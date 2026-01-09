@@ -208,8 +208,7 @@ private fun AttachmentRow(
         items(attachments) { attachment ->
             val isImage = remember(attachment.displayType) {
                 attachment.displayType.startsWith(
-                    "image/",
-                    ignoreCase = true
+                    "image/", ignoreCase = true
                 ) || attachment.displayType.contains("image", ignoreCase = true)
             }
 

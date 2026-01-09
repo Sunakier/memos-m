@@ -11,7 +11,6 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -92,16 +91,9 @@ fun MainScreen(
     ) {
         when (currentDestination) {
             MainDestination.MEMOS -> MemosListScreen(viewModel)
-            MainDestination.EXPLORE -> PlaceholderScreen("Explore")
+            MainDestination.EXPLORE -> ExploreScreen(viewModel)
             MainDestination.ATTACHMENTS -> AttachmentsScreen(viewModel)
             MainDestination.PROFILE -> ProfileScreen(viewModel, onLogout)
         }
-    }
-}
-
-@Composable
-fun PlaceholderScreen(title: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = title, style = MaterialTheme.typography.headlineMedium)
     }
 }

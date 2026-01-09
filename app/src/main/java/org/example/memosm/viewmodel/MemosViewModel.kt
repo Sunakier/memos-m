@@ -21,15 +21,18 @@ import java.io.InputStream
 
 data class MemosUiState(
     val memos: List<Memo> = emptyList(),
+    val exploreMemos: List<Memo> = emptyList(),
     val attachments: List<Attachment> = emptyList(),
     val user: User? = null,
     val userStats: UserStats? = null,
     val shortcuts: List<Shortcut> = emptyList(),
     val instanceProfile: InstanceProfile? = null,
     val isLoading: Boolean = false,
+    val isExploring: Boolean = false,
     val isPosting: Boolean = false,
     val error: String? = null,
     val nextPageToken: String? = null,
+    val exploreNextPageToken: String? = null,
     val nextAttachmentsPageToken: String? = null,
     val isRefreshing: Boolean = false,
     val token: String = "",
@@ -83,6 +86,9 @@ class MemosViewModel(
 
                 // Fetch attachments
                 loadAttachmentsInternal(loadMore = false)
+
+                // Fetch explore memos
+                fetchExplore(refresh = true)
 
                 // Fetch instance profile
                 try {
@@ -277,9 +283,39 @@ class MemosViewModel(
         }
     }
 
+    fun fetchExplore(refresh: Boolean = false) {
+        if (_uiState.value.isExploring && !refresh) return
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isExploring = true)
+            try {
+                val currentToken = if (refresh) null else _uiState.value.exploreNextPageToken
+                val response = api.listMemos(
+                    pageToken = currentToken,
+                    filter = "visibility in ['PUBLIC', 'PROTECTED']"
+                )
+                val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
+                _uiState.value = _uiState.value.copy(
+                    exploreMemos = if (refresh) newMemos else _uiState.value.exploreMemos + newMemos,
+                    exploreNextPageToken = response.nextPageToken,
+                    isExploring = false
+                )
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error fetching explore memos", e)
+                _uiState.value = _uiState.value.copy(isExploring = false)
+            }
+        }
+    }
+
     fun loadMore() {
         if (_uiState.value.nextPageToken != null && !_uiState.value.isLoading) {
             fetchMemos()
+        }
+    }
+
+    fun loadMoreExplore() {
+        if (_uiState.value.exploreNextPageToken != null && !_uiState.value.isExploring) {
+            fetchExplore()
         }
     }
 

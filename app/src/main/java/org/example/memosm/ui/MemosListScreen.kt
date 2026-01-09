@@ -86,9 +86,9 @@ fun MemosListScreen(viewModel: MemosViewModel) {
         }
     }
 
-    // Customize the list pane width to be at least 800dp for better tablet experience
+    // Customize the list pane width for a better experience
     val customDirective = navigator.scaffoldDirective.copy(
-        defaultPanePreferredWidth = 800.dp
+        defaultPanePreferredWidth = 600.dp
     )
 
     ListDetailPaneScaffold(
