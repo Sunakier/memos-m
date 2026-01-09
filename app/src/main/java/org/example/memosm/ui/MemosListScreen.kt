@@ -59,11 +59,11 @@ data class MemoKey(val name: String) : Parcelable
 @Composable
 fun MemosListScreen(viewModel: MemosViewModel) {
     val uiState by viewModel.uiState.collectAsState()
-    
+
     val scaffoldDirective = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo()).copy(
         defaultPanePreferredWidth = 600.dp
     )
-    
+
     val navigator = rememberListDetailPaneScaffoldNavigator<MemoKey>(
         scaffoldDirective = scaffoldDirective
     )
@@ -86,41 +86,37 @@ fun MemosListScreen(viewModel: MemosViewModel) {
         }
     }
 
-    NavigableListDetailPaneScaffold(
-        navigator = navigator,
-        listPane = {
-            MemosListPane(
-                viewModel = viewModel, onMemoClick = { memo ->
+    NavigableListDetailPaneScaffold(navigator = navigator, listPane = {
+        MemosListPane(
+            viewModel = viewModel, onMemoClick = { memo ->
+                focusManager.clearFocus()
+                scope.launch {
+                    memo.name?.let { name ->
+                        navigator.navigateTo(
+                            ListDetailPaneScaffoldRole.Detail, MemoKey(name)
+                        )
+                    }
+                }
+            })
+    }, detailPane = {
+        val selectedMemo = uiState.selectedMemo
+        if (selectedMemo != null) {
+            MemoDetailPane(
+                memo = selectedMemo,
+                comments = uiState.selectedMemoComments,
+                isLoadingComments = uiState.isLoadingComments,
+                token = uiState.token,
+                showBackButton = navigator.canNavigateBack(),
+                onBack = {
                     focusManager.clearFocus()
                     scope.launch {
-                        memo.name?.let { name ->
-                            navigator.navigateTo(
-                                ListDetailPaneScaffoldRole.Detail, MemoKey(name)
-                            )
-                        }
+                        navigator.navigateBack()
                     }
                 })
-        },
-        detailPane = {
-            val selectedMemo = uiState.selectedMemo
-            if (selectedMemo != null) {
-                MemoDetailPane(
-                    memo = selectedMemo,
-                    comments = uiState.selectedMemoComments,
-                    isLoadingComments = uiState.isLoadingComments,
-                    token = uiState.token,
-                    showBackButton = navigator.canNavigateBack(),
-                    onBack = {
-                        focusManager.clearFocus()
-                        scope.launch {
-                            navigator.navigateBack()
-                        }
-                    })
-            } else {
-                MemoDetailPlaceholder()
-            }
+        } else {
+            MemoDetailPlaceholder()
         }
-    )
+    })
 }
 
 @Composable
@@ -593,7 +589,7 @@ fun MemoItem(
                     )
                 }
             }
-            
+
             Text(text = memo.content, style = MaterialTheme.typography.bodyLarge)
 
             val attachments = remember(memo.attachments) {
@@ -609,8 +605,7 @@ fun MemoItem(
                     items(attachments) { attachment ->
                         val isImage = remember(attachment.displayType) {
                             attachment.displayType.startsWith(
-                                "image/",
-                                ignoreCase = true
+                                "image/", ignoreCase = true
                             ) || attachment.displayType.contains("image", ignoreCase = true)
                         }
 
