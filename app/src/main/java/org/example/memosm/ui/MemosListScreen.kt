@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -199,7 +200,8 @@ private fun MemosListPane(
                                 isPosting = uiState.isPosting,
                                 availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
                                 token = uiState.token,
-                                modifier = Modifier.widthIn(max = 800.dp)
+                                modifier = Modifier.widthIn(max = 800.dp),
+                                defaultVisibility = uiState.userSettings?.memoVisibility ?: "PRIVATE"
                             )
                         }
                     }
@@ -248,10 +250,11 @@ fun CreateMemoCard(
     isPosting: Boolean,
     availableTags: Set<String>,
     token: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    defaultVisibility: String = "PRIVATE"
 ) {
     val contentState = rememberTextFieldState("")
-    var visibility by remember { mutableStateOf("PRIVATE") }
+    var visibility by remember(defaultVisibility) { mutableStateOf(defaultVisibility) }
     var expanded by remember { mutableStateOf(false) }
 
     // We store Uri for local display, and Attachment for publishing
@@ -491,6 +494,12 @@ fun CreateMemoCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box {
                         TextButton(onClick = { expanded = true }, enabled = !isPosting) {
+                            Icon(
+                                imageVector = getVisibilityIcon(visibility),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(visibility)
                             Icon(
                                 imageVector = if (expanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
@@ -499,7 +508,17 @@ fun CreateMemoCard(
                         }
                         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                             listOf("PRIVATE", "PROTECTED", "PUBLIC").forEach { option ->
-                                DropdownMenuItem(text = { Text(option) }, onClick = {
+                                DropdownMenuItem(text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = getVisibilityIcon(option),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(option)
+                                    }
+                                }, onClick = {
                                     visibility = option
                                     expanded = false
                                 })
@@ -673,14 +692,28 @@ fun MemoItem(
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     modifier = Modifier.padding(start = 8.dp)
                 ) {
-                    Text(
-                        text = memo.visibility,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = getVisibilityIcon(memo.visibility),
+                            contentDescription = memo.visibility,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+private fun getVisibilityIcon(visibility: String): ImageVector {
+    return when (visibility.uppercase()) {
+        "PUBLIC" -> Icons.Default.Public
+        "PROTECTED" -> Icons.Default.Group
+        "PRIVATE" -> Icons.Default.Lock
+        else -> Icons.Default.Lock
     }
 }

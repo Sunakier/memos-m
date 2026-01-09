@@ -172,7 +172,7 @@ class MemosViewModel(
             inputStream.close()
 
             val fileName = getFileName(uri, context) ?: "upload_${System.currentTimeMillis()}"
-
+            
             // Memos API expects bytes to be Base64 encoded in JSON
             val base64Content = Base64.encodeToString(bytes, Base64.NO_WRAP)
             Log.d("MemosViewModel", "Encoded file to Base64, size: ${base64Content.length}")
@@ -186,7 +186,7 @@ class MemosViewModel(
             val attachment = api.createAttachment(request)
             Log.d("MemosViewModel", "Upload success: ${attachment.name}")
             val processedAttachment = processAttachment(attachment)
-
+            
             _uiState.value = _uiState.value.copy(
                 attachments = listOf(processedAttachment) + _uiState.value.attachments
             )
@@ -225,7 +225,7 @@ class MemosViewModel(
 
             val stats = api.getUserStats(userId)
             val shortcuts = api.getShortcuts(userId)
-
+            
             // Try to fetch general settings directly using "GENERAL" as documented
             val generalSetting = try {
                 api.getUserSetting(userId, "GENERAL").generalSetting
@@ -262,7 +262,7 @@ class MemosViewModel(
                 user.name?.removePrefix("users/")?.let { userId ->
                     val stats = api.getUserStats(userId)
                     val shortcuts = api.getShortcuts(userId)
-
+                    
                     val generalSetting = try {
                         api.getUserSetting(userId, "GENERAL").generalSetting
                     } catch (e: Exception) {
@@ -272,7 +272,7 @@ class MemosViewModel(
                             null
                         }
                     }
-
+                    
                     _uiState.value = _uiState.value.copy(
                         userStats = stats,
                         shortcuts = shortcuts.shortcuts ?: emptyList(),
@@ -332,13 +332,13 @@ class MemosViewModel(
                     filter = "visibility in ['PUBLIC', 'PROTECTED']"
                 )
                 val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
-
+                
                 // Collect creators that we don't have details for
                 val unknownCreators = newMemos
                     .mapNotNull { it.creator }
                     .filter { it !in _uiState.value.users }
                     .distinct()
-
+                
                 // Fetch missing users
                 unknownCreators.forEach { creatorName ->
                     try {
@@ -378,8 +378,8 @@ class MemosViewModel(
     }
 
     fun createMemo(
-        content: String,
-        visibility: String = "PRIVATE",
+        content: String, 
+        visibility: String = "PRIVATE", 
         attachments: List<Attachment>? = null,
         onSuccess: () -> Unit = {}
     ) {
@@ -388,14 +388,12 @@ class MemosViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isPosting = true)
             try {
-                val memo = api.createMemo(
-                    Memo(
-                        content = content,
-                        visibility = visibility,
-                        attachments = attachments,
-                        state = "NORMAL"
-                    )
-                )
+                val memo = api.createMemo(Memo(
+                    content = content, 
+                    visibility = visibility,
+                    attachments = attachments,
+                    state = "NORMAL"
+                ))
                 _uiState.value = _uiState.value.copy(
                     memos = listOf(processMemo(memo)) + _uiState.value.memos, isPosting = false
                 )
@@ -415,7 +413,7 @@ class MemosViewModel(
             selectedMemoComments = emptyList(),
             isLoadingComments = memo != null
         )
-
+        
         if (memo != null) {
             fetchMemoComments(memo)
         }
@@ -433,7 +431,7 @@ class MemosViewModel(
         val memoName = memo.name ?: return
         // Extract memo ID from name (format: "memos/{id}")
         val memoId = memoName.removePrefix("memos/")
-
+        
         viewModelScope.launch {
             try {
                 val response = api.listMemoComments(memoId)
@@ -454,7 +452,7 @@ class MemosViewModel(
     fun updateUserGeneralSetting(locale: String? = null, memoVisibility: String? = null) {
         val user = _uiState.value.user ?: return
         val userId = user.name?.removePrefix("users/") ?: return
-
+        
         viewModelScope.launch {
             try {
                 val currentSettings = _uiState.value.userSettings ?: UserGeneralSetting()
@@ -462,17 +460,17 @@ class MemosViewModel(
                     locale = locale ?: currentSettings.locale,
                     memoVisibility = memoVisibility ?: currentSettings.memoVisibility
                 )
-
+                
                 val settingKey = "GENERAL"
                 val request = UserSetting(
                     name = "users/$userId/settings/$settingKey",
                     generalSetting = updatedGeneral
                 )
-
+                
                 val updateMask = mutableListOf<String>()
-                // Aligning mask keys with JSON keys as requested by the server's response format
-                if (locale != null) updateMask.add("generalSetting.locale")
-                if (memoVisibility != null) updateMask.add("generalSetting.memoVisibility")
+                // Protobuf field names (snake_case) are standard for update masks in gRPC-gateways
+                if (locale != null) updateMask.add("general_setting.locale")
+                if (memoVisibility != null) updateMask.add("general_setting.memo_visibility")
 
                 val maskString = updateMask.joinToString(",")
                 Log.d("MemosViewModel", "Updating settings for $userId with mask: $maskString")
@@ -481,14 +479,9 @@ class MemosViewModel(
                     api.updateUserSetting(userId, settingKey, request, maskString)
                 } catch (e: Exception) {
                     Log.w("MemosViewModel", "Update with 'GENERAL' failed, trying 'general'", e)
-                    api.updateUserSetting(
-                        userId,
-                        "general",
-                        request.copy(name = "users/$userId/settings/general"),
-                        maskString
-                    )
+                    api.updateUserSetting(userId, "general", request.copy(name = "users/$userId/settings/general"), maskString)
                 }
-
+                
                 _uiState.value = _uiState.value.copy(
                     userSettings = updated.generalSetting,
                     error = null
@@ -496,8 +489,7 @@ class MemosViewModel(
                 Log.d("MemosViewModel", "Settings updated successfully")
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error updating user settings", e)
-                _uiState.value =
-                    _uiState.value.copy(error = "Failed to update settings: ${e.localizedMessage}")
+                _uiState.value = _uiState.value.copy(error = "Failed to update settings: ${e.localizedMessage}")
             }
         }
     }

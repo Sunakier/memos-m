@@ -8,11 +8,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Reply
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -85,7 +90,7 @@ fun MemoDetailPane(
                         modifier = Modifier.padding(top = 8.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Reply,
+                            imageVector = Icons.Outlined.Forum,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -184,12 +189,16 @@ private fun MemoDetailCard(
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     modifier = Modifier.padding(start = 8.dp)
                 ) {
-                    Text(
-                        text = memo.visibility,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Box(
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = getVisibilityIcon(memo.visibility),
+                            contentDescription = memo.visibility,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -270,5 +279,14 @@ fun MemoDetailPlaceholder(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+private fun getVisibilityIcon(visibility: String): ImageVector {
+    return when (visibility.uppercase()) {
+        "PUBLIC" -> Icons.Default.Public
+        "PROTECTED" -> Icons.Default.Group
+        "PRIVATE" -> Icons.Default.Lock
+        else -> Icons.Default.Lock
     }
 }
