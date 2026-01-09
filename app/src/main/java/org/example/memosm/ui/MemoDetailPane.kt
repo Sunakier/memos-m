@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.input.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -15,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -46,40 +44,37 @@ fun MemoDetailPane(
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
-                        }
-                    },
-                    navigationIcon = {
-                        if (showBackButton) {
-                            IconButton(onClick = onBack) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back"
-                                )
-                            }
-                        }
-                    },
-                    windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-                )
-            },
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { showCommentDialog = true },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            TopAppBar(
+                title = {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.CenterStart
                 ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add Comment")
+                    Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
                 }
             },
-            containerColor = Color.Transparent,
-            modifier = Modifier.fillMaxSize()
+                navigationIcon = {
+                    if (showBackButton) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    }
+                },
+                windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
+        }, floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showCommentDialog = true },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = "Add Comment")
+            }
+        }, containerColor = Color.Transparent, modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
             Box(
                 modifier = Modifier
@@ -177,8 +172,7 @@ fun MemoDetailPane(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .imePadding(),
-                contentAlignment = Alignment.Center
+                    .imePadding(), contentAlignment = Alignment.Center
             ) {
                 Surface(
                     modifier = Modifier
@@ -199,9 +193,9 @@ fun MemoDetailPane(
 
                         MemoComposer(
                             onPublish = { content, visibility, attachments ->
-                                viewModel.createComment(memo, content)
-                                showCommentDialog = false
-                            },
+                            viewModel.createComment(memo, content)
+                            showCommentDialog = false
+                        },
                             onUploadFile = { uri, context ->
                                 viewModel.uploadAttachment(uri, context)
                             },
@@ -211,8 +205,7 @@ fun MemoDetailPane(
                             defaultVisibility = memo.visibility,
                             placeholder = "Write your comment here...",
                             autoFocus = true,
-                            onCancel = { showCommentDialog = false }
-                        )
+                            onCancel = { showCommentDialog = false })
                     }
                 }
             }
