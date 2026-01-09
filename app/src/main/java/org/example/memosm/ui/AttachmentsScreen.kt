@@ -2,6 +2,7 @@ package org.example.memosm.ui
 
 import android.content.Intent
 import android.net.Uri
+import android.text.format.Formatter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
@@ -19,12 +20,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import org.example.memosm.model.Attachment
 import org.example.memosm.viewmodel.MemosViewModel
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun AttachmentsScreen(viewModel: MemosViewModel) {
@@ -36,14 +41,13 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
         derivedStateOf {
             val totalItemsCount = listState.layoutInfo.totalItemsCount
             if (totalItemsCount == 0 || uiState.isFetchingAttachments) return@derivedStateOf false
-            
-            val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf false
-            
-            // Trigger load more when we are 5 items away from the end,
-            // but only if there actually IS a next page.
-            uiState.nextAttachmentsPageToken != null && 
-            !uiState.nextAttachmentsPageToken.isNullOrBlank() &&
-            lastVisibleItem.index >= totalItemsCount - 5
+
+            val lastVisibleItem =
+                listState.layoutInfo.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf false
+
+            uiState.nextAttachmentsPageToken != null &&
+                    !uiState.nextAttachmentsPageToken.isNullOrBlank() &&
+                    lastVisibleItem.index >= totalItemsCount - 5
         }
     }
 
@@ -113,7 +117,25 @@ fun AttachmentItem(
     onRatioAvailable: (Float) -> Unit
 ) {
     val context = LocalContext.current
-    
+
+    val formattedDate = remember(attachment.createTime) {
+        try {
+            // "2024-03-20T10:00:00Z"
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+            inputFormat.timeZone = TimeZone.getTimeZone("UTC")
+            val date = inputFormat.parse(attachment.createTime ?: "")
+            val outputFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+            date?.let { outputFormat.format(it) } ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    val formattedSize = remember(attachment.size) {
+        val bytes = attachment.size?.toLongOrNull() ?: return@remember attachment.size ?: ""
+        Formatter.formatFileSize(context, bytes)
+    }
+
     Card(
         modifier = modifier.clip(RoundedCornerShape(12.dp)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -192,17 +214,58 @@ fun AttachmentItem(
             }
 
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = attachment.filename,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    text = attachment.size ?: "",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                val filename = attachment.filename
+                val lastDotIndex = filename.lastIndexOf('.')
+
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    if (lastDotIndex != -1 && lastDotIndex > 0) {
+                        val namePart = filename.substring(0, lastDotIndex)
+                        val extensionPart = filename.substring(lastDotIndex)
+                        Text(
+                            text = namePart,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        Text(
+                            text = extensionPart,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
+                    } else {
+                        Text(
+                            text = filename,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = formattedSize,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    if (formattedDate.isNotEmpty()) {
+                        Text(
+                            text = formattedDate,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }
