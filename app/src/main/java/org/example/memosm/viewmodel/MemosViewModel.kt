@@ -113,7 +113,6 @@ class MemosViewModel(
         } else {
             attachment.externalLink
         }
-        Log.d("MemosViewModel", "Processed attachment URL: $downloadUrl for ${attachment.filename}")
         return attachment.copy(externalLink = downloadUrl)
     }
 

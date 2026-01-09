@@ -1,12 +1,10 @@
 package org.example.memosm.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrokenImage
@@ -18,8 +16,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImagePainter
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.AsyncImage
+import coil.request.CachePolicy
 import coil.request.ImageRequest
 import org.example.memosm.model.Attachment
 import org.example.memosm.viewmodel.MemosViewModel
@@ -27,28 +25,55 @@ import org.example.memosm.viewmodel.MemosViewModel
 @Composable
 fun AttachmentsScreen(viewModel: MemosViewModel) {
     val uiState by viewModel.uiState.collectAsState()
-    val listState = rememberLazyStaggeredGridState()
+    val listState = rememberLazyListState()
 
-    val shouldLoadMore = remember {
-        derivedStateOf {
-            val lastVisibleItem =
-                listState.layoutInfo.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf false
-            lastVisibleItem.index >= listState.layoutInfo.totalItemsCount - 5
-        }
-    }
+    // Map to store aspect ratios as images load
+    val aspectRatios = remember { mutableStateMapOf<String, Float>() }
 
-    LaunchedEffect(shouldLoadMore.value) {
-        if (shouldLoadMore.value) {
-            viewModel.fetchAttachments(loadMore = true)
-        }
-    }
-
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding(),
-        contentAlignment = Alignment.TopCenter
+            .statusBarsPadding()
     ) {
+        val maxWidthDp = maxWidth
+
+        // Group attachments into justified rows
+        val justifiedRows = remember(uiState.attachments, aspectRatios.size) {
+            val rows = mutableListOf<List<Attachment>>()
+            var currentRow = mutableListOf<Attachment>()
+            var currentWidthFactor = 0f
+            // We want roughly 2-3 items per row on average
+            val maxRowWidthFactor = 2.2f
+
+            uiState.attachments.forEach { attachment ->
+                val ratio = aspectRatios[attachment.name] ?: 1.0f
+                if (currentRow.isNotEmpty() && currentWidthFactor + ratio > maxRowWidthFactor) {
+                    rows.add(currentRow)
+                    currentRow = mutableListOf(attachment)
+                    currentWidthFactor = ratio
+                } else {
+                    currentRow.add(attachment)
+                    currentWidthFactor += ratio
+                }
+            }
+            if (currentRow.isNotEmpty()) rows.add(currentRow)
+            rows
+        }
+
+        val shouldLoadMore = remember {
+            derivedStateOf {
+                val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()
+                    ?: return@derivedStateOf false
+                lastVisibleItem.index >= listState.layoutInfo.totalItemsCount - 3
+            }
+        }
+
+        LaunchedEffect(shouldLoadMore.value) {
+            if (shouldLoadMore.value) {
+                viewModel.fetchAttachments(loadMore = true)
+            }
+        }
+
         if (uiState.attachments.isEmpty() && uiState.isLoading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else if (uiState.attachments.isEmpty()) {
@@ -56,16 +81,42 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                 Text("No attachments found")
             }
         } else {
-            LazyVerticalStaggeredGrid(
-                columns = StaggeredGridCells.Adaptive(160.dp),
+            LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalItemSpacing = 8.dp
+                contentPadding = PaddingValues(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(uiState.attachments, key = { it.name }) { attachment ->
-                    AttachmentItem(attachment, uiState.token)
+                items(justifiedRows, key = { it.firstOrNull()?.name ?: "" }) { rowItems ->
+                    val totalRatio =
+                        rowItems.sumOf { (aspectRatios[it.name] ?: 1.0f).toDouble() }.toFloat()
+
+                    // Calculate height that preserves ratio for all items in the row:
+                    // Height = (AvailableWidth - Spacing) / TotalRatio
+                    val spacingSum = 8.dp * (rowItems.size - 1)
+                    val justifiedHeight =
+                        ((maxWidthDp - spacingSum) / totalRatio).coerceIn(180.dp, 360.dp)
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(justifiedHeight),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rowItems.forEach { attachment ->
+                            val ratio = aspectRatios[attachment.name] ?: 1.0f
+                            Box(modifier = Modifier.weight(ratio)) {
+                                AttachmentItem(
+                                    attachment = attachment,
+                                    token = uiState.token,
+                                    onRatioAvailable = { newRatio ->
+                                        if (aspectRatios[attachment.name] != newRatio) {
+                                            aspectRatios[attachment.name] = newRatio
+                                        }
+                                    })
+                            }
+                        }
+                    }
                 }
 
                 if (uiState.nextAttachmentsPageToken != null) {
@@ -86,99 +137,88 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
 }
 
 @Composable
-fun AttachmentItem(attachment: Attachment, token: String) {
+fun AttachmentItem(
+    attachment: Attachment, token: String, onRatioAvailable: (Float) -> Unit
+) {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .clip(RoundedCornerShape(8.dp)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
             val isImage = remember(attachment.displayType) {
-                attachment.displayType.startsWith("image/", ignoreCase = true) || 
-                attachment.displayType.contains("image", ignoreCase = true)
+                attachment.displayType.startsWith(
+                    "image/",
+                    ignoreCase = true
+                ) || attachment.displayType.contains("image", ignoreCase = true)
             }
-            
-            if (isImage) {
-                val context = LocalContext.current
-                val imageRequest = remember(attachment.externalLink, token) {
-                    ImageRequest.Builder(context)
-                        .data(attachment.externalLink)
-                        .addHeader("Authorization", "Bearer $token")
-                        .crossfade(true)
-                        // Optimize: limit size to a reasonable width for the grid
-                        .size(400)
-                        .build()
-                }
 
-                val painter = rememberAsyncImagePainter(model = imageRequest)
-                val state = painter.state
-                
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 120.dp, max = 300.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painter,
-                        contentDescription = attachment.filename,
-                        modifier = Modifier.fillMaxWidth(),
-                        contentScale = ContentScale.FillWidth,
-                    )
-
-                    when (state) {
-                        is AsyncImagePainter.State.Loading -> {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
-                        }
-                        is AsyncImagePainter.State.Error -> {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                                modifier = Modifier.padding(16.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.BrokenImage,
-                                    contentDescription = "Error",
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(32.dp)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Failed to load",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                        else -> {}
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isImage) {
+                    val context = LocalContext.current
+                    val imageRequest = remember(attachment.externalLink, token) {
+                        ImageRequest.Builder(context).data(attachment.externalLink)
+                            .addHeader("Authorization", "Bearer $token").crossfade(true).size(800)
+                            .diskCachePolicy(CachePolicy.ENABLED)
+                            .memoryCachePolicy(CachePolicy.ENABLED).build()
                     }
-                }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+
+                    var isLoading by remember { mutableStateOf(true) }
+                    var isError by remember { mutableStateOf(false) }
+
+                    AsyncImage(
+                        model = imageRequest,
+                        contentDescription = attachment.filename,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        onLoading = { isLoading = true; isError = false },
+                        onSuccess = { state ->
+                            isLoading = false
+                            isError = false
+                            val size = state.painter.intrinsicSize
+                            if (size.width > 0 && size.height > 0) {
+                                onRatioAvailable(size.width / size.height)
+                            }
+                        },
+                        onError = { isLoading = false; isError = true })
+
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp), strokeWidth = 2.dp
+                        )
+                    }
+
+                    if (isError) {
+                        Icon(
+                            imageVector = Icons.Default.BrokenImage,
+                            contentDescription = "Error",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                } else {
                     Text(
                         text = attachment.filename,
                         style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 2
+                        maxLines = 3,
+                        modifier = Modifier.padding(12.dp)
                     )
                 }
             }
-            
+
             Column(modifier = Modifier.padding(8.dp)) {
                 Text(
                     text = attachment.filename,
                     style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1
+                    maxLines = 1,
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Text(
                     text = attachment.size ?: "",
