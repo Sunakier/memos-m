@@ -21,8 +21,7 @@ enum class LoginMode {
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (String, String) -> Unit,
-    modifier: Modifier = Modifier
+    onLoginSuccess: (String, String) -> Unit, modifier: Modifier = Modifier
 ) {
     var loginMode by remember { mutableStateOf(LoginMode.TOKEN) }
     var hostUrl by remember { mutableStateOf("") }
@@ -142,15 +141,13 @@ fun LoginScreen(
                                         level = HttpLoggingInterceptor.Level.BODY
                                     }
 
-                                    val client = OkHttpClient.Builder()
-                                        .addInterceptor(logging)
-                                        .build()
+                                    val client =
+                                        OkHttpClient.Builder().addInterceptor(logging).build()
 
-                                    val retrofit = Retrofit.Builder()
-                                        .baseUrl(baseUrl)
-                                        .client(client)
-                                        .addConverterFactory(ProtoConverterFactory.create())
-                                        .build()
+                                    val retrofit =
+                                        Retrofit.Builder().baseUrl(baseUrl).client(client)
+                                            .addConverterFactory(ProtoConverterFactory.create())
+                                            .build()
 
                                     val api = retrofit.create(MemosApi::class.java)
                                     // Password login implementation removed for now as per previous state

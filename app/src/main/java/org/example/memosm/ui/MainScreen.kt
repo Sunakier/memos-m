@@ -532,9 +532,10 @@ fun CreateMemoCard(
                     val popupOffset = remember(textLayoutResult, contentState.selection, density) {
                         val layout = textLayoutResult
                         if (layout != null) {
-                            val cursorRect = layout.getCursorRect(
-                                contentState.selection.start.coerceIn(0, contentState.text.length)
-                            )
+                            val cursorIndex = contentState.selection.start
+                            // Ensure the index is within the bounds of the text that produced this layout
+                            val safeIndex = cursorIndex.coerceIn(0, layout.layoutInput.text.length)
+                            val cursorRect = layout.getCursorRect(safeIndex)
                             // Approximate padding of OutlinedTextField
                             val horizontalPadding = with(density) { 16.dp.roundToPx() }
                             val verticalPadding = with(density) { 16.dp.roundToPx() }
