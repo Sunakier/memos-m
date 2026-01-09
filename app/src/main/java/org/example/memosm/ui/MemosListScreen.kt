@@ -43,7 +43,10 @@ fun MemosListScreen(viewModel: MemosViewModel) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
         when {
             uiState.isLoading && uiState.memos.isEmpty() -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -65,7 +68,8 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                     modifier = Modifier
                         .fillMaxHeight()
                         .widthIn(max = 800.dp)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .statusBarsPadding(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally

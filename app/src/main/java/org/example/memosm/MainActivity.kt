@@ -57,7 +57,6 @@ class MainActivity : ComponentActivity() {
                                         dataStoreManager.clearCredentials()
                                     }
                                 },
-                                modifier = Modifier.padding(innerPadding)
                             )
                         } else {
                             LoginScreen(

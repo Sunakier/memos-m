@@ -32,7 +32,12 @@ fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit) {
     val shortcuts = uiState.shortcuts
     val instance = uiState.instanceProfile
 
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .safeDrawingPadding(),
+        contentAlignment = Alignment.TopCenter
+    ) {
         LazyColumn(
             modifier = Modifier
                 .widthIn(max = 800.dp)
@@ -250,10 +255,12 @@ fun InstanceCard(instance: InstanceProfile) {
 @Composable
 fun LogoutCard(onLogout: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer
-        ), onClick = onLogout
+        ),
+        onClick = onLogout
     ) {
         Row(
             modifier = Modifier
@@ -264,9 +271,7 @@ fun LogoutCard(onLogout: () -> Unit) {
         ) {
             Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
             Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                "Logout", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
-            )
+            Text("Logout", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
     }
 }
