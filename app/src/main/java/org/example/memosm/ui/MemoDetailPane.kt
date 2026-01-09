@@ -71,7 +71,7 @@ fun MemoDetailPane(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .widthIn(max = 600.dp)
+//                    .widthIn(max = 600.dp)
                     .padding(horizontal = 16.dp),
                 contentPadding = PaddingValues(vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
