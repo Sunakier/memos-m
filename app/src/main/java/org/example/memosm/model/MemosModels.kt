@@ -3,8 +3,14 @@ package org.example.memosm.model
 import com.google.gson.annotations.SerializedName
 
 data class ListMemosResponse(
-    val memos: List<Memo>,
+    val memos: List<Memo>?,
     val nextPageToken: String?
+)
+
+data class ListAttachmentsResponse(
+    val attachments: List<Attachment>?,
+    val nextPageToken: String?,
+    val totalSize: Long?
 )
 
 data class Memo(
@@ -18,12 +24,12 @@ data class Memo(
     val visibility: String,
     val tags: List<String>,
     val pinned: Boolean,
-    val attachments: List<Attachment>,
-    val relations: List<MemoRelation>,
-    val reactions: List<Reaction>,
-    val property: MemoProperty,
+    val attachments: List<Attachment>?,
+    val relations: List<MemoRelation>?,
+    val reactions: List<Reaction>?,
+    val property: MemoProperty?,
     val parent: String?,
-    val snippet: String,
+    val snippet: String?,
     val location: Location?
 )
 
@@ -31,12 +37,16 @@ data class Attachment(
     val name: String,
     val createTime: String,
     val filename: String,
-    val content: String,
-    val externalLink: String,
-    val type: String,
-    val size: String,
-    val memo: String
-)
+    val content: String?,
+    val externalLink: String?,
+    @SerializedName("type") val type: String?,
+    @SerializedName("mimeType") val mimeType: String?,
+    val size: String?,
+    val memo: String?
+) {
+    val displayType: String
+        get() = mimeType ?: type ?: ""
+}
 
 data class MemoRelation(
     val memo: MemoSnippet,

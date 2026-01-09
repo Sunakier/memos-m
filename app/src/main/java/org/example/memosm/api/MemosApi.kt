@@ -36,6 +36,17 @@ interface MemosApi {
 
     @GET("api/v1/instance/profile")
     suspend fun getInstanceProfile(): InstanceProfile
+
+    @GET("api/v1/attachments")
+    suspend fun listAttachments(
+        @Query("pageSize") pageSize: Int? = null,
+        @Query("pageToken") pageToken: String? = null,
+        @Query("filter") filter: String? = null,
+        @Query("orderBy") orderBy: String? = null,
+    ): ListAttachmentsResponse
+
+    @GET("api/v1/attachments/{attachment}")
+    suspend fun getAttachment(@Path("attachment") attachment: String): Attachment
 }
 
 data class MemoRequest(

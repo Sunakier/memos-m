@@ -18,6 +18,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 data class MemosUiState(
     val memos: List<Memo> = emptyList(),
+    val attachments: List<Attachment> = emptyList(),
     val user: User? = null,
     val userStats: UserStats? = null,
     val shortcuts: List<Shortcut> = emptyList(),
@@ -26,14 +27,16 @@ data class MemosUiState(
     val isPosting: Boolean = false,
     val error: String? = null,
     val nextPageToken: String? = null,
-    val isRefreshing: Boolean = false
+    val nextAttachmentsPageToken: String? = null,
+    val isRefreshing: Boolean = false,
+    val token: String = "" // Expose token for image loading
 )
 
 class MemosViewModel(
     private val baseUrl: String, private val token: String
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(MemosUiState())
+    private val _uiState = MutableStateFlow(MemosUiState(token = token))
     val uiState: StateFlow<MemosUiState> = _uiState.asStateFlow()
 
     private val api: MemosApi by lazy {
@@ -42,7 +45,9 @@ class MemosViewModel(
         }
         val client = OkHttpClient.Builder().addInterceptor(logging).addInterceptor { chain ->
                 val request =
-                    chain.request().newBuilder().addHeader("Authorization", "Bearer $token").build()
+                    chain.request().newBuilder()
+                        .addHeader("Authorization", "Bearer $token")
+                        .build()
                 chain.proceed(request)
             }.build()
 
@@ -59,10 +64,14 @@ class MemosViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 // Fetch memos first
-                val response = api.listMemos()
+                val memoResponse = api.listMemos()
                 _uiState.value = _uiState.value.copy(
-                    memos = response.memos, nextPageToken = response.nextPageToken
+                    memos = memoResponse.memos ?: emptyList(),
+                    nextPageToken = memoResponse.nextPageToken
                 )
+
+                // Fetch attachments
+                loadAttachmentsInternal(loadMore = false)
 
                 // Fetch instance profile
                 try {
@@ -72,8 +81,8 @@ class MemosViewModel(
                     Log.e("MemosViewModel", "Error fetching instance profile", e)
                 }
 
-                // Now get user info from the creator of the first memo
-                val firstMemo = response.memos.firstOrNull()
+                // Now get user info
+                val firstMemo = memoResponse.memos?.firstOrNull()
                 if (firstMemo != null) {
                     val userId = firstMemo.creator.removePrefix("users/")
                     fetchUserDetails(userId)
@@ -86,6 +95,42 @@ class MemosViewModel(
             } finally {
                 _uiState.value = _uiState.value.copy(isLoading = false)
             }
+        }
+    }
+
+    fun fetchAttachments(loadMore: Boolean = false) {
+        if (_uiState.value.isLoading && !loadMore) return
+        viewModelScope.launch {
+            loadAttachmentsInternal(loadMore)
+        }
+    }
+
+    private suspend fun loadAttachmentsInternal(loadMore: Boolean) {
+        val currentToken = if (loadMore) _uiState.value.nextAttachmentsPageToken else null
+        if (loadMore && currentToken == null) return
+
+        try {
+            val response = api.listAttachments(pageToken = currentToken)
+            val rawAttachments = response.attachments ?: emptyList()
+            val processedAttachments = rawAttachments.map { attachment ->
+                val downloadUrl = if (attachment.externalLink.isNullOrBlank()) {
+                    // Use the official download endpoint for v1 API
+                    "${baseUrl.removeSuffix("/")}/api/v1/${attachment.name}:download"
+                } else if (!attachment.externalLink.startsWith("http")) {
+                    // Handle relative links
+                    "${baseUrl.removeSuffix("/")}${if (attachment.externalLink.startsWith("/")) "" else "/"}${attachment.externalLink}"
+                } else {
+                    attachment.externalLink
+                }
+                attachment.copy(externalLink = downloadUrl)
+            }
+            
+            _uiState.value = _uiState.value.copy(
+                attachments = if (loadMore) _uiState.value.attachments + processedAttachments else processedAttachments,
+                nextAttachmentsPageToken = response.nextPageToken
+            )
+        } catch (e: Exception) {
+            Log.e("MemosViewModel", "Error fetching attachments", e)
         }
     }
 
@@ -125,8 +170,9 @@ class MemosViewModel(
     }
 
     private fun updateUser(user: User) {
-        val processedUser = if (user.avatarUrl != null && !user.avatarUrl.startsWith("http")) {
-            user.copy(avatarUrl = baseUrl.removeSuffix("/") + user.avatarUrl)
+        val avatarUrl = user.avatarUrl
+        val processedUser = if (avatarUrl != null && !avatarUrl.startsWith("http")) {
+            user.copy(avatarUrl = baseUrl.removeSuffix("/") + avatarUrl)
         } else {
             user
         }
@@ -145,8 +191,9 @@ class MemosViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val response = api.listMemos(pageToken = _uiState.value.nextPageToken)
+                val newMemos = response.memos ?: emptyList()
                 _uiState.value = _uiState.value.copy(
-                    memos = _uiState.value.memos + response.memos,
+                    memos = _uiState.value.memos + newMemos,
                     nextPageToken = response.nextPageToken,
                 )
             } catch (e: Exception) {

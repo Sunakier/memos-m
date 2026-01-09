@@ -28,17 +28,17 @@ class MainActivity : ComponentActivity() {
                 val context = LocalContext.current
                 val dataStoreManager = remember { DataStoreManager(context) }
                 val scope = rememberCoroutineScope()
-                
+
                 val savedUrl by dataStoreManager.hostUrl.collectAsState(initial = null)
                 val savedToken by dataStoreManager.accessToken.collectAsState(initial = null)
 
                 // Wait for DataStore to emit initial values
                 var isCheckingSession by remember { mutableStateOf(true) }
-                
+
                 LaunchedEffect(savedUrl, savedToken) {
                     // This is a simple way to wait for the first emission from DataStore
                     // In a real app, you'd use a more robust way to handle the "loading" state
-                    kotlinx.coroutines.delay(100) 
+                    kotlinx.coroutines.delay(100)
                     isCheckingSession = false
                 }
 
@@ -65,8 +65,7 @@ class MainActivity : ComponentActivity() {
                                     scope.launch {
                                         dataStoreManager.saveCredentials(baseUrl, token)
                                     }
-                                }
-                            )
+                                })
                         }
                     }
                 }

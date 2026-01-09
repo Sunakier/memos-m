@@ -93,7 +93,7 @@ fun MainScreen(
         when (currentDestination) {
             MainDestination.MEMOS -> MemosListScreen(viewModel)
             MainDestination.EXPLORE -> PlaceholderScreen("Explore")
-            MainDestination.ATTACHMENTS -> PlaceholderScreen("Attachments")
+            MainDestination.ATTACHMENTS -> AttachmentsScreen(viewModel)
             MainDestination.PROFILE -> ProfileScreen(viewModel, onLogout)
         }
     }
