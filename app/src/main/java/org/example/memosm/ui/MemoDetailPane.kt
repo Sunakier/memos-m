@@ -9,6 +9,7 @@ import androidx.compose.foundation.text.input.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
 
@@ -33,6 +35,7 @@ fun MemoDetailPane(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showCommentDialog by remember { mutableStateOf(false) }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -64,16 +67,16 @@ fun MemoDetailPane(
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             },
-            bottomBar = {
-                CommentInputBar(
-                    onPublish = { content ->
-                        viewModel.createComment(memo, content)
-                    },
-                    isPosting = uiState.isPosting
-                )
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { showCommentDialog = true },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add Comment")
+                }
             },
             containerColor = Color.Transparent,
-            contentWindowInsets = WindowInsets(0, 0, 0, 0), // Disable default insets to prevent jumping
             modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
             Box(
@@ -162,64 +165,58 @@ fun MemoDetailPane(
             }
         }
     }
+
+    if (showCommentDialog) {
+        CommentInputDialog(
+            onDismiss = { showCommentDialog = false },
+            onConfirm = { content ->
+                viewModel.createComment(memo, content)
+                showCommentDialog = false
+            },
+            isPosting = uiState.isPosting
+        )
+    }
 }
 
 @Composable
-fun CommentInputBar(
-    onPublish: (String) -> Unit,
-    isPosting: Boolean,
-    modifier: Modifier = Modifier
+fun CommentInputDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+    isPosting: Boolean
 ) {
     val contentState = rememberTextFieldState("")
 
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .imePadding(), // Ensure the input bar itself rises with the keyboard
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-        shadowElevation = 8.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .navigationBarsPadding(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Comment") },
+        text = {
             OutlinedTextField(
                 state = contentState,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Write a comment...") },
-                lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 4),
-                enabled = !isPosting,
-                shape = RoundedCornerShape(24.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 100.dp),
+                placeholder = { Text("Write your comment here...") },
+                enabled = !isPosting
             )
-
-            IconButton(
-                onClick = {
-                    onPublish(contentState.text.toString())
-                    contentState.edit { replace(0, length, "") }
-                },
-                enabled = contentState.text.isNotBlank() && !isPosting,
-                colors = IconButtonDefaults.iconButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary
-                )
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(contentState.text.toString()) },
+                enabled = contentState.text.isNotBlank() && !isPosting
             ) {
                 if (isPosting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp
-                    )
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                 } else {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Send Comment"
-                    )
+                    Text("Post")
                 }
             }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isPosting) {
+                Text("Cancel")
+            }
         }
-    }
+    )
 }
 
 @Composable
