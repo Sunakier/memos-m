@@ -1,5 +1,7 @@
 package org.example.memosm.ui
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
@@ -102,9 +104,17 @@ fun AttachmentItem(
     modifier: Modifier = Modifier,
     onRatioAvailable: (Float) -> Unit
 ) {
+    val context = LocalContext.current
+    
     Card(
         modifier = modifier.clip(RoundedCornerShape(12.dp)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        onClick = {
+            attachment.externalLink?.let { link ->
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
+                context.startActivity(intent)
+            }
+        }
     ) {
         Column {
             val displayType = attachment.displayType
@@ -122,7 +132,6 @@ fun AttachmentItem(
                 contentAlignment = Alignment.Center
             ) {
                 if (isImage) {
-                    val context = LocalContext.current
                     val externalLink = attachment.externalLink
                     val imageRequest = remember(externalLink, token) {
                         ImageRequest.Builder(context).data(externalLink)
