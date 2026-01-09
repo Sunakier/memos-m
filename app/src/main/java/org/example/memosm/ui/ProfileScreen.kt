@@ -1,5 +1,6 @@
 package org.example.memosm.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -9,9 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.Shortcut
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,6 +30,7 @@ fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit) {
     val stats = uiState.userStats
     val shortcuts = uiState.shortcuts
     val instance = uiState.instanceProfile
+    val userSettings = uiState.userSettings
 
     Box(
         modifier = Modifier
@@ -54,6 +54,17 @@ fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit) {
                 if (stats != null) {
                     item {
                         StatsCard(stats)
+                    }
+                }
+
+                if (userSettings != null) {
+                    item {
+                        SettingsCard(
+                            settings = userSettings,
+                            onUpdate = { locale, visibility ->
+                                viewModel.updateUserGeneralSetting(locale, visibility)
+                            }
+                        )
                     }
                 }
 
@@ -211,6 +222,126 @@ fun StatSubItem(label: String, count: Int) {
             fontWeight = FontWeight.SemiBold
         )
         Text(text = label, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> Unit) {
+    var showLocaleDialog by remember { mutableStateOf(false) }
+    var tempLocale by remember { mutableStateOf(settings.locale ?: "") }
+
+    if (showLocaleDialog) {
+        AlertDialog(
+            onDismissRequest = { showLocaleDialog = false },
+            title = { Text("Edit Locale") },
+            text = {
+                OutlinedTextField(
+                    value = tempLocale,
+                    onValueChange = { tempLocale = it },
+                    label = { Text("Locale (e.g. en, zh-Hans)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onUpdate(tempLocale, null)
+                    showLocaleDialog = false
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLocaleDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                "General Settings",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Locale
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        tempLocale = settings.locale ?: ""
+                        showLocaleDialog = true
+                    }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("Locale", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text = if (settings.locale.isNullOrBlank()) "Default" else settings.locale,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Icon(Icons.Default.ChevronRight, contentDescription = null)
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // Memo Visibility
+            var showVisibilityMenu by remember { mutableStateOf(false) }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Default Memo Visibility", style = MaterialTheme.typography.bodyLarge)
+
+                Box {
+                    ExposedDropdownMenuBox(
+                        expanded = showVisibilityMenu,
+                        onExpandedChange = { showVisibilityMenu = !showVisibilityMenu },
+                    ) {
+                        OutlinedTextField(
+                            value = if (settings.memoVisibility.isNullOrBlank()) "PRIVATE" else settings.memoVisibility,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showVisibilityMenu) },
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                            modifier = Modifier
+                                .width(150.dp)
+                                .menuAnchor(),
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = showVisibilityMenu,
+                            onDismissRequest = { showVisibilityMenu = false }
+                        ) {
+                            listOf("PRIVATE", "PROTECTED", "PUBLIC").forEach { visibility ->
+                                DropdownMenuItem(
+                                    text = { Text(visibility) },
+                                    onClick = {
+                                        onUpdate(null, visibility)
+                                        showVisibilityMenu = false
+                                    },
+                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

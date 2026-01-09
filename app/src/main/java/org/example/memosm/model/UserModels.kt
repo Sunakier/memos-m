@@ -1,5 +1,7 @@
 package org.example.memosm.model
 
+import com.google.gson.annotations.SerializedName
+
 data class UserResponse(
     val user: User?
 )
@@ -229,12 +231,15 @@ data class ListUserSettingsResponse(
 
 data class UserSetting(
     val name: String? = null,
+    @SerializedName("generalSetting", alternate = ["general_setting"])
     val generalSetting: UserGeneralSetting? = null,
+    @SerializedName("webhooksSetting", alternate = ["webhooks_setting"])
     val webhooksSetting: UserWebhooksSetting? = null
 )
 
 data class UserGeneralSetting(
     val locale: String? = null,
+    @SerializedName("memoVisibility", alternate = ["memo_visibility"])
     val memoVisibility: String? = null,
     val theme: String? = null
 )
