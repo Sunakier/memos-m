@@ -175,7 +175,9 @@ fun MemoDetailPane(
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding(),
                 contentAlignment = Alignment.Center
             ) {
                 Surface(
