@@ -29,7 +29,7 @@ data class MemosUiState(
     val nextPageToken: String? = null,
     val nextAttachmentsPageToken: String? = null,
     val isRefreshing: Boolean = false,
-    val token: String = "" // Expose token for image loading
+    val token: String = ""
 )
 
 class MemosViewModel(
@@ -65,8 +65,10 @@ class MemosViewModel(
             try {
                 // Fetch memos first
                 val memoResponse = api.listMemos()
+                val newMemos = memoResponse.memos?.map { processMemo(it) } ?: emptyList()
+                
                 _uiState.value = _uiState.value.copy(
-                    memos = memoResponse.memos ?: emptyList(),
+                    memos = newMemos,
                     nextPageToken = memoResponse.nextPageToken
                 )
 
@@ -82,7 +84,7 @@ class MemosViewModel(
                 }
 
                 // Now get user info
-                val firstMemo = memoResponse.memos?.firstOrNull()
+                val firstMemo = newMemos.firstOrNull()
                 if (firstMemo != null) {
                     val userId = firstMemo.creator.removePrefix("users/")
                     fetchUserDetails(userId)
@@ -96,6 +98,22 @@ class MemosViewModel(
                 _uiState.value = _uiState.value.copy(isLoading = false)
             }
         }
+    }
+
+    private fun processMemo(memo: Memo): Memo {
+        val processedAttachments = memo.attachments?.map { processAttachment(it) }
+        return memo.copy(attachments = processedAttachments)
+    }
+
+    private fun processAttachment(attachment: Attachment): Attachment {
+        val downloadUrl = if (attachment.externalLink.isNullOrBlank()) {
+            "${baseUrl.removeSuffix("/")}/api/v1/${attachment.name}:download"
+        } else if (!attachment.externalLink.startsWith("http")) {
+            "${baseUrl.removeSuffix("/")}${if (attachment.externalLink.startsWith("/")) "" else "/"}${attachment.externalLink}"
+        } else {
+            attachment.externalLink
+        }
+        return attachment.copy(externalLink = downloadUrl)
     }
 
     fun fetchAttachments(loadMore: Boolean = false) {
@@ -112,18 +130,7 @@ class MemosViewModel(
         try {
             val response = api.listAttachments(pageToken = currentToken)
             val rawAttachments = response.attachments ?: emptyList()
-            val processedAttachments = rawAttachments.map { attachment ->
-                val downloadUrl = if (attachment.externalLink.isNullOrBlank()) {
-                    // Use the official download endpoint for v1 API
-                    "${baseUrl.removeSuffix("/")}/api/v1/${attachment.name}:download"
-                } else if (!attachment.externalLink.startsWith("http")) {
-                    // Handle relative links
-                    "${baseUrl.removeSuffix("/")}${if (attachment.externalLink.startsWith("/")) "" else "/"}${attachment.externalLink}"
-                } else {
-                    attachment.externalLink
-                }
-                attachment.copy(externalLink = downloadUrl)
-            }
+            val processedAttachments = rawAttachments.map { processAttachment(it) }
             
             _uiState.value = _uiState.value.copy(
                 attachments = if (loadMore) _uiState.value.attachments + processedAttachments else processedAttachments,
@@ -191,7 +198,7 @@ class MemosViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val response = api.listMemos(pageToken = _uiState.value.nextPageToken)
-                val newMemos = response.memos ?: emptyList()
+                val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
                 _uiState.value = _uiState.value.copy(
                     memos = _uiState.value.memos + newMemos,
                     nextPageToken = response.nextPageToken,
@@ -219,7 +226,7 @@ class MemosViewModel(
             try {
                 val memo = api.createMemo(MemoRequest(content = content, visibility = visibility))
                 _uiState.value = _uiState.value.copy(
-                    memos = listOf(memo) + _uiState.value.memos, isPosting = false
+                    memos = listOf(processMemo(memo)) + _uiState.value.memos, isPosting = false
                 )
                 onSuccess()
             } catch (e: Exception) {

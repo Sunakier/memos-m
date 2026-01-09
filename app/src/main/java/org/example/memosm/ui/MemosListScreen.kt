@@ -4,16 +4,24 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
@@ -21,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
 
@@ -44,8 +54,7 @@ fun MemosListScreen(viewModel: MemosViewModel) {
     }
 
     Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopCenter
+        modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter
     ) {
         when {
             uiState.isLoading && uiState.memos.isEmpty() -> {
@@ -66,26 +75,33 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier
-                        .fillMaxHeight()
-                        .widthIn(max = 800.dp)
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .statusBarsPadding(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     item {
-                        CreateMemoCard(
-                            onPublish = { content, visibility ->
-                                viewModel.createMemo(content, visibility)
-                            },
-                            isPosting = uiState.isPosting,
-                            availableTags = uiState.userStats?.tagCount?.keys ?: emptySet()
-                        )
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            CreateMemoCard(
+                                onPublish = { content, visibility ->
+                                    viewModel.createMemo(content, visibility)
+                                },
+                                isPosting = uiState.isPosting,
+                                availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
+                                modifier = Modifier.widthIn(max = 800.dp)
+                            )
+                        }
                     }
 
                     items(uiState.memos) { memo ->
-                        MemoItem(memo)
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            MemoItem(
+                                memo = memo,
+                                token = uiState.token,
+                                modifier = Modifier.widthIn(max = 800.dp)
+                            )
+                        }
                     }
 
                     if (uiState.isLoading && uiState.memos.isNotEmpty()) {
@@ -109,7 +125,10 @@ fun MemosListScreen(viewModel: MemosViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateMemoCard(
-    onPublish: (String, String) -> Unit, isPosting: Boolean, availableTags: Set<String>
+    onPublish: (String, String) -> Unit,
+    isPosting: Boolean,
+    availableTags: Set<String>,
+    modifier: Modifier = Modifier
 ) {
     val contentState = rememberTextFieldState("")
     var visibility by remember { mutableStateOf("PRIVATE") }
@@ -119,7 +138,7 @@ fun CreateMemoCard(
     // Tag autocomplete logic
     var showTagPopup by remember { mutableStateOf(false) }
     var tagFilter by remember { mutableStateOf("") }
-    var tagStartIndex by remember { mutableStateOf(-1) }
+    var tagStartIndex by remember { mutableIntStateOf(-1) }
 
     // To track cursor position
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -130,7 +149,7 @@ fun CreateMemoCard(
         val selection = contentState.selection
         val cursorIndex = selection.start
         if (cursorIndex > 0 && selection.collapsed) {
-            val textBeforeCursor = text.substring(0, cursorIndex)
+            val textBeforeCursor = text.take(cursorIndex)
             val lastHashIndex = textBeforeCursor.lastIndexOf('#')
 
             if (lastHashIndex != -1) {
@@ -159,10 +178,7 @@ fun CreateMemoCard(
     }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 600.dp)
-            .padding(bottom = 8.dp)
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Box {
@@ -246,46 +262,78 @@ fun CreateMemoCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded },
-                    modifier = Modifier.width(160.dp)
-                ) {
-                    OutlinedTextField(
-                        value = visibility,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Visibility") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                        modifier = Modifier.menuAnchor(),
-                        textStyle = MaterialTheme.typography.bodyMedium
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expanded, onDismissRequest = { expanded = false }) {
-                        visibilityOptions.forEach { option ->
-                            DropdownMenuItem(text = { Text(option) }, onClick = {
-                                visibility = option
-                                expanded = false
-                            })
-                        }
+
+                // --- LEFT SIDE: Action Buttons ---
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { /* Do nothing */ }) {
+                        Icon(
+                            imageVector = Icons.Default.AttachFile,
+                            contentDescription = "Attach File"
+                        )
+                    }
+                    IconButton(onClick = { /* Do nothing */ }) {
+                        Icon(
+                            imageVector = Icons.Default.Image, contentDescription = "Add Image"
+                        )
                     }
                 }
 
-                Button(
-                    onClick = {
-                        onPublish(contentState.text.toString(), visibility)
-                        contentState.clearText()
-                    }, enabled = contentState.text.isNotBlank() && !isPosting
+                // --- RIGHT SIDE: Visibility and Publish ---
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    if (isPosting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp), strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Publish")
+                    Box {
+                        Row(
+                            modifier = Modifier
+                                .clickable { expanded = true }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = visibility,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Icon(
+                                imageVector = if (expanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            visibilityOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        visibility = option
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            onPublish(contentState.text.toString(), visibility)
+                            contentState.clearText()
+                        }, enabled = contentState.text.isNotBlank() && !isPosting
+                    ) {
+                        if (isPosting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp), strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Publish")
+                        }
                     }
                 }
             }
@@ -294,15 +342,46 @@ fun CreateMemoCard(
 }
 
 @Composable
-fun MemoItem(memo: Memo) {
+fun MemoItem(memo: Memo, token: String, modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .widthIn(max = 600.dp)
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = memo.content, style = MaterialTheme.typography.bodyLarge)
-            Spacer(modifier = Modifier.height(8.dp))
+            
+            val imageAttachments = remember(memo.attachments) {
+                memo.attachments?.filter { it.displayType.startsWith("image/") } ?: emptyList()
+            }
+            
+            if (imageAttachments.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 4.dp)
+                ) {
+                    items(imageAttachments) { attachment ->
+                        val context = LocalContext.current
+                        val imageRequest = remember(attachment.externalLink, token) {
+                            ImageRequest.Builder(context)
+                                .data(attachment.externalLink)
+                                .addHeader("Authorization", "Bearer $token")
+                                .crossfade(true)
+                                .build()
+                        }
+                        
+                        AsyncImage(
+                            model = imageRequest,
+                            contentDescription = attachment.filename,
+                            modifier = Modifier
+                                .size(width = 240.dp, height = 160.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
