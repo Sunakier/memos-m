@@ -2,14 +2,12 @@ package org.example.memosm.ui
 
 import android.net.Uri
 import android.os.Parcelable
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -24,9 +22,10 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
-import androidx.compose.material3.adaptive.layout.AnimatedPane
-import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
+import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,6 +49,7 @@ import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Memo
+import org.example.memosm.model.User
 import org.example.memosm.viewmodel.MemosViewModel
 
 @Parcelize
@@ -59,16 +59,16 @@ data class MemoKey(val name: String) : Parcelable
 @Composable
 fun MemosListScreen(viewModel: MemosViewModel) {
     val uiState by viewModel.uiState.collectAsState()
-    val navigator = rememberListDetailPaneScaffoldNavigator<MemoKey>()
+    
+    val scaffoldDirective = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo()).copy(
+        defaultPanePreferredWidth = 600.dp
+    )
+    
+    val navigator = rememberListDetailPaneScaffoldNavigator<MemoKey>(
+        scaffoldDirective = scaffoldDirective
+    )
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
-
-    // Handle back press when detail pane is shown
-    BackHandler(navigator.canNavigateBack()) {
-        scope.launch {
-            navigator.navigateBack()
-        }
-    }
 
     // Sync selected memo with navigator
     LaunchedEffect(navigator.currentDestination) {
@@ -86,50 +86,41 @@ fun MemosListScreen(viewModel: MemosViewModel) {
         }
     }
 
-    // Customize the list pane width for a better experience
-    val customDirective = navigator.scaffoldDirective.copy(
-        defaultPanePreferredWidth = 600.dp
-    )
-
-    ListDetailPaneScaffold(
-        directive = customDirective,
-        value = navigator.scaffoldValue,
+    NavigableListDetailPaneScaffold(
+        navigator = navigator,
         listPane = {
-            AnimatedPane {
-                MemosListPane(
-                    viewModel = viewModel, onMemoClick = { memo ->
-                        focusManager.clearFocus()
-                        scope.launch {
-                            memo.name?.let { name ->
-                                navigator.navigateTo(
-                                    ListDetailPaneScaffoldRole.Detail, MemoKey(name)
-                                )
-                            }
+            MemosListPane(
+                viewModel = viewModel, onMemoClick = { memo ->
+                    focusManager.clearFocus()
+                    scope.launch {
+                        memo.name?.let { name ->
+                            navigator.navigateTo(
+                                ListDetailPaneScaffoldRole.Detail, MemoKey(name)
+                            )
                         }
-                    })
-            }
+                    }
+                })
         },
         detailPane = {
-            AnimatedPane {
-                val selectedMemo = uiState.selectedMemo
-                if (selectedMemo != null) {
-                    MemoDetailPane(
-                        memo = selectedMemo,
-                        comments = uiState.selectedMemoComments,
-                        isLoadingComments = uiState.isLoadingComments,
-                        token = uiState.token,
-                        showBackButton = navigator.canNavigateBack(),
-                        onBack = {
-                            focusManager.clearFocus()
-                            scope.launch {
-                                navigator.navigateBack()
-                            }
-                        })
-                } else {
-                    MemoDetailPlaceholder()
-                }
+            val selectedMemo = uiState.selectedMemo
+            if (selectedMemo != null) {
+                MemoDetailPane(
+                    memo = selectedMemo,
+                    comments = uiState.selectedMemoComments,
+                    isLoadingComments = uiState.isLoadingComments,
+                    token = uiState.token,
+                    showBackButton = navigator.canNavigateBack(),
+                    onBack = {
+                        focusManager.clearFocus()
+                        scope.launch {
+                            navigator.navigateBack()
+                        }
+                    })
+            } else {
+                MemoDetailPlaceholder()
             }
-        })
+        }
+    )
 }
 
 @Composable
@@ -223,6 +214,7 @@ private fun MemosListPane(
                         ) {
                             MemoItem(
                                 memo = memo,
+//                                user = uiState.user,
                                 token = uiState.token,
                                 isSelected = memo == uiState.selectedMemo,
                                 onClick = {
@@ -552,6 +544,7 @@ fun CreateMemoCard(
 @Composable
 fun MemoItem(
     memo: Memo,
+    user: User? = null,
     token: String,
     isSelected: Boolean = false,
     onClick: () -> Unit = {},
@@ -569,6 +562,38 @@ fun MemoItem(
         }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            if (user != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    val avatarUrl = user.avatarUrl
+                    if (avatarUrl != null) {
+                        AsyncImage(
+                            model = avatarUrl,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = user.displayName ?: user.username ?: "Unknown",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            
             Text(text = memo.content, style = MaterialTheme.typography.bodyLarge)
 
             val attachments = remember(memo.attachments) {

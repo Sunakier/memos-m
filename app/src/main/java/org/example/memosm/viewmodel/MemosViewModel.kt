@@ -24,6 +24,7 @@ data class MemosUiState(
     val exploreMemos: List<Memo> = emptyList(),
     val attachments: List<Attachment> = emptyList(),
     val user: User? = null,
+    val users: Map<String, User> = emptyMap(), // Cache for users in explore
     val userStats: UserStats? = null,
     val shortcuts: List<Shortcut> = emptyList(),
     val instanceProfile: InstanceProfile? = null,
@@ -215,7 +216,11 @@ class MemosViewModel(
     private suspend fun fetchUserDetails(userId: String) {
         try {
             val user = api.getUser(userId)
-            updateUser(user)
+            val processedUser = processUser(user)
+            _uiState.value = _uiState.value.copy(
+                user = processedUser,
+                users = _uiState.value.users + ((user.name ?: "") to processedUser)
+            )
 
             val stats = api.getUserStats(userId)
             val shortcuts = api.getShortcuts(userId)
@@ -233,7 +238,11 @@ class MemosViewModel(
         try {
             val response = api.getCurrentUserAuth()
             response.user?.let { user ->
-                updateUser(user)
+                val processedUser = processUser(user)
+                _uiState.value = _uiState.value.copy(
+                    user = processedUser,
+                    users = _uiState.value.users + ((user.name ?: "") to processedUser)
+                )
                 user.name?.removePrefix("users/")?.let { userId ->
                     val stats = api.getUserStats(userId)
                     val shortcuts = api.getShortcuts(userId)
@@ -247,14 +256,13 @@ class MemosViewModel(
         }
     }
 
-    private fun updateUser(user: User) {
+    private fun processUser(user: User): User {
         val avatarUrl = user.avatarUrl
-        val processedUser = if (avatarUrl != null && !avatarUrl.startsWith("http")) {
+        return if (avatarUrl != null && !avatarUrl.startsWith("http")) {
             user.copy(avatarUrl = sanitizedBaseUrl.removeSuffix("/") + avatarUrl)
         } else {
             user
         }
-        _uiState.value = _uiState.value.copy(user = processedUser)
     }
 
     fun fetchMemos(refresh: Boolean = false) {
@@ -295,6 +303,27 @@ class MemosViewModel(
                     filter = "visibility in ['PUBLIC', 'PROTECTED']"
                 )
                 val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
+                
+                // Collect creators that we don't have details for
+                val unknownCreators = newMemos
+                    .mapNotNull { it.creator }
+                    .filter { it !in _uiState.value.users }
+                    .distinct()
+                
+                // Fetch missing users
+                unknownCreators.forEach { creatorName ->
+                    try {
+                        val userId = creatorName.removePrefix("users/")
+                        val user = api.getUser(userId)
+                        val processedUser = processUser(user)
+                        _uiState.value = _uiState.value.copy(
+                            users = _uiState.value.users + (creatorName to processedUser)
+                        )
+                    } catch (e: Exception) {
+                        Log.e("MemosViewModel", "Error fetching user $creatorName", e)
+                    }
+                }
+
                 _uiState.value = _uiState.value.copy(
                     exploreMemos = if (refresh) newMemos else _uiState.value.exploreMemos + newMemos,
                     exploreNextPageToken = response.nextPageToken,

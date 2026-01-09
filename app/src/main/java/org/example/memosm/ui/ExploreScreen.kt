@@ -139,6 +139,7 @@ private fun ExploreMemosListPane(
                     ) {
                         MemoItem(
                             memo = memo,
+                            user = uiState.users[memo.creator],
                             token = uiState.token,
                             isSelected = memo == uiState.selectedMemo,
                             onClick = {
