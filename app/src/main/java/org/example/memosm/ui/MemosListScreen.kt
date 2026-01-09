@@ -100,80 +100,92 @@ fun MemosListScreen(viewModel: MemosViewModel) {
         }
     }
 
-    NavigableListDetailPaneScaffold(navigator = navigator, listPane = {
-        AnimatedPane {
-            MemosListPane(
-                viewModel = viewModel, onMemoClick = { memo ->
-                    focusManager.clearFocus()
-                    scope.launch {
-                        val id = memo.name ?: memo.content.hashCode().toString()
-                        navigator.navigateTo(
-                            ListDetailPaneScaffoldRole.Detail, MemoKey(id)
-                        )
-                    }
-                })
-        }
-    }, detailPane = {
-        AnimatedPane {
-            val currentMemoKey = navigator.currentDestination?.contentKey
-            val isListVisible =
-                navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
-            val isDetailVisible =
-                navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
-            val isDualPane = isListVisible && isDetailVisible
-
-            AnimatedContent(
-                targetState = currentMemoKey, transitionSpec = {
-                    if (isDualPane) {
-                        // Tablet/Wide screen: simple zoom in/out
-                        (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(
-                            initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)
-                        )).togetherWith(
-                                fadeOut(animationSpec = tween(90)) + scaleOut(
-                                    targetScale = 0.92f, animationSpec = tween(90)
-                                )
+    NavigableListDetailPaneScaffold(
+        navigator = navigator,
+        listPane = {
+            AnimatedPane {
+                MemosListPane(
+                    viewModel = viewModel, onMemoClick = { memo ->
+                        focusManager.clearFocus()
+                        scope.launch {
+                            val id = memo.name ?: memo.content.hashCode().toString()
+                            navigator.navigateTo(
+                                ListDetailPaneScaffoldRole.Detail, MemoKey(id)
                             )
-                    } else {
-                        // Mobile: swipe up (slide from bottom)
-                        (slideInVertically(
-                            initialOffsetY = { it }, animationSpec = tween(300)
-                        ) + fadeIn()).togetherWith(
+                        }
+                    })
+            }
+        },
+        detailPane = {
+            AnimatedPane {
+                val currentMemoKey = navigator.currentDestination?.contentKey
+                val isListVisible =
+                    navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
+                val isDetailVisible =
+                    navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
+                val isDualPane = isListVisible && isDetailVisible
+
+                AnimatedContent(
+                    targetState = currentMemoKey,
+                    transitionSpec = {
+                        if (isDualPane) {
+                            if (initialState == null) {
+                                // First time appearing: scale + fade
+                                (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(
+                                    initialScale = 0.92f,
+                                    animationSpec = tween(220, delayMillis = 90)
+                                )).togetherWith(fadeOut(animationSpec = tween(90)))
+                            } else {
+                                // Switching between memos: smooth crossfade
+                                fadeIn(animationSpec = tween(300)).togetherWith(
+                                    fadeOut(animationSpec = tween(300))
+                                )
+                            }
+                        } else {
+                            // Mobile: swipe up (slide from bottom)
+                            (slideInVertically(
+                                initialOffsetY = { it },
+                                animationSpec = tween(300)
+                            ) + fadeIn()).togetherWith(
                                 slideOutVertically(
-                                    targetOffsetY = { it }, animationSpec = tween(300)
+                                    targetOffsetY = { it },
+                                    animationSpec = tween(300)
                                 ) + fadeOut()
                             )
-                    }
-                }, label = "DetailPaneTransition"
-            ) { memoKey ->
-                val memo = remember(memoKey, uiState.memos) {
-                    memoKey?.let { key ->
-                        uiState.memos.find {
-                            (it.name ?: it.content.hashCode().toString()) == key.id
+                        }
+                    },
+                    label = "DetailPaneTransition"
+                ) { memoKey ->
+                    val memo = remember(memoKey, uiState.memos) {
+                        memoKey?.let { key ->
+                            uiState.memos.find {
+                                (it.name ?: it.content.hashCode().toString()) == key.id
+                            }
                         }
                     }
-                }
 
-                if (memo != null) {
-                    MemoDetailPane(
-                        memo = memo,
-                        comments = uiState.selectedMemoComments,
-                        isLoadingComments = uiState.isLoadingComments,
-                        token = uiState.token,
-                        showBackButton = navigator.canNavigateBack(),
-                        onBack = {
-                            focusManager.clearFocus()
-                            scope.launch {
-                                navigator.navigateBack()
-                            }
-                        },
-                        viewModel = viewModel
-                    )
-                } else if (isDualPane) {
-                    MemoDetailPlaceholder()
+                    if (memo != null) {
+                        MemoDetailPane(
+                            memo = memo,
+                            comments = uiState.selectedMemoComments,
+                            isLoadingComments = uiState.isLoadingComments,
+                            token = uiState.token,
+                            showBackButton = navigator.canNavigateBack(),
+                            onBack = {
+                                focusManager.clearFocus()
+                                scope.launch {
+                                    navigator.navigateBack()
+                                }
+                            },
+                            viewModel = viewModel
+                        )
+                    } else if (isDualPane) {
+                        MemoDetailPlaceholder()
+                    }
                 }
             }
         }
-    })
+    )
 }
 
 @Composable
@@ -243,8 +255,8 @@ private fun MemosListPane(
                         ) {
                             CreateMemoCard(
                                 onPublish = { content, visibility, attachments ->
-                                viewModel.createMemo(content, visibility, attachments)
-                            },
+                                    viewModel.createMemo(content, visibility, attachments)
+                                },
                                 onUploadFile = { uri, context ->
                                     viewModel.uploadAttachment(uri, context)
                                 },

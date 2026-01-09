@@ -85,16 +85,12 @@ fun ExploreScreen(viewModel: MemosViewModel) {
             AnimatedContent(
                 targetState = currentMemoKey, transitionSpec = {
                     if (isDualPane) {
-                        // Tablet/Wide screen: simple zoom in/out
-                        (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(
-                            initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)
-                        )).togetherWith(
-                            fadeOut(animationSpec = tween(90)) + scaleOut(
-                                targetScale = 0.92f, animationSpec = tween(90)
-                            )
+                        // Tablet/Wide screen: smooth crossfade or simple fade
+                        (fadeIn(animationSpec = tween(300))).togetherWith(
+                            fadeOut(animationSpec = tween(300))
                         )
                     } else {
-                        // Mobile: swipe up (slide from bottom)
+                        // Mobile: slide from bottom
                         (slideInVertically(
                             initialOffsetY = { it }, animationSpec = tween(300)
                         ) + fadeIn()).togetherWith(
