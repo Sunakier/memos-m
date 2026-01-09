@@ -451,6 +451,88 @@ class MemosViewModel(
         }
     }
 
+    fun updateMemo(
+        memo: Memo,
+        content: String,
+        visibility: String,
+        attachments: List<Attachment>,
+        onSuccess: () -> Unit = {}
+    ) {
+        val memoName = memo.name ?: return
+        val memoId = memoName.removePrefix("memos/")
+        
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isPosting = true)
+            try {
+                val updatedMemo = api.updateMemo(
+                    memo = memoId,
+                    memoData = Memo(
+                        content = content,
+                        visibility = visibility,
+                        attachments = attachments
+                    ),
+                    updateMask = "content,visibility,attachments"
+                )
+                
+                val processed = processMemo(updatedMemo)
+                
+                // Update in all lists
+                val updatedMemos = _uiState.value.memos.map {
+                    if (it.name == memoName) processed else it
+                }
+                val updatedExploreMemos = _uiState.value.exploreMemos.map {
+                    if (it.name == memoName) processed else it
+                }
+                val updatedComments = _uiState.value.selectedMemoComments.map {
+                    if (it.name == memoName) processed else it
+                }
+                
+                _uiState.value = _uiState.value.copy(
+                    memos = updatedMemos,
+                    exploreMemos = updatedExploreMemos,
+                    selectedMemoComments = updatedComments,
+                    selectedMemo = if (_uiState.value.selectedMemo?.name == memoName) processed else _uiState.value.selectedMemo,
+                    isPosting = false
+                )
+                onSuccess()
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error updating memo", e)
+                _uiState.value = _uiState.value.copy(
+                    isPosting = false, error = "Failed to update memo: ${e.localizedMessage}"
+                )
+            }
+        }
+    }
+
+    fun deleteMemo(memo: Memo, onSuccess: () -> Unit = {}) {
+        val memoName = memo.name ?: return
+        val memoId = memoName.removePrefix("memos/")
+        
+        viewModelScope.launch {
+            try {
+                api.deleteMemo(memoId)
+                
+                // Update in all lists
+                val updatedMemos = _uiState.value.memos.filter { it.name != memoName }
+                val updatedExploreMemos = _uiState.value.exploreMemos.filter { it.name != memoName }
+                val updatedComments = _uiState.value.selectedMemoComments.filter { it.name != memoName }
+                
+                _uiState.value = _uiState.value.copy(
+                    memos = updatedMemos,
+                    exploreMemos = updatedExploreMemos,
+                    selectedMemoComments = updatedComments,
+                    selectedMemo = if (_uiState.value.selectedMemo?.name == memoName) null else _uiState.value.selectedMemo
+                )
+                onSuccess()
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error deleting memo", e)
+                _uiState.value = _uiState.value.copy(
+                    error = "Failed to delete memo: ${e.localizedMessage}"
+                )
+            }
+        }
+    }
+
     fun selectMemo(memo: Memo?) {
         _uiState.value = _uiState.value.copy(
             selectedMemo = memo,

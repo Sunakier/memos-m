@@ -35,6 +35,12 @@ fun MemoDetailPane(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showCommentDialog by remember { mutableStateOf(false) }
+    var memoToEdit by remember { mutableStateOf<Memo?>(null) }
+    var memoToDelete by remember { mutableStateOf<Memo?>(null) }
+
+    val isOwner = remember(memo.creator, uiState.user?.name) {
+        memo.creator == uiState.user?.name
+    }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -44,37 +50,40 @@ fun MemoDetailPane(
     ) {
         Scaffold(
             topBar = {
-            TopAppBar(
-                title = {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.CenterStart
+                TopAppBar(
+                    title = {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
+                        }
+                    },
+                    navigationIcon = {
+                        if (showBackButton) {
+                            IconButton(onClick = onBack) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back"
+                                )
+                            }
+                        }
+                    },
+                    windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            },
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { showCommentDialog = true },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ) {
-                    Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add Comment")
                 }
             },
-                navigationIcon = {
-                    if (showBackButton) {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back"
-                            )
-                        }
-                    }
-                },
-                windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
-        }, floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showCommentDialog = true },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Add Comment")
-            }
-        }, containerColor = Color.Transparent, modifier = Modifier.fillMaxSize()
+            containerColor = Color.Transparent,
+            modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
             Box(
                 modifier = Modifier
@@ -88,12 +97,17 @@ fun MemoDetailPane(
                         .widthIn(max = 800.dp)
                         .padding(horizontal = 16.dp),
                     contentPadding = PaddingValues(vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Original memo
                     item(key = "original_${memo.name ?: memo.content.hashCode()}") {
                         MemoItem(
-                            memo = memo, token = token, colors = CardDefaults.cardColors()
+                            memo = memo,
+                            token = token,
+                            colors = CardDefaults.cardColors(),
+                            onEdit = if (isOwner) { { memoToEdit = memo } } else null,
+                            onDelete = if (isOwner) { { memoToDelete = memo } } else null
                         )
                     }
 
@@ -101,7 +115,9 @@ fun MemoDetailPane(
                     item(key = "comments_header") {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 8.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Forum,
@@ -153,10 +169,15 @@ fun MemoDetailPane(
                     items(
                         comments,
                         key = { "comment_${it.name ?: it.content.hashCode()}" }) { comment ->
+                        val isCommentOwner = comment.creator == uiState.user?.name
                         MemoItem(
-                            memo = comment, token = token, colors = CardDefaults.cardColors(
+                            memo = comment,
+                            token = token,
+                            colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
+                            ),
+                            onEdit = if (isCommentOwner) { { memoToEdit = comment } } else null,
+                            onDelete = if (isCommentOwner) { { memoToDelete = comment } } else null
                         )
                     }
                 }
@@ -165,67 +186,33 @@ fun MemoDetailPane(
     }
 
     if (showCommentDialog) {
-        Dialog(
-            onDismissRequest = { showCommentDialog = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .imePadding(), contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .widthIn(max = 800.dp)
-                        .fillMaxWidth(0.9f)
-                        .wrapContentHeight(),
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 6.dp
-                ) {
-                    Column(modifier = Modifier.padding(24.dp)) {
-                        Text(
-                            text = "Add Comment",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
+        MemoComposerDialog(
+            onDismiss = { showCommentDialog = false },
+            viewModel = viewModel,
+            title = "Add Comment",
+            parentMemo = memo,
+            placeholder = "Write your comment here..."
+        )
+    }
 
-                        MemoComposer(
-                            onPublish = { content, visibility, attachments ->
-                            viewModel.createComment(memo, content)
-                            showCommentDialog = false
-                        },
-                            onUploadFile = { uri, context ->
-                                viewModel.uploadAttachment(uri, context)
-                            },
-                            availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
-                            token = uiState.token,
-                            isPosting = uiState.isPosting,
-                            defaultVisibility = memo.visibility,
-                            placeholder = "Write your comment here...",
-                            autoFocus = true,
-                            onCancel = { showCommentDialog = false })
-                    }
+    memoToEdit?.let { m ->
+        MemoEditDialog(
+            memo = m,
+            onDismiss = { memoToEdit = null },
+            viewModel = viewModel
+        )
+    }
+
+    memoToDelete?.let { m ->
+        DeleteConfirmationDialog(
+            memo = m,
+            onDismiss = { memoToDelete = null },
+            onConfirm = {
+                viewModel.deleteMemo(m) {
+                    memoToDelete = null
+                    if (m == memo) onBack()
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun MemoDetailPlaceholder(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center
-    ) {
-        AnimatedVisibility(
-            visible = true, enter = fadeIn() + slideInVertically { it / 2 }, exit = fadeOut()
-        ) {
-            Text(
-                text = "Select a memo to view details",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        )
     }
 }

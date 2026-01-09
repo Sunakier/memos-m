@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
@@ -25,12 +26,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.parcelize.Parcelize
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
-
-@Parcelize
-data class MemoKey(val id: String) : Parcelable
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -173,6 +170,9 @@ private fun MemosListPane(
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
+    
+    var memoToEdit by remember { mutableStateOf<Memo?>(null) }
+    var memoToDelete by remember { mutableStateOf<Memo?>(null) }
 
     val shouldLoadMore = remember {
         derivedStateOf {
@@ -195,95 +195,109 @@ private fun MemosListPane(
                 detectTapGestures(onTap = {
                     focusManager.clearFocus()
                 })
-            }, contentAlignment = Alignment.TopCenter
+            }, 
+        contentAlignment = Alignment.TopCenter
     ) {
-        when {
-            uiState.isLoading && uiState.memos.isEmpty() -> {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            }
-
-            uiState.error != null && uiState.memos.isEmpty() -> {
-                Text(
-                    text = uiState.error!!,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(16.dp)
-                )
-            }
-
-            else -> {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .statusBarsPadding()
-                        .pointerInput(Unit) {
-                            detectTapGestures(onTap = {
-                                focusManager.clearFocus()
-                            })
-                        },
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
-                        ) {
-                            Card(modifier = Modifier.widthIn(max = 800.dp)) {
-                                MemoComposer(
-                                    onPublish = { content, visibility, attachments ->
-                                        viewModel.createMemo(content, visibility, attachments)
-                                    },
-                                    onUploadFile = { uri, context ->
-                                        viewModel.uploadAttachment(uri, context)
-                                    },
-                                    availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
-                                    token = uiState.token,
-                                    modifier = Modifier.padding(16.dp),
-                                    isPosting = uiState.isPosting,
-                                    defaultVisibility = uiState.userSettings?.memoVisibility ?: "PRIVATE"
-                                )
-                            }
-                        }
-                    }
-
-                    items(uiState.memos, key = { it.name ?: it.content.hashCode() }) { memo ->
-                        Box(
-                            modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
-                        ) {
-                            MemoItem(
-                                memo = memo,
+        if (uiState.isLoading && uiState.memos.isEmpty()) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        } else if (uiState.error != null && uiState.memos.isEmpty()) {
+            Text(
+                text = uiState.error!!,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(16.dp)
+            )
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Top input card
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
+                    ) {
+                        Card(modifier = Modifier.widthIn(max = 800.dp)) {
+                            MemoComposer(
+                                onPublish = { content, visibility, attachments ->
+                                    viewModel.createMemo(content, visibility, attachments)
+                                },
+                                onUploadFile = { uri, context ->
+                                    viewModel.uploadAttachment(uri, context)
+                                },
+                                availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
                                 token = uiState.token,
-                                colors = if (memo == uiState.selectedMemo) {
-                                    CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                                } else {
-                                    CardDefaults.cardColors()
-                                },
-                                onClick = {
-                                    focusManager.clearFocus()
-                                    onMemoClick(memo)
-                                },
-                                modifier = Modifier.widthIn(max = 800.dp)
+                                modifier = Modifier.padding(16.dp),
+                                isPosting = uiState.isPosting,
+                                initialVisibility = uiState.userSettings?.memoVisibility ?: "PRIVATE"
                             )
                         }
                     }
+                }
 
-                    if (uiState.isLoading && uiState.memos.isNotEmpty()) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
-                            }
+                items(uiState.memos, key = { it.name ?: it.content.hashCode() }) { memo ->
+                    Box(
+                        modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
+                    ) {
+                        val isOwner = memo.creator == uiState.user?.name
+                        MemoItem(
+                            memo = memo,
+                            user = null, // Profile pic removed from Memos tab
+                            token = uiState.token,
+                            colors = if (memo == uiState.selectedMemo) {
+                                CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                            } else {
+                                CardDefaults.cardColors()
+                            },
+                            onClick = {
+                                focusManager.clearFocus()
+                                onMemoClick(memo)
+                            },
+                            onEdit = if (isOwner) { { memoToEdit = memo } } else null,
+                            onDelete = if (isOwner) { { memoToDelete = memo } } else null,
+                            modifier = Modifier.widthIn(max = 800.dp)
+                        )
+                    }
+                }
+
+                if (uiState.isLoading && uiState.memos.isNotEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
                         }
                     }
                 }
             }
         }
+    }
+    
+    memoToEdit?.let { memo ->
+        MemoEditDialog(
+            memo = memo,
+            onDismiss = { memoToEdit = null },
+            viewModel = viewModel
+        )
+    }
+    
+    memoToDelete?.let { memo ->
+        DeleteConfirmationDialog(
+            memo = memo,
+            onDismiss = { memoToDelete = null },
+            onConfirm = {
+                viewModel.deleteMemo(memo)
+                memoToDelete = null
+            }
+        )
     }
 }

@@ -10,8 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,8 +34,12 @@ fun MemoItem(
     token: String,
     colors: CardColors = CardDefaults.cardColors(),
     onClick: (() -> Unit)? = null,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -44,36 +47,83 @@ fun MemoItem(
         colors = colors
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            if (user != null) {
+            val showTopRow = user != null || onEdit != null || onDelete != null
+            if (showTopRow) {
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    val avatarUrl = user.avatarUrl
-                    if (avatarUrl != null) {
-                        AsyncImage(
-                            model = avatarUrl,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle,
-                            contentDescription = null,
-                            modifier = Modifier.size(32.dp),
-                            tint = MaterialTheme.colorScheme.outline
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        if (user != null) {
+                            val avatarUrl = user.avatarUrl
+                            if (avatarUrl != null) {
+                                AsyncImage(
+                                    model = avatarUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.AccountCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(32.dp),
+                                    tint = MaterialTheme.colorScheme.outline
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = user.displayName ?: user.username ?: "Unknown",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = user.displayName ?: user.username ?: "Unknown",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
+
+                    if (onEdit != null || onDelete != null) {
+                        Box {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More")
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                if (onEdit != null) {
+                                    DropdownMenuItem(
+                                        text = { Text("Edit") },
+                                        onClick = {
+                                            showMenu = false
+                                            onEdit()
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
+                                    )
+                                }
+                                if (onDelete != null) {
+                                    DropdownMenuItem(
+                                        text = { Text("Delete") },
+                                        onClick = {
+                                            showMenu = false
+                                            onDelete()
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
+                                        colors = MenuDefaults.itemColors(
+                                            textColor = MaterialTheme.colorScheme.error,
+                                            leadingIconColor = MaterialTheme.colorScheme.error
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
+                Spacer(modifier = Modifier.height(if (user != null) 8.dp else 4.dp))
             }
 
             Text(text = memo.content, style = MaterialTheme.typography.bodyLarge)

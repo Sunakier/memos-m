@@ -37,17 +37,24 @@ fun MemoComposer(
     token: String,
     modifier: Modifier = Modifier,
     isPosting: Boolean = false,
-    defaultVisibility: String = "PRIVATE",
+    initialContent: String = "",
+    initialVisibility: String = "PRIVATE",
+    initialAttachments: List<Attachment> = emptyList(),
     placeholder: String = "What's on your mind?",
     autoFocus: Boolean = false,
     onCancel: (() -> Unit)? = null
 ) {
-    val contentState = rememberTextFieldState("")
-    var visibility by remember(defaultVisibility) { mutableStateOf(defaultVisibility) }
+    val contentState = rememberTextFieldState(initialContent)
+    var visibility by remember(initialVisibility) { mutableStateOf(initialVisibility) }
     var expanded by remember { mutableStateOf(false) }
 
-    // We store Uri for local display, and Attachment for publishing
-    var draftAttachments by remember { mutableStateOf(emptyList<Pair<Uri, Attachment?>>()) }
+    // Use a more explicit state declaration to avoid type inference issues with Pair and nullable types
+    val draftAttachmentsState = remember(initialAttachments) {
+        val initial: List<Pair<Uri, Attachment?>> = initialAttachments.map { Uri.EMPTY to (it as Attachment?) }
+        mutableStateOf(initial)
+    }
+    var draftAttachments by draftAttachmentsState
+    
     var isUploadingCount by remember { mutableIntStateOf(0) }
 
     val scope = rememberCoroutineScope()
@@ -92,15 +99,22 @@ fun MemoComposer(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 items(draftAttachments) { (uri, attachment) ->
-                    val isImage = remember(uri) {
-                        context.contentResolver.getType(uri)?.startsWith("image/") == true
+                    val isImage = remember(uri, attachment) {
+                        if (uri != Uri.EMPTY) {
+                            context.contentResolver.getType(uri)?.startsWith("image/") == true
+                        } else {
+                            attachment?.displayType?.startsWith("image/", ignoreCase = true) == true ||
+                            attachment?.displayType?.contains("image", ignoreCase = true) == true
+                        }
                     }
 
                     Box(modifier = Modifier.size(80.dp)) {
                         if (isImage) {
+                            val model = if (uri != Uri.EMPTY) uri else attachment?.externalLink
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current)
-                                    .data(uri)
+                                    .data(model)
+                                    .addHeader("Authorization", "Bearer $token")
                                     .crossfade(true).build(),
                                 contentDescription = null,
                                 modifier = Modifier
@@ -131,7 +145,7 @@ fun MemoComposer(
                                     .background(
                                         Color.Black.copy(alpha = 0.3f), RoundedCornerShape(8.dp)
                                     ), contentAlignment = Alignment.Center
-                            ) {
+                                ) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(24.dp), color = Color.White
                                 )
@@ -140,7 +154,7 @@ fun MemoComposer(
 
                         IconButton(
                             onClick = {
-                                draftAttachments = draftAttachments.filter { it.first != uri }
+                                draftAttachments = draftAttachments.filter { it.second != attachment || (it.first != uri && uri != Uri.EMPTY) }
                             },
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
@@ -227,8 +241,6 @@ fun MemoComposer(
                     onClick = {
                         val finalAttachments = draftAttachments.mapNotNull { it.second }
                         onPublish(contentState.text.toString(), visibility, finalAttachments)
-                        contentState.edit { replace(0, length, "") }
-                        draftAttachments = emptyList()
                     },
                     enabled = (contentState.text.isNotBlank() || draftAttachments.isNotEmpty()) && !isPosting && isUploadingCount == 0,
                 ) {
@@ -244,7 +256,8 @@ fun MemoComposer(
                             contentDescription = "Publish"
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(if (autoFocus) "Post" else "Publish")
+                        val isEdit = initialContent.isNotEmpty() || initialAttachments.isNotEmpty()
+                        Text(if (isEdit) "Update" else if (autoFocus) "Post" else "Publish")
                     }
                 }
             }
