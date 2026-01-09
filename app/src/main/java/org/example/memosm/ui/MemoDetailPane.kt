@@ -40,120 +40,121 @@ fun MemoDetailPane(
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier
 ) {
-    with(sharedTransitionScope) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
+                    }
+                }, navigationIcon = {
+                    if (showBackButton) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
                         }
-                    }, navigationIcon = {
-                        if (showBackButton) {
-                            IconButton(onClick = onBack) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back"
-                                )
-                            }
-                        }
-                    },
-                    windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
-                )
-            },
-            modifier = modifier
-                .sharedBounds(
-                    sharedContentState = rememberSharedContentState(key = "memo_${memo.name}"),
-                    animatedVisibilityScope = animatedVisibilityScope,
-                    clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(12.dp))
-                )
-        ) { innerPadding ->
-            Box(
+                    }
+                },
+                windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
+            )
+        },
+        modifier = modifier
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.TopCenter
+                    .fillMaxHeight()
+                    .widthIn(max = 800.dp)
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .widthIn(max = 800.dp)
-                        .padding(horizontal = 16.dp),
-                    contentPadding = PaddingValues(vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Original memo
-                    item(key = "original_${memo.name}") {
+                // Original memo
+                item(key = "original_${memo.name}") {
+                    with(sharedTransitionScope) {
                         MemoDetailCard(
                             memo = memo, token = token, isOriginal = true,
-                            modifier = Modifier.animateItem()
-                        )
-                    }
-
-                    // Comments section header
-                    item(key = "comments_header") {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 8.dp).animateItem()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Forum,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Comments (${comments.size})",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-
-                    // Loading indicator for comments
-                    if (isLoadingComments) {
-                        item(key = "loading") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(32.dp)
-                                    .animateItem(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
-                            }
-                        }
-                    }
-
-                    // Comments list
-                    if (!isLoadingComments && comments.isEmpty()) {
-                        item(key = "empty_comments") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(32.dp)
-                                    .animateItem(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "No comments yet",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                            modifier = Modifier
+                                .animateItem()
+                                .sharedBounds(
+                                    sharedContentState = rememberSharedContentState(key = "memo_${memo.name}"),
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(12.dp))
                                 )
-                            }
-                        }
-                    }
-
-                    items(comments, key = { "comment_${it.name}" }) { comment ->
-                        MemoDetailCard(
-                            memo = comment, token = token, isOriginal = false,
-                            modifier = Modifier.animateItem()
                         )
                     }
+                }
+
+                // Comments section header
+                item(key = "comments_header") {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 8.dp).animateItem()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Forum,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Comments (${comments.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
+                // Loading indicator for comments
+                if (isLoadingComments) {
+                    item(key = "loading") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp)
+                                .animateItem(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                }
+
+                // Comments list
+                if (!isLoadingComments && comments.isEmpty()) {
+                    item(key = "empty_comments") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp)
+                                .animateItem(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No comments yet",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                items(comments, key = { "comment_${it.name}" }) { comment ->
+                    MemoDetailCard(
+                        memo = comment, token = token, isOriginal = false,
+                        modifier = Modifier.animateItem()
+                    )
                 }
             }
         }
