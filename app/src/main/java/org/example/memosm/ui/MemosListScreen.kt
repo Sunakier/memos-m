@@ -16,11 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ArrowDropUp
-import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -148,8 +144,10 @@ fun CreateMemoCard(
     val contentState = rememberTextFieldState("")
     var visibility by remember { mutableStateOf("PRIVATE") }
     var expanded by remember { mutableStateOf(false) }
-    var uploadedAttachments by remember { mutableStateOf(emptyList<Attachment>()) }
-    var isUploading by remember { mutableStateOf(false) }
+    
+    // We store Uri for local display, and Attachment for publishing
+    var draftAttachments by remember { mutableStateOf(emptyList<Pair<Uri, Attachment?>>()) }
+    var isUploadingCount by remember { mutableIntStateOf(0) }
     
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -158,15 +156,21 @@ fun CreateMemoCard(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
         if (uris.isNotEmpty()) {
-            isUploading = true
-            scope.launch {
-                uris.forEach { uri ->
+            uris.forEach { uri ->
+                draftAttachments = draftAttachments + (uri to null)
+                isUploadingCount++
+                scope.launch {
                     val attachment = onUploadFile(uri, context)
                     if (attachment != null) {
-                        uploadedAttachments = uploadedAttachments + attachment
+                        draftAttachments = draftAttachments.map { 
+                            if (it.first == uri) uri to attachment else it 
+                        }
+                    } else {
+                        // Optional: Handle error, remove from list or show error state
+                        draftAttachments = draftAttachments.filter { it.first != uri }
                     }
+                    isUploadingCount--
                 }
-                isUploading = false
             }
         }
     }
@@ -270,24 +274,22 @@ fun CreateMemoCard(
                 }
             }
 
-            if (uploadedAttachments.isNotEmpty() || isUploading) {
+            if (draftAttachments.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(uploadedAttachments) { attachment ->
-                        val isImage = remember(attachment.displayType) {
-                            attachment.displayType.startsWith("image/", ignoreCase = true) || 
-                            attachment.displayType.contains("image", ignoreCase = true)
+                    items(draftAttachments) { (uri, attachment) ->
+                        val isImage = remember(uri) {
+                            context.contentResolver.getType(uri)?.startsWith("image/") == true
                         }
                         
                         Box(modifier = Modifier.size(80.dp)) {
                             if (isImage) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(LocalContext.current)
-                                        .data(attachment.externalLink)
-                                        .addHeader("Authorization", "Bearer $token")
+                                        .data(uri) // Use local URI for immediate display
                                         .crossfade(true)
                                         .build(),
                                     contentDescription = null,
@@ -306,17 +308,23 @@ fun CreateMemoCard(
                                         .padding(4.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        text = attachment.filename,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        maxLines = 2,
-                                        modifier = Modifier.padding(4.dp)
-                                    )
+                                    Icon(imageVector = Icons.Default.InsertDriveFile, contentDescription = null)
                                 }
                             }
                             
+                            if (attachment == null) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                                }
+                            }
+
                             IconButton(
-                                onClick = { uploadedAttachments = uploadedAttachments - attachment },
+                                onClick = { draftAttachments = draftAttachments.filter { it.first != uri } },
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .size(24.dp)
@@ -328,19 +336,6 @@ fun CreateMemoCard(
                                     tint = Color.White,
                                     modifier = Modifier.size(16.dp)
                                 )
-                            }
-                        }
-                    }
-                    if (isUploading) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
                             }
                         }
                     }
@@ -356,13 +351,13 @@ fun CreateMemoCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = { pickerLauncher.launch("*/*") },
-                        enabled = !isPosting && !isUploading
+                        enabled = !isPosting
                     ) {
                         Icon(imageVector = Icons.Default.AttachFile, contentDescription = "Attach File")
                     }
                     IconButton(
                         onClick = { pickerLauncher.launch("image/*") },
-                        enabled = !isPosting && !isUploading
+                        enabled = !isPosting
                     ) {
                         Icon(imageVector = Icons.Default.Image, contentDescription = "Add Image")
                     }
@@ -392,11 +387,12 @@ fun CreateMemoCard(
 
                     Button(
                         onClick = {
-                            onPublish(contentState.text.toString(), visibility, uploadedAttachments)
+                            val finalAttachments = draftAttachments.mapNotNull { it.second }
+                            onPublish(contentState.text.toString(), visibility, finalAttachments)
                             contentState.edit { replace(0, length, "") }
-                            uploadedAttachments = emptyList()
+                            draftAttachments = emptyList()
                         },
-                        enabled = (contentState.text.isNotBlank() || uploadedAttachments.isNotEmpty()) && !isPosting && !isUploading
+                        enabled = (contentState.text.isNotBlank() || draftAttachments.isNotEmpty()) && !isPosting && isUploadingCount == 0
                     ) {
                         if (isPosting) {
                             CircularProgressIndicator(

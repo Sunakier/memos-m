@@ -2,8 +2,8 @@ package org.example.memosm.viewmodel
 
 import android.content.Context
 import android.net.Uri
+import android.util.Base64
 import android.util.Log
-import android.webkit.MimeTypeMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -11,10 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
-import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
 import org.example.memosm.api.AttachmentRequest
 import org.example.memosm.api.MemoRequest
@@ -27,7 +24,6 @@ import java.io.InputStream
 data class MemosUiState(
     val memos: List<Memo> = emptyList(),
     val attachments: List<Attachment> = emptyList(),
-    val uploadingAttachments: List<Attachment> = emptyList(),
     val user: User? = null,
     val userStats: UserStats? = null,
     val shortcuts: List<Shortcut> = emptyList(),
@@ -48,6 +44,8 @@ class MemosViewModel(
     private val _uiState = MutableStateFlow(MemosUiState(token = token))
     val uiState: StateFlow<MemosUiState> = _uiState.asStateFlow()
 
+    private val sanitizedBaseUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+
     private val api: MemosApi by lazy {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
@@ -60,7 +58,7 @@ class MemosViewModel(
             chain.proceed(request)
         }.build()
 
-        Retrofit.Builder().baseUrl(baseUrl).client(client)
+        Retrofit.Builder().baseUrl(sanitizedBaseUrl).client(client)
             .addConverterFactory(GsonConverterFactory.create()).build().create(MemosApi::class.java)
     }
 
@@ -116,9 +114,9 @@ class MemosViewModel(
 
     private fun processAttachment(attachment: Attachment): Attachment {
         val downloadUrl = if (attachment.externalLink.isNullOrBlank()) {
-            "${baseUrl.removeSuffix("/")}/file/${attachment.name}/${attachment.filename}"
+            "${sanitizedBaseUrl.removeSuffix("/")}/file/${attachment.name}/${attachment.filename}"
         } else if (!attachment.externalLink.startsWith("http")) {
-            "${baseUrl.removeSuffix("/")}${if (attachment.externalLink.startsWith("/")) "" else "/"}${attachment.externalLink}"
+            "${sanitizedBaseUrl.removeSuffix("/")}${if (attachment.externalLink.startsWith("/")) "" else "/"}${attachment.externalLink}"
         } else {
             attachment.externalLink
         }
@@ -151,6 +149,7 @@ class MemosViewModel(
     }
 
     suspend fun uploadAttachment(uri: Uri, context: Context): Attachment? {
+        Log.d("MemosViewModel", "Starting upload for URI: $uri")
         return try {
             val contentResolver = context.contentResolver
             val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
@@ -160,10 +159,18 @@ class MemosViewModel(
 
             val fileName = getFileName(uri, context) ?: "upload_${System.currentTimeMillis()}"
             
-            val requestFile = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
-            val body = MultipartBody.Part.createFormData("file", fileName, requestFile)
+            // Memos API expects bytes to be Base64 encoded in JSON
+            val base64Content = Base64.encodeToString(bytes, Base64.NO_WRAP)
+            Log.d("MemosViewModel", "Encoded file to Base64, size: ${base64Content.length}")
 
-            val attachment = api.uploadAttachment(body)
+            val request = AttachmentRequest(
+                filename = fileName,
+                type = mimeType,
+                content = base64Content
+            )
+
+            val attachment = api.createAttachment(request)
+            Log.d("MemosViewModel", "Upload success: ${attachment.name}")
             val processedAttachment = processAttachment(attachment)
             
             _uiState.value = _uiState.value.copy(
@@ -231,7 +238,7 @@ class MemosViewModel(
     private fun updateUser(user: User) {
         val avatarUrl = user.avatarUrl
         val processedUser = if (avatarUrl != null && !avatarUrl.startsWith("http")) {
-            user.copy(avatarUrl = baseUrl.removeSuffix("/") + avatarUrl)
+            user.copy(avatarUrl = sanitizedBaseUrl.removeSuffix("/") + avatarUrl)
         } else {
             user
         }

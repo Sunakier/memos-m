@@ -46,7 +46,10 @@ interface MemosApi {
     suspend fun getAttachment(@Path("attachment") attachment: String): Attachment
 
     @POST("api/v1/attachments")
-    suspend fun createAttachment(@Body attachment: AttachmentRequest): Attachment
+    suspend fun createAttachment(
+        @Body attachment: AttachmentRequest,
+        @Query("attachmentId") attachmentId: String? = null
+    ): Attachment
 
     @Multipart
     @POST("api/v1/attachments")
