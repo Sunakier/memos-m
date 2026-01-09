@@ -1,5 +1,7 @@
 # Memos M
 
+![App icon](app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp)
+
 An unofficial third-party Android client for [Memos](https://usememos.com/).
 
 This app exists because the official MoeMemos Android client currently has serious usability issues on Android, making it difficult to use in day-to-day workflows. This project aims to provide a more reliable and responsive option while staying compatible with the Memos backend.
