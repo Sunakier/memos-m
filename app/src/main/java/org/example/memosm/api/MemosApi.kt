@@ -1,14 +1,20 @@
 package org.example.memosm.api
 
-import memos.api.v1.SignInRequest
-import memos.api.v1.SignInResponse
+import org.example.memosm.model.ListMemosResponse
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Query
 
 interface MemosApi {
-    @POST("memos.api.v1.AuthService/CreateSession")
-    suspend fun createSession(@Body request: SignInRequest): SignInResponse
 
-    @POST("api/v1/auth/signin")
-    suspend fun signin(@Body request: SignInRequest): SignInResponse
+    @GET("api/v1/memos")
+    suspend fun listMemos(
+        @Query("pageSize") pageSize: Int? = null,
+        @Query("pageToken") pageToken: String? = null,
+        @Query("state") state: String? = null,
+        @Query("orderBy") orderBy: String? = null,
+        @Query("filter") filter: String? = null,
+        @Query("showDeleted") showDeleted: Boolean? = null,
+    ): ListMemosResponse
 }

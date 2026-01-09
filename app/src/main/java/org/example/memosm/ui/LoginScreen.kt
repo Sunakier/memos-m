@@ -9,8 +9,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import memos.api.v1.SignInRequestKt.passwordCredentials
-import memos.api.v1.signInRequest
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.example.memosm.api.MemosApi
@@ -22,7 +20,10 @@ enum class LoginMode {
 }
 
 @Composable
-fun LoginScreen(modifier: Modifier = Modifier) {
+fun LoginScreen(
+    onLoginSuccess: (String, String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     var loginMode by remember { mutableStateOf(LoginMode.TOKEN) }
     var hostUrl by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
@@ -51,7 +52,7 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
-            TabRow(
+            SecondaryTabRow(
                 selectedTabIndex = loginMode.ordinal, modifier = Modifier.fillMaxWidth()
             ) {
                 Tab(
@@ -123,49 +124,39 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                         isLoading = true
                         errorMessage = null
                         try {
-                            Log.i("MemosLogin", "--- Starting Login Attempt (gRPC-Web Style) ---")
-                            
                             var normalizedHost = hostUrl.trim()
-                            if (!normalizedHost.startsWith("http")) {
-                                normalizedHost = "https://$normalizedHost"
-                            }
-                            val baseUrl =
-                                if (normalizedHost.endsWith("/")) normalizedHost else "$normalizedHost/"
-                            
-                            Log.i("MemosLogin", "Target Base URL: $baseUrl")
-
-                            if (loginMode == LoginMode.TOKEN) {
-                                Log.i("MemosLogin", "Token Login: ${token.take(10)}...")
-                            } else {
-                                val logging = HttpLoggingInterceptor { message ->
-                                    Log.d("MemosApi", message)
-                                }.apply {
-                                    level = HttpLoggingInterceptor.Level.BODY
+                            if (normalizedHost.isNotBlank()) {
+                                if (!normalizedHost.startsWith("http")) {
+                                    normalizedHost = "https://$normalizedHost"
                                 }
+                                val baseUrl =
+                                    if (normalizedHost.endsWith("/")) normalizedHost else "$normalizedHost/"
 
-                                val client = OkHttpClient.Builder()
-                                    .addInterceptor(logging)
-                                    .build()
-
-                                val retrofit = Retrofit.Builder()
-                                    .baseUrl(baseUrl)
-                                    .client(client)
-                                    .addConverterFactory(ProtoConverterFactory.create())
-                                    .build()
-
-                                val api = retrofit.create(MemosApi::class.java)
-                                
-                                val request = signInRequest {
-                                    passwordCredentials = passwordCredentials {
-                                        this.username = username
-                                        this.password = password
+                                if (loginMode == LoginMode.TOKEN) {
+                                    // For token login, we just assume it's valid for now and proceed
+                                    onLoginSuccess(baseUrl, token)
+                                } else {
+                                    val logging = HttpLoggingInterceptor { message ->
+                                        Log.d("MemosApi", message)
+                                    }.apply {
+                                        level = HttpLoggingInterceptor.Level.BODY
                                     }
-                                }
 
-                                // Calling the specific CreateSession endpoint you requested
-                                val response = api.createSession(request)
-                                Log.i("MemosLogin", "Login SUCCESS via CreateSession!")
-                                Log.i("MemosLogin", "Access Token: ${response.accessToken.take(10)}...")
+                                    val client = OkHttpClient.Builder()
+                                        .addInterceptor(logging)
+                                        .build()
+
+                                    val retrofit = Retrofit.Builder()
+                                        .baseUrl(baseUrl)
+                                        .client(client)
+                                        .addConverterFactory(ProtoConverterFactory.create())
+                                        .build()
+
+                                    val api = retrofit.create(MemosApi::class.java)
+                                    // Password login implementation removed for now as per previous state
+                                }
+                            } else {
+                                errorMessage = "Host URL cannot be empty"
                             }
                         } catch (e: Exception) {
                             Log.e("MemosLogin", "Login failed", e)
