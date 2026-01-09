@@ -94,16 +94,23 @@ fun MemosListScreen(viewModel: MemosViewModel) {
         NavigableListDetailPaneScaffold(
             navigator = navigator,
             listPane = {
-                val isVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
-                AnimatedVisibility(
-                    visible = isVisible,
-                    enter = fadeIn(tween(300)),
-                    exit = fadeOut(tween(300))
-                ) {
+                // Use AnimatedContent to provide AnimatedVisibilityScope for shared element transitions
+                // The target state tracks whether we're in single-pane mode with detail visible
+                val isDetailExpanded = navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
+                val isSinglePane = navigator.scaffoldValue.primary == navigator.scaffoldValue.secondary
+                
+                AnimatedContent(
+                    targetState = isDetailExpanded && isSinglePane,
+                    transitionSpec = {
+                        // No visual transition - let the shared element handle the animation
+                        EnterTransition.None togetherWith ExitTransition.None
+                    },
+                    label = "ListPaneTransition"
+                ) { _ ->
                     MemosListPane(
                         viewModel = viewModel,
                         sharedTransitionScope = this@SharedTransitionLayout,
-                        animatedVisibilityScope = this,
+                        animatedVisibilityScope = this@AnimatedContent,
                         onMemoClick = { memo ->
                             focusManager.clearFocus()
                             scope.launch {
@@ -119,63 +126,39 @@ fun MemosListScreen(viewModel: MemosViewModel) {
             detailPane = {
                 val selectedMemo = uiState.selectedMemo
                 val isListAndDetailVisible = navigator.scaffoldValue.primary != navigator.scaffoldValue.secondary
-                val isVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
                 
-                AnimatedVisibility(
-                    visible = isVisible,
-                    enter = fadeIn(tween(300)),
-                    exit = fadeOut(tween(300))
-                ) {
-                    val paneScope = this
-                    if (isListAndDetailVisible) {
-                        // Tablet/Wide screen: slide from bottom when memo selection changes
-                        AnimatedContent(
-                            targetState = selectedMemo,
-                            transitionSpec = {
-                                (slideInVertically(initialOffsetY = { it }, animationSpec = tween(300)) + fadeIn())
-                                    .togetherWith(slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300)) + fadeOut())
-                            },
-                            label = "TabletDetailAnimation"
-                        ) { memo ->
-                            if (memo != null) {
-                                MemoDetailPane(
-                                    memo = memo,
-                                    comments = uiState.selectedMemoComments,
-                                    isLoadingComments = uiState.isLoadingComments,
-                                    token = uiState.token,
-                                    showBackButton = navigator.canNavigateBack(),
-                                    sharedTransitionScope = this@SharedTransitionLayout,
-                                    animatedVisibilityScope = this@AnimatedContent,
-                                    onBack = {
-                                        focusManager.clearFocus()
-                                        scope.launch {
-                                            navigator.navigateBack()
-                                        }
-                                    })
-                            } else {
-                                MemoDetailPlaceholder()
-                            }
-                        }
-                    } else {
-                        // Mobile: Shared element expansion from the list card to full screen
-                        if (selectedMemo != null) {
-                            MemoDetailPane(
-                                memo = selectedMemo,
-                                comments = uiState.selectedMemoComments,
-                                isLoadingComments = uiState.isLoadingComments,
-                                token = uiState.token,
-                                showBackButton = navigator.canNavigateBack(),
-                                sharedTransitionScope = this@SharedTransitionLayout,
-                                animatedVisibilityScope = paneScope,
-                                onBack = {
-                                    focusManager.clearFocus()
-                                    scope.launch {
-                                        navigator.navigateBack()
-                                    }
-                                })
+                // Use AnimatedContent to provide proper AnimatedVisibilityScope for shared element transitions
+                AnimatedContent(
+                    targetState = selectedMemo,
+                    transitionSpec = {
+                        if (isListAndDetailVisible) {
+                            // Tablet/Wide screen: slide from bottom when memo selection changes
+                            (slideInVertically(initialOffsetY = { it }, animationSpec = tween(300)) + fadeIn())
+                                .togetherWith(slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300)) + fadeOut())
                         } else {
-                            MemoDetailPlaceholder()
+                            // Mobile: No visual transition - let the shared element handle the animation
+                            EnterTransition.None togetherWith ExitTransition.None
                         }
+                    },
+                    label = "DetailPaneTransition"
+                ) { memo ->
+                    if (memo != null) {
+                        MemoDetailPane(
+                            memo = memo,
+                            comments = uiState.selectedMemoComments,
+                            isLoadingComments = uiState.isLoadingComments,
+                            token = uiState.token,
+                            showBackButton = navigator.canNavigateBack(),
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this@AnimatedContent,
+                            onBack = {
+                                focusManager.clearFocus()
+                                scope.launch {
+                                    navigator.navigateBack()
+                                }
+                            })
+                    } else {
+                        MemoDetailPlaceholder()
                     }
                 }
             }
