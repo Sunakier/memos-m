@@ -1,5 +1,9 @@
 package org.example.memosm.ui
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -7,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.*
 import androidx.compose.material.icons.Icons
@@ -14,12 +19,14 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -31,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import kotlinx.coroutines.launch
+import org.example.memosm.model.Attachment
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
 
@@ -84,11 +93,15 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             CreateMemoCard(
-                                onPublish = { content, visibility ->
-                                    viewModel.createMemo(content, visibility)
+                                onPublish = { content, visibility, attachments ->
+                                    viewModel.createMemo(content, visibility, attachments)
+                                },
+                                onUploadFile = { uri, context ->
+                                    viewModel.uploadAttachment(uri, context)
                                 },
                                 isPosting = uiState.isPosting,
                                 availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
+                                token = uiState.token,
                                 modifier = Modifier.widthIn(max = 800.dp)
                             )
                         }
@@ -125,22 +138,44 @@ fun MemosListScreen(viewModel: MemosViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateMemoCard(
-    onPublish: (String, String) -> Unit,
+    onPublish: (String, String, List<Attachment>) -> Unit,
+    onUploadFile: suspend (Uri, android.content.Context) -> Attachment?,
     isPosting: Boolean,
     availableTags: Set<String>,
+    token: String,
     modifier: Modifier = Modifier
 ) {
     val contentState = rememberTextFieldState("")
     var visibility by remember { mutableStateOf("PRIVATE") }
     var expanded by remember { mutableStateOf(false) }
-    val visibilityOptions = listOf("PRIVATE", "PROTECTED", "PUBLIC")
+    var uploadedAttachments by remember { mutableStateOf(emptyList<Attachment>()) }
+    var isUploading by remember { mutableStateOf(false) }
+    
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    
+    val pickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            isUploading = true
+            scope.launch {
+                uris.forEach { uri ->
+                    val attachment = onUploadFile(uri, context)
+                    if (attachment != null) {
+                        uploadedAttachments = uploadedAttachments + attachment
+                    }
+                }
+                isUploading = false
+            }
+        }
+    }
 
     // Tag autocomplete logic
     var showTagPopup by remember { mutableStateOf(false) }
     var tagFilter by remember { mutableStateOf("") }
     var tagStartIndex by remember { mutableIntStateOf(-1) }
 
-    // To track cursor position
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
     val density = LocalDensity.current
 
@@ -170,16 +205,11 @@ fun CreateMemoCard(
     }
 
     val filteredTags = remember(tagFilter, availableTags) {
-        if (tagFilter.isEmpty()) {
-            availableTags.toList()
-        } else {
-            availableTags.filter { it.contains(tagFilter, ignoreCase = true) }
-        }
+        if (tagFilter.isEmpty()) availableTags.toList()
+        else availableTags.filter { it.contains(tagFilter, ignoreCase = true) }
     }
 
-    Card(
-        modifier = modifier.fillMaxWidth()
-    ) {
+    Card(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Box {
                 OutlinedTextField(
@@ -196,34 +226,23 @@ fun CreateMemoCard(
                         val layout = textLayoutResult
                         if (layout != null) {
                             val cursorIndex = contentState.selection.start
-                            // Ensure the index is within the bounds of the text that produced this layout
                             val safeIndex = cursorIndex.coerceIn(0, layout.layoutInput.text.length)
                             val cursorRect = layout.getCursorRect(safeIndex)
-                            // Approximate padding of OutlinedTextField
                             val horizontalPadding = with(density) { 16.dp.roundToPx() }
                             val verticalPadding = with(density) { 16.dp.roundToPx() }
-
                             IntOffset(
                                 x = cursorRect.left.toInt() + horizontalPadding,
                                 y = cursorRect.bottom.toInt() + verticalPadding
                             )
-                        } else {
-                            IntOffset(0, 150)
-                        }
+                        } else IntOffset(0, 150)
                     }
 
-                    Popup(
-                        alignment = Alignment.TopStart, offset = popupOffset
-                    ) {
+                    Popup(alignment = Alignment.TopStart, offset = popupOffset) {
                         Surface(
                             modifier = Modifier
                                 .widthIn(max = 200.dp)
                                 .heightIn(max = 200.dp)
-                                .border(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.outlineVariant,
-                                    RoundedCornerShape(8.dp)
-                                ),
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
                             shape = RoundedCornerShape(8.dp),
                             tonalElevation = 8.dp,
                             shadowElevation = 4.dp
@@ -237,14 +256,8 @@ fun CreateMemoCard(
                                             .clickable {
                                                 contentState.edit {
                                                     val replacement = "#$tag "
-                                                    replace(
-                                                        tagStartIndex,
-                                                        contentState.selection.start,
-                                                        replacement
-                                                    )
-                                                    val newCursor =
-                                                        tagStartIndex + replacement.length
-                                                    selection = TextRange(newCursor)
+                                                    replace(tagStartIndex, contentState.selection.start, replacement)
+                                                    selection = TextRange(tagStartIndex + replacement.length)
                                                 }
                                                 showTagPopup = false
                                             }
@@ -256,58 +269,116 @@ fun CreateMemoCard(
                     }
                 }
             }
+
+            if (uploadedAttachments.isNotEmpty() || isUploading) {
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    items(uploadedAttachments) { attachment ->
+                        val isImage = remember(attachment.displayType) {
+                            attachment.displayType.startsWith("image/", ignoreCase = true) || 
+                            attachment.displayType.contains("image", ignoreCase = true)
+                        }
+                        
+                        Box(modifier = Modifier.size(80.dp)) {
+                            if (isImage) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(attachment.externalLink)
+                                        .addHeader("Authorization", "Bearer $token")
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                        .padding(4.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = attachment.filename,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        maxLines = 2,
+                                        modifier = Modifier.padding(4.dp)
+                                    )
+                                }
+                            }
+                            
+                            IconButton(
+                                onClick = { uploadedAttachments = uploadedAttachments - attachment },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(24.dp)
+                                    .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Remove",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                    if (isUploading) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            }
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-
-                // --- LEFT SIDE: Action Buttons ---
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { /* Do nothing */ }) {
-                        Icon(
-                            imageVector = Icons.Default.AttachFile,
-                            contentDescription = "Attach File"
-                        )
+                    IconButton(
+                        onClick = { pickerLauncher.launch("*/*") },
+                        enabled = !isPosting && !isUploading
+                    ) {
+                        Icon(imageVector = Icons.Default.AttachFile, contentDescription = "Attach File")
                     }
-                    IconButton(onClick = { /* Do nothing */ }) {
-                        Icon(
-                            imageVector = Icons.Default.Image, contentDescription = "Add Image"
-                        )
+                    IconButton(
+                        onClick = { pickerLauncher.launch("image/*") },
+                        enabled = !isPosting && !isUploading
+                    ) {
+                        Icon(imageVector = Icons.Default.Image, contentDescription = "Add Image")
                     }
                 }
 
-                // --- RIGHT SIDE: Visibility and Publish ---
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Box {
-                        Row(
-                            modifier = Modifier
-                                .clickable { expanded = true }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = visibility,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        TextButton(onClick = { expanded = true }, enabled = !isPosting) {
+                            Text(visibility)
                             Icon(
                                 imageVector = if (expanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                contentDescription = null
                             )
                         }
-
-                        DropdownMenu(
-                            expanded = expanded,
-                            onDismissRequest = { expanded = false }
-                        ) {
-                            visibilityOptions.forEach { option ->
+                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            listOf("PRIVATE", "PROTECTED", "PUBLIC").forEach { option ->
                                 DropdownMenuItem(
                                     text = { Text(option) },
                                     onClick = {
@@ -321,16 +392,23 @@ fun CreateMemoCard(
 
                     Button(
                         onClick = {
-                            onPublish(contentState.text.toString(), visibility)
-                            contentState.clearText()
-                        }, enabled = contentState.text.isNotBlank() && !isPosting
+                            onPublish(contentState.text.toString(), visibility, uploadedAttachments)
+                            contentState.edit { replace(0, length, "") }
+                            uploadedAttachments = emptyList()
+                        },
+                        enabled = (contentState.text.isNotBlank() || uploadedAttachments.isNotEmpty()) && !isPosting && !isUploading
                     ) {
                         if (isPosting) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp), strokeWidth = 2.dp
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
                             )
                         } else {
-                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Send,
+                                contentDescription = "Publish"
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Publish")
                         }
@@ -349,34 +427,68 @@ fun MemoItem(memo: Memo, token: String, modifier: Modifier = Modifier) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = memo.content, style = MaterialTheme.typography.bodyLarge)
             
-            val imageAttachments = remember(memo.attachments) {
-                memo.attachments?.filter { it.displayType.startsWith("image/") } ?: emptyList()
+            val attachments = remember(memo.attachments) {
+                memo.attachments ?: emptyList()
             }
             
-            if (imageAttachments.isNotEmpty()) {
+            if (attachments.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(bottom = 4.dp)
                 ) {
-                    items(imageAttachments) { attachment ->
-                        val context = LocalContext.current
-                        val imageRequest = remember(attachment.externalLink, token) {
-                            ImageRequest.Builder(context)
-                                .data(attachment.externalLink)
-                                .addHeader("Authorization", "Bearer $token")
-                                .crossfade(true)
-                                .build()
+                    items(attachments) { attachment ->
+                        val isImage = remember(attachment.displayType) {
+                            attachment.displayType.startsWith("image/", ignoreCase = true) || 
+                            attachment.displayType.contains("image", ignoreCase = true)
                         }
                         
-                        AsyncImage(
-                            model = imageRequest,
-                            contentDescription = attachment.filename,
-                            modifier = Modifier
-                                .size(width = 240.dp, height = 160.dp)
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
-                        )
+                        if (isImage) {
+                            val context = LocalContext.current
+                            val imageRequest = remember(attachment.externalLink, token) {
+                                ImageRequest.Builder(context)
+                                    .data(attachment.externalLink)
+                                    .addHeader("Authorization", "Bearer $token")
+                                    .crossfade(true)
+                                    .build()
+                            }
+                            
+                            AsyncImage(
+                                model = imageRequest,
+                                contentDescription = attachment.filename,
+                                modifier = Modifier
+                                    .size(width = 240.dp, height = 160.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Card(
+                                modifier = Modifier
+                                    .size(width = 200.dp, height = 100.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(8.dp),
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = attachment.filename,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        maxLines = 2,
+                                        modifier = Modifier.padding(bottom = 4.dp)
+                                    )
+                                    Text(
+                                        text = attachment.displayType,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

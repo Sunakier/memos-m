@@ -1,11 +1,8 @@
 package org.example.memosm.api
 
+import okhttp3.MultipartBody
 import org.example.memosm.model.*
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.POST
-import retrofit2.http.Path
-import retrofit2.http.Query
+import retrofit2.http.*
 
 interface MemosApi {
 
@@ -47,10 +44,39 @@ interface MemosApi {
 
     @GET("api/v1/attachments/{attachment}")
     suspend fun getAttachment(@Path("attachment") attachment: String): Attachment
+
+    @POST("api/v1/attachments")
+    suspend fun createAttachment(@Body attachment: AttachmentRequest): Attachment
+
+    @Multipart
+    @POST("api/v1/attachments")
+    suspend fun uploadAttachment(
+        @Part file: MultipartBody.Part
+    ): Attachment
+
+    @PATCH("api/v1/attachments/{attachment}")
+    suspend fun updateAttachment(
+        @Path("attachment") attachment: String,
+        @Body request: AttachmentRequest,
+        @Query("updateMask") updateMask: String
+    ): Attachment
+
+    @DELETE("api/v1/attachments/{attachment}")
+    suspend fun deleteAttachment(@Path("attachment") attachment: String)
 }
 
 data class MemoRequest(
     val content: String,
     val state: String = "NORMAL",
-    val visibility: String = "PRIVATE"
+    val visibility: String = "PRIVATE",
+    val attachments: List<Attachment>? = null
+)
+
+data class AttachmentRequest(
+    val name: String? = null,
+    val filename: String,
+    val content: String? = null,
+    val externalLink: String? = null,
+    val type: String,
+    val memo: String? = null
 )

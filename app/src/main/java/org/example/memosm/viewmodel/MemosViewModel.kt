@@ -1,6 +1,9 @@
 package org.example.memosm.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import android.util.Log
+import android.webkit.MimeTypeMap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -8,17 +11,23 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.logging.HttpLoggingInterceptor
+import org.example.memosm.api.AttachmentRequest
 import org.example.memosm.api.MemoRequest
 import org.example.memosm.api.MemosApi
 import org.example.memosm.model.*
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.InputStream
 
 data class MemosUiState(
     val memos: List<Memo> = emptyList(),
     val attachments: List<Attachment> = emptyList(),
+    val uploadingAttachments: List<Attachment> = emptyList(),
     val user: User? = null,
     val userStats: UserStats? = null,
     val shortcuts: List<Shortcut> = emptyList(),
@@ -141,6 +150,49 @@ class MemosViewModel(
         }
     }
 
+    suspend fun uploadAttachment(uri: Uri, context: Context): Attachment? {
+        return try {
+            val contentResolver = context.contentResolver
+            val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
+            val inputStream: InputStream? = contentResolver.openInputStream(uri)
+            val bytes = inputStream?.readBytes() ?: return null
+            inputStream.close()
+
+            val fileName = getFileName(uri, context) ?: "upload_${System.currentTimeMillis()}"
+            
+            val requestFile = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+            val body = MultipartBody.Part.createFormData("file", fileName, requestFile)
+
+            val attachment = api.uploadAttachment(body)
+            val processedAttachment = processAttachment(attachment)
+            
+            _uiState.value = _uiState.value.copy(
+                attachments = listOf(processedAttachment) + _uiState.value.attachments
+            )
+            processedAttachment
+        } catch (e: Exception) {
+            Log.e("MemosViewModel", "Error uploading attachment", e)
+            null
+        }
+    }
+
+    private fun getFileName(uri: Uri, context: Context): String? {
+        var name: String? = null
+        if (uri.scheme == "content") {
+            val cursor = context.contentResolver.query(uri, null, null, null, null)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val index = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (index != -1) name = it.getString(index)
+                }
+            }
+        }
+        return name ?: uri.path?.let { path ->
+            val cut = path.lastIndexOf('/')
+            if (cut != -1) path.substring(cut + 1) else path
+        }
+    }
+
     private suspend fun fetchUserDetails(userId: String) {
         try {
             val user = api.getUser(userId)
@@ -218,13 +270,22 @@ class MemosViewModel(
         }
     }
 
-    fun createMemo(content: String, visibility: String = "PRIVATE", onSuccess: () -> Unit = {}) {
-        if (content.isBlank()) return
+    fun createMemo(
+        content: String, 
+        visibility: String = "PRIVATE", 
+        attachments: List<Attachment>? = null,
+        onSuccess: () -> Unit = {}
+    ) {
+        if (content.isBlank() && attachments.isNullOrEmpty()) return
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isPosting = true)
             try {
-                val memo = api.createMemo(MemoRequest(content = content, visibility = visibility))
+                val memo = api.createMemo(MemoRequest(
+                    content = content, 
+                    visibility = visibility,
+                    attachments = attachments
+                ))
                 _uiState.value = _uiState.value.copy(
                     memos = listOf(processMemo(memo)) + _uiState.value.memos, isPosting = false
                 )
