@@ -1,5 +1,7 @@
 package org.example.memosm.ui
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,6 +10,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
+import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
@@ -55,37 +59,61 @@ fun ExploreScreen(viewModel: MemosViewModel) {
         }
     }
 
-    NavigableListDetailPaneScaffold(navigator = navigator, listPane = {
-        ExploreMemosListPane(
-            viewModel = viewModel, onMemoClick = { memo ->
-                focusManager.clearFocus()
-                scope.launch {
-                    val id = memo.name ?: memo.content.hashCode().toString()
-                    navigator.navigateTo(
-                        androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole.Detail,
-                        MemoKey(id)
-                    )
-                }
-            })
-    }, detailPane = {
-        val selectedMemo = uiState.selectedMemo
-        if (selectedMemo != null) {
-            MemoDetailPane(
-                memo = selectedMemo,
-                comments = uiState.selectedMemoComments,
-                isLoadingComments = uiState.isLoadingComments,
-                token = uiState.token,
-                showBackButton = navigator.canNavigateBack(),
-                onBack = {
+    NavigableListDetailPaneScaffold(
+        navigator = navigator,
+        listPane = {
+            ExploreMemosListPane(
+                viewModel = viewModel, onMemoClick = { memo ->
                     focusManager.clearFocus()
                     scope.launch {
-                        navigator.navigateBack()
+                        val id = memo.name ?: memo.content.hashCode().toString()
+                        navigator.navigateTo(
+                            ListDetailPaneScaffoldRole.Detail,
+                            MemoKey(id)
+                        )
                     }
                 })
-        } else {
-            MemoDetailPlaceholder()
+        },
+        detailPane = {
+            val selectedMemo = uiState.selectedMemo
+            val isListVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
+            val isDetailVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
+            val isDualPane = isListVisible && isDetailVisible
+
+            AnimatedContent(
+                targetState = selectedMemo,
+                transitionSpec = {
+                    if (isDualPane) {
+                        // Tablet/Wide screen: simple zoom in/out
+                        (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)))
+                            .togetherWith(fadeOut(animationSpec = tween(90)) + scaleOut(targetScale = 0.92f, animationSpec = tween(90)))
+                    } else {
+                        // Mobile: swipe up (slide from bottom)
+                        (slideInVertically(initialOffsetY = { it }, animationSpec = tween(300)) + fadeIn())
+                            .togetherWith(slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300)) + fadeOut())
+                    }
+                },
+                label = "DetailPaneTransition"
+            ) { memo ->
+                if (memo != null) {
+                    MemoDetailPane(
+                        memo = memo,
+                        comments = uiState.selectedMemoComments,
+                        isLoadingComments = uiState.isLoadingComments,
+                        token = uiState.token,
+                        showBackButton = navigator.canNavigateBack(),
+                        onBack = {
+                            focusManager.clearFocus()
+                            scope.launch {
+                                navigator.navigateBack()
+                            }
+                        })
+                } else {
+                    MemoDetailPlaceholder()
+                }
+            }
         }
-    })
+    )
 }
 
 @Composable
