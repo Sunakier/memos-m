@@ -73,6 +73,7 @@ fun MemoDetailPane(
                 )
             },
             containerColor = Color.Transparent,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0), // Disable default insets to prevent jumping
             modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
             Box(
@@ -172,7 +173,9 @@ fun CommentInputBar(
     val contentState = rememberTextFieldState("")
 
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .imePadding(), // Ensure the input bar itself rises with the keyboard
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
         shadowElevation = 8.dp
