@@ -60,11 +60,9 @@ fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit) {
                 if (userSettings != null) {
                     item {
                         SettingsCard(
-                            settings = userSettings,
-                            onUpdate = { locale, visibility ->
+                            settings = userSettings, onUpdate = { locale, visibility ->
                                 viewModel.updateUserGeneralSetting(locale, visibility)
-                            }
-                        )
+                            })
                     }
                 }
 
@@ -256,8 +254,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                 TextButton(onClick = { showLocaleDialog = false }) {
                     Text("Cancel")
                 }
-            }
-        )
+            })
     }
 
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -270,17 +267,15 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
             Spacer(modifier = Modifier.height(16.dp))
 
             // Locale
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        tempLocale = settings.locale ?: ""
-                        showLocaleDialog = true
-                    }
-                    .padding(vertical = 8.dp),
+            Row(modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    tempLocale = settings.locale ?: ""
+                    showLocaleDialog = true
+                }
+                .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+                horizontalArrangement = Arrangement.SpaceBetween) {
                 Column {
                     Text("Locale", style = MaterialTheme.typography.bodyLarge)
                     Text(
@@ -325,8 +320,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
 
                         ExposedDropdownMenu(
                             expanded = showVisibilityMenu,
-                            onDismissRequest = { showVisibilityMenu = false }
-                        ) {
+                            onDismissRequest = { showVisibilityMenu = false }) {
                             listOf("PRIVATE", "PROTECTED", "PUBLIC").forEach { visibility ->
                                 DropdownMenuItem(
                                     text = { Text(visibility) },

@@ -44,13 +44,13 @@ fun MemoDetailPane(
         topBar = {
             TopAppBar(
                 title = {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
-                    }
-                }, navigationIcon = {
+                Box(
+                    modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart
+                ) {
+                    Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
+                }
+            },
+                navigationIcon = {
                     if (showBackButton) {
                         IconButton(onClick = onBack) {
                             Icon(
@@ -62,8 +62,7 @@ fun MemoDetailPane(
                 },
                 windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
             )
-        },
-        modifier = modifier
+        }, modifier = modifier
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -83,13 +82,19 @@ fun MemoDetailPane(
                 item(key = "original_${memo.name}") {
                     with(sharedTransitionScope) {
                         MemoDetailCard(
-                            memo = memo, token = token, isOriginal = true,
+                            memo = memo,
+                            token = token,
+                            isOriginal = true,
                             modifier = Modifier
                                 .animateItem()
                                 .sharedBounds(
                                     sharedContentState = rememberSharedContentState(key = "memo_${memo.name}"),
                                     animatedVisibilityScope = animatedVisibilityScope,
-                                    clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(12.dp))
+                                    clipInOverlayDuringTransition = OverlayClip(
+                                        RoundedCornerShape(
+                                            12.dp
+                                        )
+                                    )
                                 )
                         )
                     }
@@ -99,7 +104,9 @@ fun MemoDetailPane(
                 item(key = "comments_header") {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 8.dp).animateItem()
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .animateItem()
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Forum,
@@ -152,7 +159,9 @@ fun MemoDetailPane(
 
                 items(comments, key = { "comment_${it.name}" }) { comment ->
                     MemoDetailCard(
-                        memo = comment, token = token, isOriginal = false,
+                        memo = comment,
+                        token = token,
+                        isOriginal = false,
                         modifier = Modifier.animateItem()
                     )
                 }
@@ -257,7 +266,8 @@ private fun AttachmentRow(
                     modifier = Modifier
                         .size(width = 200.dp, height = 100.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .animateItem(), colors = CardDefaults.cardColors(
+                        .animateItem(),
+                    colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
@@ -292,9 +302,7 @@ fun MemoDetailPlaceholder(modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center
     ) {
         AnimatedVisibility(
-            visible = true,
-            enter = fadeIn() + slideInVertically { it / 2 },
-            exit = fadeOut()
+            visible = true, enter = fadeIn() + slideInVertically { it / 2 }, exit = fadeOut()
         ) {
             Text(
                 text = "Select a memo to view details",
