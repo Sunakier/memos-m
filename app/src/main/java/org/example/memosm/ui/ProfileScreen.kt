@@ -44,7 +44,7 @@ fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit) {
     ) {
         LazyColumn(
             modifier = Modifier
-                .widthIn(max = 800.dp)
+                .widthIn(max = 600.dp)
                 .fillMaxWidth()
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

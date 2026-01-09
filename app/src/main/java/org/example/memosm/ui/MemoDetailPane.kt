@@ -15,8 +15,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
 
@@ -46,7 +49,8 @@ fun MemoDetailPane(
                 TopAppBar(
                     title = {
                         Box(
-                            modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.CenterStart
                         ) {
                             Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
                         }
@@ -152,7 +156,8 @@ fun MemoDetailPane(
                     }
 
                     items(
-                        comments, key = { "comment_${it.name ?: it.content.hashCode()}" }) { comment ->
+                        comments,
+                        key = { "comment_${it.name ?: it.content.hashCode()}" }) { comment ->
                         MemoItem(
                             memo = comment, token = token, colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -165,56 +170,52 @@ fun MemoDetailPane(
     }
 
     if (showCommentDialog) {
-        CommentInputDialog(
-            onDismiss = { showCommentDialog = false },
-            onConfirm = { content ->
-                viewModel.createComment(memo, content)
-                showCommentDialog = false
-            },
-            isPosting = uiState.isPosting
-        )
-    }
-}
-
-@Composable
-fun CommentInputDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit,
-    isPosting: Boolean
-) {
-    val contentState = rememberTextFieldState("")
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add Comment") },
-        text = {
-            OutlinedTextField(
-                state = contentState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 100.dp),
-                placeholder = { Text("Write your comment here...") },
-                enabled = !isPosting
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = { onConfirm(contentState.text.toString()) },
-                enabled = contentState.text.isNotBlank() && !isPosting
+        Dialog(
+            onDismissRequest = { showCommentDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                if (isPosting) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                } else {
-                    Text("Post")
+                Surface(
+                    modifier = Modifier
+                        .widthIn(max = 800.dp)
+                        .fillMaxWidth(0.9f)
+                        .wrapContentHeight(),
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 6.dp
+                ) {
+                    Column(modifier = Modifier.padding(24.dp)) {
+                        Text(
+                            text = "Add Comment",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        MemoComposer(
+                            onPublish = { content, visibility, attachments ->
+                                viewModel.createComment(memo, content)
+                                showCommentDialog = false
+                            },
+                            onUploadFile = { uri, context ->
+                                viewModel.uploadAttachment(uri, context)
+                            },
+                            availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
+                            token = uiState.token,
+                            isPosting = uiState.isPosting,
+                            defaultVisibility = memo.visibility,
+                            placeholder = "Write your comment here...",
+                            autoFocus = true,
+                            onCancel = { showCommentDialog = false }
+                        )
+                    }
                 }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !isPosting) {
-                Text("Cancel")
-            }
         }
-    )
+    }
 }
 
 @Composable
