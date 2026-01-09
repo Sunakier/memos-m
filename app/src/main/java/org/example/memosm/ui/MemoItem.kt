@@ -92,31 +92,30 @@ fun MemoItem(
                                 Icon(Icons.Default.MoreVert, contentDescription = "More")
                             }
                             DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
-                            ) {
+                                expanded = showMenu, onDismissRequest = { showMenu = false }) {
                                 if (onEdit != null) {
-                                    DropdownMenuItem(
-                                        text = { Text("Edit") },
-                                        onClick = {
-                                            showMenu = false
-                                            onEdit()
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
-                                    )
+                                    DropdownMenuItem(text = { Text("Edit") }, onClick = {
+                                        showMenu = false
+                                        onEdit()
+                                    }, leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Edit, contentDescription = null
+                                        )
+                                    })
                                 }
                                 if (onDelete != null) {
                                     DropdownMenuItem(
-                                        text = { Text("Delete") },
-                                        onClick = {
-                                            showMenu = false
-                                            onDelete()
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
-                                        colors = MenuDefaults.itemColors(
-                                            textColor = MaterialTheme.colorScheme.error,
-                                            leadingIconColor = MaterialTheme.colorScheme.error
+                                        text = { Text("Delete") }, onClick = {
+                                        showMenu = false
+                                        onDelete()
+                                    }, leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Delete, contentDescription = null
                                         )
+                                    }, colors = MenuDefaults.itemColors(
+                                        textColor = MaterialTheme.colorScheme.error,
+                                        leadingIconColor = MaterialTheme.colorScheme.error
+                                    )
                                     )
                                 }
                             }
@@ -201,14 +200,13 @@ fun MemoItem(
             ) {
                 val formattedTime = remember(memo.displayTime) {
                     try {
-                        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+                        val inputFormat =
+                            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
                         inputFormat.timeZone = TimeZone.getTimeZone("UTC")
                         val date = inputFormat.parse(memo.displayTime ?: "")
                         date?.let {
                             DateUtils.getRelativeTimeSpanString(
-                                it.time,
-                                System.currentTimeMillis(),
-                                DateUtils.MINUTE_IN_MILLIS
+                                it.time, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS
                             ).toString()
                         } ?: memo.displayTime ?: "UNKNOWN"
                     } catch (e: Exception) {

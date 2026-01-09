@@ -147,23 +147,19 @@ fun MemoInput(
                 ) {
                     LazyColumn {
                         items(filteredTags) { tag ->
-                            Text(
-                                text = "#$tag", modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        contentState.edit {
-                                            val replacement = "#$tag "
-                                            replace(
-                                                tagStartIndex,
-                                                contentState.selection.start,
-                                                replacement
-                                            )
-                                            selection =
-                                                TextRange(tagStartIndex + replacement.length)
-                                        }
-                                        showTagPopup = false
+                            Text(text = "#$tag", modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    contentState.edit {
+                                        val replacement = "#$tag "
+                                        replace(
+                                            tagStartIndex, contentState.selection.start, replacement
+                                        )
+                                        selection = TextRange(tagStartIndex + replacement.length)
                                     }
-                                    .padding(12.dp), style = MaterialTheme.typography.bodyMedium)
+                                    showTagPopup = false
+                                }
+                                .padding(12.dp), style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }

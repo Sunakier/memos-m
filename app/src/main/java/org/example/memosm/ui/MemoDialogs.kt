@@ -31,10 +31,8 @@ fun MemoComposerDialog(
     val isTablet = adaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
 
     Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
+        onDismissRequest = onDismiss, properties = DialogProperties(
+            usePlatformDefaultWidth = false, decorFitsSystemWindows = false
         )
     ) {
         val surfaceModifier = if (isTablet) {
@@ -49,8 +47,7 @@ fun MemoComposerDialog(
         val shape = if (isTablet) RoundedCornerShape(24.dp) else RoundedCornerShape(0.dp)
 
         Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
         ) {
             Surface(
                 modifier = surfaceModifier,
@@ -79,34 +76,37 @@ fun MemoComposerDialog(
                         if (!isTablet) {
                             IconButton(onClick = onDismiss) {
                                 Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Close"
+                                    imageVector = Icons.Default.Close, contentDescription = "Close"
                                 )
                             }
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
 
                     MemoComposer(
                         onPublish = { content, visibility, attachments ->
-                            when {
-                                initialMemo != null -> {
-                                    viewModel.updateMemo(initialMemo, content, visibility, attachments) {
-                                        onDismiss()
-                                    }
-                                }
-                                parentMemo != null -> {
-                                    viewModel.createComment(parentMemo, content)
+                        when {
+                            initialMemo != null -> {
+                                viewModel.updateMemo(
+                                    initialMemo, content, visibility, attachments
+                                ) {
                                     onDismiss()
                                 }
-                                else -> {
-                                    viewModel.createMemo(content, visibility, attachments) {
-                                        onDismiss()
-                                    }
+                            }
+
+                            parentMemo != null -> {
+                                viewModel.createComment(parentMemo, content)
+                                onDismiss()
+                            }
+
+                            else -> {
+                                viewModel.createMemo(content, visibility, attachments) {
+                                    onDismiss()
                                 }
                             }
-                        },
+                        }
+                    },
                         onUploadFile = { uri, context ->
                             viewModel.uploadAttachment(uri, context)
                         },
@@ -114,7 +114,8 @@ fun MemoComposerDialog(
                         token = uiState.token,
                         isPosting = uiState.isPosting,
                         initialContent = initialMemo?.content ?: "",
-                        initialVisibility = initialMemo?.visibility ?: parentMemo?.visibility ?: uiState.userSettings?.memoVisibility ?: "PRIVATE",
+                        initialVisibility = initialMemo?.visibility ?: parentMemo?.visibility
+                        ?: uiState.userSettings?.memoVisibility ?: "PRIVATE",
                         initialAttachments = initialMemo?.attachments ?: emptyList(),
                         placeholder = placeholder,
                         autoFocus = true,
@@ -128,23 +129,16 @@ fun MemoComposerDialog(
 
 @Composable
 fun MemoEditDialog(
-    memo: Memo,
-    onDismiss: () -> Unit,
-    viewModel: MemosViewModel
+    memo: Memo, onDismiss: () -> Unit, viewModel: MemosViewModel
 ) {
     MemoComposerDialog(
-        onDismiss = onDismiss,
-        viewModel = viewModel,
-        title = "Edit Memo",
-        initialMemo = memo
+        onDismiss = onDismiss, viewModel = viewModel, title = "Edit Memo", initialMemo = memo
     )
 }
 
 @Composable
 fun DeleteConfirmationDialog(
-    memo: Memo,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    memo: Memo, onDismiss: () -> Unit, onConfirm: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -162,6 +156,5 @@ fun DeleteConfirmationDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
-        }
-    )
+        })
 }

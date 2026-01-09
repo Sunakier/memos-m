@@ -50,58 +50,52 @@ fun MainScreen(
     NavigationSuiteScaffold(
         navigationSuiteItems = {
             MainDestination.entries.forEach { destination ->
-                item(
-                    selected = currentDestination == destination,
-                    onClick = {
-                        focusManager.clearFocus()
-                        currentDestination = destination
-                    },
-                    icon = {
-                        val isSelected = currentDestination == destination
-                        when (destination) {
-                            MainDestination.MEMOS -> Icon(
-                                if (isSelected) Icons.AutoMirrored.Filled.LibraryBooks else Icons.AutoMirrored.Outlined.LibraryBooks,
-                                contentDescription = null
-                            )
+                item(selected = currentDestination == destination, onClick = {
+                    focusManager.clearFocus()
+                    currentDestination = destination
+                }, icon = {
+                    val isSelected = currentDestination == destination
+                    when (destination) {
+                        MainDestination.MEMOS -> Icon(
+                            if (isSelected) Icons.AutoMirrored.Filled.LibraryBooks else Icons.AutoMirrored.Outlined.LibraryBooks,
+                            contentDescription = null
+                        )
 
-                            MainDestination.EXPLORE -> Icon(
-                                if (isSelected) Icons.Default.Public else Icons.Outlined.Public,
-                                contentDescription = null
-                            )
+                        MainDestination.EXPLORE -> Icon(
+                            if (isSelected) Icons.Default.Public else Icons.Outlined.Public,
+                            contentDescription = null
+                        )
 
-                            MainDestination.ATTACHMENTS -> Icon(
-                                if (isSelected) Icons.Default.Attachment else Icons.Outlined.Attachment,
-                                contentDescription = null
-                            )
+                        MainDestination.ATTACHMENTS -> Icon(
+                            if (isSelected) Icons.Default.Attachment else Icons.Outlined.Attachment,
+                            contentDescription = null
+                        )
 
-                            MainDestination.PROFILE -> {
-                                val avatarUrl = uiState.user?.avatarUrl
-                                if (avatarUrl != null) {
-                                    AsyncImage(
-                                        model = avatarUrl,
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .size(24.dp)
-                                            .clip(CircleShape)
-                                            .then(
-                                                if (isSelected) Modifier.border(
-                                                    2.dp,
-                                                    MaterialTheme.colorScheme.primary,
-                                                    CircleShape
-                                                ) else Modifier
-                                            ),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    Icon(
-                                        if (isSelected) Icons.Default.Person else Icons.Outlined.Person,
-                                        contentDescription = null
-                                    )
-                                }
+                        MainDestination.PROFILE -> {
+                            val avatarUrl = uiState.user?.avatarUrl
+                            if (avatarUrl != null) {
+                                AsyncImage(
+                                    model = avatarUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .then(
+                                            if (isSelected) Modifier.border(
+                                                2.dp, MaterialTheme.colorScheme.primary, CircleShape
+                                            ) else Modifier
+                                        ),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    if (isSelected) Icons.Default.Person else Icons.Outlined.Person,
+                                    contentDescription = null
+                                )
                             }
                         }
-                    },
-                    label = { Text(destination.label) })
+                    }
+                }, label = { Text(destination.label) })
             }
         }, modifier = modifier
     ) {

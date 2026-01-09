@@ -160,8 +160,7 @@ fun ProfileHeader(user: User) {
 fun StatsCard(stats: UserStats) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 "Statistics",
@@ -310,8 +309,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                     },
                     trailingContent = {
                         Icon(
-                            Icons.Default.ArrowDropDown,
-                            contentDescription = null
+                            Icons.Default.ArrowDropDown, contentDescription = null
                         )
                     },
                     modifier = Modifier.clickable { showVisibilityMenu = true },
@@ -324,13 +322,10 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                     modifier = Modifier.align(Alignment.BottomEnd)
                 ) {
                     listOf("PRIVATE", "PROTECTED", "PUBLIC").forEach { visibility ->
-                        DropdownMenuItem(
-                            text = { Text(visibility) },
-                            onClick = {
-                                onUpdate(null, visibility)
-                                showVisibilityMenu = false
-                            }
-                        )
+                        DropdownMenuItem(text = { Text(visibility) }, onClick = {
+                            onUpdate(null, visibility)
+                            showVisibilityMenu = false
+                        })
                     }
                 }
             }
@@ -351,10 +346,10 @@ fun ShortcutsCard(shortcuts: List<Shortcut>) {
             shortcuts.forEach { shortcut ->
                 ListItem(
                     headlineContent = { Text(shortcut.title ?: "") }, leadingContent = {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Shortcut, contentDescription = null
-                        )
-                    }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    Icon(
+                        Icons.AutoMirrored.Filled.Shortcut, contentDescription = null
+                    )
+                }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
             }
         }

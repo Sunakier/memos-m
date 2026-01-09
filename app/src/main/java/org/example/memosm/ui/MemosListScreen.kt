@@ -48,7 +48,7 @@ fun MemosListScreen(viewModel: MemosViewModel) {
     LaunchedEffect(navigator.currentDestination) {
         // Clear focus whenever navigation happens to prevent unwanted keyboard/focus
         focusManager.clearFocus()
-        
+
         val currentMemoKey = navigator.currentDestination?.contentKey
         if (currentMemoKey != null) {
             val selectedId =
@@ -75,92 +75,84 @@ fun MemosListScreen(viewModel: MemosViewModel) {
         }
     }
 
-    NavigableListDetailPaneScaffold(
-        navigator = navigator,
-        listPane = {
-            AnimatedPane {
-                MemosListPane(
-                    viewModel = viewModel, onMemoClick = { memo ->
-                        focusManager.clearFocus()
-                        scope.launch {
-                            val id = memo.name ?: memo.content.hashCode().toString()
-                            navigator.navigateTo(
-                                ListDetailPaneScaffoldRole.Detail, MemoKey(id)
-                            )
-                        }
-                    })
-            }
-        },
-        detailPane = {
-            AnimatedPane {
-                val currentMemoKey = navigator.currentDestination?.contentKey
-                val isListVisible =
-                    navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
-                val isDetailVisible =
-                    navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
-                val isDualPane = isListVisible && isDetailVisible
-
-                AnimatedContent(
-                    targetState = currentMemoKey,
-                    transitionSpec = {
-                        if (isDualPane) {
-                            if (initialState == null) {
-                                // First time appearing: scale + fade
-                                (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(
-                                    initialScale = 0.92f,
-                                    animationSpec = tween(220, delayMillis = 90)
-                                )).togetherWith(fadeOut(animationSpec = tween(90)))
-                            } else {
-                                // Switching between memos: smooth crossfade
-                                fadeIn(animationSpec = tween(300)).togetherWith(
-                                    fadeOut(animationSpec = tween(300))
-                                )
-                            }
-                        } else {
-                            // Mobile: swipe up (slide from bottom)
-                            (slideInVertically(
-                                initialOffsetY = { it },
-                                animationSpec = tween(300)
-                            ) + fadeIn()).togetherWith(
-                                slideOutVertically(
-                                    targetOffsetY = { it },
-                                    animationSpec = tween(300)
-                                ) + fadeOut()
-                            )
-                        }
-                    },
-                    label = "DetailPaneTransition"
-                ) { memoKey ->
-                    val memo = remember(memoKey, uiState.memos) {
-                        memoKey?.let { key ->
-                            uiState.memos.find {
-                                (it.name ?: it.content.hashCode().toString()) == key.id
-                            }
-                        }
-                    }
-
-                    if (memo != null) {
-                        MemoDetailPane(
-                            memo = memo,
-                            comments = uiState.selectedMemoComments,
-                            isLoadingComments = uiState.isLoadingComments,
-                            token = uiState.token,
-                            showBackButton = navigator.canNavigateBack(),
-                            onBack = {
-                                focusManager.clearFocus()
-                                scope.launch {
-                                    navigator.navigateBack()
-                                }
-                            },
-                            viewModel = viewModel
+    NavigableListDetailPaneScaffold(navigator = navigator, listPane = {
+        AnimatedPane {
+            MemosListPane(
+                viewModel = viewModel, onMemoClick = { memo ->
+                    focusManager.clearFocus()
+                    scope.launch {
+                        val id = memo.name ?: memo.content.hashCode().toString()
+                        navigator.navigateTo(
+                            ListDetailPaneScaffoldRole.Detail, MemoKey(id)
                         )
-                    } else if (isDualPane) {
-                        MemoDetailPlaceholder()
                     }
+                })
+        }
+    }, detailPane = {
+        AnimatedPane {
+            val currentMemoKey = navigator.currentDestination?.contentKey
+            val isListVisible =
+                navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
+            val isDetailVisible =
+                navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
+            val isDualPane = isListVisible && isDetailVisible
+
+            AnimatedContent(
+                targetState = currentMemoKey, transitionSpec = {
+                    if (isDualPane) {
+                        if (initialState == null) {
+                            // First time appearing: scale + fade
+                            (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(
+                                initialScale = 0.92f,
+                                animationSpec = tween(220, delayMillis = 90)
+                            )).togetherWith(fadeOut(animationSpec = tween(90)))
+                        } else {
+                            // Switching between memos: smooth crossfade
+                            fadeIn(animationSpec = tween(300)).togetherWith(
+                                fadeOut(animationSpec = tween(300))
+                            )
+                        }
+                    } else {
+                        // Mobile: swipe up (slide from bottom)
+                        (slideInVertically(
+                            initialOffsetY = { it }, animationSpec = tween(300)
+                        ) + fadeIn()).togetherWith(
+                            slideOutVertically(
+                                targetOffsetY = { it }, animationSpec = tween(300)
+                            ) + fadeOut()
+                        )
+                    }
+                }, label = "DetailPaneTransition"
+            ) { memoKey ->
+                val memo = remember(memoKey, uiState.memos) {
+                    memoKey?.let { key ->
+                        uiState.memos.find {
+                            (it.name ?: it.content.hashCode().toString()) == key.id
+                        }
+                    }
+                }
+
+                if (memo != null) {
+                    MemoDetailPane(
+                        memo = memo,
+                        comments = uiState.selectedMemoComments,
+                        isLoadingComments = uiState.isLoadingComments,
+                        token = uiState.token,
+                        showBackButton = navigator.canNavigateBack(),
+                        onBack = {
+                            focusManager.clearFocus()
+                            scope.launch {
+                                navigator.navigateBack()
+                            }
+                        },
+                        viewModel = viewModel
+                    )
+                } else if (isDualPane) {
+                    MemoDetailPlaceholder()
                 }
             }
         }
-    )
+    })
 }
 
 @Composable
@@ -170,7 +162,7 @@ private fun MemosListPane(
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
-    
+
     var memoToEdit by remember { mutableStateOf<Memo?>(null) }
     var memoToDelete by remember { mutableStateOf<Memo?>(null) }
 
@@ -195,8 +187,7 @@ private fun MemosListPane(
                 detectTapGestures(onTap = {
                     focusManager.clearFocus()
                 })
-            }, 
-        contentAlignment = Alignment.TopCenter
+            }, contentAlignment = Alignment.TopCenter
     ) {
         if (uiState.isLoading && uiState.memos.isEmpty()) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -226,8 +217,8 @@ private fun MemosListPane(
                         Card(modifier = Modifier.widthIn(max = 800.dp)) {
                             MemoComposer(
                                 onPublish = { content, visibility, attachments ->
-                                    viewModel.createMemo(content, visibility, attachments)
-                                },
+                                viewModel.createMemo(content, visibility, attachments)
+                            },
                                 onUploadFile = { uri, context ->
                                     viewModel.uploadAttachment(uri, context)
                                 },
@@ -235,7 +226,8 @@ private fun MemosListPane(
                                 token = uiState.token,
                                 modifier = Modifier.padding(16.dp),
                                 isPosting = uiState.isPosting,
-                                initialVisibility = uiState.userSettings?.memoVisibility ?: "PRIVATE"
+                                initialVisibility = uiState.userSettings?.memoVisibility
+                                    ?: "PRIVATE"
                             )
                         }
                     }
@@ -247,22 +239,19 @@ private fun MemosListPane(
                     ) {
                         val isOwner = memo.creator == uiState.user?.name
                         MemoItem(
-                            memo = memo,
-                            user = null, // Profile pic removed from Memos tab
-                            token = uiState.token,
-                            colors = if (memo == uiState.selectedMemo) {
+                            memo = memo, user = null, // Profile pic removed from Memos tab
+                            token = uiState.token, colors = if (memo == uiState.selectedMemo) {
                                 CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                             } else {
                                 CardDefaults.cardColors()
-                            },
-                            onClick = {
+                            }, onClick = {
                                 focusManager.clearFocus()
                                 onMemoClick(memo)
-                            },
-                            onEdit = if (isOwner) { { memoToEdit = memo } } else null,
-                            onDelete = if (isOwner) { { memoToDelete = memo } } else null,
-                            modifier = Modifier.widthIn(max = 800.dp)
-                        )
+                            }, onEdit = if (isOwner) {
+                                { memoToEdit = memo }
+                            } else null, onDelete = if (isOwner) {
+                                { memoToDelete = memo }
+                            } else null, modifier = Modifier.widthIn(max = 800.dp))
                     }
                 }
 
@@ -281,23 +270,17 @@ private fun MemosListPane(
             }
         }
     }
-    
+
     memoToEdit?.let { memo ->
         MemoEditDialog(
-            memo = memo,
-            onDismiss = { memoToEdit = null },
-            viewModel = viewModel
+            memo = memo, onDismiss = { memoToEdit = null }, viewModel = viewModel
         )
     }
-    
+
     memoToDelete?.let { memo ->
-        DeleteConfirmationDialog(
-            memo = memo,
-            onDismiss = { memoToDelete = null },
-            onConfirm = {
-                viewModel.deleteMemo(memo)
-                memoToDelete = null
-            }
-        )
+        DeleteConfirmationDialog(memo = memo, onDismiss = { memoToDelete = null }, onConfirm = {
+            viewModel.deleteMemo(memo)
+            memoToDelete = null
+        })
     }
 }

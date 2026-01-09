@@ -37,19 +37,16 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyStaggeredGridState()
     val aspectRatios = remember { mutableStateMapOf<String, Float>() }
-    
+
     // Limits for zooming
     val minCellWidth = 120.dp
     val maxCellWidth = 600.dp
 
     // Animate the cell width changes for a smoother transition
     val animatedCellWidth by animateDpAsState(
-        targetValue = uiState.attachmentCellWidth.dp,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
-        label = "CellWidthAnimation"
+        targetValue = uiState.attachmentCellWidth.dp, animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow
+        ), label = "CellWidthAnimation"
     )
 
     val shouldLoadMore = remember {
@@ -60,9 +57,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
             val lastVisibleItem =
                 listState.layoutInfo.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf false
 
-            uiState.nextAttachmentsPageToken != null &&
-                    !uiState.nextAttachmentsPageToken.isNullOrBlank() &&
-                    lastVisibleItem.index >= totalItemsCount - 5
+            uiState.nextAttachmentsPageToken != null && !uiState.nextAttachmentsPageToken.isNullOrBlank() && lastVisibleItem.index >= totalItemsCount - 5
         }
     }
 
@@ -82,23 +77,23 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         val pressedChanges = event.changes.filter { it.pressed }
-                        
+
                         if (pressedChanges.size >= 2) {
                             val p1 = pressedChanges[0].position
                             val p2 = pressedChanges[1].position
                             val p1Prev = pressedChanges[0].previousPosition
                             val p2Prev = pressedChanges[1].previousPosition
-                            
+
                             val currentDistance = (p1 - p2).getDistance()
                             val previousDistance = (p1Prev - p2Prev).getDistance()
-                            
+
                             if (previousDistance > 0f && currentDistance > 0f) {
                                 val zoomFactor = currentDistance / previousDistance
                                 if (zoomFactor != 1f) {
-                                    val newWidth = (uiState.attachmentCellWidth * zoomFactor).coerceIn(
-                                        minCellWidth.value, 
-                                        maxCellWidth.value
-                                    )
+                                    val newWidth =
+                                        (uiState.attachmentCellWidth * zoomFactor).coerceIn(
+                                            minCellWidth.value, maxCellWidth.value
+                                        )
                                     viewModel.updateAttachmentCellWidth(newWidth)
                                     // Consume the event to prevent the list from scrolling while zooming
                                     event.changes.forEach { it.consume() }
@@ -107,8 +102,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                         }
                     }
                 }
-            }
-    ) {
+            }) {
         if (uiState.attachments.isEmpty() && uiState.isLoading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else if (uiState.attachments.isEmpty()) {
@@ -125,9 +119,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(
-                    items = uiState.attachments, 
-                    key = { it.name ?: it.filename }
-                ) { attachment ->
+                    items = uiState.attachments, key = { it.name ?: it.filename }) { attachment ->
                     val key = attachment.name ?: attachment.filename
                     val ratio = aspectRatios[key] ?: 1.0f
 
@@ -195,8 +187,7 @@ fun AttachmentItem(
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
                 context.startActivity(intent)
             }
-        }
-    ) {
+        }) {
         Column {
             val displayType = attachment.displayType
             val isImage = remember(displayType) {

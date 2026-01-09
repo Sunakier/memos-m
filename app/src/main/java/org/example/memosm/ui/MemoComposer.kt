@@ -50,11 +50,12 @@ fun MemoComposer(
 
     // Use a more explicit state declaration to avoid type inference issues with Pair and nullable types
     val draftAttachmentsState = remember(initialAttachments) {
-        val initial: List<Pair<Uri, Attachment?>> = initialAttachments.map { Uri.EMPTY to (it as Attachment?) }
+        val initial: List<Pair<Uri, Attachment?>> =
+            initialAttachments.map { Uri.EMPTY to (it as Attachment?) }
         mutableStateOf(initial)
     }
     var draftAttachments by draftAttachmentsState
-    
+
     var isUploadingCount by remember { mutableIntStateOf(0) }
 
     val scope = rememberCoroutineScope()
@@ -103,8 +104,11 @@ fun MemoComposer(
                         if (uri != Uri.EMPTY) {
                             context.contentResolver.getType(uri)?.startsWith("image/") == true
                         } else {
-                            attachment?.displayType?.startsWith("image/", ignoreCase = true) == true ||
-                            attachment?.displayType?.contains("image", ignoreCase = true) == true
+                            attachment?.displayType?.startsWith(
+                                "image/", ignoreCase = true
+                            ) == true || attachment?.displayType?.contains(
+                                "image", ignoreCase = true
+                            ) == true
                         }
                     }
 
@@ -112,10 +116,9 @@ fun MemoComposer(
                         if (isImage) {
                             val model = if (uri != Uri.EMPTY) uri else attachment?.externalLink
                             AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(model)
-                                    .addHeader("Authorization", "Bearer $token")
-                                    .crossfade(true).build(),
+                                model = ImageRequest.Builder(LocalContext.current).data(model)
+                                    .addHeader("Authorization", "Bearer $token").crossfade(true)
+                                    .build(),
                                 contentDescription = null,
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -145,7 +148,7 @@ fun MemoComposer(
                                     .background(
                                         Color.Black.copy(alpha = 0.3f), RoundedCornerShape(8.dp)
                                     ), contentAlignment = Alignment.Center
-                                ) {
+                            ) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(24.dp), color = Color.White
                                 )
@@ -154,7 +157,8 @@ fun MemoComposer(
 
                         IconButton(
                             onClick = {
-                                draftAttachments = draftAttachments.filter { it.second != attachment || (it.first != uri && uri != Uri.EMPTY) }
+                                draftAttachments =
+                                    draftAttachments.filter { it.second != attachment || (it.first != uri && uri != Uri.EMPTY) }
                             },
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
@@ -184,8 +188,7 @@ fun MemoComposer(
                     onClick = { pickerLauncher.launch("*/*") }, enabled = !isPosting
                 ) {
                     Icon(
-                        imageVector = Icons.Default.AttachFile,
-                        contentDescription = "Attach File"
+                        imageVector = Icons.Default.AttachFile, contentDescription = "Attach File"
                     )
                 }
                 IconButton(

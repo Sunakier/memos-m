@@ -50,40 +50,37 @@ fun MemoDetailPane(
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
-                        }
-                    },
-                    navigationIcon = {
-                        if (showBackButton) {
-                            IconButton(onClick = onBack) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back"
-                                )
-                            }
-                        }
-                    },
-                    windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-                )
-            },
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { showCommentDialog = true },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            TopAppBar(
+                title = {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.CenterStart
                 ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add Comment")
+                    Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
                 }
             },
-            containerColor = Color.Transparent,
-            modifier = Modifier.fillMaxSize()
+                navigationIcon = {
+                    if (showBackButton) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    }
+                },
+                windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
+        }, floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showCommentDialog = true },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = "Add Comment")
+            }
+        }, containerColor = Color.Transparent, modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
             Box(
                 modifier = Modifier
@@ -106,9 +103,12 @@ fun MemoDetailPane(
                             memo = memo,
                             token = token,
                             colors = CardDefaults.cardColors(),
-                            onEdit = if (isOwner) { { memoToEdit = memo } } else null,
-                            onDelete = if (isOwner) { { memoToDelete = memo } } else null
-                        )
+                            onEdit = if (isOwner) {
+                                { memoToEdit = memo }
+                            } else null,
+                            onDelete = if (isOwner) {
+                                { memoToDelete = memo }
+                            } else null)
                     }
 
                     // Comments section header
@@ -171,14 +171,13 @@ fun MemoDetailPane(
                         key = { "comment_${it.name ?: it.content.hashCode()}" }) { comment ->
                         val isCommentOwner = comment.creator == uiState.user?.name
                         MemoItem(
-                            memo = comment,
-                            token = token,
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                            onEdit = if (isCommentOwner) { { memoToEdit = comment } } else null,
-                            onDelete = if (isCommentOwner) { { memoToDelete = comment } } else null
-                        )
+                            memo = comment, token = token, colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ), onEdit = if (isCommentOwner) {
+                            { memoToEdit = comment }
+                        } else null, onDelete = if (isCommentOwner) {
+                            { memoToDelete = comment }
+                        } else null)
                     }
                 }
             }
@@ -197,22 +196,16 @@ fun MemoDetailPane(
 
     memoToEdit?.let { m ->
         MemoEditDialog(
-            memo = m,
-            onDismiss = { memoToEdit = null },
-            viewModel = viewModel
+            memo = m, onDismiss = { memoToEdit = null }, viewModel = viewModel
         )
     }
 
     memoToDelete?.let { m ->
-        DeleteConfirmationDialog(
-            memo = m,
-            onDismiss = { memoToDelete = null },
-            onConfirm = {
-                viewModel.deleteMemo(m) {
-                    memoToDelete = null
-                    if (m == memo) onBack()
-                }
+        DeleteConfirmationDialog(memo = m, onDismiss = { memoToDelete = null }, onConfirm = {
+            viewModel.deleteMemo(m) {
+                memoToDelete = null
+                if (m == memo) onBack()
             }
-        )
+        })
     }
 }
