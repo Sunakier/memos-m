@@ -94,13 +94,15 @@ fun MemosListScreen(viewModel: MemosViewModel) {
         NavigableListDetailPaneScaffold(
             navigator = navigator,
             listPane = {
-                // Use AnimatedContent to provide AnimatedVisibilityScope for shared element transitions
-                // The target state tracks whether we're in single-pane mode with detail visible
+                // Use AnimatedContent to provide AnimatedVisibilityScope for shared element transitions.
+                // On mobile (single-pane), track when detail is expanded to trigger the shared element animation.
+                // On tablet (dual-pane), this is always false since both panes are visible simultaneously.
                 val isDetailExpanded = navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
                 val isSinglePane = navigator.scaffoldValue.primary == navigator.scaffoldValue.secondary
+                val detailVisibleInSinglePaneMode = isDetailExpanded && isSinglePane
                 
                 AnimatedContent(
-                    targetState = isDetailExpanded && isSinglePane,
+                    targetState = detailVisibleInSinglePaneMode,
                     transitionSpec = {
                         // No visual transition - let the shared element handle the animation
                         EnterTransition.None togetherWith ExitTransition.None
