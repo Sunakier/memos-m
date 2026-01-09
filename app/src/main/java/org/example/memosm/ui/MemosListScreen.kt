@@ -4,8 +4,6 @@ import android.net.Uri
 import android.os.Parcelable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,7 +24,6 @@ import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
-import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
@@ -57,9 +54,9 @@ import org.example.memosm.model.User
 import org.example.memosm.viewmodel.MemosViewModel
 
 @Parcelize
-data class MemoKey(val name: String) : Parcelable
+data class MemoKey(val id: String) : Parcelable
 
-@OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun MemosListScreen(viewModel: MemosViewModel) {
     val uiState by viewModel.uiState.collectAsState()
@@ -77,104 +74,61 @@ fun MemosListScreen(viewModel: MemosViewModel) {
     // Sync selected memo with navigator
     LaunchedEffect(navigator.currentDestination) {
         val currentMemoKey = navigator.currentDestination?.contentKey
-        if (currentMemoKey?.name != uiState.selectedMemo?.name) {
-            if (currentMemoKey != null) {
+        if (currentMemoKey != null) {
+            val selectedId = uiState.selectedMemo?.let { it.name ?: it.content.hashCode().toString() }
+            if (currentMemoKey.id != selectedId) {
                 // Find the memo in current list if possible, or just use the name to fetch
-                val memo = uiState.memos.find { it.name == currentMemoKey.name }
+                val memo = uiState.memos.find { (it.name ?: it.content.hashCode().toString()) == currentMemoKey.id }
                 if (memo != null) {
                     viewModel.selectMemo(memo)
                 }
-            } else {
-                viewModel.clearSelectedMemo()
             }
+        } else if (uiState.selectedMemo != null) {
+            viewModel.clearSelectedMemo()
         }
     }
 
-    SharedTransitionLayout {
-        NavigableListDetailPaneScaffold(
-            navigator = navigator,
-            listPane = {
-                // Use AnimatedContent to provide AnimatedVisibilityScope for shared element transitions.
-                // On mobile (single-pane), track when detail is expanded to trigger the shared element animation.
-                // On tablet (dual-pane), this is always false since both panes are visible simultaneously.
-                val isDetailExpanded = navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
-                val isSinglePane = navigator.scaffoldValue.primary == navigator.scaffoldValue.secondary
-                val detailVisibleInSinglePaneMode = isDetailExpanded && isSinglePane
-                
-                AnimatedContent(
-                    targetState = detailVisibleInSinglePaneMode,
-                    transitionSpec = {
-                        // No visual transition - let the shared element handle the animation
-                        EnterTransition.None togetherWith ExitTransition.None
-                    },
-                    label = "ListPaneTransition"
-                ) { _ ->
-                    MemosListPane(
-                        viewModel = viewModel,
-                        sharedTransitionScope = this@SharedTransitionLayout,
-                        animatedVisibilityScope = this@AnimatedContent,
-                        onMemoClick = { memo ->
-                            focusManager.clearFocus()
-                            scope.launch {
-                                memo.name?.let { name ->
-                                    navigator.navigateTo(
-                                        ListDetailPaneScaffoldRole.Detail, MemoKey(name)
-                                    )
-                                }
-                            }
-                        })
-                }
-            },
-            detailPane = {
-                val selectedMemo = uiState.selectedMemo
-                val isListAndDetailVisible = navigator.scaffoldValue.primary != navigator.scaffoldValue.secondary
-                
-                // Use AnimatedContent to provide proper AnimatedVisibilityScope for shared element transitions
-                AnimatedContent(
-                    targetState = selectedMemo,
-                    transitionSpec = {
-                        if (isListAndDetailVisible) {
-                            // Tablet/Wide screen: slide from bottom when memo selection changes
-                            (slideInVertically(initialOffsetY = { it }, animationSpec = tween(300)) + fadeIn())
-                                .togetherWith(slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300)) + fadeOut())
-                        } else {
-                            // Mobile: No visual transition - let the shared element handle the animation
-                            EnterTransition.None togetherWith ExitTransition.None
-                        }
-                    },
-                    label = "DetailPaneTransition"
-                ) { memo ->
-                    if (memo != null) {
-                        MemoDetailPane(
-                            memo = memo,
-                            comments = uiState.selectedMemoComments,
-                            isLoadingComments = uiState.isLoadingComments,
-                            token = uiState.token,
-                            showBackButton = navigator.canNavigateBack(),
-                            sharedTransitionScope = this@SharedTransitionLayout,
-                            animatedVisibilityScope = this@AnimatedContent,
-                            onBack = {
-                                focusManager.clearFocus()
-                                scope.launch {
-                                    navigator.navigateBack()
-                                }
-                            })
-                    } else {
-                        MemoDetailPlaceholder()
+    NavigableListDetailPaneScaffold(
+        navigator = navigator,
+        listPane = {
+            MemosListPane(
+                viewModel = viewModel,
+                onMemoClick = { memo ->
+                    focusManager.clearFocus()
+                    scope.launch {
+                        val id = memo.name ?: memo.content.hashCode().toString()
+                        navigator.navigateTo(
+                            ListDetailPaneScaffoldRole.Detail, MemoKey(id)
+                        )
                     }
-                }
+                })
+        },
+        detailPane = {
+            val selectedMemo = uiState.selectedMemo
+            if (selectedMemo != null) {
+                MemoDetailPane(
+                    memo = selectedMemo,
+                    comments = uiState.selectedMemoComments,
+                    isLoadingComments = uiState.isLoadingComments,
+                    token = uiState.token,
+                    showBackButton = navigator.canNavigateBack(),
+                    onBack = {
+                        focusManager.clearFocus()
+                        scope.launch {
+                            navigator.navigateBack()
+                        }
+                    })
+            } else {
+                MemoDetailPlaceholder()
             }
-        )
-    }
+        }
+    )
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun MemosListPane(
     viewModel: MemosViewModel,
     onMemoClick: (Memo) -> Unit,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -263,27 +217,16 @@ private fun MemosListPane(
                         Box(
                             modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
                         ) {
-                            with(sharedTransitionScope) {
-                                MemoItem(
-                                    memo = memo,
-//                                user = uiState.user,
-                                    token = uiState.token,
-                                    isSelected = memo == uiState.selectedMemo,
-                                    sharedTransitionScope = sharedTransitionScope,
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    onClick = {
-                                        focusManager.clearFocus()
-                                        onMemoClick(memo)
-                                    },
-                                    modifier = Modifier
-                                        .widthIn(max = 800.dp)
-                                        .sharedBounds(
-                                            sharedContentState = rememberSharedContentState(key = "memo_${memo.name}"),
-                                            animatedVisibilityScope = animatedVisibilityScope,
-                                            clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(12.dp))
-                                        )
-                                )
-                            }
+                            MemoItem(
+                                memo = memo,
+                                token = uiState.token,
+                                isSelected = memo == uiState.selectedMemo,
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    onMemoClick(memo)
+                                },
+                                modifier = Modifier.widthIn(max = 800.dp)
+                            )
                         }
                     }
 
@@ -619,162 +562,152 @@ fun CreateMemoCard(
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MemoItem(
     memo: Memo,
     user: User? = null,
     token: String,
     isSelected: Boolean = false,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    with(sharedTransitionScope) {
-        Card(
-            modifier = modifier
-                .fillMaxWidth()
-                .sharedBounds(
-                    sharedContentState = rememberSharedContentState(key = "memo_${memo.name}"),
-                    animatedVisibilityScope = animatedVisibilityScope,
-                    clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(12.dp))
-                )
-                .clickable(onClick = onClick), colors = if (isSelected) {
-                CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            } else {
-                CardDefaults.cardColors()
-            }
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                if (user != null) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    ) {
-                        val avatarUrl = user.avatarUrl
-                        if (avatarUrl != null) {
-                            AsyncImage(
-                                model = avatarUrl,
-                                contentDescription = null,
-                                modifier = Modifier
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick), colors = if (isSelected) {
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            )
+        } else {
+            CardDefaults.cardColors()
+        }
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            if (user != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    val avatarUrl = user.avatarUrl
+                    if (avatarUrl != null) {
+                        AsyncImage(
+                            model = avatarUrl,
+                            contentDescription = null,
+                            modifier = Modifier
                                     .size(32.dp)
                                     .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = user.displayName ?: user.username ?: "Unknown",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Text(text = memo.content, style = MaterialTheme.typography.bodyLarge)
+
+            val attachments = remember(memo.attachments) {
+                memo.attachments ?: emptyList()
+            }
+
+            if (attachments.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 4.dp)
+                ) {
+                    items(attachments) { attachment ->
+                        val isImage = remember(attachment.displayType) {
+                            attachment.displayType.startsWith(
+                                "image/", ignoreCase = true
+                            ) || attachment.displayType.contains("image", ignoreCase = true)
+                        }
+
+                        if (isImage) {
+                            val context = LocalContext.current
+                            val imageRequest = remember(attachment.externalLink, token) {
+                                ImageRequest.Builder(context).data(attachment.externalLink)
+                                    .addHeader("Authorization", "Bearer $token").crossfade(true)
+                                    .build()
+                            }
+
+                            AsyncImage(
+                                model = imageRequest,
+                                contentDescription = attachment.filename,
+                                modifier = Modifier
+                                        .size(width = 240.dp, height = 160.dp)
+                                        .clip(RoundedCornerShape(8.dp)),
                                 contentScale = ContentScale.Crop
                             )
                         } else {
-                            Icon(
-                                imageVector = Icons.Default.AccountCircle,
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp),
-                                tint = MaterialTheme.colorScheme.outline
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = user.displayName ?: user.username ?: "Unknown",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Text(text = memo.content, style = MaterialTheme.typography.bodyLarge)
-
-                val attachments = remember(memo.attachments) {
-                    memo.attachments ?: emptyList()
-                }
-
-                if (attachments.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(bottom = 4.dp)
-                    ) {
-                        items(attachments) { attachment ->
-                            val isImage = remember(attachment.displayType) {
-                                attachment.displayType.startsWith(
-                                    "image/", ignoreCase = true
-                                ) || attachment.displayType.contains("image", ignoreCase = true)
-                            }
-
-                            if (isImage) {
-                                val context = LocalContext.current
-                                val imageRequest = remember(attachment.externalLink, token) {
-                                    ImageRequest.Builder(context).data(attachment.externalLink)
-                                        .addHeader("Authorization", "Bearer $token").crossfade(true)
-                                        .build()
-                                }
-
-                                AsyncImage(
-                                    model = imageRequest,
-                                    contentDescription = attachment.filename,
-                                    modifier = Modifier
-                                        .size(width = 240.dp, height = 160.dp)
-                                        .clip(RoundedCornerShape(8.dp)),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Card(
-                                    modifier = Modifier
+                            Card(
+                                modifier = Modifier
                                         .size(width = 200.dp, height = 100.dp)
                                         .clip(RoundedCornerShape(8.dp)),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                                ) {
-                                    Column(
-                                        modifier = Modifier
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                Column(
+                                    modifier = Modifier
                                             .fillMaxSize()
                                             .padding(8.dp),
-                                        verticalArrangement = Arrangement.Center,
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(
-                                            text = attachment.filename,
-                                            style = MaterialTheme.typography.labelMedium,
-                                            maxLines = 2,
-                                            modifier = Modifier.padding(bottom = 4.dp)
-                                        )
-                                        Text(
-                                            text = attachment.displayType,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = attachment.filename,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        maxLines = 2,
+                                        modifier = Modifier.padding(bottom = 4.dp)
+                                    )
+                                    Text(
+                                        text = attachment.displayType,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                         }
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = memo.displayTime ?: "UNKNOW",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.padding(start = 8.dp)
                 ) {
-                    Text(
-                        text = memo.displayTime ?: "UNKNOW",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.padding(start = 8.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Icon(
-                                imageVector = getVisibilityIcon(memo.visibility),
-                                contentDescription = memo.visibility,
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        Icon(
+                            imageVector = getVisibilityIcon(memo.visibility),
+                            contentDescription = memo.visibility,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }

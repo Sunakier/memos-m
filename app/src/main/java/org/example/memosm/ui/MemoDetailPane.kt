@@ -27,7 +27,7 @@ import coil.request.ImageRequest
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Memo
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemoDetailPane(
     memo: Memo,
@@ -36,8 +36,6 @@ fun MemoDetailPane(
     token: String,
     showBackButton: Boolean,
     onBack: () -> Unit,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -79,34 +77,19 @@ fun MemoDetailPane(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Original memo
-                item(key = "original_${memo.name}") {
-                    with(sharedTransitionScope) {
-                        MemoDetailCard(
-                            memo = memo,
-                            token = token,
-                            isOriginal = true,
-                            modifier = Modifier
-                                .animateItem()
-                                .sharedBounds(
-                                    sharedContentState = rememberSharedContentState(key = "memo_${memo.name}"),
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    clipInOverlayDuringTransition = OverlayClip(
-                                        RoundedCornerShape(
-                                            12.dp
-                                        )
-                                    )
-                                )
-                        )
-                    }
+                item(key = "original_${memo.name ?: memo.content.hashCode()}") {
+                    MemoDetailCard(
+                        memo = memo,
+                        token = token,
+                        isOriginal = true
+                    )
                 }
 
                 // Comments section header
                 item(key = "comments_header") {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .padding(top = 8.dp)
-                            .animateItem()
+                        modifier = Modifier.padding(top = 8.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Forum,
@@ -129,8 +112,7 @@ fun MemoDetailPane(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(32.dp)
-                                .animateItem(),
+                                .padding(32.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator()
@@ -144,8 +126,7 @@ fun MemoDetailPane(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(32.dp)
-                                .animateItem(),
+                                .padding(32.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -157,12 +138,11 @@ fun MemoDetailPane(
                     }
                 }
 
-                items(comments, key = { "comment_${it.name}" }) { comment ->
+                items(comments, key = { "comment_${it.name ?: it.content.hashCode()}" }) { comment ->
                     MemoDetailCard(
                         memo = comment,
                         token = token,
-                        isOriginal = false,
-                        modifier = Modifier.animateItem()
+                        isOriginal = false
                     )
                 }
             }
@@ -257,16 +237,14 @@ private fun AttachmentRow(
                     contentDescription = attachment.filename,
                     modifier = Modifier
                         .size(width = 240.dp, height = 160.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .animateItem(),
+                        .clip(RoundedCornerShape(8.dp)),
                     contentScale = ContentScale.Crop
                 )
             } else {
                 Card(
                     modifier = Modifier
                         .size(width = 200.dp, height = 100.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .animateItem(),
+                        .clip(RoundedCornerShape(8.dp)),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
