@@ -41,18 +41,12 @@ import org.example.memosm.viewmodel.MemosViewModel
 enum class MainDestination(
     val label: String
 ) {
-    MEMOS("Memos"),
-    EXPLORE("Explore"),
-    ATTACHMENTS("Attachments"),
-    PROFILE("Profile")
+    MEMOS("Memos"), EXPLORE("Explore"), ATTACHMENTS("Attachments"), PROFILE("Profile")
 }
 
 @Composable
 fun MainScreen(
-    baseUrl: String,
-    token: String,
-    onLogout: () -> Unit,
-    modifier: Modifier = Modifier
+    baseUrl: String, token: String, onLogout: () -> Unit, modifier: Modifier = Modifier
 ) {
     var currentDestination by remember { mutableStateOf(MainDestination.MEMOS) }
     val viewModel: MemosViewModel =
@@ -427,12 +421,10 @@ fun InstanceCard(instance: InstanceProfile) {
 @Composable
 fun LogoutCard(onLogout: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
+        modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer
-        ),
-        onClick = onLogout
+        ), onClick = onLogout
     ) {
         Row(
             modifier = Modifier
@@ -443,7 +435,9 @@ fun LogoutCard(onLogout: () -> Unit) {
         ) {
             Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
             Spacer(modifier = Modifier.width(12.dp))
-            Text("Logout", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "Logout", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -468,9 +462,7 @@ fun InfoRow(label: String, value: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateMemoCard(
-    onPublish: (String, String) -> Unit,
-    isPosting: Boolean,
-    availableTags: Set<String>
+    onPublish: (String, String) -> Unit, isPosting: Boolean, availableTags: Set<String>
 ) {
     val contentState = rememberTextFieldState("")
     var visibility by remember { mutableStateOf("PRIVATE") }
@@ -557,14 +549,17 @@ fun CreateMemoCard(
                     }
 
                     Popup(
-                        alignment = Alignment.TopStart,
-                        offset = popupOffset
+                        alignment = Alignment.TopStart, offset = popupOffset
                     ) {
                         Surface(
                             modifier = Modifier
                                 .widthIn(max = 200.dp)
                                 .heightIn(max = 200.dp)
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outlineVariant,
+                                    RoundedCornerShape(8.dp)
+                                ),
                             shape = RoundedCornerShape(8.dp),
                             tonalElevation = 8.dp,
                             shadowElevation = 4.dp
@@ -578,15 +573,19 @@ fun CreateMemoCard(
                                             .clickable {
                                                 contentState.edit {
                                                     val replacement = "#$tag "
-                                                    replace(tagStartIndex, contentState.selection.start, replacement)
-                                                    val newCursor = tagStartIndex + replacement.length
+                                                    replace(
+                                                        tagStartIndex,
+                                                        contentState.selection.start,
+                                                        replacement
+                                                    )
+                                                    val newCursor =
+                                                        tagStartIndex + replacement.length
                                                     selection = TextRange(newCursor)
                                                 }
                                                 showTagPopup = false
                                             }
                                             .padding(12.dp),
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
+                                        style = MaterialTheme.typography.bodyMedium)
                                 }
                             }
                         }
@@ -615,17 +614,12 @@ fun CreateMemoCard(
                         textStyle = MaterialTheme.typography.bodyMedium
                     )
                     ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
+                        expanded = expanded, onDismissRequest = { expanded = false }) {
                         visibilityOptions.forEach { option ->
-                            DropdownMenuItem(
-                                text = { Text(option) },
-                                onClick = {
-                                    visibility = option
-                                    expanded = false
-                                }
-                            )
+                            DropdownMenuItem(text = { Text(option) }, onClick = {
+                                visibility = option
+                                expanded = false
+                            })
                         }
                     }
                 }
