@@ -39,5 +39,7 @@ interface MemosApi {
 }
 
 data class MemoRequest(
-    val content: String, val state: String = "NORMAL", val visibility: String = "PRIVATE"
+    val content: String,
+    val state: String = "NORMAL",
+    val visibility: String = "PRIVATE"
 )

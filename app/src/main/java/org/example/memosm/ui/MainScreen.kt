@@ -1,14 +1,17 @@
 package org.example.memosm.ui
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.Shortcut
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
@@ -23,23 +26,33 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import org.example.memosm.model.Memo
-import org.example.memosm.model.Shortcut
+import org.example.memosm.model.*
 import org.example.memosm.viewmodel.MemosViewModel
 
 enum class MainDestination(
     val label: String
 ) {
-    MEMOS("Memos"), EXPLORE("Explore"), ATTACHMENTS("Attachments"), PROFILE("Profile")
+    MEMOS("Memos"),
+    EXPLORE("Explore"),
+    ATTACHMENTS("Attachments"),
+    PROFILE("Profile")
 }
 
 @Composable
 fun MainScreen(
-    baseUrl: String, token: String, modifier: Modifier = Modifier
+    baseUrl: String,
+    token: String,
+    onLogout: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var currentDestination by remember { mutableStateOf(MainDestination.MEMOS) }
     val viewModel: MemosViewModel =
@@ -105,7 +118,7 @@ fun MainScreen(
             MainDestination.MEMOS -> MemosListScreen(viewModel)
             MainDestination.EXPLORE -> PlaceholderScreen("Explore")
             MainDestination.ATTACHMENTS -> PlaceholderScreen("Attachments")
-            MainDestination.PROFILE -> ProfileScreen(viewModel)
+            MainDestination.PROFILE -> ProfileScreen(viewModel, onLogout)
         }
     }
 }
@@ -158,9 +171,11 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                 ) {
                     item {
                         CreateMemoCard(
-                            onPublish = { content ->
-                                viewModel.createMemo(content)
-                            }, isPosting = uiState.isPosting
+                            onPublish = { content, visibility ->
+                                viewModel.createMemo(content, visibility)
+                            },
+                            isPosting = uiState.isPosting,
+                            availableTags = uiState.userStats?.tagCount?.keys ?: emptySet()
                         )
                     }
 
@@ -187,7 +202,7 @@ fun MemosListScreen(viewModel: MemosViewModel) {
 }
 
 @Composable
-fun ProfileScreen(viewModel: MemosViewModel) {
+fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
     val user = uiState.user
     val stats = uiState.userStats
@@ -227,6 +242,10 @@ fun ProfileScreen(viewModel: MemosViewModel) {
                 }
 
                 item {
+                    LogoutCard(onLogout)
+                }
+
+                item {
                     Spacer(modifier = Modifier.height(32.dp))
                 }
             } else if (uiState.isLoading) {
@@ -256,7 +275,7 @@ fun ProfileScreen(viewModel: MemosViewModel) {
 }
 
 @Composable
-fun ProfileHeader(user: org.example.memosm.model.User) {
+fun ProfileHeader(user: User) {
     Card(
         modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)
     ) {
@@ -297,7 +316,7 @@ fun ProfileHeader(user: org.example.memosm.model.User) {
 }
 
 @Composable
-fun StatsCard(stats: org.example.memosm.model.UserStats) {
+fun StatsCard(stats: UserStats) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -389,7 +408,7 @@ fun ShortcutsCard(shortcuts: List<Shortcut>) {
 }
 
 @Composable
-fun InstanceCard(instance: org.example.memosm.model.InstanceProfile) {
+fun InstanceCard(instance: InstanceProfile) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -401,6 +420,30 @@ fun InstanceCard(instance: org.example.memosm.model.InstanceProfile) {
             InfoRow("Version", instance.version)
             InfoRow("Mode", instance.mode)
             InfoRow("URL", instance.instanceUrl)
+        }
+    }
+}
+
+@Composable
+fun LogoutCard(onLogout: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer
+        ),
+        onClick = onLogout
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text("Logout", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -422,11 +465,59 @@ fun InfoRow(label: String, value: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateMemoCard(
-    onPublish: (String) -> Unit, isPosting: Boolean
+    onPublish: (String, String) -> Unit,
+    isPosting: Boolean,
+    availableTags: Set<String>
 ) {
-    var content by remember { mutableStateOf("") }
+    val contentState = rememberTextFieldState("")
+    var visibility by remember { mutableStateOf("PRIVATE") }
+    var expanded by remember { mutableStateOf(false) }
+    val visibilityOptions = listOf("PRIVATE", "PROTECTED", "PUBLIC")
+
+    // Tag autocomplete logic
+    var showTagPopup by remember { mutableStateOf(false) }
+    var tagFilter by remember { mutableStateOf("") }
+    var tagStartIndex by remember { mutableStateOf(-1) }
+
+    // To track cursor position
+    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val density = LocalDensity.current
+
+    LaunchedEffect(contentState.text, contentState.selection) {
+        val text = contentState.text.toString()
+        val selection = contentState.selection
+        val cursorIndex = selection.start
+        if (cursorIndex > 0 && selection.collapsed) {
+            val textBeforeCursor = text.substring(0, cursorIndex)
+            val lastHashIndex = textBeforeCursor.lastIndexOf('#')
+
+            if (lastHashIndex != -1) {
+                val potentialTag = textBeforeCursor.substring(lastHashIndex + 1)
+                if (!potentialTag.contains(' ') && !potentialTag.contains('\n')) {
+                    showTagPopup = true
+                    tagFilter = potentialTag
+                    tagStartIndex = lastHashIndex
+                } else {
+                    showTagPopup = false
+                }
+            } else {
+                showTagPopup = false
+            }
+        } else {
+            showTagPopup = false
+        }
+    }
+
+    val filteredTags = remember(tagFilter, availableTags) {
+        if (tagFilter.isEmpty()) {
+            availableTags.toList()
+        } else {
+            availableTags.filter { it.contains(tagFilter, ignoreCase = true) }
+        }
+    }
 
     Card(
         modifier = Modifier
@@ -435,23 +526,115 @@ fun CreateMemoCard(
             .padding(bottom = 8.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            OutlinedTextField(
-                value = content,
-                onValueChange = { content = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("What's on your mind?") },
-                minLines = 3,
-                enabled = !isPosting
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            Box {
+                OutlinedTextField(
+                    state = contentState,
+                    onTextLayout = { getLayout -> textLayoutResult = getLayout() },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("What's on your mind?") },
+                    lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 3),
+                    enabled = !isPosting
+                )
+
+                if (showTagPopup && filteredTags.isNotEmpty()) {
+                    val popupOffset = remember(textLayoutResult, contentState.selection, density) {
+                        val layout = textLayoutResult
+                        if (layout != null) {
+                            val cursorRect = layout.getCursorRect(
+                                contentState.selection.start.coerceIn(0, contentState.text.length)
+                            )
+                            // Approximate padding of OutlinedTextField
+                            val horizontalPadding = with(density) { 16.dp.roundToPx() }
+                            val verticalPadding = with(density) { 16.dp.roundToPx() }
+
+                            IntOffset(
+                                x = cursorRect.left.toInt() + horizontalPadding,
+                                y = cursorRect.bottom.toInt() + verticalPadding
+                            )
+                        } else {
+                            IntOffset(0, 150)
+                        }
+                    }
+
+                    Popup(
+                        alignment = Alignment.TopStart,
+                        offset = popupOffset
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .widthIn(max = 200.dp)
+                                .heightIn(max = 200.dp)
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
+                            shape = RoundedCornerShape(8.dp),
+                            tonalElevation = 8.dp,
+                            shadowElevation = 4.dp
+                        ) {
+                            LazyColumn {
+                                items(filteredTags) { tag ->
+                                    Text(
+                                        text = "#$tag",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                contentState.edit {
+                                                    val replacement = "#$tag "
+                                                    replace(tagStartIndex, contentState.selection.start, replacement)
+                                                    val newCursor = tagStartIndex + replacement.length
+                                                    selection = TextRange(newCursor)
+                                                }
+                                                showTagPopup = false
+                                            }
+                                            .padding(12.dp),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded },
+                    modifier = Modifier.width(160.dp)
+                ) {
+                    OutlinedTextField(
+                        value = visibility,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Visibility") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                        modifier = Modifier.menuAnchor(),
+                        textStyle = MaterialTheme.typography.bodyMedium
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        visibilityOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    visibility = option
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
                 Button(
                     onClick = {
-                        onPublish(content)
-                        content = ""
-                    }, enabled = content.isNotBlank() && !isPosting
+                        onPublish(contentState.text.toString(), visibility)
+                        contentState.clearText()
+                    }, enabled = contentState.text.isNotBlank() && !isPosting
                 ) {
                     if (isPosting) {
                         CircularProgressIndicator(
@@ -478,11 +661,29 @@ fun MemoItem(memo: Memo) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = memo.content, style = MaterialTheme.typography.bodyLarge)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = memo.displayTime,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = memo.displayTime,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.padding(start = 8.dp)
+                ) {
+                    Text(
+                        text = memo.visibility,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
     }
 }

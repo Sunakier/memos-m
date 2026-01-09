@@ -52,6 +52,11 @@ class MainActivity : ComponentActivity() {
                             MainScreen(
                                 baseUrl = savedUrl!!,
                                 token = savedToken!!,
+                                onLogout = {
+                                    scope.launch {
+                                        dataStoreManager.clearCredentials()
+                                    }
+                                },
                                 modifier = Modifier.padding(innerPadding)
                             )
                         } else {

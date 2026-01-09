@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,8 +30,7 @@ data class MemosUiState(
 )
 
 class MemosViewModel(
-    private val baseUrl: String,
-    private val token: String
+    private val baseUrl: String, private val token: String
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MemosUiState())
@@ -42,22 +40,14 @@ class MemosViewModel(
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
-        val client = OkHttpClient.Builder()
-            .addInterceptor(logging)
-            .addInterceptor { chain ->
-                val request = chain.request().newBuilder()
-                    .addHeader("Authorization", "Bearer $token")
-                    .build()
+        val client = OkHttpClient.Builder().addInterceptor(logging).addInterceptor { chain ->
+                val request =
+                    chain.request().newBuilder().addHeader("Authorization", "Bearer $token").build()
                 chain.proceed(request)
-            }
-            .build()
+            }.build()
 
-        Retrofit.Builder()
-            .baseUrl(baseUrl)
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(MemosApi::class.java)
+        Retrofit.Builder().baseUrl(baseUrl).client(client)
+            .addConverterFactory(GsonConverterFactory.create()).build().create(MemosApi::class.java)
     }
 
     init {
@@ -68,22 +58,25 @@ class MemosViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                // Fetch instance profile
-                val instanceProfileDeferred = async { try { api.getInstanceProfile() } catch (e: Exception) { null } }
-                
-                // Fetch memos
+                // Fetch memos first
                 val response = api.listMemos()
                 _uiState.value = _uiState.value.copy(
-                    memos = response.memos,
-                    nextPageToken = response.nextPageToken,
-                    instanceProfile = instanceProfileDeferred.await()
+                    memos = response.memos, nextPageToken = response.nextPageToken
                 )
+
+                // Fetch instance profile
+                try {
+                    val instance = api.getInstanceProfile()
+                    _uiState.value = _uiState.value.copy(instanceProfile = instance)
+                } catch (e: Exception) {
+                    Log.e("MemosViewModel", "Error fetching instance profile", e)
+                }
 
                 // Now get user info from the creator of the first memo
                 val firstMemo = response.memos.firstOrNull()
                 if (firstMemo != null) {
                     val userId = firstMemo.creator.removePrefix("users/")
-                    fetchExtendedUserInfo(userId)
+                    fetchUserDetails(userId)
                 } else {
                     fallbackFetchUser()
                 }
@@ -96,52 +89,48 @@ class MemosViewModel(
         }
     }
 
-    private suspend fun fetchExtendedUserInfo(userId: String) {
-        viewModelScope.launch {
-            try {
-                val userDeferred = async { api.getUser(userId) }
-                val statsDeferred = async { try { api.getUserStats(userId) } catch (e: Exception) { null } }
-                val shortcutsDeferred = async { try { api.getShortcuts(userId) } catch (e: Exception) { null } }
+    private suspend fun fetchUserDetails(userId: String) {
+        try {
+            val user = api.getUser(userId)
+            updateUser(user)
 
-                val user = userDeferred.await()
-                val processedUser = if (user.avatarUrl != null && !user.avatarUrl.startsWith("http")) {
-                    user.copy(avatarUrl = baseUrl.removeSuffix("/") + user.avatarUrl)
-                } else {
-                    user
-                }
+            val stats = api.getUserStats(userId)
+            val shortcuts = api.getShortcuts(userId)
 
-                _uiState.value = _uiState.value.copy(
-                    user = processedUser,
-                    userStats = statsDeferred.await(),
-                    shortcuts = shortcutsDeferred.await()?.shortcuts ?: emptyList()
-                )
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error fetching extended user info", e)
-            }
+            _uiState.value = _uiState.value.copy(
+                userStats = stats, shortcuts = shortcuts.shortcuts
+            )
+        } catch (e: Exception) {
+            Log.e("MemosViewModel", "Error fetching user details for: $userId", e)
+            fallbackFetchUser()
         }
     }
 
     private suspend fun fallbackFetchUser() {
         try {
             val response = api.getCurrentUserAuth()
-            val user = response.user
-            if (user != null) {
-                val processedUser = if (user.avatarUrl != null && !user.avatarUrl.startsWith("http")) {
-                    user.copy(avatarUrl = baseUrl.removeSuffix("/") + user.avatarUrl)
-                } else {
-                    user
-                }
-                _uiState.value = _uiState.value.copy(user = processedUser)
-                
-                // Try to fetch stats for fallback user
-                user.name?.let { name ->
-                    val userId = name.removePrefix("users/")
-                    fetchExtendedUserInfo(userId)
+            response.user?.let { user ->
+                updateUser(user)
+                user.name?.removePrefix("users/")?.let { userId ->
+                    val stats = api.getUserStats(userId)
+                    val shortcuts = api.getShortcuts(userId)
+                    _uiState.value = _uiState.value.copy(
+                        userStats = stats, shortcuts = shortcuts.shortcuts
+                    )
                 }
             }
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Fallback user fetch failed", e)
         }
+    }
+
+    private fun updateUser(user: User) {
+        val processedUser = if (user.avatarUrl != null && !user.avatarUrl.startsWith("http")) {
+            user.copy(avatarUrl = baseUrl.removeSuffix("/") + user.avatarUrl)
+        } else {
+            user
+        }
+        _uiState.value = _uiState.value.copy(user = processedUser)
     }
 
     fun fetchMemos(refresh: Boolean = false) {
@@ -175,23 +164,21 @@ class MemosViewModel(
         }
     }
 
-    fun createMemo(content: String, onSuccess: () -> Unit = {}) {
+    fun createMemo(content: String, visibility: String = "PRIVATE", onSuccess: () -> Unit = {}) {
         if (content.isBlank()) return
-        
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isPosting = true)
             try {
-                val memo = api.createMemo(MemoRequest(content = content))
+                val memo = api.createMemo(MemoRequest(content = content, visibility = visibility))
                 _uiState.value = _uiState.value.copy(
-                    memos = listOf(memo) + _uiState.value.memos,
-                    isPosting = false
+                    memos = listOf(memo) + _uiState.value.memos, isPosting = false
                 )
                 onSuccess()
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error creating memo", e)
                 _uiState.value = _uiState.value.copy(
-                    isPosting = false,
-                    error = "Failed to create memo: ${e.localizedMessage}"
+                    isPosting = false, error = "Failed to create memo: ${e.localizedMessage}"
                 )
             }
         }
