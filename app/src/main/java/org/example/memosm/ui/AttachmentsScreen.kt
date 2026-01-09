@@ -3,13 +3,12 @@ package org.example.memosm.ui
 import android.content.Intent
 import android.net.Uri
 import android.text.format.Formatter
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
-import androidx.compose.foundation.lazy.staggeredgrid.items
-import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.foundation.lazy.staggeredgrid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BrokenImage
@@ -18,6 +17,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +37,21 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyStaggeredGridState()
     val aspectRatios = remember { mutableStateMapOf<String, Float>() }
+    
+    // Zoom state for grid item size
+    var targetCellWidth by remember { mutableStateOf(240.dp) }
+    val minCellWidth = 120.dp
+    val maxCellWidth = 600.dp
+
+    // Animate the cell width changes for a smoother transition
+    val animatedCellWidth by animateDpAsState(
+        targetValue = targetCellWidth,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "CellWidthAnimation"
+    )
 
     val shouldLoadMore = remember {
         derivedStateOf {
@@ -61,6 +77,35 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
+            // Detect pinch-to-zoom gestures globally using the Initial pass
+            // This ensures zooming works even when fingers are over clickable cards.
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val pressedChanges = event.changes.filter { it.pressed }
+                        
+                        if (pressedChanges.size >= 2) {
+                            val p1 = pressedChanges[0].position
+                            val p2 = pressedChanges[1].position
+                            val p1Prev = pressedChanges[0].previousPosition
+                            val p2Prev = pressedChanges[1].previousPosition
+                            
+                            val currentDistance = (p1 - p2).getDistance()
+                            val previousDistance = (p1Prev - p2Prev).getDistance()
+                            
+                            if (previousDistance > 0f && currentDistance > 0f) {
+                                val zoomFactor = currentDistance / previousDistance
+                                if (zoomFactor != 1f) {
+                                    targetCellWidth = (targetCellWidth * zoomFactor).coerceIn(minCellWidth, maxCellWidth)
+                                    // Consume the event to prevent the list from scrolling while zooming
+                                    event.changes.forEach { it.consume() }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
     ) {
         if (uiState.attachments.isEmpty() && uiState.isLoading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -70,14 +115,17 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
             }
         } else {
             LazyVerticalStaggeredGrid(
-                columns = StaggeredGridCells.Adaptive(240.dp),
+                columns = StaggeredGridCells.Adaptive(animatedCellWidth),
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(12.dp),
                 verticalItemSpacing = 12.dp,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(uiState.attachments, key = { it.name ?: it.filename }) { attachment ->
+                items(
+                    items = uiState.attachments, 
+                    key = { it.name ?: it.filename }
+                ) { attachment ->
                     val key = attachment.name ?: attachment.filename
                     val ratio = aspectRatios[key] ?: 1.0f
 
@@ -86,7 +134,8 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                         token = uiState.token,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(ratio),
+                            .aspectRatio(ratio)
+                            .animateItem(), // Smoothly animate reordering when columns change
                         onRatioAvailable = { newRatio ->
                             aspectRatios[key] = newRatio
                         })
