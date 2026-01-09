@@ -17,6 +17,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import org.example.memosm.data.DataStoreManager
 import org.example.memosm.viewmodel.MemosViewModel
 
 enum class MainDestination(
@@ -27,11 +28,15 @@ enum class MainDestination(
 
 @Composable
 fun MainScreen(
-    baseUrl: String, token: String, onLogout: () -> Unit, modifier: Modifier = Modifier
+    baseUrl: String, 
+    token: String, 
+    dataStoreManager: DataStoreManager,
+    onLogout: () -> Unit, 
+    modifier: Modifier = Modifier
 ) {
     var currentDestination by remember { mutableStateOf(MainDestination.MEMOS) }
     val viewModel: MemosViewModel =
-        viewModel(factory = MemosViewModel.provideFactory(baseUrl, token))
+        viewModel(factory = MemosViewModel.provideFactory(baseUrl, token, dataStoreManager))
     val uiState by viewModel.uiState.collectAsState()
 
     NavigationSuiteScaffold(

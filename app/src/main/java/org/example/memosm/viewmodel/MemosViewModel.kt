@@ -10,10 +10,12 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.example.memosm.api.MemosApi
+import org.example.memosm.data.DataStoreManager
 import org.example.memosm.model.*
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -42,11 +44,14 @@ data class MemosUiState(
     // Detail pane state
     val selectedMemo: Memo? = null,
     val selectedMemoComments: List<Memo> = emptyList(),
-    val isLoadingComments: Boolean = false
+    val isLoadingComments: Boolean = false,
+    val attachmentCellWidth: Float = 240f
 )
 
 class MemosViewModel(
-    private val baseUrl: String, private val token: String
+    private val baseUrl: String, 
+    private val token: String,
+    private val dataStoreManager: DataStoreManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MemosUiState(token = token))
@@ -71,6 +76,13 @@ class MemosViewModel(
     }
 
     init {
+        viewModelScope.launch {
+            dataStoreManager.attachmentCellWidth.collectLatest { width ->
+                if (width != null) {
+                    _uiState.value = _uiState.value.copy(attachmentCellWidth = width)
+                }
+            }
+        }
         refreshAll()
     }
 
@@ -497,12 +509,19 @@ class MemosViewModel(
         }
     }
 
+    fun updateAttachmentCellWidth(width: Float) {
+        viewModelScope.launch {
+            dataStoreManager.saveAttachmentCellWidth(width)
+            // No need to update _uiState manually here because init block collects from DataStore
+        }
+    }
+
     companion object {
-        fun provideFactory(baseUrl: String, token: String): ViewModelProvider.Factory =
+        fun provideFactory(baseUrl: String, token: String, dataStoreManager: DataStoreManager): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return MemosViewModel(baseUrl, token) as T
+                    return MemosViewModel(baseUrl, token, dataStoreManager) as T
                 }
             }
     }

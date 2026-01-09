@@ -38,14 +38,13 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
     val listState = rememberLazyStaggeredGridState()
     val aspectRatios = remember { mutableStateMapOf<String, Float>() }
     
-    // Zoom state for grid item size
-    var targetCellWidth by remember { mutableStateOf(240.dp) }
+    // Limits for zooming
     val minCellWidth = 120.dp
     val maxCellWidth = 600.dp
 
     // Animate the cell width changes for a smoother transition
     val animatedCellWidth by animateDpAsState(
-        targetValue = targetCellWidth,
+        targetValue = uiState.attachmentCellWidth.dp,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMediumLow
@@ -78,7 +77,6 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
             .fillMaxSize()
             .statusBarsPadding()
             // Detect pinch-to-zoom gestures globally using the Initial pass
-            // This ensures zooming works even when fingers are over clickable cards.
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
@@ -97,7 +95,11 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                             if (previousDistance > 0f && currentDistance > 0f) {
                                 val zoomFactor = currentDistance / previousDistance
                                 if (zoomFactor != 1f) {
-                                    targetCellWidth = (targetCellWidth * zoomFactor).coerceIn(minCellWidth, maxCellWidth)
+                                    val newWidth = (uiState.attachmentCellWidth * zoomFactor).coerceIn(
+                                        minCellWidth.value, 
+                                        maxCellWidth.value
+                                    )
+                                    viewModel.updateAttachmentCellWidth(newWidth)
                                     // Consume the event to prevent the list from scrolling while zooming
                                     event.changes.forEach { it.consume() }
                                 }
@@ -135,7 +137,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(ratio)
-                            .animateItem(), // Smoothly animate reordering when columns change
+                            .animateItem(),
                         onRatioAvailable = { newRatio ->
                             aspectRatios[key] = newRatio
                         })

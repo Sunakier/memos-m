@@ -52,6 +52,7 @@ class MainActivity : ComponentActivity() {
                             MainScreen(
                                 baseUrl = savedUrl!!,
                                 token = savedToken!!,
+                                dataStoreManager = dataStoreManager,
                                 onLogout = {
                                     scope.launch {
                                         dataStoreManager.clearCredentials()
