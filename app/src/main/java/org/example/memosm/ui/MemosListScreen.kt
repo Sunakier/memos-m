@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.layout.AnimatedPane
 import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
 import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
@@ -94,54 +95,64 @@ fun MemosListScreen(viewModel: MemosViewModel) {
     NavigableListDetailPaneScaffold(
         navigator = navigator,
         listPane = {
-            MemosListPane(
-                viewModel = viewModel,
-                onMemoClick = { memo ->
-                    focusManager.clearFocus()
-                    scope.launch {
-                        val id = memo.name ?: memo.content.hashCode().toString()
-                        navigator.navigateTo(
-                            ListDetailPaneScaffoldRole.Detail, MemoKey(id)
-                        )
-                    }
-                })
+            AnimatedPane {
+                MemosListPane(
+                    viewModel = viewModel,
+                    onMemoClick = { memo ->
+                        focusManager.clearFocus()
+                        scope.launch {
+                            val id = memo.name ?: memo.content.hashCode().toString()
+                            navigator.navigateTo(
+                                ListDetailPaneScaffoldRole.Detail, MemoKey(id)
+                            )
+                        }
+                    })
+            }
         },
         detailPane = {
-            val selectedMemo = uiState.selectedMemo
-            val isListVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
-            val isDetailVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
-            val isDualPane = isListVisible && isDetailVisible
+            AnimatedPane {
+                val currentMemoKey = navigator.currentDestination?.contentKey
+                val isListVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
+                val isDetailVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
+                val isDualPane = isListVisible && isDetailVisible
 
-            AnimatedContent(
-                targetState = selectedMemo,
-                transitionSpec = {
-                    if (isDualPane) {
-                        // Tablet/Wide screen: simple zoom in/out
-                        (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)))
-                            .togetherWith(fadeOut(animationSpec = tween(90)) + scaleOut(targetScale = 0.92f, animationSpec = tween(90)))
-                    } else {
-                        // Mobile: swipe up (slide from bottom)
-                        (slideInVertically(initialOffsetY = { it }, animationSpec = tween(300)) + fadeIn())
-                            .togetherWith(slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300)) + fadeOut())
+                AnimatedContent(
+                    targetState = currentMemoKey,
+                    transitionSpec = {
+                        if (isDualPane) {
+                            // Tablet/Wide screen: simple zoom in/out
+                            (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)))
+                                .togetherWith(fadeOut(animationSpec = tween(90)) + scaleOut(targetScale = 0.92f, animationSpec = tween(90)))
+                        } else {
+                            // Mobile: swipe up (slide from bottom)
+                            (slideInVertically(initialOffsetY = { it }, animationSpec = tween(300)) + fadeIn())
+                                .togetherWith(slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300)) + fadeOut())
+                        }
+                    },
+                    label = "DetailPaneTransition"
+                ) { memoKey ->
+                    val memo = remember(memoKey, uiState.memos) {
+                        memoKey?.let { key ->
+                            uiState.memos.find { (it.name ?: it.content.hashCode().toString()) == key.id }
+                        }
                     }
-                },
-                label = "DetailPaneTransition"
-            ) { memo ->
-                if (memo != null) {
-                    MemoDetailPane(
-                        memo = memo,
-                        comments = uiState.selectedMemoComments,
-                        isLoadingComments = uiState.isLoadingComments,
-                        token = uiState.token,
-                        showBackButton = navigator.canNavigateBack(),
-                        onBack = {
-                            focusManager.clearFocus()
-                            scope.launch {
-                                navigator.navigateBack()
-                            }
-                        })
-                } else {
-                    MemoDetailPlaceholder()
+
+                    if (memo != null) {
+                        MemoDetailPane(
+                            memo = memo,
+                            comments = uiState.selectedMemoComments,
+                            isLoadingComments = uiState.isLoadingComments,
+                            token = uiState.token,
+                            showBackButton = navigator.canNavigateBack(),
+                            onBack = {
+                                focusManager.clearFocus()
+                                scope.launch {
+                                    navigator.navigateBack()
+                                }
+                            })
+                    } else if (isDualPane) {
+                        MemoDetailPlaceholder()
+                    }
                 }
             }
         }
