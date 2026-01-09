@@ -12,32 +12,249 @@ data class User(
     val displayName: String? = null,
     val avatarUrl: String? = null,
     val description: String? = null,
+    val password: String? = null,
     val state: String? = null,
     val createTime: String? = null,
     val updateTime: String? = null
 )
 
 data class UserStats(
-    val name: String,
-    val memoDisplayTimestamps: List<String>,
-    val memoTypeStats: MemoTypeStats,
-    val tagCount: Map<String, Int>,
-    val pinnedMemos: List<String>,
-    val totalMemoCount: Int
+    val name: String? = null,
+    val memoDisplayTimestamps: List<String>? = null,
+    val memoTypeStats: MemoTypeStats? = null,
+    val tagCount: Map<String, Int>? = null,
+    val pinnedMemos: List<String>? = null,
+    val totalMemoCount: Int? = null
 )
 
 data class MemoTypeStats(
-    val linkCount: Int, val codeCount: Int, val todoCount: Int, val undoCount: Int
+    val linkCount: Int? = null,
+    val codeCount: Int? = null,
+    val todoCount: Int? = null,
+    val undoCount: Int? = null
 )
 
 data class ShortcutResponse(
-    val shortcuts: List<Shortcut>
+    val shortcuts: List<Shortcut>? = null
 )
 
 data class Shortcut(
-    val name: String, val title: String, val filter: String
+    val name: String? = null,
+    val title: String? = null,
+    val filter: String? = null
 )
 
 data class InstanceProfile(
-    val owner: String, val version: String, val mode: String, val instanceUrl: String
+    val owner: String? = null,
+    val version: String? = null,
+    val mode: String? = null,
+    val instanceUrl: String? = null
+)
+
+// --- Auth Models ---
+
+data class RefreshTokenRequest(
+    val dummy: String? = null // Usually empty
+)
+
+data class RefreshTokenResponse(
+    val accessToken: String,
+    val expiresAt: String
+)
+
+data class SignInRequest(
+    val passwordCredentials: PasswordCredentials? = null,
+    val ssoCredentials: SSOCredentials? = null
+)
+
+data class PasswordCredentials(
+    val username: String,
+    val password: String
+)
+
+data class SSOCredentials(
+    val idpId: Int,
+    val code: String,
+    val redirectUri: String,
+    val codeVerifier: String? = null
+)
+
+data class SignInResponse(
+    val user: User,
+    val accessToken: String,
+    val accessTokenExpiresAt: String
+)
+
+data class GetCurrentUserResponse(
+    val user: User
+)
+
+// --- Identity Provider Models ---
+
+data class ListIdentityProvidersResponse(
+    val identityProviders: List<IdentityProvider>?
+)
+
+data class IdentityProvider(
+    val name: String? = null,
+    val type: String,
+    val title: String,
+    val identifierFilter: String? = null,
+    val config: IdentityProviderConfig
+)
+
+data class IdentityProviderConfig(
+    val oauth2Config: OAuth2Config? = null
+)
+
+data class OAuth2Config(
+    val clientId: String,
+    val clientSecret: String,
+    val authUrl: String,
+    val tokenUrl: String,
+    val userInfoUrl: String,
+    val scopes: List<String>,
+    val fieldMapping: FieldMapping
+)
+
+data class FieldMapping(
+    val identifier: String,
+    val displayName: String,
+    val email: String,
+    val avatarUrl: String
+)
+
+// --- Instance Models ---
+
+data class InstanceSetting(
+    val name: String? = null,
+    val generalSetting: GeneralSetting? = null,
+    val storageSetting: StorageSetting? = null,
+    val memoRelatedSetting: MemoRelatedSetting? = null
+)
+
+data class GeneralSetting(
+    val disallowUserRegistration: Boolean? = null,
+    val disallowPasswordAuth: Boolean? = null,
+    val additionalScript: String? = null,
+    val additionalStyle: String? = null,
+    val customProfile: CustomProfile? = null,
+    val weekStartDayOffset: Int? = null,
+    val disallowChangeUsername: Boolean? = null,
+    val disallowChangeNickname: Boolean? = null
+)
+
+data class CustomProfile(
+    val title: String? = null,
+    val description: String? = null,
+    val logoUrl: String? = null
+)
+
+data class MemoRelatedSetting(
+    val disallowPublicVisibility: Boolean? = null,
+    val displayWithUpdateTime: Boolean? = null,
+    val contentLengthLimit: Int? = null,
+    val enableDoubleClickEdit: Boolean? = null,
+    val reactions: List<String>? = null
+)
+
+data class StorageSetting(
+    val storageType: String? = null,
+    val filepathTemplate: String? = null,
+    val uploadSizeLimitMb: String? = null,
+    val s3Config: S3Config? = null
+)
+
+data class S3Config(
+    val accessKeyId: String,
+    val accessKeySecret: String,
+    val endpoint: String,
+    val region: String,
+    val bucket: String,
+    val usePathStyle: Boolean
+)
+
+// --- User Expansion Models ---
+
+data class ListUsersResponse(
+    val users: List<User>?,
+    val nextPageToken: String? = null,
+    val totalSize: Int? = null
+)
+
+data class ListUserNotificationsResponse(
+    val notifications: List<UserNotification>?,
+    val nextPageToken: String?
+)
+
+data class UserNotification(
+    val name: String? = null,
+    val sender: String? = null,
+    val status: String? = null,
+    val createTime: String? = null,
+    val type: String? = null,
+    val activityId: Int? = null
+)
+
+data class ListPersonalAccessTokensResponse(
+    val personalAccessTokens: List<PersonalAccessToken>?,
+    val nextPageToken: String?,
+    val totalSize: Int?
+)
+
+data class PersonalAccessToken(
+    val name: String? = null,
+    val description: String? = null,
+    val createdAt: String? = null,
+    val expiresAt: String? = null,
+    val lastUsedAt: String? = null
+)
+
+data class CreatePersonalAccessTokenRequest(
+    val parent: String,
+    val description: String? = null,
+    val expiresInDays: Int? = null
+)
+
+data class CreatePersonalAccessTokenResponse(
+    val personalAccessToken: PersonalAccessToken,
+    val token: String
+)
+
+data class ListUserSettingsResponse(
+    val settings: List<UserSetting>?,
+    val nextPageToken: String?,
+    val totalSize: Int?
+)
+
+data class UserSetting(
+    val name: String? = null,
+    val generalSetting: UserGeneralSetting? = null,
+    val webhooksSetting: UserWebhooksSetting? = null
+)
+
+data class UserGeneralSetting(
+    val locale: String? = null,
+    val memoVisibility: String? = null,
+    val theme: String? = null
+)
+
+data class UserWebhooksSetting(
+    val webhooks: List<UserWebhook>? = null
+)
+
+data class ListUserWebhooksResponse(
+    val webhooks: List<UserWebhook>?
+)
+
+data class UserWebhook(
+    val name: String? = null,
+    val url: String,
+    val displayName: String? = null,
+    val createTime: String? = null,
+    val updateTime: String? = null
+)
+
+data class ListAllUserStatsResponse(
+    val stats: List<UserStats>?
 )

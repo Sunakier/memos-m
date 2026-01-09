@@ -10,42 +10,42 @@ data class ListMemosResponse(
 data class ListAttachmentsResponse(
     val attachments: List<Attachment>?,
     val nextPageToken: String?,
-    val totalSize: Long?
+    val totalSize: Int?
 )
 
 data class Memo(
-    val name: String,
-    val state: String,
-    val creator: String,
-    val createTime: String,
-    val updateTime: String,
-    val displayTime: String,
+    val name: String? = null,
+    val state: String? = null,
+    val creator: String? = null,
+    val createTime: String? = null,
+    val updateTime: String? = null,
+    val displayTime: String? = null,
     val content: String,
     val visibility: String,
-    val tags: List<String>,
-    val pinned: Boolean,
-    val attachments: List<Attachment>?,
-    val relations: List<MemoRelation>?,
-    val reactions: List<Reaction>?,
-    val property: MemoProperty?,
-    val parent: String?,
-    val snippet: String?,
-    val location: Location?
+    val tags: List<String>? = null,
+    val pinned: Boolean? = null,
+    val attachments: List<Attachment>? = null,
+    val relations: List<MemoRelation>? = null,
+    val reactions: List<Reaction>? = null,
+    val property: MemoProperty? = null,
+    val parent: String? = null,
+    val snippet: String? = null,
+    val location: Location? = null
 )
 
 data class Attachment(
-    val name: String,
-    val createTime: String,
+    val name: String? = null,
+    val createTime: String? = null,
     val filename: String,
-    val content: String?,
-    val externalLink: String?,
-    @SerializedName("type") val type: String?,
-    @SerializedName("mimeType") val mimeType: String?,
-    val size: String?,
-    val memo: String?
+    val content: String? = null,
+    val externalLink: String? = null,
+    @SerializedName("type") val type: String,
+    @SerializedName("mimeType") val mimeType: String? = null,
+    val size: String? = null,
+    val memo: String? = null
 ) {
     val displayType: String
-        get() = mimeType ?: type ?: ""
+        get() = mimeType ?: type
 }
 
 data class MemoRelation(
@@ -56,26 +56,90 @@ data class MemoRelation(
 
 data class MemoSnippet(
     val name: String,
-    val snippet: String
+    val snippet: String? = null
 )
 
 data class Reaction(
-    val name: String,
-    val creator: String,
+    val name: String? = null,
+    val creator: String? = null,
     val contentId: String,
     val reactionType: String,
-    val createTime: String
+    val createTime: String? = null
 )
 
 data class MemoProperty(
-    val hasLink: Boolean,
-    val hasTaskList: Boolean,
-    val hasCode: Boolean,
-    val hasIncompleteTasks: Boolean
+    val hasLink: Boolean? = null,
+    val hasTaskList: Boolean? = null,
+    val hasCode: Boolean? = null,
+    val hasIncompleteTasks: Boolean? = null
 )
 
 data class Location(
-    val placeholder: String,
-    val latitude: Double,
-    val longitude: Double
+    val placeholder: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null
+)
+
+// --- Activity Models ---
+
+data class ListActivitiesResponse(
+    val activities: List<Activity>?,
+    val nextPageToken: String?
+)
+
+data class Activity(
+    val name: String? = null,
+    val creator: String? = null,
+    val type: String? = null,
+    val level: String? = null,
+    val createTime: String? = null,
+    val payload: ActivityPayload? = null
+)
+
+data class ActivityPayload(
+    val memoComment: ActivityMemoCommentPayload? = null
+)
+
+data class ActivityMemoCommentPayload(
+    val memo: String? = null,
+    val relatedMemo: String? = null
+)
+
+// --- Additional Memo Service Models ---
+
+data class ListMemoAttachmentsResponse(
+    val attachments: List<Attachment>?,
+    val nextPageToken: String?
+)
+
+data class SetMemoAttachmentsRequest(
+    val name: String,
+    val attachments: List<Attachment>
+)
+
+data class ListMemoCommentsResponse(
+    val memos: List<Memo>?,
+    val nextPageToken: String?,
+    val totalSize: Int?
+)
+
+data class ListMemoReactionsResponse(
+    val reactions: List<Reaction>?,
+    val nextPageToken: String?,
+    val totalSize: Int?
+)
+
+data class UpsertMemoReactionRequest(
+    val name: String,
+    val reaction: Reaction
+)
+
+data class ListMemoRelationsResponse(
+    val relations: List<MemoRelation>?,
+    val nextPageToken: String?
+)
+
+data class SetMemoRelationsRequest(
+    val name: String,
+    val relations: List<MemoRelation>
 )
