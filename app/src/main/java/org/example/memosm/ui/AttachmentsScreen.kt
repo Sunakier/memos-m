@@ -2,13 +2,13 @@ package org.example.memosm.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.outlined.BrokenImage
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -55,13 +55,13 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                 Text("No attachments found")
             }
         } else {
-            LazyHorizontalStaggeredGrid(
-                rows = StaggeredGridCells.Adaptive(240.dp),
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Adaptive(240.dp),
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalItemSpacing = 8.dp
+                contentPadding = PaddingValues(12.dp),
+                verticalItemSpacing = 12.dp,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(uiState.attachments, key = { it.name ?: it.filename }) { attachment ->
                     val key = attachment.name ?: attachment.filename
@@ -71,8 +71,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                         attachment = attachment,
                         token = uiState.token,
                         modifier = Modifier
-                            .fillMaxHeight()
-                            .widthIn(min = 120.dp)
+                            .fillMaxWidth()
                             .aspectRatio(ratio),
                         onRatioAvailable = { newRatio ->
                             aspectRatios[key] = newRatio
@@ -83,8 +82,8 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                     item {
                         Box(
                             modifier = Modifier
-                                .fillMaxHeight()
-                                .width(80.dp),
+                                .fillMaxWidth()
+                                .height(80.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator()
@@ -104,7 +103,7 @@ fun AttachmentItem(
     onRatioAvailable: (Float) -> Unit
 ) {
     Card(
-        modifier = modifier.clip(RoundedCornerShape(8.dp)),
+        modifier = modifier.clip(RoundedCornerShape(12.dp)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
@@ -159,7 +158,7 @@ fun AttachmentItem(
 
                     if (isError) {
                         Icon(
-                            imageVector = Icons.Default.BrokenImage,
+                            imageVector = Icons.Outlined.BrokenImage,
                             contentDescription = "Error",
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(32.dp)
@@ -168,23 +167,23 @@ fun AttachmentItem(
                 } else {
                     Text(
                         text = attachment.filename,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
                         maxLines = 3,
-                        modifier = Modifier.padding(12.dp)
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
             }
 
-            Column(modifier = Modifier.padding(8.dp)) {
+            Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     text = attachment.filename,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
                     text = attachment.size ?: "",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

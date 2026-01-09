@@ -8,7 +8,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.Shortcut
+import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.LibraryBooks
+import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -155,11 +159,15 @@ fun ProfileHeader(user: User) {
 @Composable
 fun StatsCard(stats: UserStats) {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
                 "Statistics",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Start)
             )
             Spacer(modifier = Modifier.height(12.dp))
             Row(
@@ -168,24 +176,25 @@ fun StatsCard(stats: UserStats) {
                 StatItem(
                     label = "Memos",
                     value = (stats.totalMemoCount ?: 0).toString(),
-                    icon = Icons.Default.Description
+                    icon = Icons.AutoMirrored.Outlined.LibraryBooks
                 )
                 StatItem(
                     label = "Tags",
                     value = (stats.tagCount?.size ?: 0).toString(),
-                    icon = Icons.Default.Tag
+                    icon = Icons.Outlined.Tag
                 )
                 StatItem(
                     label = "Pinned",
                     value = (stats.pinnedMemos?.size ?: 0).toString(),
-                    icon = Icons.Default.PushPin
+                    icon = Icons.Outlined.PushPin
                 )
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
             Text("Content Breakdown", style = MaterialTheme.typography.labelLarge)
             Spacer(modifier = Modifier.height(8.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(48.dp, Alignment.CenterHorizontally)
             ) {
                 StatSubItem("Links", stats.memoTypeStats?.linkCount ?: 0)
                 StatSubItem("Code", stats.memoTypeStats?.codeCount ?: 0)
@@ -228,6 +237,7 @@ fun StatSubItem(label: String, count: Int) {
 fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> Unit) {
     var showLocaleDialog by remember { mutableStateOf(false) }
     var tempLocale by remember { mutableStateOf(settings.locale ?: "") }
+    var showVisibilityMenu by remember { mutableStateOf(false) }
 
     if (showLocaleDialog) {
         AlertDialog(
@@ -258,80 +268,69 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
     }
 
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(vertical = 16.dp)) {
             Text(
                 "General Settings",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Locale
-            Row(modifier = Modifier
-                .fillMaxWidth()
-                .clickable {
-                    tempLocale = settings.locale ?: ""
-                    showLocaleDialog = true
-                }
-                .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text("Locale", style = MaterialTheme.typography.bodyLarge)
+            ListItem(
+                headlineContent = { Text("Locale") },
+                supportingContent = {
                     Text(
                         text = if (settings.locale.isNullOrBlank()) "Default" else settings.locale,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
-                Icon(Icons.Default.ChevronRight, contentDescription = null)
-            }
+                },
+                trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+                modifier = Modifier.clickable {
+                    tempLocale = settings.locale ?: ""
+                    showLocaleDialog = true
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Memo Visibility
-            var showVisibilityMenu by remember { mutableStateOf(false) }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Default Memo Visibility", style = MaterialTheme.typography.bodyLarge)
-
-                Box {
-                    ExposedDropdownMenuBox(
-                        expanded = showVisibilityMenu,
-                        onExpandedChange = { showVisibilityMenu = !showVisibilityMenu },
-                    ) {
-                        OutlinedTextField(
-                            value = if (settings.memoVisibility.isNullOrBlank()) "PRIVATE" else settings.memoVisibility,
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showVisibilityMenu) },
-                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                            modifier = Modifier
-                                .width(150.dp)
-                                .menuAnchor(),
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyMedium
+            Box {
+                ListItem(
+                    headlineContent = { Text("Default Memo Visibility") },
+                    supportingContent = {
+                        Text(
+                            text = if (settings.memoVisibility.isNullOrBlank()) "PRIVATE" else settings.memoVisibility,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    },
+                    trailingContent = {
+                        Icon(
+                            Icons.Default.ArrowDropDown,
+                            contentDescription = null
+                        )
+                    },
+                    modifier = Modifier.clickable { showVisibilityMenu = true },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                )
 
-                        ExposedDropdownMenu(
-                            expanded = showVisibilityMenu,
-                            onDismissRequest = { showVisibilityMenu = false }) {
-                            listOf("PRIVATE", "PROTECTED", "PUBLIC").forEach { visibility ->
-                                DropdownMenuItem(
-                                    text = { Text(visibility) },
-                                    onClick = {
-                                        onUpdate(null, visibility)
-                                        showVisibilityMenu = false
-                                    },
-                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                                )
+                DropdownMenu(
+                    expanded = showVisibilityMenu,
+                    onDismissRequest = { showVisibilityMenu = false },
+                    modifier = Modifier.align(Alignment.BottomEnd)
+                ) {
+                    listOf("PRIVATE", "PROTECTED", "PUBLIC").forEach { visibility ->
+                        DropdownMenuItem(
+                            text = { Text(visibility) },
+                            onClick = {
+                                onUpdate(null, visibility)
+                                showVisibilityMenu = false
                             }
-                        }
+                        )
                     }
                 }
             }
@@ -352,10 +351,10 @@ fun ShortcutsCard(shortcuts: List<Shortcut>) {
             shortcuts.forEach { shortcut ->
                 ListItem(
                     headlineContent = { Text(shortcut.title ?: "") }, leadingContent = {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Shortcut, contentDescription = null
-                    )
-                }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        Icon(
+                            Icons.AutoMirrored.Filled.Shortcut, contentDescription = null
+                        )
+                    }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
             }
         }
