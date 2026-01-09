@@ -165,7 +165,9 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                             scope.launch {
                                 navigator.navigateBack()
                             }
-                        })
+                        },
+                        viewModel = viewModel
+                    )
                 } else if (isDualPane) {
                     MemoDetailPlaceholder()
                 }

@@ -422,6 +422,35 @@ class MemosViewModel(
         }
     }
 
+    fun createComment(parentMemo: Memo, content: String, onSuccess: () -> Unit = {}) {
+        if (content.isBlank()) return
+        val memoId = parentMemo.name?.removePrefix("memos/") ?: return
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isPosting = true)
+            try {
+                val comment = api.createMemoComment(
+                    memo = memoId,
+                    comment = Memo(
+                        content = content,
+                        visibility = parentMemo.visibility,
+                        state = "NORMAL"
+                    )
+                )
+                _uiState.value = _uiState.value.copy(
+                    selectedMemoComments = _uiState.value.selectedMemoComments + processMemo(comment),
+                    isPosting = false
+                )
+                onSuccess()
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error creating comment", e)
+                _uiState.value = _uiState.value.copy(
+                    isPosting = false, error = "Failed to create comment: ${e.localizedMessage}"
+                )
+            }
+        }
+    }
+
     fun selectMemo(memo: Memo?) {
         _uiState.value = _uiState.value.copy(
             selectedMemo = memo,

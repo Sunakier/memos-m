@@ -89,19 +89,19 @@ fun ExploreScreen(viewModel: MemosViewModel) {
                         (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(
                             initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)
                         )).togetherWith(
-                                fadeOut(animationSpec = tween(90)) + scaleOut(
-                                    targetScale = 0.92f, animationSpec = tween(90)
-                                )
+                            fadeOut(animationSpec = tween(90)) + scaleOut(
+                                targetScale = 0.92f, animationSpec = tween(90)
                             )
+                        )
                     } else {
                         // Mobile: swipe up (slide from bottom)
                         (slideInVertically(
                             initialOffsetY = { it }, animationSpec = tween(300)
                         ) + fadeIn()).togetherWith(
-                                slideOutVertically(
-                                    targetOffsetY = { it }, animationSpec = tween(300)
-                                ) + fadeOut()
-                            )
+                            slideOutVertically(
+                                targetOffsetY = { it }, animationSpec = tween(300)
+                            ) + fadeOut()
+                        )
                     }
                 }, label = "ExploreDetailPaneTransition"
             ) { memoKey ->
@@ -125,7 +125,9 @@ fun ExploreScreen(viewModel: MemosViewModel) {
                             scope.launch {
                                 navigator.navigateBack()
                             }
-                        })
+                        },
+                        viewModel = viewModel
+                    )
                 } else if (isDualPane) {
                     MemoDetailPlaceholder()
                 }
