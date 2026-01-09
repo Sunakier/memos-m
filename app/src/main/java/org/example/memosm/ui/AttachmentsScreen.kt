@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,9 +34,16 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
 
     val shouldLoadMore = remember {
         derivedStateOf {
-            val lastVisibleItem =
-                listState.layoutInfo.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf false
-            lastVisibleItem.index >= listState.layoutInfo.totalItemsCount - 5
+            val totalItemsCount = listState.layoutInfo.totalItemsCount
+            if (totalItemsCount == 0 || uiState.isFetchingAttachments) return@derivedStateOf false
+            
+            val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf false
+            
+            // Trigger load more when we are 5 items away from the end,
+            // but only if there actually IS a next page.
+            uiState.nextAttachmentsPageToken != null && 
+            !uiState.nextAttachmentsPageToken.isNullOrBlank() &&
+            lastVisibleItem.index >= totalItemsCount - 5
         }
     }
 
@@ -80,8 +88,8 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                         })
                 }
 
-                if (uiState.nextAttachmentsPageToken != null) {
-                    item {
+                if (!uiState.nextAttachmentsPageToken.isNullOrBlank()) {
+                    item(span = StaggeredGridItemSpan.FullLine) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()

@@ -32,6 +32,7 @@ data class MemosUiState(
     val isLoading: Boolean = false,
     val isExploring: Boolean = false,
     val isPosting: Boolean = false,
+    val isFetchingAttachments: Boolean = false,
     val error: String? = null,
     val nextPageToken: String? = null,
     val exploreNextPageToken: String? = null,
@@ -138,9 +139,11 @@ class MemosViewModel(
     }
 
     fun fetchAttachments(loadMore: Boolean = false) {
-        if (_uiState.value.isLoading && !loadMore) return
+        if (_uiState.value.isFetchingAttachments) return
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isFetchingAttachments = true)
             loadAttachmentsInternal(loadMore)
+            _uiState.value = _uiState.value.copy(isFetchingAttachments = false)
         }
     }
 
