@@ -2,7 +2,7 @@ package org.example.memosm.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.LazyHorizontalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
@@ -27,6 +27,7 @@ import org.example.memosm.viewmodel.MemosViewModel
 fun AttachmentsScreen(viewModel: MemosViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyStaggeredGridState()
+    val aspectRatios = remember { mutableStateMapOf<String, Float>() }
 
     val shouldLoadMore = remember {
         derivedStateOf {
@@ -54,18 +55,28 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                 Text("No attachments found")
             }
         } else {
-            LazyVerticalStaggeredGrid(
-                columns = StaggeredGridCells.Adaptive(160.dp),
+            LazyHorizontalStaggeredGrid(
+                rows = StaggeredGridCells.Adaptive(240.dp),
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalItemSpacing = 8.dp
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalItemSpacing = 8.dp
             ) {
                 items(uiState.attachments, key = { it.name ?: it.filename }) { attachment ->
+                    val key = attachment.name ?: attachment.filename
+                    val ratio = aspectRatios[key] ?: 1.0f
+                    
                     AttachmentItem(
                         attachment = attachment,
-                        token = uiState.token
+                        token = uiState.token,
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .widthIn(min = 120.dp)
+                            .aspectRatio(ratio),
+                        onRatioAvailable = { newRatio ->
+                            aspectRatios[key] = newRatio
+                        }
                     )
                 }
 
@@ -73,8 +84,8 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                     item {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
+                                .fillMaxHeight()
+                                .width(80.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator()
@@ -89,33 +100,35 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
 @Composable
 fun AttachmentItem(
     attachment: Attachment, 
-    token: String
+    token: String,
+    modifier: Modifier = Modifier,
+    onRatioAvailable: (Float) -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp)),
+        modifier = modifier.clip(RoundedCornerShape(8.dp)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            val isImage = remember(attachment.displayType) {
-                attachment.displayType.startsWith(
+            val displayType = attachment.displayType
+            val isImage = remember(displayType) {
+                displayType.startsWith(
                     "image/",
                     ignoreCase = true
-                ) || attachment.displayType.contains("image", ignoreCase = true)
+                ) || displayType.contains("image", ignoreCase = true)
             }
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .wrapContentHeight()
+                    .weight(1f)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 if (isImage) {
                     val context = LocalContext.current
-                    val imageRequest = remember(attachment.externalLink, token) {
-                        ImageRequest.Builder(context).data(attachment.externalLink)
+                    val externalLink = attachment.externalLink
+                    val imageRequest = remember(externalLink, token) {
+                        ImageRequest.Builder(context).data(externalLink)
                             .addHeader("Authorization", "Bearer $token").crossfade(true).size(800)
                             .diskCachePolicy(CachePolicy.ENABLED)
                             .memoryCachePolicy(CachePolicy.ENABLED).build()
@@ -127,18 +140,22 @@ fun AttachmentItem(
                     AsyncImage(
                         model = imageRequest,
                         contentDescription = attachment.filename,
-                        modifier = Modifier.fillMaxWidth(),
-                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
                         onLoading = { isLoading = true; isError = false },
-                        onSuccess = { 
+                        onSuccess = { state ->
                             isLoading = false
                             isError = false
+                            val size = state.painter.intrinsicSize
+                            if (size.width > 0 && size.height > 0) {
+                                onRatioAvailable(size.width / size.height)
+                            }
                         },
                         onError = { isLoading = false; isError = true })
 
                     if (isLoading) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp).padding(16.dp), 
+                            modifier = Modifier.size(24.dp), 
                             strokeWidth = 2.dp
                         )
                     }
@@ -148,7 +165,7 @@ fun AttachmentItem(
                             imageVector = Icons.Default.BrokenImage,
                             contentDescription = "Error",
                             tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(32.dp).padding(16.dp)
+                            modifier = Modifier.size(32.dp)
                         )
                     }
                 } else {
