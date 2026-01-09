@@ -93,7 +93,7 @@ fun ExploreScreen(viewModel: MemosViewModel) {
                             .togetherWith(slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300)) + fadeOut())
                     }
                 },
-                label = "DetailPaneTransition"
+                label = "ExploreDetailPaneTransition"
             ) { memo ->
                 if (memo != null) {
                     MemoDetailPane(
