@@ -2,9 +2,10 @@ package org.example.memosm.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrokenImage
@@ -14,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -26,44 +26,13 @@ import org.example.memosm.viewmodel.MemosViewModel
 @Composable
 fun AttachmentsScreen(viewModel: MemosViewModel) {
     val uiState by viewModel.uiState.collectAsState()
-    val listState = rememberLazyListState()
-
-    // Map to store aspect ratios as images load
-    val aspectRatios = remember { mutableStateMapOf<String, Float>() }
-
-    // Use LocalConfiguration to get screen width stably
-    val configuration = LocalConfiguration.current
-    val maxWidthDp = configuration.screenWidthDp.dp - 16.dp
-
-    // Group attachments into justified rows using derivedStateOf
-    val justifiedRows by remember(uiState.attachments) {
-        derivedStateOf {
-            val rows = mutableListOf<List<Attachment>>()
-            var currentRow = mutableListOf<Attachment>()
-            var currentWidthFactor = 0f
-            val maxRowWidthFactor = 2.2f
-
-            uiState.attachments.forEach { attachment ->
-                val ratio = aspectRatios[attachment.name] ?: 1.0f
-                if (currentRow.isNotEmpty() && currentWidthFactor + ratio > maxRowWidthFactor) {
-                    rows.add(currentRow)
-                    currentRow = mutableListOf(attachment)
-                    currentWidthFactor = ratio
-                } else {
-                    currentRow.add(attachment)
-                    currentWidthFactor += ratio
-                }
-            }
-            if (currentRow.isNotEmpty()) rows.add(currentRow)
-            rows
-        }
-    }
+    val listState = rememberLazyStaggeredGridState()
 
     val shouldLoadMore = remember {
         derivedStateOf {
             val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()
                 ?: return@derivedStateOf false
-            lastVisibleItem.index >= listState.layoutInfo.totalItemsCount - 3
+            lastVisibleItem.index >= listState.layoutInfo.totalItemsCount - 5
         }
     }
 
@@ -85,41 +54,19 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                 Text("No attachments found")
             }
         } else {
-            LazyColumn(
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Adaptive(160.dp),
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalItemSpacing = 8.dp
             ) {
-                items(justifiedRows, key = { it.firstOrNull()?.name ?: "" }) { rowItems ->
-                    val totalRatio =
-                        rowItems.sumOf { (aspectRatios[it.name] ?: 1.0f).toDouble() }.toFloat()
-
-                    // Calculate height that preserves ratio: Height = Width / TotalRatio
-                    val spacingSum = 8.dp * (rowItems.size - 1)
-                    val justifiedHeight =
-                        ((maxWidthDp - spacingSum) / totalRatio).coerceIn(180.dp, 360.dp)
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(justifiedHeight),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        rowItems.forEach { attachment ->
-                            val ratio = aspectRatios[attachment.name] ?: 1.0f
-                            Box(modifier = Modifier.weight(ratio)) {
-                                AttachmentItem(
-                                    attachment = attachment,
-                                    token = uiState.token,
-                                    onRatioAvailable = { newRatio ->
-                                        if (aspectRatios[attachment.name] != newRatio) {
-                                            aspectRatios[attachment.name] = newRatio
-                                        }
-                                    })
-                            }
-                        }
-                    }
+                items(uiState.attachments, key = { it.name ?: it.filename }) { attachment ->
+                    AttachmentItem(
+                        attachment = attachment,
+                        token = uiState.token
+                    )
                 }
 
                 if (uiState.nextAttachmentsPageToken != null) {
@@ -141,11 +88,12 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
 
 @Composable
 fun AttachmentItem(
-    attachment: Attachment, token: String, onRatioAvailable: (Float) -> Unit
+    attachment: Attachment, 
+    token: String
 ) {
     Card(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -159,8 +107,8 @@ fun AttachmentItem(
 
             Box(
                 modifier = Modifier
-                    .weight(1f)
                     .fillMaxWidth()
+                    .wrapContentHeight()
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
@@ -179,22 +127,19 @@ fun AttachmentItem(
                     AsyncImage(
                         model = imageRequest,
                         contentDescription = attachment.filename,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth(),
+                        contentScale = ContentScale.FillWidth,
                         onLoading = { isLoading = true; isError = false },
-                        onSuccess = { state ->
+                        onSuccess = { 
                             isLoading = false
                             isError = false
-                            val size = state.painter.intrinsicSize
-                            if (size.width > 0 && size.height > 0) {
-                                onRatioAvailable(size.width / size.height)
-                            }
                         },
                         onError = { isLoading = false; isError = true })
 
                     if (isLoading) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp), strokeWidth = 2.dp
+                            modifier = Modifier.size(24.dp).padding(16.dp), 
+                            strokeWidth = 2.dp
                         )
                     }
 
@@ -203,7 +148,7 @@ fun AttachmentItem(
                             imageVector = Icons.Default.BrokenImage,
                             contentDescription = "Error",
                             tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(32.dp).padding(16.dp)
                         )
                     }
                 } else {

@@ -13,8 +13,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
-import org.example.memosm.api.AttachmentRequest
-import org.example.memosm.api.MemoRequest
 import org.example.memosm.api.MemosApi
 import org.example.memosm.model.*
 import retrofit2.Retrofit
@@ -93,8 +91,12 @@ class MemosViewModel(
                 // Now get user info
                 val firstMemo = newMemos.firstOrNull()
                 if (firstMemo != null) {
-                    val userId = firstMemo.creator.removePrefix("users/")
-                    fetchUserDetails(userId)
+                    val userId = firstMemo.creator?.removePrefix("users/") ?: ""
+                    if (userId.isNotEmpty()) {
+                        fetchUserDetails(userId)
+                    } else {
+                        fallbackFetchUser()
+                    }
                 } else {
                     fallbackFetchUser()
                 }
@@ -114,7 +116,7 @@ class MemosViewModel(
 
     private fun processAttachment(attachment: Attachment): Attachment {
         val downloadUrl = if (attachment.externalLink.isNullOrBlank()) {
-            "${sanitizedBaseUrl.removeSuffix("/")}/file/${attachment.name}/${attachment.filename}"
+            "${sanitizedBaseUrl.removeSuffix("/")}/file/${attachment.name ?: ""}/${attachment.filename}"
         } else if (!attachment.externalLink.startsWith("http")) {
             "${sanitizedBaseUrl.removeSuffix("/")}${if (attachment.externalLink.startsWith("/")) "" else "/"}${attachment.externalLink}"
         } else {
@@ -163,7 +165,7 @@ class MemosViewModel(
             val base64Content = Base64.encodeToString(bytes, Base64.NO_WRAP)
             Log.d("MemosViewModel", "Encoded file to Base64, size: ${base64Content.length}")
 
-            val request = AttachmentRequest(
+            val request = Attachment(
                 filename = fileName,
                 type = mimeType,
                 content = base64Content
@@ -209,7 +211,7 @@ class MemosViewModel(
             val shortcuts = api.getShortcuts(userId)
 
             _uiState.value = _uiState.value.copy(
-                userStats = stats, shortcuts = shortcuts.shortcuts
+                userStats = stats, shortcuts = shortcuts.shortcuts ?: emptyList()
             )
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error fetching user details for: $userId", e)
@@ -226,7 +228,7 @@ class MemosViewModel(
                     val stats = api.getUserStats(userId)
                     val shortcuts = api.getShortcuts(userId)
                     _uiState.value = _uiState.value.copy(
-                        userStats = stats, shortcuts = shortcuts.shortcuts
+                        userStats = stats, shortcuts = shortcuts.shortcuts ?: emptyList()
                     )
                 }
             }
@@ -288,10 +290,11 @@ class MemosViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isPosting = true)
             try {
-                val memo = api.createMemo(MemoRequest(
+                val memo = api.createMemo(Memo(
                     content = content, 
                     visibility = visibility,
-                    attachments = attachments
+                    attachments = attachments,
+                    state = "NORMAL"
                 ))
                 _uiState.value = _uiState.value.copy(
                     memos = listOf(processMemo(memo)) + _uiState.value.memos, isPosting = false

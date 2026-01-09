@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -308,7 +309,7 @@ fun CreateMemoCard(
                                         .padding(4.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(imageVector = Icons.Default.InsertDriveFile, contentDescription = null)
+                                    Icon(imageVector = Icons.AutoMirrored.Filled.InsertDriveFile, contentDescription = null)
                                 }
                             }
                             
@@ -496,7 +497,7 @@ fun MemoItem(memo: Memo, token: String, modifier: Modifier = Modifier) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = memo.displayTime,
+                    text = memo.displayTime ?: "UNKNOW",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

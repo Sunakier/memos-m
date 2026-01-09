@@ -127,7 +127,7 @@ fun ProfileHeader(user: User) {
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "@${user.username}",
+                        text = "@${user.username ?: "unknown"}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -136,7 +136,7 @@ fun ProfileHeader(user: User) {
             if (!user.description.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = user.description, style = MaterialTheme.typography.bodyMedium
+                    text = user.description ?: "", style = MaterialTheme.typography.bodyMedium
                 )
             }
         }
@@ -158,15 +158,15 @@ fun StatsCard(stats: UserStats) {
             ) {
                 StatItem(
                     label = "Memos",
-                    value = stats.totalMemoCount.toString(),
+                    value = (stats.totalMemoCount ?: 0).toString(),
                     icon = Icons.Default.Description
                 )
                 StatItem(
-                    label = "Tags", value = stats.tagCount.size.toString(), icon = Icons.Default.Tag
+                    label = "Tags", value = (stats.tagCount?.size ?: 0).toString(), icon = Icons.Default.Tag
                 )
                 StatItem(
                     label = "Pinned",
-                    value = stats.pinnedMemos.size.toString(),
+                    value = (stats.pinnedMemos?.size ?: 0).toString(),
                     icon = Icons.Default.PushPin
                 )
             }
@@ -176,9 +176,9 @@ fun StatsCard(stats: UserStats) {
             Row(
                 modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                StatSubItem("Links", stats.memoTypeStats.linkCount)
-                StatSubItem("Code", stats.memoTypeStats.codeCount)
-                StatSubItem("Todo", stats.memoTypeStats.todoCount)
+                StatSubItem("Links", stats.memoTypeStats?.linkCount ?: 0)
+                StatSubItem("Code", stats.memoTypeStats?.codeCount ?: 0)
+                StatSubItem("Todo", stats.memoTypeStats?.todoCount ?: 0)
             }
         }
     }
@@ -224,7 +224,7 @@ fun ShortcutsCard(shortcuts: List<Shortcut>) {
             Spacer(modifier = Modifier.height(8.dp))
             shortcuts.forEach { shortcut ->
                 ListItem(
-                    headlineContent = { Text(shortcut.title) }, leadingContent = {
+                    headlineContent = { Text(shortcut.title ?: "") }, leadingContent = {
                     Icon(
                         Icons.AutoMirrored.Filled.Shortcut, contentDescription = null
                     )
@@ -245,9 +245,9 @@ fun InstanceCard(instance: InstanceProfile) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
-            InfoRow("Version", instance.version)
-            InfoRow("Mode", instance.mode)
-            InfoRow("URL", instance.instanceUrl)
+            InfoRow("Version", instance.version ?: "Unknown")
+            InfoRow("Mode", instance.mode ?: "Unknown")
+            InfoRow("URL", instance.instanceUrl ?: "Unknown")
         }
     }
 }
