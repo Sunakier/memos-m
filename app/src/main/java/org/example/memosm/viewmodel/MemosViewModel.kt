@@ -44,12 +44,12 @@ class MemosViewModel(
             level = HttpLoggingInterceptor.Level.BODY
         }
         val client = OkHttpClient.Builder().addInterceptor(logging).addInterceptor { chain ->
-                val request =
-                    chain.request().newBuilder()
-                        .addHeader("Authorization", "Bearer $token")
-                        .build()
-                chain.proceed(request)
-            }.build()
+            val request =
+                chain.request().newBuilder()
+                    .addHeader("Authorization", "Bearer $token")
+                    .build()
+            chain.proceed(request)
+        }.build()
 
         Retrofit.Builder().baseUrl(baseUrl).client(client)
             .addConverterFactory(GsonConverterFactory.create()).build().create(MemosApi::class.java)
@@ -66,7 +66,7 @@ class MemosViewModel(
                 // Fetch memos first
                 val memoResponse = api.listMemos()
                 val newMemos = memoResponse.memos?.map { processMemo(it) } ?: emptyList()
-                
+
                 _uiState.value = _uiState.value.copy(
                     memos = newMemos,
                     nextPageToken = memoResponse.nextPageToken
@@ -107,12 +107,13 @@ class MemosViewModel(
 
     private fun processAttachment(attachment: Attachment): Attachment {
         val downloadUrl = if (attachment.externalLink.isNullOrBlank()) {
-            "${baseUrl.removeSuffix("/")}/api/v1/${attachment.name}:download"
+            "${baseUrl.removeSuffix("/")}/file/${attachment.name}/${attachment.filename}"
         } else if (!attachment.externalLink.startsWith("http")) {
             "${baseUrl.removeSuffix("/")}${if (attachment.externalLink.startsWith("/")) "" else "/"}${attachment.externalLink}"
         } else {
             attachment.externalLink
         }
+        Log.d("MemosViewModel", "Processed attachment URL: $downloadUrl for ${attachment.filename}")
         return attachment.copy(externalLink = downloadUrl)
     }
 
@@ -131,7 +132,7 @@ class MemosViewModel(
             val response = api.listAttachments(pageToken = currentToken)
             val rawAttachments = response.attachments ?: emptyList()
             val processedAttachments = rawAttachments.map { processAttachment(it) }
-            
+
             _uiState.value = _uiState.value.copy(
                 attachments = if (loadMore) _uiState.value.attachments + processedAttachments else processedAttachments,
                 nextAttachmentsPageToken = response.nextPageToken
