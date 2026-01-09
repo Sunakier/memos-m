@@ -185,7 +185,11 @@ private fun ExploreMemosListPane(
                             memo = memo,
                             user = uiState.users[memo.creator],
                             token = uiState.token,
-                            isSelected = memo == uiState.selectedMemo,
+                            colors = if (memo == uiState.selectedMemo) {
+                                CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                            } else {
+                                CardDefaults.cardColors()
+                            },
                             onClick = {
                                 focusManager.clearFocus()
                                 onMemoClick(memo)

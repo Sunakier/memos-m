@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -28,23 +29,27 @@ enum class MainDestination(
 
 @Composable
 fun MainScreen(
-    baseUrl: String, 
-    token: String, 
+    baseUrl: String,
+    token: String,
     dataStoreManager: DataStoreManager,
-    onLogout: () -> Unit, 
+    onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var currentDestination by remember { mutableStateOf(MainDestination.MEMOS) }
     val viewModel: MemosViewModel =
         viewModel(factory = MemosViewModel.provideFactory(baseUrl, token, dataStoreManager))
     val uiState by viewModel.uiState.collectAsState()
+    val focusManager = LocalFocusManager.current
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
             MainDestination.entries.forEach { destination ->
                 item(
                     selected = currentDestination == destination,
-                    onClick = { currentDestination = destination },
+                    onClick = {
+                        focusManager.clearFocus()
+                        currentDestination = destination
+                    },
                     icon = {
                         val isSelected = currentDestination == destination
                         when (destination) {

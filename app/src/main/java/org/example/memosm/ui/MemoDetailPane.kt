@@ -3,28 +3,16 @@ package org.example.memosm.ui
 import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import org.example.memosm.model.Attachment
 import org.example.memosm.model.Memo
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,10 +66,12 @@ fun MemoDetailPane(
             ) {
                 // Original memo
                 item(key = "original_${memo.name ?: memo.content.hashCode()}") {
-                    MemoDetailCard(
+                    MemoItem(
                         memo = memo,
                         token = token,
-                        isOriginal = true
+                        colors = CardDefaults.cardColors(
+//                            containerColor = MaterialTheme.colorScheme.surface
+                        )
                     )
                 }
 
@@ -139,135 +129,13 @@ fun MemoDetailPane(
                 }
 
                 items(comments, key = { "comment_${it.name ?: it.content.hashCode()}" }) { comment ->
-                    MemoDetailCard(
+                    MemoItem(
                         memo = comment,
                         token = token,
-                        isOriginal = false
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
                     )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MemoDetailCard(
-    memo: Memo, token: String, isOriginal: Boolean, modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(), colors = if (isOriginal) {
-            CardDefaults.cardColors()
-        } else {
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        }
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = memo.content, style = MaterialTheme.typography.bodyLarge
-            )
-
-            val attachments = remember(memo.attachments) {
-                memo.attachments ?: emptyList()
-            }
-
-            if (attachments.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                AttachmentRow(attachments = attachments, token = token)
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = memo.displayTime ?: "UNKNOWN",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.padding(start = 8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Icon(
-                            imageVector = getVisibilityIcon(memo.visibility),
-                            contentDescription = memo.visibility,
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AttachmentRow(
-    attachments: List<Attachment>, token: String, modifier: Modifier = Modifier
-) {
-    LazyRow(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(bottom = 4.dp)
-    ) {
-        items(attachments, key = { it.externalLink ?: it.filename }) { attachment ->
-            val isImage = remember(attachment.displayType) {
-                attachment.displayType.startsWith(
-                    "image/", ignoreCase = true
-                ) || attachment.displayType.contains("image", ignoreCase = true)
-            }
-
-            if (isImage) {
-                val context = LocalContext.current
-                val imageRequest = remember(attachment.externalLink, token) {
-                    ImageRequest.Builder(context).data(attachment.externalLink)
-                        .addHeader("Authorization", "Bearer $token").crossfade(true).build()
-                }
-
-                AsyncImage(
-                    model = imageRequest,
-                    contentDescription = attachment.filename,
-                    modifier = Modifier
-                        .size(width = 240.dp, height = 160.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Card(
-                    modifier = Modifier
-                        .size(width = 200.dp, height = 100.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(8.dp),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = attachment.filename,
-                            style = MaterialTheme.typography.labelMedium,
-                            maxLines = 2,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-                        Text(
-                            text = attachment.displayType,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
             }
         }
@@ -288,14 +156,5 @@ fun MemoDetailPlaceholder(modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    }
-}
-
-private fun getVisibilityIcon(visibility: String): ImageVector {
-    return when (visibility.uppercase()) {
-        "PUBLIC" -> Icons.Default.Public
-        "PROTECTED" -> Icons.Default.Group
-        "PRIVATE" -> Icons.Default.Lock
-        else -> Icons.Default.Lock
     }
 }
