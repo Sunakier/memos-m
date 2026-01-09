@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -37,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -50,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
 import org.example.memosm.model.Attachment
@@ -383,72 +386,98 @@ fun CreateMemoCard(
             val showPublishText = maxWidth > 300.dp
 
             Column {
+                // Focus handling: Use a state to control whether the field is focusable.
+                // This prevents automatic focus when navigating back or switching tabs.
+                var isActivated by remember { mutableStateOf(false) }
+                
                 Box {
                     OutlinedTextField(
                         state = contentState,
                         onTextLayout = { getLayout -> textLayoutResult = getLayout() },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .focusRequester(focusRequester),
+                            .focusRequester(focusRequester)
+                            .onFocusChanged { 
+                                if (it.isFocused) isActivated = true
+                            },
                         placeholder = { Text("What's on your mind?") },
                         lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 3),
-                        enabled = !isPosting
+                        enabled = !isPosting && isActivated
                     )
 
-                    if (showTagPopup && filteredTags.isNotEmpty()) {
-                        val popupOffset =
-                            remember(textLayoutResult, contentState.selection, density) {
-                                val layout = textLayoutResult
-                                if (layout != null) {
-                                    val cursorIndex = contentState.selection.start
-                                    val safeIndex =
-                                        cursorIndex.coerceIn(0, layout.layoutInput.text.length)
-                                    val cursorRect = layout.getCursorRect(safeIndex)
-                                    val horizontalPadding = with(density) { 16.dp.roundToPx() }
-                                    val verticalPadding = with(density) { 16.dp.roundToPx() }
-                                    IntOffset(
-                                        x = cursorRect.left.toInt() + horizontalPadding,
-                                        y = cursorRect.bottom.toInt() + verticalPadding
-                                    )
-                                } else IntOffset(0, 150)
-                            }
-
-                        Popup(alignment = Alignment.TopStart, offset = popupOffset) {
-                            Surface(
-                                modifier = Modifier
-                                    .widthIn(max = 200.dp)
-                                    .heightIn(max = 200.dp)
-                                    .border(
-                                        1.dp,
-                                        MaterialTheme.colorScheme.outlineVariant,
-                                        RoundedCornerShape(8.dp)
-                                    ),
-                                shape = RoundedCornerShape(8.dp),
-                                tonalElevation = 8.dp,
-                                shadowElevation = 4.dp
-                            ) {
-                                LazyColumn {
-                                    items(filteredTags) { tag ->
-                                        Text(
-                                            text = "#$tag",
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable {
-                                                    contentState.edit {
-                                                        val replacement = "#$tag "
-                                                        replace(
-                                                            tagStartIndex,
-                                                            contentState.selection.start,
-                                                            replacement
-                                                        )
-                                                        selection =
-                                                            TextRange(tagStartIndex + replacement.length)
-                                                    }
-                                                    showTagPopup = false
-                                                }
-                                                .padding(12.dp),
-                                            style = MaterialTheme.typography.bodyMedium)
+                    // Overlay to catch the first tap and activate the field
+                    if (!isActivated && !isPosting) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    isActivated = true
+                                    // Use a small delay to ensure the field is enabled before requesting focus
+                                    scope.launch {
+                                        delay(10)
+                                        focusRequester.requestFocus()
                                     }
+                                }
+                        )
+                    }
+                }
+
+                if (showTagPopup && filteredTags.isNotEmpty()) {
+                    val popupOffset =
+                        remember(textLayoutResult, contentState.selection, density) {
+                            val layout = textLayoutResult
+                            if (layout != null) {
+                                val cursorIndex = contentState.selection.start
+                                val safeIndex =
+                                    cursorIndex.coerceIn(0, layout.layoutInput.text.length)
+                                val cursorRect = layout.getCursorRect(safeIndex)
+                                val horizontalPadding = with(density) { 16.dp.roundToPx() }
+                                val verticalPadding = with(density) { 16.dp.roundToPx() }
+                                IntOffset(
+                                    x = cursorRect.left.toInt() + horizontalPadding,
+                                    y = cursorRect.bottom.toInt() + verticalPadding
+                                )
+                            } else IntOffset(0, 150)
+                        }
+
+                    Popup(alignment = Alignment.TopStart, offset = popupOffset) {
+                        Surface(
+                            modifier = Modifier
+                                .widthIn(max = 200.dp)
+                                .heightIn(max = 200.dp)
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outlineVariant,
+                                    RoundedCornerShape(8.dp)
+                                ),
+                            shape = RoundedCornerShape(8.dp),
+                            tonalElevation = 8.dp,
+                            shadowElevation = 4.dp
+                        ) {
+                            LazyColumn {
+                                items(filteredTags) { tag ->
+                                    Text(
+                                        text = "#$tag",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                contentState.edit {
+                                                    val replacement = "#$tag "
+                                                    replace(
+                                                        tagStartIndex,
+                                                        contentState.selection.start,
+                                                        replacement
+                                                    )
+                                                    selection =
+                                                        TextRange(tagStartIndex + replacement.length)
+                                                }
+                                                showTagPopup = false
+                                            }
+                                            .padding(12.dp),
+                                        style = MaterialTheme.typography.bodyMedium)
                                 }
                             }
                         }
@@ -601,6 +630,7 @@ fun CreateMemoCard(
                                 )
                                 contentState.edit { replace(0, length, "") }
                                 draftAttachments = emptyList()
+                                isActivated = false // Reset activation after publish
                                 focusManager.clearFocus()
                             },
                             enabled = (contentState.text.isNotBlank() || draftAttachments.isNotEmpty()) && !isPosting && isUploadingCount == 0,

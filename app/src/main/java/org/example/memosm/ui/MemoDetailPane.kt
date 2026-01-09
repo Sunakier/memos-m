@@ -30,12 +30,12 @@ fun MemoDetailPane(
         topBar = {
             TopAppBar(
                 title = {
-                Box(
-                    modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart
-                ) {
-                    Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
-                }
-            },
+                    Box(
+                        modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart
+                    ) {
+                        Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
+                    }
+                },
                 navigationIcon = {
                     if (showBackButton) {
                         IconButton(onClick = onBack) {
@@ -67,9 +67,7 @@ fun MemoDetailPane(
                 // Original memo
                 item(key = "original_${memo.name ?: memo.content.hashCode()}") {
                     MemoItem(
-                        memo = memo,
-                        token = token,
-                        colors = CardDefaults.cardColors(
+                        memo = memo, token = token, colors = CardDefaults.cardColors(
 //                            containerColor = MaterialTheme.colorScheme.surface
                         )
                     )
@@ -128,11 +126,10 @@ fun MemoDetailPane(
                     }
                 }
 
-                items(comments, key = { "comment_${it.name ?: it.content.hashCode()}" }) { comment ->
+                items(
+                    comments, key = { "comment_${it.name ?: it.content.hashCode()}" }) { comment ->
                     MemoItem(
-                        memo = comment,
-                        token = token,
-                        colors = CardDefaults.cardColors(
+                        memo = comment, token = token, colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     )

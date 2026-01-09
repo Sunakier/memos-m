@@ -41,6 +41,12 @@ fun MainScreen(
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
 
+    // Ensure focus is cleared whenever we switch screens
+    DisposableEffect(currentDestination) {
+        focusManager.clearFocus()
+        onDispose { }
+    }
+
     NavigationSuiteScaffold(
         navigationSuiteItems = {
             MainDestination.entries.forEach { destination ->
