@@ -34,10 +34,7 @@ import org.example.memosm.viewmodel.MemosViewModel
 enum class MainDestination(
     val label: String
 ) {
-    MEMOS("Memos"),
-    EXPLORE("Explore"),
-    ATTACHMENTS("Attachments"),
-    PROFILE("Profile")
+    MEMOS("Memos"), EXPLORE("Explore"), ATTACHMENTS("Attachments"), PROFILE("Profile")
 }
 
 @Composable
@@ -197,55 +194,60 @@ fun ProfileScreen(viewModel: MemosViewModel) {
     val shortcuts = uiState.shortcuts
     val instance = uiState.instanceProfile
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        if (user != null) {
-            item {
-                ProfileHeader(user)
-            }
-
-            if (stats != null) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        LazyColumn(
+            modifier = Modifier
+                .widthIn(max = 800.dp)
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            if (user != null) {
                 item {
-                    StatsCard(stats)
+                    ProfileHeader(user)
                 }
-            }
 
-            if (shortcuts.isNotEmpty()) {
+                if (stats != null) {
+                    item {
+                        StatsCard(stats)
+                    }
+                }
+
+                if (shortcuts.isNotEmpty()) {
+                    item {
+                        ShortcutsCard(shortcuts)
+                    }
+                }
+
+                if (instance != null) {
+                    item {
+                        InstanceCard(instance)
+                    }
+                }
+
                 item {
-                    ShortcutsCard(shortcuts)
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
-            }
-
-            if (instance != null) {
+            } else if (uiState.isLoading) {
                 item {
-                    InstanceCard(instance)
+                    Box(
+                        modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(32.dp))
-            }
-        } else if (uiState.isLoading) {
-            item {
-                Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            }
-        } else {
-            item {
-                Column(
-                    modifier = Modifier.fillParentMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text("User information not available")
-                    Button(onClick = { viewModel.refreshAll() }) {
-                        Text("Retry")
+            } else {
+                item {
+                    Column(
+                        modifier = Modifier.fillParentMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text("User information not available")
+                        Button(onClick = { viewModel.refreshAll() }) {
+                            Text("Retry")
+                        }
                     }
                 }
             }
@@ -256,38 +258,38 @@ fun ProfileScreen(viewModel: MemosViewModel) {
 @Composable
 fun ProfileHeader(user: org.example.memosm.model.User) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp)
+        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            AsyncImage(
-                model = user.avatarUrl,
-                contentDescription = "Avatar",
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = user.displayName ?: user.username ?: "Unknown",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "@${user.username}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Column(modifier = Modifier.padding(24.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()
+            ) {
+                AsyncImage(
+                    model = user.avatarUrl,
+                    contentDescription = "Avatar",
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.width(24.dp))
+                Column {
+                    Text(
+                        text = user.displayName ?: user.username ?: "Unknown",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "@${user.username}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             if (!user.description.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = user.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                    text = user.description, style = MaterialTheme.typography.bodyMedium
                 )
             }
         }
@@ -305,19 +307,27 @@ fun StatsCard(stats: org.example.memosm.model.UserStats) {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround
             ) {
-                StatItem(label = "Memos", value = stats.totalMemoCount.toString(), icon = Icons.Default.Description)
-                StatItem(label = "Tags", value = stats.tagCount.size.toString(), icon = Icons.Default.Tag)
-                StatItem(label = "Pinned", value = stats.pinnedMemos.size.toString(), icon = Icons.Default.PushPin)
+                StatItem(
+                    label = "Memos",
+                    value = stats.totalMemoCount.toString(),
+                    icon = Icons.Default.Description
+                )
+                StatItem(
+                    label = "Tags", value = stats.tagCount.size.toString(), icon = Icons.Default.Tag
+                )
+                StatItem(
+                    label = "Pinned",
+                    value = stats.pinnedMemos.size.toString(),
+                    icon = Icons.Default.PushPin
+                )
             }
-            Divider(modifier = Modifier.padding(vertical = 12.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
             Text("Content Breakdown", style = MaterialTheme.typography.labelLarge)
             Spacer(modifier = Modifier.height(8.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 StatSubItem("Links", stats.memoTypeStats.linkCount)
                 StatSubItem("Code", stats.memoTypeStats.codeCount)
@@ -330,8 +340,15 @@ fun StatsCard(stats: org.example.memosm.model.UserStats) {
 @Composable
 fun StatItem(label: String, value: String, icon: ImageVector) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-        Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Icon(
+            icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
+        )
         Text(text = label, style = MaterialTheme.typography.labelSmall)
     }
 }
@@ -339,7 +356,11 @@ fun StatItem(label: String, value: String, icon: ImageVector) {
 @Composable
 fun StatSubItem(label: String, count: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = count.toString(), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+        Text(
+            text = count.toString(),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold
+        )
         Text(text = label, style = MaterialTheme.typography.labelSmall)
     }
 }
@@ -356,9 +377,11 @@ fun ShortcutsCard(shortcuts: List<Shortcut>) {
             Spacer(modifier = Modifier.height(8.dp))
             shortcuts.forEach { shortcut ->
                 ListItem(
-                    headlineContent = { Text(shortcut.title) },
-                    leadingContent = { Icon(Icons.AutoMirrored.Filled.Shortcut, contentDescription = null) },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    headlineContent = { Text(shortcut.title) }, leadingContent = {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Shortcut, contentDescription = null
+                    )
+                }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
             }
         }
@@ -390,7 +413,11 @@ fun InfoRow(label: String, value: String) {
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
     }
 }
