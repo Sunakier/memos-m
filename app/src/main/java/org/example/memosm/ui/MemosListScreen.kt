@@ -1,6 +1,7 @@
 package org.example.memosm.ui
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -19,6 +20,11 @@ import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.layout.AnimatedPane
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffold
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
+import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,8 +46,77 @@ import org.example.memosm.model.Attachment
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
 
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun MemosListScreen(viewModel: MemosViewModel) {
+    val uiState by viewModel.uiState.collectAsState()
+    val navigator = rememberListDetailPaneScaffoldNavigator<Memo>()
+    val scope = rememberCoroutineScope()
+
+    // Handle back press when detail pane is shown
+    BackHandler(navigator.canNavigateBack()) {
+        scope.launch {
+            navigator.navigateBack()
+        }
+    }
+
+    // Sync selected memo with navigator
+    LaunchedEffect(navigator.currentDestination) {
+        val currentMemo = navigator.currentDestination?.contentKey
+        if (currentMemo != uiState.selectedMemo) {
+            if (currentMemo != null) {
+                viewModel.selectMemo(currentMemo)
+            } else {
+                viewModel.clearSelectedMemo()
+            }
+        }
+    }
+
+    ListDetailPaneScaffold(
+        directive = navigator.scaffoldDirective,
+        value = navigator.scaffoldValue,
+        listPane = {
+            AnimatedPane {
+                MemosListPane(
+                    viewModel = viewModel,
+                    onMemoClick = { memo ->
+                        scope.launch {
+                            navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, memo)
+                        }
+                    }
+                )
+            }
+        },
+        detailPane = {
+            AnimatedPane {
+                val selectedMemo = navigator.currentDestination?.contentKey
+                if (selectedMemo != null) {
+                    MemoDetailPane(
+                        memo = selectedMemo,
+                        comments = uiState.selectedMemoComments,
+                        isLoadingComments = uiState.isLoadingComments,
+                        token = uiState.token,
+                        showBackButton = navigator.canNavigateBack(),
+                        onBack = {
+                            scope.launch {
+                                navigator.navigateBack()
+                            }
+                        }
+                    )
+                } else {
+                    MemoDetailPlaceholder()
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun MemosListPane(
+    viewModel: MemosViewModel,
+    onMemoClick: (Memo) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
 
@@ -60,7 +135,8 @@ fun MemosListScreen(viewModel: MemosViewModel) {
     }
 
     Box(
-        modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
     ) {
         when {
             uiState.isLoading && uiState.memos.isEmpty() -> {
@@ -109,6 +185,8 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                             MemoItem(
                                 memo = memo,
                                 token = uiState.token,
+                                isSelected = memo == uiState.selectedMemo,
+                                onClick = { onMemoClick(memo) },
                                 modifier = Modifier.widthIn(max = 800.dp)
                             )
                         }
@@ -417,9 +495,24 @@ fun CreateMemoCard(
 }
 
 @Composable
-fun MemoItem(memo: Memo, token: String, modifier: Modifier = Modifier) {
+fun MemoItem(
+    memo: Memo,
+    token: String,
+    isSelected: Boolean = false,
+    onClick: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     Card(
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = if (isSelected) {
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            )
+        } else {
+            CardDefaults.cardColors()
+        }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = memo.content, style = MaterialTheme.typography.bodyLarge)

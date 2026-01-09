@@ -32,7 +32,11 @@ data class MemosUiState(
     val nextPageToken: String? = null,
     val nextAttachmentsPageToken: String? = null,
     val isRefreshing: Boolean = false,
-    val token: String = ""
+    val token: String = "",
+    // Detail pane state
+    val selectedMemo: Memo? = null,
+    val selectedMemoComments: List<Memo> = emptyList(),
+    val isLoadingComments: Boolean = false
 )
 
 class MemosViewModel(
@@ -304,6 +308,48 @@ class MemosViewModel(
                 Log.e("MemosViewModel", "Error creating memo", e)
                 _uiState.value = _uiState.value.copy(
                     isPosting = false, error = "Failed to create memo: ${e.localizedMessage}"
+                )
+            }
+        }
+    }
+
+    fun selectMemo(memo: Memo?) {
+        _uiState.value = _uiState.value.copy(
+            selectedMemo = memo,
+            selectedMemoComments = emptyList(),
+            isLoadingComments = memo != null
+        )
+        
+        if (memo != null) {
+            fetchMemoComments(memo)
+        }
+    }
+
+    fun clearSelectedMemo() {
+        _uiState.value = _uiState.value.copy(
+            selectedMemo = null,
+            selectedMemoComments = emptyList(),
+            isLoadingComments = false
+        )
+    }
+
+    private fun fetchMemoComments(memo: Memo) {
+        val memoName = memo.name ?: return
+        // Extract memo ID from name (format: "memos/{id}")
+        val memoId = memoName.removePrefix("memos/")
+        
+        viewModelScope.launch {
+            try {
+                val response = api.listMemoComments(memoId)
+                val comments = response.memos?.map { processMemo(it) } ?: emptyList()
+                _uiState.value = _uiState.value.copy(
+                    selectedMemoComments = comments,
+                    isLoadingComments = false
+                )
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error fetching memo comments", e)
+                _uiState.value = _uiState.value.copy(
+                    isLoadingComments = false
                 )
             }
         }
