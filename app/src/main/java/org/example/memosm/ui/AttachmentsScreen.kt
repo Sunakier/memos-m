@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -30,19 +31,16 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
     // Map to store aspect ratios as images load
     val aspectRatios = remember { mutableStateMapOf<String, Float>() }
 
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-    ) {
-        val maxWidthDp = maxWidth
+    // Use LocalConfiguration to get screen width stably
+    val configuration = LocalConfiguration.current
+    val maxWidthDp = configuration.screenWidthDp.dp - 16.dp
 
-        // Group attachments into justified rows
-        val justifiedRows = remember(uiState.attachments, aspectRatios.size) {
+    // Group attachments into justified rows using derivedStateOf
+    val justifiedRows by remember(uiState.attachments) {
+        derivedStateOf {
             val rows = mutableListOf<List<Attachment>>()
             var currentRow = mutableListOf<Attachment>()
             var currentWidthFactor = 0f
-            // We want roughly 2-3 items per row on average
             val maxRowWidthFactor = 2.2f
 
             uiState.attachments.forEach { attachment ->
@@ -59,21 +57,27 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
             if (currentRow.isNotEmpty()) rows.add(currentRow)
             rows
         }
+    }
 
-        val shouldLoadMore = remember {
-            derivedStateOf {
-                val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()
-                    ?: return@derivedStateOf false
-                lastVisibleItem.index >= listState.layoutInfo.totalItemsCount - 3
-            }
+    val shouldLoadMore = remember {
+        derivedStateOf {
+            val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()
+                ?: return@derivedStateOf false
+            lastVisibleItem.index >= listState.layoutInfo.totalItemsCount - 3
         }
+    }
 
-        LaunchedEffect(shouldLoadMore.value) {
-            if (shouldLoadMore.value) {
-                viewModel.fetchAttachments(loadMore = true)
-            }
+    LaunchedEffect(shouldLoadMore.value) {
+        if (shouldLoadMore.value) {
+            viewModel.fetchAttachments(loadMore = true)
         }
+    }
 
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+    ) {
         if (uiState.attachments.isEmpty() && uiState.isLoading) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else if (uiState.attachments.isEmpty()) {
@@ -91,8 +95,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                     val totalRatio =
                         rowItems.sumOf { (aspectRatios[it.name] ?: 1.0f).toDouble() }.toFloat()
 
-                    // Calculate height that preserves ratio for all items in the row:
-                    // Height = (AvailableWidth - Spacing) / TotalRatio
+                    // Calculate height that preserves ratio: Height = Width / TotalRatio
                     val spacingSum = 8.dp * (rowItems.size - 1)
                     val justifiedHeight =
                         ((maxWidthDp - spacingSum) / totalRatio).coerceIn(180.dp, 360.dp)
