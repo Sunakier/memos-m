@@ -136,7 +136,7 @@ fun ProfileHeader(user: User) {
             if (!user.description.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = user.description ?: "", style = MaterialTheme.typography.bodyMedium
+                    text = user.description, style = MaterialTheme.typography.bodyMedium
                 )
             }
         }

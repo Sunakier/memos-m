@@ -1,12 +1,15 @@
 package org.example.memosm.ui
 
 import android.net.Uri
+import android.os.Parcelable
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -30,9 +33,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
@@ -42,16 +47,21 @@ import androidx.compose.ui.window.Popup
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.launch
+import kotlinx.parcelize.Parcelize
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
+
+@Parcelize
+data class MemoKey(val name: String) : Parcelable
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun MemosListScreen(viewModel: MemosViewModel) {
     val uiState by viewModel.uiState.collectAsState()
-    val navigator = rememberListDetailPaneScaffoldNavigator<Memo>()
+    val navigator = rememberListDetailPaneScaffoldNavigator<MemoKey>()
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
 
     // Handle back press when detail pane is shown
     BackHandler(navigator.canNavigateBack()) {
@@ -62,10 +72,14 @@ fun MemosListScreen(viewModel: MemosViewModel) {
 
     // Sync selected memo with navigator
     LaunchedEffect(navigator.currentDestination) {
-        val currentMemo = navigator.currentDestination?.contentKey
-        if (currentMemo != uiState.selectedMemo) {
-            if (currentMemo != null) {
-                viewModel.selectMemo(currentMemo)
+        val currentMemoKey = navigator.currentDestination?.contentKey
+        if (currentMemoKey?.name != uiState.selectedMemo?.name) {
+            if (currentMemoKey != null) {
+                // Find the memo in current list if possible, or just use the name to fetch
+                val memo = uiState.memos.find { it.name == currentMemoKey.name }
+                if (memo != null) {
+                    viewModel.selectMemo(memo)
+                }
             } else {
                 viewModel.clearSelectedMemo()
             }
@@ -78,18 +92,21 @@ fun MemosListScreen(viewModel: MemosViewModel) {
         listPane = {
             AnimatedPane {
                 MemosListPane(
-                    viewModel = viewModel,
-                    onMemoClick = { memo ->
+                    viewModel = viewModel, onMemoClick = { memo ->
+                        focusManager.clearFocus()
                         scope.launch {
-                            navigator.navigateTo(ListDetailPaneScaffoldRole.Detail, memo)
+                            memo.name?.let { name ->
+                                navigator.navigateTo(
+                                    ListDetailPaneScaffoldRole.Detail, MemoKey(name)
+                                )
+                            }
                         }
-                    }
-                )
+                    })
             }
         },
         detailPane = {
             AnimatedPane {
-                val selectedMemo = navigator.currentDestination?.contentKey
+                val selectedMemo = uiState.selectedMemo
                 if (selectedMemo != null) {
                     MemoDetailPane(
                         memo = selectedMemo,
@@ -98,27 +115,30 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                         token = uiState.token,
                         showBackButton = navigator.canNavigateBack(),
                         onBack = {
+                            focusManager.clearFocus()
                             scope.launch {
                                 navigator.navigateBack()
                             }
-                        }
-                    )
+                        })
                 } else {
                     MemoDetailPlaceholder()
                 }
             }
-        }
-    )
+        })
 }
 
 @Composable
 private fun MemosListPane(
-    viewModel: MemosViewModel,
-    onMemoClick: (Memo) -> Unit,
-    modifier: Modifier = Modifier
+    viewModel: MemosViewModel, onMemoClick: (Memo) -> Unit, modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
+    val focusManager = LocalFocusManager.current
+
+    // Prevent auto-focus when the screen is first loaded
+    LaunchedEffect(Unit) {
+        focusManager.clearFocus()
+    }
 
     val shouldLoadMore = remember {
         derivedStateOf {
@@ -135,8 +155,13 @@ private fun MemosListPane(
     }
 
     Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopCenter
+        modifier = modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    focusManager.clearFocus()
+                })
+            }, contentAlignment = Alignment.TopCenter
     ) {
         when {
             uiState.isLoading && uiState.memos.isEmpty() -> {
@@ -158,17 +183,24 @@ private fun MemosListPane(
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .statusBarsPadding(),
+                        .statusBarsPadding()
+                        .pointerInput(Unit) {
+                            detectTapGestures(onTap = {
+                                focusManager.clearFocus()
+                            })
+                        },
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     item {
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
+                        ) {
                             CreateMemoCard(
                                 onPublish = { content, visibility, attachments ->
-                                    viewModel.createMemo(content, visibility, attachments)
-                                },
+                                viewModel.createMemo(content, visibility, attachments)
+                            },
                                 onUploadFile = { uri, context ->
                                     viewModel.uploadAttachment(uri, context)
                                 },
@@ -181,12 +213,17 @@ private fun MemosListPane(
                     }
 
                     items(uiState.memos) { memo ->
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
+                        ) {
                             MemoItem(
                                 memo = memo,
                                 token = uiState.token,
                                 isSelected = memo == uiState.selectedMemo,
-                                onClick = { onMemoClick(memo) },
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    onMemoClick(memo)
+                                },
                                 modifier = Modifier.widthIn(max = 800.dp)
                             )
                         }
@@ -223,14 +260,14 @@ fun CreateMemoCard(
     val contentState = rememberTextFieldState("")
     var visibility by remember { mutableStateOf("PRIVATE") }
     var expanded by remember { mutableStateOf(false) }
-    
+
     // We store Uri for local display, and Attachment for publishing
     var draftAttachments by remember { mutableStateOf(emptyList<Pair<Uri, Attachment?>>()) }
     var isUploadingCount by remember { mutableIntStateOf(0) }
-    
+
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    
+
     val pickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
@@ -241,8 +278,8 @@ fun CreateMemoCard(
                 scope.launch {
                     val attachment = onUploadFile(uri, context)
                     if (attachment != null) {
-                        draftAttachments = draftAttachments.map { 
-                            if (it.first == uri) uri to attachment else it 
+                        draftAttachments = draftAttachments.map {
+                            if (it.first == uri) uri to attachment else it
                         }
                     } else {
                         // Optional: Handle error, remove from list or show error state
@@ -325,7 +362,11 @@ fun CreateMemoCard(
                             modifier = Modifier
                                 .widthIn(max = 200.dp)
                                 .heightIn(max = 200.dp)
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outlineVariant,
+                                    RoundedCornerShape(8.dp)
+                                ),
                             shape = RoundedCornerShape(8.dp),
                             tonalElevation = 8.dp,
                             shadowElevation = 4.dp
@@ -339,8 +380,13 @@ fun CreateMemoCard(
                                             .clickable {
                                                 contentState.edit {
                                                     val replacement = "#$tag "
-                                                    replace(tagStartIndex, contentState.selection.start, replacement)
-                                                    selection = TextRange(tagStartIndex + replacement.length)
+                                                    replace(
+                                                        tagStartIndex,
+                                                        contentState.selection.start,
+                                                        replacement
+                                                    )
+                                                    selection =
+                                                        TextRange(tagStartIndex + replacement.length)
                                                 }
                                                 showTagPopup = false
                                             }
@@ -363,14 +409,13 @@ fun CreateMemoCard(
                         val isImage = remember(uri) {
                             context.contentResolver.getType(uri)?.startsWith("image/") == true
                         }
-                        
+
                         Box(modifier = Modifier.size(80.dp)) {
                             if (isImage) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(LocalContext.current)
                                         .data(uri) // Use local URI for immediate display
-                                        .crossfade(true)
-                                        .build(),
+                                        .crossfade(true).build(),
                                     contentDescription = null,
                                     modifier = Modifier
                                         .fillMaxSize()
@@ -384,26 +429,33 @@ fun CreateMemoCard(
                                         .fillMaxSize()
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(MaterialTheme.colorScheme.surfaceVariant)
-                                        .padding(4.dp),
-                                    contentAlignment = Alignment.Center
+                                        .padding(4.dp), contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(imageVector = Icons.AutoMirrored.Filled.InsertDriveFile, contentDescription = null)
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
+                                        contentDescription = null
+                                    )
                                 }
                             }
-                            
+
                             if (attachment == null) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
-                                    contentAlignment = Alignment.Center
+                                        .background(
+                                            Color.Black.copy(alpha = 0.3f), RoundedCornerShape(8.dp)
+                                        ), contentAlignment = Alignment.Center
                                 ) {
-                                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp), color = Color.White
+                                    )
                                 }
                             }
 
                             IconButton(
-                                onClick = { draftAttachments = draftAttachments.filter { it.first != uri } },
+                                onClick = {
+                                    draftAttachments = draftAttachments.filter { it.first != uri }
+                                },
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .size(24.dp)
@@ -429,14 +481,15 @@ fun CreateMemoCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
-                        onClick = { pickerLauncher.launch("*/*") },
-                        enabled = !isPosting
+                        onClick = { pickerLauncher.launch("*/*") }, enabled = !isPosting
                     ) {
-                        Icon(imageVector = Icons.Default.AttachFile, contentDescription = "Attach File")
+                        Icon(
+                            imageVector = Icons.Default.AttachFile,
+                            contentDescription = "Attach File"
+                        )
                     }
                     IconButton(
-                        onClick = { pickerLauncher.launch("image/*") },
-                        enabled = !isPosting
+                        onClick = { pickerLauncher.launch("image/*") }, enabled = !isPosting
                     ) {
                         Icon(imageVector = Icons.Default.Image, contentDescription = "Add Image")
                     }
@@ -453,13 +506,10 @@ fun CreateMemoCard(
                         }
                         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                             listOf("PRIVATE", "PROTECTED", "PUBLIC").forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(option) },
-                                    onClick = {
-                                        visibility = option
-                                        expanded = false
-                                    }
-                                )
+                                DropdownMenuItem(text = { Text(option) }, onClick = {
+                                    visibility = option
+                                    expanded = false
+                                })
                             }
                         }
                     }
@@ -505,8 +555,7 @@ fun MemoItem(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = if (isSelected) {
+            .clickable(onClick = onClick), colors = if (isSelected) {
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer
             )
@@ -516,11 +565,11 @@ fun MemoItem(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = memo.content, style = MaterialTheme.typography.bodyLarge)
-            
+
             val attachments = remember(memo.attachments) {
                 memo.attachments ?: emptyList()
             }
-            
+
             if (attachments.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 LazyRow(
@@ -529,20 +578,20 @@ fun MemoItem(
                 ) {
                     items(attachments) { attachment ->
                         val isImage = remember(attachment.displayType) {
-                            attachment.displayType.startsWith("image/", ignoreCase = true) || 
-                            attachment.displayType.contains("image", ignoreCase = true)
+                            attachment.displayType.startsWith(
+                                "image/",
+                                ignoreCase = true
+                            ) || attachment.displayType.contains("image", ignoreCase = true)
                         }
-                        
+
                         if (isImage) {
                             val context = LocalContext.current
                             val imageRequest = remember(attachment.externalLink, token) {
-                                ImageRequest.Builder(context)
-                                    .data(attachment.externalLink)
-                                    .addHeader("Authorization", "Bearer $token")
-                                    .crossfade(true)
+                                ImageRequest.Builder(context).data(attachment.externalLink)
+                                    .addHeader("Authorization", "Bearer $token").crossfade(true)
                                     .build()
                             }
-                            
+
                             AsyncImage(
                                 model = imageRequest,
                                 contentDescription = attachment.filename,
