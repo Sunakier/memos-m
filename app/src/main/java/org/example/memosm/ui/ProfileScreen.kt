@@ -162,7 +162,9 @@ fun StatsCard(stats: UserStats) {
                     icon = Icons.Default.Description
                 )
                 StatItem(
-                    label = "Tags", value = (stats.tagCount?.size ?: 0).toString(), icon = Icons.Default.Tag
+                    label = "Tags",
+                    value = (stats.tagCount?.size ?: 0).toString(),
+                    icon = Icons.Default.Tag
                 )
                 StatItem(
                     label = "Pinned",
@@ -255,12 +257,10 @@ fun InstanceCard(instance: InstanceProfile) {
 @Composable
 fun LogoutCard(onLogout: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
+        modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer
-        ),
-        onClick = onLogout
+        ), onClick = onLogout
     ) {
         Row(
             modifier = Modifier
@@ -271,7 +271,9 @@ fun LogoutCard(onLogout: () -> Unit) {
         ) {
             Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
             Spacer(modifier = Modifier.width(12.dp))
-            Text("Logout", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "Logout", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
+            )
         }
     }
 }

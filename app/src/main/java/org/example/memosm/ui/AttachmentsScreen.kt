@@ -31,8 +31,8 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
 
     val shouldLoadMore = remember {
         derivedStateOf {
-            val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()
-                ?: return@derivedStateOf false
+            val lastVisibleItem =
+                listState.layoutInfo.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf false
             lastVisibleItem.index >= listState.layoutInfo.totalItemsCount - 5
         }
     }
@@ -66,7 +66,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                 items(uiState.attachments, key = { it.name ?: it.filename }) { attachment ->
                     val key = attachment.name ?: attachment.filename
                     val ratio = aspectRatios[key] ?: 1.0f
-                    
+
                     AttachmentItem(
                         attachment = attachment,
                         token = uiState.token,
@@ -76,8 +76,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                             .aspectRatio(ratio),
                         onRatioAvailable = { newRatio ->
                             aspectRatios[key] = newRatio
-                        }
-                    )
+                        })
                 }
 
                 if (uiState.nextAttachmentsPageToken != null) {
@@ -99,7 +98,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
 
 @Composable
 fun AttachmentItem(
-    attachment: Attachment, 
+    attachment: Attachment,
     token: String,
     modifier: Modifier = Modifier,
     onRatioAvailable: (Float) -> Unit
@@ -112,8 +111,7 @@ fun AttachmentItem(
             val displayType = attachment.displayType
             val isImage = remember(displayType) {
                 displayType.startsWith(
-                    "image/",
-                    ignoreCase = true
+                    "image/", ignoreCase = true
                 ) || displayType.contains("image", ignoreCase = true)
             }
 
@@ -155,8 +153,7 @@ fun AttachmentItem(
 
                     if (isLoading) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp), 
-                            strokeWidth = 2.dp
+                            modifier = Modifier.size(24.dp), strokeWidth = 2.dp
                         )
                     }
 

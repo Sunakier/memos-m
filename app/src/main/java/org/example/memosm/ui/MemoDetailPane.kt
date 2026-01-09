@@ -36,26 +36,26 @@ fun MemoDetailPane(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
-                        Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
+                title = {
+                Box(
+                    modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart
+                ) {
+                    Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
+                }
+            }, navigationIcon = {
+                if (showBackButton) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
-                },
-                navigationIcon = {
-                    if (showBackButton) {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back"
-                            )
-                        }
-                    }
-                },
+                }
+            },
                 // Add some padding to TopAppBar content to match the centered column
                 windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
             )
-        },
-        modifier = modifier
+        }, modifier = modifier
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -74,9 +74,7 @@ fun MemoDetailPane(
                 // Original memo
                 item {
                     MemoDetailCard(
-                        memo = memo,
-                        token = token,
-                        isOriginal = true
+                        memo = memo, token = token, isOriginal = true
                     )
                 }
 
@@ -135,9 +133,7 @@ fun MemoDetailPane(
 
                 items(comments) { comment ->
                     MemoDetailCard(
-                        memo = comment,
-                        token = token,
-                        isOriginal = false
+                        memo = comment, token = token, isOriginal = false
                     )
                 }
             }
@@ -147,14 +143,10 @@ fun MemoDetailPane(
 
 @Composable
 private fun MemoDetailCard(
-    memo: Memo,
-    token: String,
-    isOriginal: Boolean,
-    modifier: Modifier = Modifier
+    memo: Memo, token: String, isOriginal: Boolean, modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = if (isOriginal) {
+        modifier = modifier.fillMaxWidth(), colors = if (isOriginal) {
             CardDefaults.cardColors()
         } else {
             CardDefaults.cardColors(
@@ -164,8 +156,7 @@ private fun MemoDetailCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = memo.content,
-                style = MaterialTheme.typography.bodyLarge
+                text = memo.content, style = MaterialTheme.typography.bodyLarge
             )
 
             val attachments = remember(memo.attachments) {
@@ -207,9 +198,7 @@ private fun MemoDetailCard(
 
 @Composable
 private fun AttachmentRow(
-    attachments: List<Attachment>,
-    token: String,
-    modifier: Modifier = Modifier
+    attachments: List<Attachment>, token: String, modifier: Modifier = Modifier
 ) {
     LazyRow(
         modifier = modifier,
@@ -218,18 +207,17 @@ private fun AttachmentRow(
     ) {
         items(attachments) { attachment ->
             val isImage = remember(attachment.displayType) {
-                attachment.displayType.startsWith("image/", ignoreCase = true) ||
-                        attachment.displayType.contains("image", ignoreCase = true)
+                attachment.displayType.startsWith(
+                    "image/",
+                    ignoreCase = true
+                ) || attachment.displayType.contains("image", ignoreCase = true)
             }
 
             if (isImage) {
                 val context = LocalContext.current
                 val imageRequest = remember(attachment.externalLink, token) {
-                    ImageRequest.Builder(context)
-                        .data(attachment.externalLink)
-                        .addHeader("Authorization", "Bearer $token")
-                        .crossfade(true)
-                        .build()
+                    ImageRequest.Builder(context).data(attachment.externalLink)
+                        .addHeader("Authorization", "Bearer $token").crossfade(true).build()
                 }
 
                 AsyncImage(
@@ -244,8 +232,7 @@ private fun AttachmentRow(
                 Card(
                     modifier = Modifier
                         .size(width = 200.dp, height = 100.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    colors = CardDefaults.cardColors(
+                        .clip(RoundedCornerShape(8.dp)), colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
@@ -277,8 +264,7 @@ private fun AttachmentRow(
 @Composable
 fun MemoDetailPlaceholder(modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center
     ) {
         Text(
             text = "Select a memo to view details",
