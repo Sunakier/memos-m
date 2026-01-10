@@ -1,7 +1,7 @@
 package org.example.memosm.ui
 
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -49,6 +50,9 @@ fun MainScreen(
         viewModel(factory = MemosViewModel.provideFactory(baseUrl, token, dataStoreManager))
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
+    
+    // State holder to preserve UI state (scroll position, search state, navigator state) across tab switches
+    val saveableStateHolder = rememberSaveableStateHolder()
 
     // Ensure focus is cleared whenever we switch screens
     DisposableEffect(currentDestination) {
@@ -118,44 +122,24 @@ fun MainScreen(
             }
         }, modifier = modifier
     ) {
-        Box(Modifier.fillMaxSize()) {
-            // Use Box to keep all screens in memory but only show the active one.
-            // This preserves scroll state and other UI state within each screen.
-            
-            // Memos Screen
-            androidx.compose.animation.AnimatedVisibility(
-                visible = currentDestination == MainDestination.MEMOS,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                MemosListScreen(viewModel)
-            }
-            
-            // Explore Screen
-            androidx.compose.animation.AnimatedVisibility(
-                visible = currentDestination == MainDestination.EXPLORE,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                ExploreScreen(viewModel)
-            }
-            
-            // Attachments Screen
-            androidx.compose.animation.AnimatedVisibility(
-                visible = currentDestination == MainDestination.ATTACHMENTS,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                AttachmentsScreen(viewModel)
-            }
-            
-            // Profile Screen
-            androidx.compose.animation.AnimatedVisibility(
-                visible = currentDestination == MainDestination.PROFILE,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                ProfileScreen(viewModel, onLogout)
+        // AnimatedContent handles the transition between screens
+        AnimatedContent(
+            targetState = currentDestination,
+            transitionSpec = {
+                fadeIn(animationSpec = tween(220)) togetherWith fadeOut(animationSpec = tween(220))
+            },
+            label = "MainScreenDestinationTransition",
+            modifier = Modifier.fillMaxSize()
+        ) { targetDestination ->
+            // SaveableStateProvider ensures that all rememberSaveable states (like scroll position)
+            // are preserved and restored when switching back to this tab.
+            saveableStateHolder.SaveableStateProvider(targetDestination) {
+                when (targetDestination) {
+                    MainDestination.MEMOS -> MemosListScreen(viewModel)
+                    MainDestination.EXPLORE -> ExploreScreen(viewModel)
+                    MainDestination.ATTACHMENTS -> AttachmentsScreen(viewModel)
+                    MainDestination.PROFILE -> ProfileScreen(viewModel, onLogout)
+                }
             }
         }
     }
