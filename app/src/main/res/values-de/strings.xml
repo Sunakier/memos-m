@@ -1,0 +1,86 @@
+<resources>
+    <string name="login_title">Bei Memos anmelden</string>
+    <string name="login_token">Token</string>
+    <string name="login_password">Passwort</string>
+    <string name="login_username">Benutzername</string>
+    <string name="login_host_url">Host-URL</string>
+    <string name="login_error_empty_host">Host-URL darf nicht leer sein</string>
+    <string name="login_error_failed">Anmeldung fehlgeschlagen: %1$s</string>
+    <string name="login_button">Anmelden</string>
+
+    <string name="nav_memos">Memos</string>
+    <string name="nav_explore">Entdecken</string>
+    <string name="nav_attachments">Anhänge</string>
+    <string name="nav_profile">Profil</string>
+
+    <string name="profile_user_info_not_available">Benutzerinformationen nicht verfügbar</string>
+    <string name="profile_retry">Wiederholen</string>
+    <string name="profile_avatar_description">Avatar</string>
+    <string name="profile_statistics">Statistiken</string>
+    <string name="profile_stats_memos">Memos</string>
+    <string name="profile_stats_tags">Tags</string>
+    <string name="profile_stats_pinned">Angeheftet</string>
+    <string name="profile_stats_links">Links</string>
+    <string name="profile_stats_code">Code</string>
+    <string name="profile_stats_todo">Todo</string>
+    <string name="profile_tags_no_tags">Keine Tags gefunden</string>
+    <string name="profile_settings_general">Allgemeine Einstellungen</string>
+    <string name="profile_settings_locale">Sprache (Locale)</string>
+    <string name="profile_settings_locale_default">Standard</string>
+    <string name="profile_settings_locale_edit">Sprache bearbeiten</string>
+    <string name="profile_settings_locale_label">Sprache (z.B. en, de)</string>
+    <string name="profile_settings_visibility">Standard-Sichtbarkeit für Memos</string>
+    <string name="profile_shortcuts">Kurzbefehle</string>
+    <string name="profile_shortcuts_none">Keine Kurzbefehle konfiguriert</string>
+    <string name="profile_webhooks">Webhooks</string>
+    <string name="profile_webhooks_none">Keine Webhooks konfiguriert</string>
+    <string name="profile_instance_info">Instanz-Informationen</string>
+    <string name="profile_instance_version">Version</string>
+    <string name="profile_instance_mode">Modus</string>
+    <string name="profile_instance_url">URL</string>
+    <string name="profile_logout">Abmelden</string>
+
+    <string name="memo_action_edit">Bearbeiten</string>
+    <string name="memo_action_delete">Löschen</string>
+    <string name="memo_action_more">Mehr</string>
+    <string name="memo_publish">Veröffentlichen</string>
+    <string name="memo_list_end">Du hast das Ende erreicht</string>
+    <string name="memo_unknown_user">Unbekannt</string>
+    <string name="memo_unknown_time">UNBEKANNT</string>
+    <string name="memo_action_update">Aktualisieren</string>
+    <string name="memo_action_post">Posten</string>
+
+    <string name="memo_composer_placeholder">Was geht dir durch den Kopf?</string>
+    <string name="memo_composer_remove_attachment">Entfernen</string>
+    <string name="memo_composer_remove_location">Standort entfernen</string>
+    <string name="memo_composer_attach_file">Datei anhängen</string>
+    <string name="memo_composer_add_image">Bild hinzufügen</string>
+    <string name="memo_composer_add_location">Standort hinzufügen</string>
+    <string name="memo_composer_edit_location">Standort bearbeiten</string>
+    <string name="memo_composer_location_name">Name</string>
+    <string name="memo_composer_location_latitude">Breitengrad</string>
+    <string name="memo_composer_location_longitude">Längengrad</string>
+
+    <string name="attachments_none_found">Keine Anhänge gefunden</string>
+    <string name="attachments_error">Fehler</string>
+
+    <string name="memo_dialog_edit_title">Memo bearbeiten</string>
+    <string name="memo_dialog_delete_title">Memo löschen</string>
+    <string name="memo_dialog_delete_confirm">Bist du sicher, dass du dieses Memo löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.</string>
+
+    <string name="memo_detail_title">Memo-Details</string>
+    <string name="memo_detail_comments">Kommentare (%1$d)</string>
+    <string name="memo_detail_no_comments">Noch keine Kommentare</string>
+    <string name="memo_detail_add_comment">Kommentar hinzufügen</string>
+    <string name="memo_detail_comment_placeholder">Schreibe deinen Kommentar hier...</string>
+    <string name="memo_detail_back">Zurück</string>
+    <string name="memo_detail_placeholder">Wähle ein Memo aus, um Details anzuzeigen</string>
+
+    <string name="memo_visibility_public">Öffentlich</string>
+    <string name="memo_visibility_protected">Geschützt</string>
+    <string name="memo_visibility_private">Privat</string>
+
+    <string name="common_save">Speichern</string>
+    <string name="common_cancel">Abbrechen</string>
+    <string name="memo_input_add_tag">Tag hinzufügen</string>
+</resources>

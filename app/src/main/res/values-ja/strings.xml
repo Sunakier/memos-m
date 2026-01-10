@@ -1,5 +1,4 @@
 <resources>
-    <string name="app_name">MemosM</string>
     <string name="login_title">Memosにログイン</string>
     <string name="login_token">トークン</string>
     <string name="login_password">パスワード</string>
@@ -78,7 +77,7 @@
     <string name="memo_detail_placeholder">メモを選択して詳細を表示</string>
 
     <string name="memo_visibility_public">公開</string>
-    <string name="memo_visibility_protected">メンバーに表示</string>
+    <string name="memo_visibility_protected">メンバー限定</string>
     <string name="memo_visibility_private">非公開</string>
 
     <string name="memo_input_add_tag">タグを追加...</string>

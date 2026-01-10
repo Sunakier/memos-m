@@ -47,6 +47,16 @@ import org.example.memosm.model.Attachment
 import org.example.memosm.model.Location
 
 @Composable
+fun getVisibilityLabel(visibility: String): String {
+    return when (visibility.uppercase()) {
+        "PUBLIC" -> stringResource(R.string.memo_visibility_public)
+        "PROTECTED" -> stringResource(R.string.memo_visibility_protected)
+        "PRIVATE" -> stringResource(R.string.memo_visibility_private)
+        else -> visibility
+    }
+}
+
+@Composable
 fun MemoComposer(
     onPublish: (String, String, List<Attachment>, Location?) -> Unit,
     onUploadFile: suspend (Uri, Context) -> Attachment?,
@@ -373,7 +383,7 @@ fun MemoComposer(
                         )
                         if (showVisibilityLabel) {
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(visibility)
+                            Text(getVisibilityLabel(visibility))
                             Icon(
                                 imageVector = if (expanded) Icons.Outlined.ArrowDropUp else Icons.Outlined.ArrowDropDown,
                                 contentDescription = null
@@ -390,7 +400,7 @@ fun MemoComposer(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(option)
+                                    Text(getVisibilityLabel(option))
                                 }
                             }, onClick = {
                                 visibility = option

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MemosM</string>
+    <string name="app_name" translatable="false">MemosM</string>
     <string name="login_title">Login to Memos</string>
     <string name="login_token">Token</string>
     <string name="login_password">Password</string>

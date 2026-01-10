@@ -388,7 +388,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                     headlineContent = { Text(stringResource(R.string.profile_settings_visibility)) },
                     supportingContent = {
                         Text(
-                            text = if (settings.memoVisibility.isNullOrBlank()) "PRIVATE" else settings.memoVisibility,
+                            text = if (settings.memoVisibility.isNullOrBlank()) getVisibilityLabel("PRIVATE") else getVisibilityLabel(settings.memoVisibility),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -408,7 +408,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                     modifier = Modifier.align(Alignment.BottomEnd)
                 ) {
                     listOf("PRIVATE", "PROTECTED", "PUBLIC").forEach { visibility ->
-                        DropdownMenuItem(text = { Text(visibility) }, onClick = {
+                        DropdownMenuItem(text = { Text(getVisibilityLabel(visibility)) }, onClick = {
                             onUpdate(null, visibility)
                             showVisibilityMenu = false
                         })

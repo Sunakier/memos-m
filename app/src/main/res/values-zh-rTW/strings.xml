@@ -1,0 +1,86 @@
+<resources>
+    <string name="login_title">登入到 Memos</string>
+    <string name="login_token">權杖 (Token)</string>
+    <string name="login_password">密碼</string>
+    <string name="login_username">使用者名稱</string>
+    <string name="login_host_url">伺服器網址</string>
+    <string name="login_error_empty_host">伺服器網址不能為空</string>
+    <string name="login_error_failed">登入失敗: %1$s</string>
+    <string name="login_button">登入</string>
+
+    <string name="nav_memos">筆記</string>
+    <string name="nav_explore">探索</string>
+    <string name="nav_attachments">資源</string>
+    <string name="nav_profile">我的</string>
+
+    <string name="profile_user_info_not_available">無法取得使用者資訊</string>
+    <string name="profile_retry">重試</string>
+    <string name="profile_avatar_description">頭像</string>
+    <string name="profile_statistics">統計</string>
+    <string name="profile_stats_memos">筆記</string>
+    <string name="profile_stats_tags">標籤</string>
+    <string name="profile_stats_pinned">置頂</string>
+    <string name="profile_stats_links">連結</string>
+    <string name="profile_stats_code">程式碼</string>
+    <string name="profile_stats_todo">待辦</string>
+    <string name="profile_tags_no_tags">暫無標籤</string>
+    <string name="profile_settings_general">一般設定</string>
+    <string name="profile_settings_locale">語言</string>
+    <string name="profile_settings_locale_default">預設</string>
+    <string name="profile_settings_locale_edit">編輯語言</string>
+    <string name="profile_settings_locale_label">語言區域 (如 en, zh-Hant)</string>
+    <string name="profile_settings_visibility">預設筆記可見性</string>
+    <string name="profile_shortcuts">捷徑</string>
+    <string name="profile_shortcuts_none">暫無捷徑</string>
+    <string name="profile_webhooks">Webhooks</string>
+    <string name="profile_webhooks_none">暫無 Webhooks</string>
+    <string name="profile_instance_info">實例資訊</string>
+    <string name="profile_instance_version">版本</string>
+    <string name="profile_instance_mode">模式</string>
+    <string name="profile_instance_url">網址</string>
+    <string name="profile_logout">登出</string>
+
+    <string name="memo_action_edit">編輯</string>
+    <string name="memo_action_delete">刪除</string>
+    <string name="memo_action_more">更多</string>
+    <string name="memo_publish">發佈</string>
+    <string name="memo_list_end">到底了</string>
+    <string name="memo_unknown_user">未知使用者</string>
+    <string name="memo_unknown_time">未知時間</string>
+    <string name="memo_action_update">更新</string>
+    <string name="memo_action_post">發表</string>
+
+    <string name="memo_composer_placeholder">有什麼新鮮事？</string>
+    <string name="memo_composer_remove_attachment">移除附件</string>
+    <string name="memo_composer_remove_location">移除位置</string>
+    <string name="memo_composer_attach_file">附加檔案</string>
+    <string name="memo_composer_add_image">新增圖片</string>
+    <string name="memo_composer_add_location">新增位置</string>
+    <string name="memo_composer_edit_location">編輯位置</string>
+    <string name="memo_composer_location_name">名稱</string>
+    <string name="memo_composer_location_latitude">緯度</string>
+    <string name="memo_composer_location_longitude">經度</string>
+
+    <string name="attachments_none_found">暫無資源</string>
+    <string name="attachments_error">錯誤</string>
+
+    <string name="memo_dialog_edit_title">編輯筆記</string>
+    <string name="memo_dialog_delete_title">刪除筆記</string>
+    <string name="memo_dialog_delete_confirm">確定要刪除這條筆記嗎？此操作不可撤銷。</string>
+
+    <string name="memo_detail_title">筆記詳情</string>
+    <string name="memo_detail_comments">評論 (%1$d)</string>
+    <string name="memo_detail_no_comments">暫無評論</string>
+    <string name="memo_detail_add_comment">新增評論</string>
+    <string name="memo_detail_comment_placeholder">撰寫你的評論...</string>
+    <string name="memo_detail_back">返回</string>
+    <string name="memo_detail_placeholder">選擇一條筆記查看詳情</string>
+
+    <string name="memo_visibility_public">所有人可見</string>
+    <string name="memo_visibility_protected">登入使用者可見</string>
+    <string name="memo_visibility_private">僅自己可見</string>
+
+    <string name="common_save">儲存</string>
+    <string name="common_cancel">取消</string>
+    <string name="memo_input_add_tag">新增標籤</string>
+</resources>
