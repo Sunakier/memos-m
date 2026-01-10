@@ -287,27 +287,30 @@ fun MemoItem(
             }
             Spacer(modifier = Modifier.height(if (user != null) 10.dp else 2.dp))
 
-            Column(modifier = Modifier.padding(start = 4.dp, end = 8.dp)) {
+            Column(modifier = Modifier.padding(start = 0.dp, end = 8.dp)) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .then(
                             if (maxHeight != Dp.Unspecified) {
-                            Modifier.heightIn(max = maxHeight).graphicsLayer {
-                                    compositingStrategy = CompositingStrategy.Offscreen
-                                }.drawWithContent {
-                                    drawContent()
-                                    if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
-                                        drawRect(
-                                            brush = Brush.verticalGradient(
-                                                0.7f to Color.Black, 1.0f to Color.Transparent
-                                            ), blendMode = BlendMode.DstIn
-                                        )
+                                Modifier
+                                    .heightIn(max = maxHeight)
+                                    .graphicsLayer {
+                                        compositingStrategy = CompositingStrategy.Offscreen
                                     }
-                                }
-                        } else {
-                            Modifier
-                        })) {
+                                    .drawWithContent {
+                                        drawContent()
+                                        if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
+                                            drawRect(
+                                                brush = Brush.verticalGradient(
+                                                    0.7f to Color.Black, 1.0f to Color.Transparent
+                                                ), blendMode = BlendMode.DstIn
+                                            )
+                                        }
+                                    }
+                            } else {
+                                Modifier
+                            })) {
                     Markdown(
                         markdownState = markdownState,
                         imageTransformer = Coil2ImageTransformerImpl,
@@ -325,7 +328,9 @@ fun MemoItem(
                                 )
                             }
                         ),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 12.dp)
                     )
                 }
 
@@ -393,16 +398,20 @@ fun MemoItem(
                             contentPadding = PaddingValues(bottom = 4.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                .graphicsLayer {
+                                    compositingStrategy = CompositingStrategy.Offscreen
+                                }
                                 .drawWithContent {
                                     drawContent()
                                     val canScrollBackward = scrollState.canScrollBackward
                                     val canScrollForward = scrollState.canScrollForward
-                                    
+
                                     if (canScrollBackward || canScrollForward) {
-                                        val leftFade = if (canScrollBackward) Color.Transparent else Color.Black
-                                        val rightFade = if (canScrollForward) Color.Transparent else Color.Black
-                                        
+                                        val leftFade =
+                                            if (canScrollBackward) Color.Transparent else Color.Black
+                                        val rightFade =
+                                            if (canScrollForward) Color.Transparent else Color.Black
+
                                         drawRect(
                                             brush = Brush.horizontalGradient(
                                                 0f to leftFade,
@@ -415,7 +424,9 @@ fun MemoItem(
                                     }
                                 }
                         ) {
-                            items(attachments, key = { it.externalLink ?: it.filename }) { attachment ->
+                            items(
+                                attachments,
+                                key = { it.externalLink ?: it.filename }) { attachment ->
                                 AttachmentDisplay(attachment, token, isDetailView)
                             }
                         }
@@ -526,7 +537,12 @@ fun AttachmentDisplay(
             model = imageRequest,
             contentDescription = attachment.filename,
             modifier = Modifier
-                .then(if (isDetailView) Modifier.fillMaxWidth() else Modifier.size(width = 240.dp, height = 160.dp))
+                .then(
+                    if (isDetailView) Modifier.fillMaxWidth() else Modifier.size(
+                        width = 240.dp,
+                        height = 160.dp
+                    )
+                )
                 .clip(RoundedCornerShape(8.dp))
                 .then(
                     if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
@@ -548,7 +564,11 @@ fun AttachmentDisplay(
             url = attachment.externalLink,
             token = token,
             modifier = Modifier
-                .then(if (isDetailView) Modifier.fillMaxWidth().aspectRatio(16/9f) else Modifier.size(width = 280.dp, height = 180.dp))
+                .then(
+                    if (isDetailView) Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16 / 9f) else Modifier.size(width = 280.dp, height = 180.dp)
+                )
                 .clip(RoundedCornerShape(8.dp))
         )
     } else if (isAudio && !attachment.externalLink.isNullOrBlank()) {
@@ -556,13 +576,22 @@ fun AttachmentDisplay(
             url = attachment.externalLink,
             filename = attachment.filename,
             token = token,
-            modifier = Modifier.then(if (isDetailView) Modifier.fillMaxWidth() else Modifier.width(240.dp))
+            modifier = Modifier.then(
+                if (isDetailView) Modifier.fillMaxWidth() else Modifier.width(
+                    240.dp
+                )
+            )
         )
     } else {
         val context = LocalContext.current
         Card(
             modifier = Modifier
-                .then(if (isDetailView) Modifier.fillMaxWidth() else Modifier.size(width = 200.dp, height = 100.dp))
+                .then(
+                    if (isDetailView) Modifier.fillMaxWidth() else Modifier.size(
+                        width = 200.dp,
+                        height = 100.dp
+                    )
+                )
                 .clip(RoundedCornerShape(8.dp))
                 .then(
                     if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
@@ -610,7 +639,7 @@ fun VideoPlayer(
     val context = LocalContext.current
     var isFullscreen by remember { mutableStateOf(false) }
     var isReady by remember { mutableStateOf(false) }
-    
+
     val exoPlayer = remember {
         ExoPlayer.Builder(context).setMediaSourceFactory(
             DefaultMediaSourceFactory(context).setDataSourceFactory(
@@ -623,7 +652,7 @@ fun VideoPlayer(
     LaunchedEffect(url) {
         exoPlayer.setMediaItem(MediaItem.fromUri(url))
         exoPlayer.prepare()
-        
+
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) {
@@ -667,7 +696,7 @@ fun VideoPlayer(
                 .fillMaxSize()
                 .alpha(if (isReady) 1f else 0f)
         )
-        
+
         if (!isReady) {
             CircularProgressIndicator(modifier = Modifier.size(32.dp))
         }
@@ -684,14 +713,17 @@ fun VideoPlayer(
         ) {
             val activity = context.findActivity()
             DisposableEffect(Unit) {
-                val originalOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                val originalOrientation =
+                    activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                 activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                 onDispose {
                     activity?.requestedOrientation = originalOrientation
                 }
             }
 
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)) {
                 AndroidView(
                     factory = { ctx ->
                         PlayerView(ctx).apply {
@@ -913,7 +945,7 @@ private fun ClickableCheckbox(
 
     val isClickable = onToggle != null
 
-    Row(modifier = Modifier.padding(end = 4.dp)) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
         Checkbox(
             checked = isChecked,
             onCheckedChange = if (isClickable) { _ ->
@@ -932,13 +964,14 @@ private fun ClickableCheckbox(
                 }
 
                 // Create the new content with the toggled checkbox
-                val newContent = content.substring(0, startOffset) +
-                    newCheckboxText +
-                    content.substring(endOffset)
-
+                val newContent = content.take(startOffset) +
+                        newCheckboxText +
+                        content.substring(endOffset)
                 onToggle(newContent)
             } else null,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier
+                .padding(end = 4.dp)
+                .size(20.dp),
             enabled = isClickable
         )
     }
