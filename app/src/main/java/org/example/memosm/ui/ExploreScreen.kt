@@ -24,8 +24,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
 
@@ -208,7 +210,7 @@ private fun ExploreMemosListPane(
                     modifier = Modifier.padding(16.dp)
                 )
                 Button(onClick = { viewModel.fetchExplore(refresh = true) }) {
-                    Text("Retry")
+                    Text(stringResource(R.string.profile_retry))
                 }
             }
         } else {
@@ -270,7 +272,7 @@ private fun ExploreMemosListPane(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "You've reached the end",
+                                text = stringResource(R.string.memo_list_end),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )

@@ -33,9 +33,11 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
 
@@ -267,7 +269,7 @@ private fun MemosListPane(
                                         initialVisibility = uiState.draftMemo?.visibility
                                             ?: uiState.userSettings?.memoVisibility ?: "PRIVATE",
                                         initialLocation = uiState.draftMemo?.location,
-                                        submitLabel = "Publish"
+                                        submitLabel = stringResource(R.string.memo_publish)
                                     )
                                 }
                             }
@@ -368,7 +370,7 @@ private fun MemosListPane(
                                 modifier = Modifier.padding(16.dp)
                             )
                             Button(onClick = { viewModel.refreshAll() }) {
-                                Text("Retry")
+                                Text(stringResource(R.string.profile_retry))
                             }
                         }
                     }
@@ -420,7 +422,7 @@ private fun MemosListPane(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "You've reached the end",
+                                    text = stringResource(R.string.memo_list_end),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.outline
                                 )

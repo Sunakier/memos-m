@@ -15,16 +15,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import org.example.memosm.R
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.viewmodel.MemosViewModel
 
 enum class MainDestination(
-    val label: String
+    val labelRes: Int
 ) {
-    MEMOS("Memos"), EXPLORE("Explore"), ATTACHMENTS("Attachments"), PROFILE("Profile")
+    MEMOS(R.string.nav_memos),
+    EXPLORE(R.string.nav_explore),
+    ATTACHMENTS(R.string.nav_attachments),
+    PROFILE(R.string.nav_profile)
 }
 
 @Composable
@@ -106,7 +111,7 @@ fun MainScreen(
                             }
                         }
                     }
-                }, label = { Text(destination.label) })
+                }, label = { Text(stringResource(destination.labelRes)) })
             }
         }, modifier = modifier
     ) {

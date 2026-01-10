@@ -13,8 +13,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
 
@@ -53,7 +55,7 @@ fun MemoDetailPane(
                             modifier = Modifier.fillMaxWidth(),
                             contentAlignment = Alignment.CenterStart
                         ) {
-                            Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
+                            Text(stringResource(R.string.memo_detail_title), modifier = Modifier.widthIn(max = 600.dp))
                         }
                     },
                     navigationIcon = {
@@ -61,7 +63,7 @@ fun MemoDetailPane(
                             IconButton(onClick = onBack) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back"
+                                    contentDescription = stringResource(R.string.memo_detail_back)
                                 )
                             }
                         }
@@ -76,7 +78,7 @@ fun MemoDetailPane(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = "Add Comment")
+                        Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.memo_detail_add_comment))
                     }
                 }
             }, containerColor = Color.Transparent, modifier = Modifier.fillMaxSize()
@@ -127,7 +129,7 @@ fun MemoDetailPane(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Comments (${comments.size})",
+                                text = stringResource(R.string.memo_detail_comments, comments.size),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -158,7 +160,7 @@ fun MemoDetailPane(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "No comments yet",
+                                    text = stringResource(R.string.memo_detail_no_comments),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -191,9 +193,9 @@ fun MemoDetailPane(
         MemoComposerDialog(
             onDismiss = { showCommentDialog = false },
             viewModel = viewModel,
-            title = "Add Comment",
+            title = stringResource(R.string.memo_detail_add_comment),
             parentMemo = memo,
-            placeholder = "Write your comment here..."
+            placeholder = stringResource(R.string.memo_detail_comment_placeholder)
         )
     }
 

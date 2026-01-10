@@ -16,6 +16,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.IntOffset
@@ -23,12 +24,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.example.memosm.R
 import kotlin.math.roundToInt
 
 @Composable
 fun MemoInput(
     contentState: TextFieldState,
-    placeholder: String,
+    placeholder: String = stringResource(R.string.memo_composer_placeholder),
     availableTags: Set<String>,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,

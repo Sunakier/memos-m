@@ -1,0 +1,88 @@
+<resources>
+    <string name="app_name">MemosM</string>
+    <string name="login_title">Memosにログイン</string>
+    <string name="login_token">トークン</string>
+    <string name="login_password">パスワード</string>
+    <string name="login_username">ユーザー名</string>
+    <string name="login_host_url">ホストURL</string>
+    <string name="login_error_empty_host">ホストURLを入力してください</string>
+    <string name="login_error_failed">ログインに失敗しました: %1$s</string>
+    <string name="login_button">ログイン</string>
+
+    <string name="nav_memos">メモ</string>
+    <string name="nav_explore">共有メモ</string>
+    <string name="nav_attachments">添付ファイル</string>
+    <string name="nav_profile">プロフィール</string>
+
+    <string name="profile_user_info_not_available">ユーザー情報が取得できません</string>
+    <string name="profile_retry">再試行</string>
+    <string name="profile_avatar_description">アバター</string>
+    <string name="profile_statistics">統計</string>
+    <string name="profile_stats_memos">メモ</string>
+    <string name="profile_stats_tags">タグ</string>
+    <string name="profile_stats_pinned">固定済み</string>
+    <string name="profile_stats_links">リンク</string>
+    <string name="profile_stats_code">コード</string>
+    <string name="profile_stats_todo">ToDo</string>
+    <string name="profile_tags_no_tags">タグが見つかりません</string>
+    <string name="profile_settings_general">一般設定</string>
+    <string name="profile_settings_locale">ロケール</string>
+    <string name="profile_settings_locale_default">デフォルト</string>
+    <string name="profile_settings_locale_edit">ロケールの編集</string>
+    <string name="profile_settings_locale_label">ロケール (例: ja, en)</string>
+    <string name="profile_settings_visibility">デフォルトの公開範囲</string>
+    <string name="profile_shortcuts">ショートカット</string>
+    <string name="profile_shortcuts_none">ショートカットが設定されていません</string>
+    <string name="profile_webhooks">Webhook</string>
+    <string name="profile_webhooks_none">Webhookが設定されていません</string>
+    <string name="profile_instance_info">インスタンス情報</string>
+    <string name="profile_instance_version">バージョン</string>
+    <string name="profile_instance_mode">モード</string>
+    <string name="profile_instance_url">URL</string>
+    <string name="profile_logout">ログアウト</string>
+
+    <string name="memo_action_edit">編集</string>
+    <string name="memo_action_delete">削除</string>
+    <string name="memo_action_more">メニュー</string>
+    <string name="memo_publish">公開</string>
+    <string name="memo_list_end">最後まで読み込みました</string>
+    <string name="memo_unknown_user">不明</string>
+    <string name="memo_unknown_time">不明</string>
+    <string name="memo_action_update">更新</string>
+    <string name="memo_action_post">投稿</string>
+
+    <string name="memo_composer_placeholder">今思ったことは…</string>
+    <string name="memo_composer_remove_attachment">削除</string>
+    <string name="memo_composer_remove_location">場所を削除</string>
+    <string name="memo_composer_attach_file">ファイルを添付</string>
+    <string name="memo_composer_add_image">画像を追加</string>
+    <string name="memo_composer_add_location">場所を追加</string>
+    <string name="memo_composer_edit_location">場所を編集</string>
+    <string name="memo_composer_location_name">名前</string>
+    <string name="memo_composer_location_latitude">緯度</string>
+    <string name="memo_composer_location_longitude">経度</string>
+
+    <string name="attachments_none_found">添付ファイルが見つかりません</string>
+    <string name="attachments_error">エラー</string>
+
+    <string name="memo_dialog_edit_title">メモを編集</string>
+    <string name="memo_dialog_delete_title">メモを削除</string>
+    <string name="memo_dialog_delete_confirm">このメモを削除してもよろしいですか？この操作は取り消せません。</string>
+
+    <string name="memo_detail_title">メモの詳細</string>
+    <string name="memo_detail_comments">コメント (%1$d)</string>
+    <string name="memo_detail_no_comments">コメントはまだありません</string>
+    <string name="memo_detail_add_comment">コメントを追加</string>
+    <string name="memo_detail_comment_placeholder">コメントを入力...</string>
+    <string name="memo_detail_back">戻る</string>
+    <string name="memo_detail_placeholder">メモを選択して詳細を表示</string>
+
+    <string name="memo_visibility_public">公開</string>
+    <string name="memo_visibility_protected">メンバーに表示</string>
+    <string name="memo_visibility_private">非公開</string>
+
+    <string name="memo_input_add_tag">タグを追加...</string>
+
+    <string name="common_save">保存</string>
+    <string name="common_cancel">キャンセル</string>
+</resources>

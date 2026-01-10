@@ -18,9 +18,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import org.example.memosm.R
 import org.example.memosm.model.*
 import org.example.memosm.viewmodel.MemosViewModel
 
@@ -116,9 +118,9 @@ fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text("User information not available")
+                        Text(stringResource(R.string.profile_user_info_not_available))
                         Button(onClick = { viewModel.refreshAll() }) {
-                            Text("Retry")
+                            Text(stringResource(R.string.profile_retry))
                         }
                     }
                 }
@@ -138,7 +140,7 @@ fun ProfileHeader(user: User) {
             ) {
                 AsyncImage(
                     model = user.avatarUrl,
-                    contentDescription = "Avatar",
+                    contentDescription = stringResource(R.string.profile_avatar_description),
                     modifier = Modifier
                         .size(80.dp)
                         .clip(CircleShape),
@@ -147,7 +149,7 @@ fun ProfileHeader(user: User) {
                 Spacer(modifier = Modifier.width(24.dp))
                 Column {
                     Text(
-                        text = user.displayName ?: user.username ?: "Unknown",
+                        text = user.displayName ?: user.username ?: stringResource(R.string.memo_unknown_user),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -175,7 +177,7 @@ fun StatsCard(stats: UserStats?) {
             modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                "Statistics",
+                stringResource(R.string.profile_statistics),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.Start)
@@ -189,19 +191,19 @@ fun StatsCard(stats: UserStats?) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 StatItem(
-                    label = "Memos",
+                    label = stringResource(R.string.profile_stats_memos),
                     value = stats?.totalMemoCount?.toString() ?: "N/A",
                     icon = Icons.AutoMirrored.Outlined.LibraryBooks,
                     modifier = Modifier.weight(1f)
                 )
                 StatItem(
-                    label = "Tags",
+                    label = stringResource(R.string.profile_stats_tags),
                     value = stats?.tagCount?.size?.toString() ?: "N/A",
                     icon = Icons.Outlined.Tag,
                     modifier = Modifier.weight(1f)
                 )
                 StatItem(
-                    label = "Pinned",
+                    label = stringResource(R.string.profile_stats_pinned),
                     value = stats?.pinnedMemos?.size?.toString() ?: "N/A",
                     icon = Icons.Outlined.PushPin,
                     modifier = Modifier.weight(1f)
@@ -221,19 +223,19 @@ fun StatsCard(stats: UserStats?) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 StatItem(
-                    label = "Links",
+                    label = stringResource(R.string.profile_stats_links),
                     value = stats?.memoTypeStats?.linkCount?.toString() ?: "N/A",
                     icon = Icons.Outlined.Link,
                     modifier = Modifier.weight(1f)
                 )
                 StatItem(
-                    label = "Code",
+                    label = stringResource(R.string.profile_stats_code),
                     value = stats?.memoTypeStats?.codeCount?.toString() ?: "N/A",
                     icon = Icons.Outlined.Code,
                     modifier = Modifier.weight(1f)
                 )
                 StatItem(
-                    label = "Todo",
+                    label = stringResource(R.string.profile_stats_todo),
                     value = stats?.memoTypeStats?.todoCount?.toString() ?: "N/A",
                     icon = Icons.Outlined.TaskAlt,
                     modifier = Modifier.weight(1f)
@@ -249,13 +251,13 @@ fun TagsCard(tagCount: Map<String, Int>) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                "Tags", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
+                stringResource(R.string.profile_stats_tags), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(12.dp))
 
             if (tagCount.isEmpty()) {
                 Text(
-                    text = "No tags found",
+                    text = stringResource(R.string.profile_tags_no_tags),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -325,12 +327,12 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
     if (showLocaleDialog) {
         AlertDialog(
             onDismissRequest = { showLocaleDialog = false },
-            title = { Text("Edit Locale") },
+            title = { Text(stringResource(R.string.profile_settings_locale_edit)) },
             text = {
                 OutlinedTextField(
                     value = tempLocale,
                     onValueChange = { tempLocale = it },
-                    label = { Text("Locale (e.g. en, zh-Hans)") },
+                    label = { Text(stringResource(R.string.profile_settings_locale_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -340,12 +342,12 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                     onUpdate(tempLocale, null)
                     showLocaleDialog = false
                 }) {
-                    Text("Save")
+                    Text(stringResource(R.string.common_save))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showLocaleDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_cancel))
                 }
             })
     }
@@ -353,7 +355,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(vertical = 16.dp)) {
             Text(
-                "General Settings",
+                stringResource(R.string.profile_settings_general),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 16.dp)
@@ -362,10 +364,10 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
 
             // Locale
             ListItem(
-                headlineContent = { Text("Locale") },
+                headlineContent = { Text(stringResource(R.string.profile_settings_locale)) },
                 supportingContent = {
                     Text(
-                        text = if (settings.locale.isNullOrBlank()) "Default" else settings.locale,
+                        text = if (settings.locale.isNullOrBlank()) stringResource(R.string.profile_settings_locale_default) else settings.locale,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -383,7 +385,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
             // Memo Visibility
             Box {
                 ListItem(
-                    headlineContent = { Text("Default Memo Visibility") },
+                    headlineContent = { Text(stringResource(R.string.profile_settings_visibility)) },
                     supportingContent = {
                         Text(
                             text = if (settings.memoVisibility.isNullOrBlank()) "PRIVATE" else settings.memoVisibility,
@@ -422,7 +424,7 @@ fun ShortcutsCard(shortcuts: List<Shortcut>) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                "Shortcuts",
+                stringResource(R.string.profile_shortcuts),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -430,7 +432,7 @@ fun ShortcutsCard(shortcuts: List<Shortcut>) {
 
             if (shortcuts.isEmpty()) {
                 Text(
-                    text = "No shortcuts configured",
+                    text = stringResource(R.string.profile_shortcuts_none),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -455,7 +457,7 @@ fun WebhooksCard(webhooks: List<UserWebhook>) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                "Webhooks",
+                stringResource(R.string.profile_webhooks),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -463,7 +465,7 @@ fun WebhooksCard(webhooks: List<UserWebhook>) {
 
             if (webhooks.isEmpty()) {
                 Text(
-                    text = "No webhooks configured",
+                    text = stringResource(R.string.profile_webhooks_none),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -473,7 +475,7 @@ fun WebhooksCard(webhooks: List<UserWebhook>) {
                     ListItem(
                         headlineContent = {
                         Text(
-                            webhook.displayName ?: webhook.name ?: "Unknown"
+                            webhook.displayName ?: webhook.name ?: stringResource(R.string.memo_unknown_user)
                         )
                     }, supportingContent = {
                         Text(
@@ -499,14 +501,14 @@ fun InstanceCard(instance: InstanceProfile) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                "Instance Information",
+                stringResource(R.string.profile_instance_info),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
-            InfoRow("Version", instance.version ?: "Unknown")
-            InfoRow("Mode", instance.mode ?: "Unknown")
-            InfoRow("URL", instance.instanceUrl ?: "Unknown")
+            InfoRow(stringResource(R.string.profile_instance_version), instance.version ?: stringResource(R.string.memo_unknown_user))
+            InfoRow(stringResource(R.string.profile_instance_mode), instance.mode ?: stringResource(R.string.memo_unknown_user))
+            InfoRow(stringResource(R.string.profile_instance_url), instance.instanceUrl ?: stringResource(R.string.memo_unknown_user))
         }
     }
 }
@@ -529,7 +531,7 @@ fun LogoutCard(onLogout: () -> Unit) {
             Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null)
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                "Logout", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
+                stringResource(R.string.profile_logout), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
             )
         }
     }

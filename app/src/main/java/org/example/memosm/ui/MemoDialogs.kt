@@ -5,8 +5,10 @@ import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
 
@@ -18,7 +20,7 @@ fun MemoComposerDialog(
     title: String,
     initialMemo: Memo? = null,
     parentMemo: Memo? = null, // If provided, it's a comment
-    placeholder: String = "What's on your mind?"
+    placeholder: String = stringResource(R.string.memo_composer_placeholder)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val adaptiveInfo = currentWindowAdaptiveInfo()
@@ -104,7 +106,7 @@ fun MemoEditDialog(
     memo: Memo, onDismiss: () -> Unit, viewModel: MemosViewModel
 ) {
     MemoComposerDialog(
-        onDismiss = onDismiss, viewModel = viewModel, title = "Edit Memo", initialMemo = memo
+        onDismiss = onDismiss, viewModel = viewModel, title = stringResource(R.string.memo_dialog_edit_title), initialMemo = memo
     )
 }
 
@@ -114,19 +116,19 @@ fun DeleteConfirmationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Delete Memo") },
-        text = { Text("Are you sure you want to delete this memo? This action cannot be undone.") },
+        title = { Text(stringResource(R.string.memo_dialog_delete_title)) },
+        text = { Text(stringResource(R.string.memo_dialog_delete_confirm)) },
         confirmButton = {
             TextButton(
                 onClick = onConfirm,
                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
             ) {
-                Text("Delete")
+                Text(stringResource(R.string.memo_action_delete))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_cancel))
             }
         })
 }

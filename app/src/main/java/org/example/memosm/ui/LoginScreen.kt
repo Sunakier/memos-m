@@ -6,11 +6,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.example.memosm.R
 import org.example.memosm.api.MemosApi
 import retrofit2.Retrofit
 import retrofit2.converter.protobuf.ProtoConverterFactory
@@ -46,7 +48,7 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Top
         ) {
             Text(
-                text = "Login to Memos",
+                text = stringResource(R.string.login_title),
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
@@ -57,11 +59,11 @@ fun LoginScreen(
                 Tab(
                     selected = loginMode == LoginMode.TOKEN,
                     onClick = { loginMode = LoginMode.TOKEN },
-                    text = { Text("Token") })
+                    text = { Text(stringResource(R.string.login_token)) })
                 Tab(
                     selected = loginMode == LoginMode.PASSWORD,
                     onClick = { loginMode = LoginMode.PASSWORD },
-                    text = { Text("Password") })
+                    text = { Text(stringResource(R.string.login_password)) })
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -69,9 +71,9 @@ fun LoginScreen(
             OutlinedTextField(
                 value = hostUrl,
                 onValueChange = { hostUrl = it },
-                label = { Text("Host URL") },
+                label = { Text(stringResource(R.string.login_host_url)) },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("https://demo.usememos.com") },
+                placeholder = { Text(stringResource(R.string.login_host_url_placeholder)) },
                 enabled = !isLoading
             )
 
@@ -82,7 +84,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = token,
                         onValueChange = { token = it },
-                        label = { Text("Token") },
+                        label = { Text(stringResource(R.string.login_token)) },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isLoading
                     )
@@ -93,7 +95,7 @@ fun LoginScreen(
                         OutlinedTextField(
                             value = username,
                             onValueChange = { username = it },
-                            label = { Text("Username") },
+                            label = { Text(stringResource(R.string.login_username)) },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !isLoading
                         )
@@ -101,7 +103,7 @@ fun LoginScreen(
                         OutlinedTextField(
                             value = password,
                             onValueChange = { password = it },
-                            label = { Text("Password") },
+                            label = { Text(stringResource(R.string.login_password)) },
                             visualTransformation = PasswordVisualTransformation(),
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !isLoading
@@ -116,6 +118,9 @@ fun LoginScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+
+            val errorEmptyHost = stringResource(R.string.login_error_empty_host)
+            val errorFailed = stringResource(R.string.login_error_failed)
 
             Button(
                 onClick = {
@@ -153,11 +158,11 @@ fun LoginScreen(
                                     // Password login implementation removed for now as per previous state
                                 }
                             } else {
-                                errorMessage = "Host URL cannot be empty"
+                                errorMessage = errorEmptyHost
                             }
                         } catch (e: Exception) {
                             Log.e("MemosLogin", "Login failed", e)
-                            errorMessage = "Login failed: ${e.localizedMessage}"
+                            errorMessage = errorFailed.format(e.localizedMessage ?: "unknown")
                         } finally {
                             isLoading = false
                         }
@@ -167,7 +172,7 @@ fun LoginScreen(
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                 } else {
-                    Text("Login")
+                    Text(stringResource(R.string.login_button))
                 }
             }
         }

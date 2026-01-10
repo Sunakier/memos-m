@@ -29,12 +29,14 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
+import org.example.memosm.R
 import org.example.memosm.model.Attachment
 import org.example.memosm.viewmodel.MemosViewModel
 import java.text.SimpleDateFormat
@@ -135,7 +137,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (uiState.attachments.isEmpty() && !uiState.isFetchingAttachments) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No attachments found")
+                    Text(stringResource(R.string.attachments_none_found))
                 }
             } else {
                 LazyVerticalStaggeredGrid(
@@ -183,7 +185,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "You've reached the end",
+                                    text = stringResource(R.string.memo_list_end),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.outline
                                 )
@@ -284,7 +286,7 @@ fun AttachmentItem(
                     if (isError) {
                         Icon(
                             imageVector = Icons.Outlined.BrokenImage,
-                            contentDescription = "Error",
+                            contentDescription = stringResource(R.string.attachments_error),
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(32.dp)
                         )

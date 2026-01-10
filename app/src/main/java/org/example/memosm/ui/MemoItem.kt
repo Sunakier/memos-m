@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -33,6 +34,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
 import com.mikepenz.markdown.m3.Markdown
+import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User
 import java.text.SimpleDateFormat
@@ -53,6 +55,7 @@ fun MemoItem(
     var showMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
+    val unknownTime = stringResource(R.string.memo_unknown_time)
     val formattedTime = remember(memo.displayTime) {
         try {
             val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
@@ -62,9 +65,9 @@ fun MemoItem(
                 DateUtils.getRelativeTimeSpanString(
                     it.time, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS
                 ).toString()
-            } ?: memo.displayTime ?: "UNKNOWN"
+            } ?: memo.displayTime ?: unknownTime
         } catch (_: Exception) {
-            memo.displayTime ?: "UNKNOWN"
+            memo.displayTime ?: unknownTime
         }
     }
 
@@ -95,7 +98,7 @@ fun MemoItem(
                         if (avatarUrl != null) {
                             AsyncImage(
                                 model = avatarUrl,
-                                contentDescription = null,
+                                contentDescription = stringResource(R.string.profile_avatar_description),
                                 modifier = Modifier
                                     .size(28.dp)
                                     .clip(CircleShape),
@@ -112,7 +115,7 @@ fun MemoItem(
                         Spacer(modifier = Modifier.width(8.dp))
                         Column(verticalArrangement = Arrangement.Center) {
                             Text(
-                                text = user.displayName ?: user.username ?: "Unknown",
+                                text = user.displayName ?: user.username ?: stringResource(R.string.memo_unknown_user),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
                                 lineHeight = MaterialTheme.typography.labelSmall.lineHeight
@@ -160,14 +163,14 @@ fun MemoItem(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
-                                contentDescription = "More",
+                                contentDescription = stringResource(R.string.memo_action_more),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
                         DropdownMenu(
                             expanded = showMenu, onDismissRequest = { showMenu = false }) {
                             if (onEdit != null) {
-                                DropdownMenuItem(text = { Text("Edit") }, onClick = {
+                                DropdownMenuItem(text = { Text(stringResource(R.string.memo_action_edit)) }, onClick = {
                                     showMenu = false
                                     onEdit()
                                 }, leadingIcon = {
@@ -178,7 +181,7 @@ fun MemoItem(
                             }
                             if (onDelete != null) {
                                 DropdownMenuItem(
-                                    text = { Text("Delete") }, onClick = {
+                                    text = { Text(stringResource(R.string.memo_action_delete)) }, onClick = {
                                     showMenu = false
                                     onDelete()
                                 }, leadingIcon = {
