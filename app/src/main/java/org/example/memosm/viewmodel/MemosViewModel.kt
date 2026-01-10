@@ -133,8 +133,7 @@ class MemosViewModel(
             try {
                 // Fetch memos first
                 val filter = if (_uiState.value.selectedTags.isNotEmpty()) {
-                    val tagsFilter = _uiState.value.selectedTags.joinToString(", ") { "\"$it\"" }
-                    "tag in [$tagsFilter]"
+                    _uiState.value.selectedTags.joinToString(" && ") { "tag in [\"$it\"]" }
                 } else null
                 
                 val memoResponse = api.listMemos(filter = filter, pageSize = DEFAULT_PAGE_SIZE)
@@ -382,8 +381,7 @@ class MemosViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val filter = if (_uiState.value.selectedTags.isNotEmpty()) {
-                    val tagsFilter = _uiState.value.selectedTags.joinToString(", ") { "\"$it\"" }
-                    "tag in [$tagsFilter]"
+                    _uiState.value.selectedTags.joinToString(" && ") { "tag in [\"$it\"]" }
                 } else null
                 
                 val response = api.listMemos(pageToken = currentToken, filter = filter, pageSize = DEFAULT_PAGE_SIZE)
@@ -459,13 +457,16 @@ class MemosViewModel(
         }
     }
 
-    fun prepareSearch(isExplore: Boolean) {
+    fun prepareSearch(isExplore: Boolean, filter: String? = null) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSearching = true, searchMemos = emptyList())
             try {
-                // Fetch a larger set for searching
-                val filter = if (isExplore) "visibility in ['PUBLIC', 'PROTECTED']" else null
-                val response = api.listMemos(filter = filter, pageSize = 200) // Fetch up to 200 for local search
+                val baseFilter = if (isExplore) "visibility in ['PUBLIC', 'PROTECTED']" else null
+                val finalFilter = if (filter != null) {
+                    if (baseFilter != null) "$baseFilter && $filter" else filter
+                } else baseFilter
+
+                val response = api.listMemos(filter = finalFilter, pageSize = 200)
                 val searchMemos = response.memos?.map { processMemo(it) } ?: emptyList()
                 
                 _uiState.value = _uiState.value.copy(
@@ -473,7 +474,6 @@ class MemosViewModel(
                     isSearching = false
                 )
                 
-                // Fetch user info for creators in search results if explore
                 if (isExplore) {
                     val unknownCreators = searchMemos
                         .mapNotNull { it.creator }
