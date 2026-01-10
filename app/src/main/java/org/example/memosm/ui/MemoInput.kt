@@ -1,6 +1,5 @@
 package org.example.memosm.ui
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -23,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @Composable
 fun MemoInput(
@@ -97,7 +97,11 @@ fun MemoInput(
             lineLimits = TextFieldLineLimits.MultiLine(
                 minHeightInLines = minHeightInLines, maxHeightInLines = maxHeightInLines
             ),
-            enabled = enabled && isActivated
+            enabled = enabled && isActivated,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+            )
         )
 
         // Overlay to catch the first tap if not activated
@@ -127,8 +131,8 @@ fun MemoInput(
                     val horizontalPadding = with(density) { 16.dp.roundToPx() }
                     val verticalPadding = with(density) { 16.dp.roundToPx() }
                     IntOffset(
-                        x = cursorRect.left.toInt() + horizontalPadding,
-                        y = cursorRect.bottom.toInt() + verticalPadding
+                        x = cursorRect.left.roundToInt() + horizontalPadding,
+                        y = cursorRect.bottom.roundToInt() + verticalPadding
                     )
                 } else IntOffset(0, 150)
             }
@@ -136,20 +140,18 @@ fun MemoInput(
             Popup(alignment = Alignment.TopStart, offset = popupOffset) {
                 Surface(
                     modifier = Modifier
-                        .widthIn(max = 200.dp)
-                        .heightIn(max = 200.dp)
-                        .border(
-                            1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp)
-                        ),
+                        .widthIn(min = 120.dp, max = 240.dp)
+                        .heightIn(max = 200.dp),
                     shape = RoundedCornerShape(8.dp),
-                    tonalElevation = 8.dp,
-                    shadowElevation = 4.dp
+                    tonalElevation = 3.dp,
+                    shadowElevation = 3.dp,
+                    color = MaterialTheme.colorScheme.surfaceContainer
                 ) {
-                    LazyColumn {
+                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
                         items(filteredTags) { tag ->
-                            Text(text = "#$tag", modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
+                            DropdownMenuItem(
+                                text = { Text(text = "#$tag") },
+                                onClick = {
                                     contentState.edit {
                                         val replacement = "#$tag "
                                         replace(
@@ -159,7 +161,7 @@ fun MemoInput(
                                     }
                                     showTagPopup = false
                                 }
-                                .padding(12.dp), style = MaterialTheme.typography.bodyMedium)
+                            )
                         }
                     }
                 }
