@@ -1,5 +1,7 @@
 package org.example.memosm.ui
 
+import android.content.Intent
+import android.net.Uri
 import android.text.format.DateUtils
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,6 +20,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -38,6 +41,7 @@ fun MemoItem(
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     val formattedTime = remember(memo.displayTime) {
         try {
@@ -185,6 +189,42 @@ fun MemoItem(
 
             Column(modifier = Modifier.padding(start = 4.dp, end = 12.dp)) {
                 Text(text = memo.content, style = MaterialTheme.typography.bodyLarge)
+
+                memo.location?.let { loc ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val isClickable = loc.latitude != null && loc.longitude != null
+                    Surface(
+                        onClick = {
+                            if (isClickable) {
+                                val uri = "https://www.openstreetmap.org/?mlat=${loc.latitude}&mlon=${loc.longitude}#map=17/${loc.latitude}/${loc.longitude}"
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
+                                context.startActivity(intent)
+                            }
+                        },
+                        enabled = isClickable,
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Place,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = loc.placeholder ?: "${loc.latitude}, ${loc.longitude}",
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
 
                 val attachments = remember(memo.attachments) {
                     memo.attachments ?: emptyList()

@@ -252,14 +252,14 @@ private fun MemosListPane(
                                 // triggering a reset of the internal composer state.
                                 key(uiState.draftMemo == null) {
                                     MemoComposer(
-                                        onPublish = { content, visibility, attachments ->
-                                        viewModel.createMemo(content, visibility, attachments)
+                                        onPublish = { content, visibility, attachments, location ->
+                                        viewModel.createMemo(content, visibility, attachments, location)
                                     },
                                         onUploadFile = { uri, context ->
                                             viewModel.uploadAttachment(uri, context)
                                         },
-                                        onDraftChanged = { content, visibility, attachments ->
-                                            viewModel.saveDraft(content, visibility, attachments)
+                                        onDraftChanged = { content, visibility, attachments, location ->
+                                            viewModel.saveDraft(content, visibility, attachments, location)
                                         },
                                         availableTags = uiState.userStats?.tagCount?.keys
                                             ?: emptySet(),
@@ -271,6 +271,7 @@ private fun MemosListPane(
                                             ?: emptyList(),
                                         initialVisibility = uiState.draftMemo?.visibility
                                             ?: uiState.userSettings?.memoVisibility ?: "PRIVATE",
+                                        initialLocation = uiState.draftMemo?.location,
                                         submitLabel = "Publish"
                                     )
                                 }

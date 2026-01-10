@@ -478,6 +478,7 @@ class MemosViewModel(
         content: String, 
         visibility: String = "PRIVATE", 
         attachments: List<Attachment>? = null,
+        location: Location? = null,
         onSuccess: () -> Unit = {}
     ) {
         if (content.isBlank() && attachments.isNullOrEmpty()) return
@@ -489,6 +490,7 @@ class MemosViewModel(
                     content = content, 
                     visibility = visibility,
                     attachments = attachments,
+                    location = location,
                     state = "NORMAL"
                 ))
                 _uiState.value = _uiState.value.copy(
@@ -508,11 +510,12 @@ class MemosViewModel(
         }
     }
 
-    fun saveDraft(content: String, visibility: String, attachments: List<Attachment>) {
+    fun saveDraft(content: String, visibility: String, attachments: List<Attachment>, location: Location? = null) {
         val draft = Memo(
             content = content,
             visibility = visibility,
-            attachments = attachments
+            attachments = attachments,
+            location = location
         )
         // Update UI state immediately
         _uiState.value = _uiState.value.copy(draftMemo = draft)
@@ -560,6 +563,7 @@ class MemosViewModel(
         content: String,
         visibility: String,
         attachments: List<Attachment>,
+        location: Location? = null,
         onSuccess: () -> Unit = {}
     ) {
         val memoName = memo.name ?: return
@@ -573,9 +577,10 @@ class MemosViewModel(
                     memoData = Memo(
                         content = content,
                         visibility = visibility,
-                        attachments = attachments
+                        attachments = attachments,
+                        location = location
                     ),
-                    updateMask = "content,visibility,attachments"
+                    updateMask = "content,visibility,attachments,location"
                 )
                 
                 val processed = processMemo(updatedMemo)

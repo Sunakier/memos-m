@@ -97,6 +97,7 @@ dependencies {
     }
     implementation(libs.okhttp.logging)
     implementation(libs.protobuf.kotlin.lite)
+    implementation(libs.google.play.services.location)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

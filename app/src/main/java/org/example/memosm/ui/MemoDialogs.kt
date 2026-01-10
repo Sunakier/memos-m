@@ -58,11 +58,11 @@ fun MemoComposerDialog(
             )
 
             MemoComposer(
-                onPublish = { content, visibility, attachments ->
+                onPublish = { content, visibility, attachments, location ->
                 when {
                     initialMemo != null -> {
                         viewModel.updateMemo(
-                            initialMemo, content, visibility, attachments
+                            initialMemo, content, visibility, attachments, location
                         ) {
                             onDismiss()
                         }
@@ -74,7 +74,7 @@ fun MemoComposerDialog(
                     }
 
                     else -> {
-                        viewModel.createMemo(content, visibility, attachments) {
+                        viewModel.createMemo(content, visibility, attachments, location) {
                             onDismiss()
                         }
                     }
@@ -90,6 +90,7 @@ fun MemoComposerDialog(
                 initialVisibility = initialMemo?.visibility ?: parentMemo?.visibility
                 ?: uiState.userSettings?.memoVisibility ?: "PRIVATE",
                 initialAttachments = initialMemo?.attachments ?: emptyList(),
+                initialLocation = initialMemo?.location,
                 placeholder = placeholder,
                 autoFocus = true,
                 onCancel = onDismiss

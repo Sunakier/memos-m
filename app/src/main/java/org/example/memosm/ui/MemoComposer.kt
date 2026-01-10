@@ -1,6 +1,9 @@
 package org.example.memosm.ui
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -10,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -26,16 +30,23 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import kotlinx.coroutines.launch
 import org.example.memosm.model.Attachment
+import org.example.memosm.model.Location
 
 @Composable
 fun MemoComposer(
-    onPublish: (String, String, List<Attachment>) -> Unit,
+    onPublish: (String, String, List<Attachment>, Location?) -> Unit,
     onUploadFile: suspend (Uri, Context) -> Attachment?,
     availableTags: Set<String>,
     token: String,
@@ -44,10 +55,11 @@ fun MemoComposer(
     initialContent: String = "",
     initialVisibility: String = "PRIVATE",
     initialAttachments: List<Attachment> = emptyList(),
+    initialLocation: Location? = null,
     placeholder: String = "What's on your mind?",
     autoFocus: Boolean = false,
     onCancel: (() -> Unit)? = null,
-    onDraftChanged: ((String, String, List<Attachment>) -> Unit)? = null,
+    onDraftChanged: ((String, String, List<Attachment>, Location?) -> Unit)? = null,
     submitLabel: String? = null
 ) {
     val contentState = rememberTextFieldState(initialContent)
@@ -60,12 +72,17 @@ fun MemoComposer(
         mutableStateOf(initial)
     }
     var draftAttachments by draftAttachmentsState
+    var location by remember(initialLocation) { mutableStateOf(initialLocation) }
+    var showLocationEditDialog by remember { mutableStateOf(false) }
 
     var isUploadingCount by remember { mutableIntStateOf(0) }
+    var isFetchingLocation by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val density = LocalDensity.current
+
+    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
     val pickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -84,14 +101,16 @@ fun MemoComposer(
                         onDraftChanged?.invoke(
                             contentState.text.toString(),
                             visibility,
-                            updated.mapNotNull { it.second })
+                            updated.mapNotNull { it.second },
+                            location)
                     } else {
                         val updated = draftAttachments.filter { it.first != uri }
                         draftAttachments = updated
                         onDraftChanged?.invoke(
                             contentState.text.toString(),
                             visibility,
-                            updated.mapNotNull { it.second })
+                            updated.mapNotNull { it.second },
+                            location)
                     }
                     isUploadingCount--
                 }
@@ -99,14 +118,50 @@ fun MemoComposer(
         }
     }
 
+    @SuppressLint("MissingPermission")
+    fun fetchLocation() {
+        isFetchingLocation = true
+        val cancellationTokenSource = CancellationTokenSource()
+        fusedLocationClient.getCurrentLocation(
+            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+            cancellationTokenSource.token
+        ).addOnSuccessListener { androidLoc ->
+            if (androidLoc != null) {
+                location = Location(
+                    latitude = androidLoc.latitude,
+                    longitude = androidLoc.longitude,
+                    placeholder = "Current Location"
+                )
+            }
+            isFetchingLocation = false
+        }.addOnFailureListener {
+            isFetchingLocation = false
+        }
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        ) {
+            fetchLocation()
+        }
+    }
+
     LaunchedEffect(contentState.text) {
         onDraftChanged?.invoke(
-            contentState.text.toString(), visibility, draftAttachments.mapNotNull { it.second })
+            contentState.text.toString(), visibility, draftAttachments.mapNotNull { it.second }, location)
     }
 
     LaunchedEffect(visibility) {
         onDraftChanged?.invoke(
-            contentState.text.toString(), visibility, draftAttachments.mapNotNull { it.second })
+            contentState.text.toString(), visibility, draftAttachments.mapNotNull { it.second }, location)
+    }
+
+    LaunchedEffect(location) {
+        onDraftChanged?.invoke(
+            contentState.text.toString(), visibility, draftAttachments.mapNotNull { it.second }, location)
     }
 
     var componentWidth by remember { mutableStateOf(0.dp) }
@@ -200,7 +255,8 @@ fun MemoComposer(
                                 onDraftChanged?.invoke(
                                     contentState.text.toString(),
                                     visibility,
-                                    updated.mapNotNull { it.second })
+                                    updated.mapNotNull { it.second },
+                                    location)
                             },
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
@@ -221,6 +277,37 @@ fun MemoComposer(
             }
         }
 
+        location?.let { loc ->
+            Spacer(modifier = Modifier.height(8.dp))
+            InputChip(
+                selected = true,
+                onClick = { showLocationEditDialog = true },
+                label = {
+                    Text(
+                        text = loc.placeholder ?: "${loc.latitude}, ${loc.longitude}",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Remove Location",
+                        modifier = Modifier
+                            .size(18.dp)
+                            .noRippleClickable { location = null }
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Place,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            )
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -239,6 +326,31 @@ fun MemoComposer(
                     onClick = { pickerLauncher.launch("image/*") }, enabled = !isPosting
                 ) {
                     Icon(imageVector = Icons.Outlined.Image, contentDescription = "Add Image")
+                }
+                IconButton(
+                    onClick = {
+                        val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                        val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                        
+                        if (hasCoarse || hasFine) {
+                            fetchLocation()
+                        } else {
+                            locationPermissionLauncher.launch(
+                                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+                            )
+                        }
+                    },
+                    enabled = !isPosting && !isFetchingLocation
+                ) {
+                    if (isFetchingLocation) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(
+                            imageVector = if (location != null) Icons.Default.Place else Icons.Outlined.Place,
+                            contentDescription = "Add Location",
+                            tint = if (location != null) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                        )
+                    }
                 }
             }
 
@@ -289,7 +401,7 @@ fun MemoComposer(
                 Button(
                     onClick = {
                         val finalAttachments = draftAttachments.mapNotNull { it.second }
-                        onPublish(contentState.text.toString(), visibility, finalAttachments)
+                        onPublish(contentState.text.toString(), visibility, finalAttachments, location)
                     },
                     enabled = (contentState.text.isNotBlank() || draftAttachments.isNotEmpty()) && !isPosting && isUploadingCount == 0,
                     contentPadding = if (showPublishLabel) ButtonDefaults.ContentPadding else PaddingValues(
@@ -320,5 +432,60 @@ fun MemoComposer(
                 }
             }
         }
+    }
+
+    if (showLocationEditDialog && location != null) {
+        var tempPlaceholder by remember { mutableStateOf(location?.placeholder ?: "") }
+        var tempLatitude by remember { mutableStateOf(location?.latitude?.toString() ?: "") }
+        var tempLongitude by remember { mutableStateOf(location?.longitude?.toString() ?: "") }
+
+        AlertDialog(
+            onDismissRequest = { showLocationEditDialog = false },
+            title = { Text("Edit Location") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = tempPlaceholder,
+                        onValueChange = { tempPlaceholder = it },
+                        label = { Text("Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = tempLatitude,
+                        onValueChange = { tempLatitude = it },
+                        label = { Text("Latitude") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = tempLongitude,
+                        onValueChange = { tempLongitude = it },
+                        label = { Text("Longitude") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    location = location?.copy(
+                        placeholder = tempPlaceholder,
+                        latitude = tempLatitude.toDoubleOrNull(),
+                        longitude = tempLongitude.toDoubleOrNull()
+                    )
+                    showLocationEditDialog = false
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLocationEditDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
