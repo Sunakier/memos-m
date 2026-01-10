@@ -9,10 +9,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.Shortcut
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
+import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.automirrored.outlined.Shortcut
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material.icons.outlined.Tag
-import androidx.compose.material.icons.outlined.Webhook
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,32 +38,29 @@ fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit) {
     val userSettings = uiState.userSettings
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .safeDrawingPadding(),
-        contentAlignment = Alignment.TopCenter
+        modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter
     ) {
         LazyColumn(
             modifier = Modifier
                 .widthIn(max = 600.dp)
-                .fillMaxWidth()
-                .padding(16.dp),
+                .fillMaxWidth(),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                top = 16.dp + WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
+                end = 16.dp,
+                bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues()
+                    .calculateBottomPadding()
+            ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (user != null) {
                 item {
                     ProfileHeader(user)
                 }
 
-                if (stats != null) {
-                    item {
-                        StatsCard(stats)
-                    }
-                    
-                    item {
-                        TagsCard(stats.tagCount ?: emptyMap())
-                    }
+                item {
+                    StatsCard(stats)
                 }
 
                 if (userSettings != null) {
@@ -73,6 +70,10 @@ fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit) {
                                 viewModel.updateUserGeneralSetting(locale, visibility)
                             })
                     }
+                }
+
+                item {
+                    TagsCard(stats?.tagCount ?: emptyMap())
                 }
 
                 item {
@@ -171,11 +172,10 @@ fun ProfileHeader(user: User) {
 }
 
 @Composable
-fun StatsCard(stats: UserStats) {
+fun StatsCard(stats: UserStats?) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 "Statistics",
@@ -184,7 +184,7 @@ fun StatsCard(stats: UserStats) {
                 modifier = Modifier.align(Alignment.Start)
             )
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             // First Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -193,30 +193,30 @@ fun StatsCard(stats: UserStats) {
             ) {
                 StatItem(
                     label = "Memos",
-                    value = (stats.totalMemoCount ?: 0).toString(),
+                    value = stats?.totalMemoCount?.toString() ?: "N/A",
                     icon = Icons.AutoMirrored.Outlined.LibraryBooks,
                     modifier = Modifier.weight(1f)
                 )
                 StatItem(
                     label = "Tags",
-                    value = (stats.tagCount?.size ?: 0).toString(),
+                    value = stats?.tagCount?.size?.toString() ?: "N/A",
                     icon = Icons.Outlined.Tag,
                     modifier = Modifier.weight(1f)
                 )
                 StatItem(
                     label = "Pinned",
-                    value = (stats.pinnedMemos?.size ?: 0).toString(),
+                    value = stats?.pinnedMemos?.size?.toString() ?: "N/A",
                     icon = Icons.Outlined.PushPin,
                     modifier = Modifier.weight(1f)
                 )
             }
-            
+
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 16.dp, horizontal = 24.dp),
                 thickness = 0.5.dp,
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
             )
-            
+
             // Second Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -225,20 +225,20 @@ fun StatsCard(stats: UserStats) {
             ) {
                 StatItem(
                     label = "Links",
-                    value = (stats.memoTypeStats?.linkCount ?: 0).toString(),
-                    icon = Icons.Default.Link,
+                    value = stats?.memoTypeStats?.linkCount?.toString() ?: "N/A",
+                    icon = Icons.Outlined.Link,
                     modifier = Modifier.weight(1f)
                 )
                 StatItem(
                     label = "Code",
-                    value = (stats.memoTypeStats?.codeCount ?: 0).toString(),
-                    icon = Icons.Default.Code,
+                    value = stats?.memoTypeStats?.codeCount?.toString() ?: "N/A",
+                    icon = Icons.Outlined.Code,
                     modifier = Modifier.weight(1f)
                 )
                 StatItem(
                     label = "Todo",
-                    value = (stats.memoTypeStats?.todoCount ?: 0).toString(),
-                    icon = Icons.Default.CheckBox,
+                    value = stats?.memoTypeStats?.todoCount?.toString() ?: "N/A",
+                    icon = Icons.Outlined.TaskAlt,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -252,12 +252,10 @@ fun TagsCard(tagCount: Map<String, Int>) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                "Tags",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                "Tags", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             if (tagCount.isEmpty()) {
                 Text(
                     text = "No tags found",
@@ -290,7 +288,9 @@ fun TagsCard(tagCount: Map<String, Int>) {
                                     Text(
                                         text = count.toString(),
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
+                                            alpha = 0.7f
+                                        )
                                     )
                                 }
                             }
@@ -373,7 +373,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
-                trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
+                trailingContent = { Icon(Icons.Outlined.ChevronRight, contentDescription = null) },
                 modifier = Modifier.clickable {
                     tempLocale = settings.locale ?: ""
                     showLocaleDialog = true
@@ -396,7 +396,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                     },
                     trailingContent = {
                         Icon(
-                            Icons.Default.ArrowDropDown, contentDescription = null
+                            Icons.Outlined.ArrowDropDown, contentDescription = null
                         )
                     },
                     modifier = Modifier.clickable { showVisibilityMenu = true },
@@ -430,7 +430,7 @@ fun ShortcutsCard(shortcuts: List<Shortcut>) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             if (shortcuts.isEmpty()) {
                 Text(
                     text = "No shortcuts configured",
@@ -443,7 +443,7 @@ fun ShortcutsCard(shortcuts: List<Shortcut>) {
                     ListItem(
                         headlineContent = { Text(shortcut.title ?: "") }, leadingContent = {
                         Icon(
-                            Icons.AutoMirrored.Filled.Shortcut, contentDescription = null
+                            Icons.AutoMirrored.Outlined.Shortcut, contentDescription = null
                         )
                     }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
@@ -463,7 +463,7 @@ fun WebhooksCard(webhooks: List<UserWebhook>) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             if (webhooks.isEmpty()) {
                 Text(
                     text = "No webhooks configured",
@@ -474,21 +474,22 @@ fun WebhooksCard(webhooks: List<UserWebhook>) {
             } else {
                 webhooks.forEach { webhook ->
                     ListItem(
-                        headlineContent = { Text(webhook.displayName ?: webhook.name ?: "Unknown") },
-                        supportingContent = {
-                            Text(
-                                text = webhook.url,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1
-                            )
-                        },
-                        leadingContent = {
-                            Icon(
-                                Icons.Outlined.Webhook, contentDescription = null
-                            )
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        headlineContent = {
+                        Text(
+                            webhook.displayName ?: webhook.name ?: "Unknown"
+                        )
+                    }, supportingContent = {
+                        Text(
+                            text = webhook.url,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }, leadingContent = {
+                        Icon(
+                            Icons.Outlined.Webhook, contentDescription = null
+                        )
+                    }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
                 }
             }
@@ -528,7 +529,7 @@ fun LogoutCard(onLogout: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
+            Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null)
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 "Logout", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
