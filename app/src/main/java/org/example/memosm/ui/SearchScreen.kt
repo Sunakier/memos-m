@@ -45,6 +45,7 @@ fun MemoSearchBar(
     viewModel: MemosViewModel,
     isExplore: Boolean = false,
     onMemoClick: (Memo) -> Unit,
+    onExpandedChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     placeholder: String = stringResource(R.string.memo_search_placeholder)
 ) {
@@ -122,7 +123,10 @@ fun MemoSearchBar(
                     onQueryChange = { query = it },
                     onSearch = { focusManager.clearFocus() },
                     expanded = expanded,
-                    onExpandedChange = { expanded = it },
+                    onExpandedChange = { 
+                        expanded = it
+                        onExpandedChange(it)
+                    },
                     placeholder = { Text(placeholder) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = {
@@ -140,7 +144,10 @@ fun MemoSearchBar(
                 )
             },
             expanded = expanded,
-            onExpandedChange = { expanded = it },
+            onExpandedChange = { 
+                expanded = it
+                onExpandedChange(it)
+            },
         ) {
             SearchResultContent(
                 query = query,

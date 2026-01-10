@@ -104,140 +104,114 @@ fun ExploreScreen(viewModel: MemosViewModel) {
     val isListVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
     val isDualPane = isListVisible && isDetailVisible
 
-    val showSearchBar = !isDualPane && (!isScrollingDown || listState.firstVisibleItemIndex == 0)
+    var isSearchExpanded by remember { mutableStateOf(false) }
+    val showSearchBar = (!isScrollingDown || listState.firstVisibleItemIndex == 0)
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        NavigableListDetailPaneScaffold(
-            navigator = navigator,
-            listPane = {
-                AnimatedPane {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        ExploreMemosListPane(
+    NavigableListDetailPaneScaffold(
+        navigator = navigator,
+        listPane = {
+            AnimatedPane {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    ExploreMemosListPane(
+                        viewModel = viewModel,
+                        listState = listState,
+                        onMemoClick = { memo ->
+                            focusManager.clearFocus()
+                            scope.launch {
+                                val id = memo.name ?: memo.content.hashCode().toString()
+                                navigator.navigateTo(
+                                    ListDetailPaneScaffoldRole.Detail, MemoKey(id)
+                                )
+                            }
+                        })
+
+                    // Overlay SearchBar on the list pane.
+                    // Only show it if search isn't covering the screen or we are on tablet.
+                    AnimatedVisibility(
+                        visible = showSearchBar && (!isSearchExpanded || isDualPane || !isDetailVisible),
+                        enter = slideInVertically { -it } + fadeIn(),
+                        exit = slideOutVertically { -it } + fadeOut(),
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    ) {
+                        MemoSearchBar(
                             viewModel = viewModel,
-                            listState = listState,
+                            isExplore = true,
                             onMemoClick = { memo ->
                                 focusManager.clearFocus()
                                 scope.launch {
                                     val id = memo.name ?: memo.content.hashCode().toString()
                                     navigator.navigateTo(
-                                        ListDetailPaneScaffoldRole.Detail, MemoKey(id)
+                                        ListDetailPaneScaffoldRole.Detail, MemoKey(id, fromSearch = true)
                                     )
                                 }
-                            })
-
-                        // Overlay SearchBar on the list pane for tablets (dual pane)
-                        if (isDualPane) {
-                            AnimatedVisibility(
-                                visible = !isScrollingDown || listState.firstVisibleItemIndex == 0,
-                                enter = slideInVertically { -it } + fadeIn(),
-                                exit = slideOutVertically { -it } + fadeOut(),
-                                modifier = Modifier.align(Alignment.TopCenter)
-                            ) {
-                                MemoSearchBar(
-                                    viewModel = viewModel,
-                                    isExplore = true,
-                                    onMemoClick = { memo ->
-                                        focusManager.clearFocus()
-                                        scope.launch {
-                                            val id = memo.name ?: memo.content.hashCode().toString()
-                                            navigator.navigateTo(
-                                                ListDetailPaneScaffoldRole.Detail, MemoKey(id, fromSearch = true)
-                                            )
-                                        }
-                                    },
-                                    placeholder = stringResource(R.string.memo_search_explore_placeholder)
-                                )
-                            }
-                        }
+                            },
+                            onExpandedChange = { isSearchExpanded = it },
+                            placeholder = stringResource(R.string.memo_search_explore_placeholder)
+                        )
                     }
                 }
-            },
-            detailPane = {
-                AnimatedPane {
-                    val currentMemoKey = navigator.currentDestination?.contentKey
-
-                    AnimatedContent(
-                        targetState = currentMemoKey, transitionSpec = {
-                            if (isDualPane) {
-                                if (initialState == null) {
-                                    // First time appearing: scale + fade
-                                    (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(
-                                        initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)
-                                    )).togetherWith(fadeOut(animationSpec = tween(90)))
-                                } else {
-                                    // Switching between memos: smooth crossfade
-                                    fadeIn(animationSpec = tween(300)).togetherWith(
-                                        fadeOut(animationSpec = tween(300))
-                                    )
-                                }
-                            } else {
-                                // Mobile: slide from bottom
-                                (slideInVertically(
-                                    initialOffsetY = { it }, animationSpec = tween(300)
-                                ) + fadeIn()).togetherWith(
-                                    slideOutVertically(
-                                        targetOffsetY = { it }, animationSpec = tween(300)
-                                    ) + fadeOut()
-                                )
-                            }
-                        }, label = "ExploreDetailPaneTransition"
-                    ) { memoKey ->
-                        val memo = remember(memoKey, uiState.exploreMemos, uiState.searchMemos) {
-                            memoKey?.let { key ->
-                                val pool = if (key.fromSearch) uiState.searchMemos else uiState.exploreMemos
-                                pool.find {
-                                    (it.name ?: it.content.hashCode().toString()) == key.id
-                                }
-                            }
-                        }
-
-                        if (memo != null) {
-                            MemoDetailPane(
-                                memo = memo,
-                                comments = uiState.selectedMemoComments,
-                                isLoadingComments = uiState.isLoadingComments,
-                                token = uiState.token,
-                                showBackButton = navigator.canNavigateBack(),
-                                onBack = {
-                                    focusManager.clearFocus()
-                                    scope.launch {
-                                        navigator.navigateBack()
-                                    }
-                                },
-                                viewModel = viewModel
-                            )
-                        } else if (isDualPane) {
-                            MemoDetailPlaceholder()
-                        }
-                    }
-                }
-            })
-
-        // Overlay SearchBar globally for mobile (single pane)
-        if (!isDualPane) {
-            AnimatedVisibility(
-                visible = showSearchBar,
-                enter = slideInVertically { -it } + fadeIn(),
-                exit = slideOutVertically { -it } + fadeOut(),
-                modifier = Modifier.align(Alignment.TopCenter)
-            ) {
-                MemoSearchBar(
-                    viewModel = viewModel,
-                    isExplore = true,
-                    onMemoClick = { memo ->
-                        focusManager.clearFocus()
-                        scope.launch {
-                            val id = memo.name ?: memo.content.hashCode().toString()
-                            navigator.navigateTo(
-                                ListDetailPaneScaffoldRole.Detail, MemoKey(id, fromSearch = true)
-                            )
-                        }
-                    },
-                    placeholder = stringResource(R.string.memo_search_explore_placeholder)
-                )
             }
-        }
-    }
+        },
+        detailPane = {
+            AnimatedPane {
+                val currentMemoKey = navigator.currentDestination?.contentKey
+
+                AnimatedContent(
+                    targetState = currentMemoKey, transitionSpec = {
+                        if (isDualPane) {
+                            if (initialState == null) {
+                                // First time appearing: scale + fade
+                                (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(
+                                    initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)
+                                )).togetherWith(fadeOut(animationSpec = tween(90)))
+                            } else {
+                                // Switching between memos: smooth crossfade
+                                fadeIn(animationSpec = tween(300)).togetherWith(
+                                    fadeOut(animationSpec = tween(300))
+                                )
+                            }
+                        } else {
+                            // Mobile: slide from bottom
+                            (slideInVertically(
+                                initialOffsetY = { it }, animationSpec = tween(300)
+                            ) + fadeIn()).togetherWith(
+                                slideOutVertically(
+                                    targetOffsetY = { it }, animationSpec = tween(300)
+                                ) + fadeOut()
+                            )
+                        }
+                    }, label = "ExploreDetailPaneTransition"
+                ) { memoKey ->
+                    val memo = remember(memoKey, uiState.exploreMemos, uiState.searchMemos) {
+                        memoKey?.let { key ->
+                            val pool = if (key.fromSearch) uiState.searchMemos else uiState.exploreMemos
+                            pool.find {
+                                (it.name ?: it.content.hashCode().toString()) == key.id
+                            }
+                        }
+                    }
+
+                    if (memo != null) {
+                        MemoDetailPane(
+                            memo = memo,
+                            comments = uiState.selectedMemoComments,
+                            isLoadingComments = uiState.isLoadingComments,
+                            token = uiState.token,
+                            showBackButton = navigator.canNavigateBack(),
+                            onBack = {
+                                focusManager.clearFocus()
+                                scope.launch {
+                                    navigator.navigateBack()
+                                }
+                            },
+                            viewModel = viewModel
+                        )
+                    } else if (isDualPane) {
+                        MemoDetailPlaceholder()
+                    }
+                }
+            }
+        })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
