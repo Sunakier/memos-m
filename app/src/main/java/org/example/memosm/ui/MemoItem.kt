@@ -41,11 +41,13 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
 import com.mikepenz.markdown.m3.Markdown
-import org.example.memosm.R
+import com.mikepenz.markdown.model.rememberMarkdownState
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User
+import org.example.memosm.R
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.core.net.toUri
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -83,6 +85,12 @@ fun MemoItem(
             memo.displayTime ?: unknownTime
         }
     }
+
+    val markdownState = if (memo.content.length < 1000) rememberMarkdownState(
+        memo.content, retainState = true, immediate = true
+    ) else rememberMarkdownState(
+        memo.content, retainState = true, immediate = false
+    )
 
     Card(
         modifier = modifier.fillMaxWidth(), colors = colors
@@ -128,7 +136,8 @@ fun MemoItem(
                         Spacer(modifier = Modifier.width(8.dp))
                         Column(verticalArrangement = Arrangement.Center) {
                             Text(
-                                text = user.displayName ?: user.username ?: stringResource(R.string.memo_unknown_user),
+                                text = user.displayName ?: user.username
+                                ?: stringResource(R.string.memo_unknown_user),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
                                 lineHeight = MaterialTheme.typography.labelSmall.lineHeight
@@ -190,7 +199,8 @@ fun MemoItem(
                                         val memoId = memo.name.removePrefix("memos/")
                                         val webUrl = "https://memos.nannoda.com/memos/$memoId"
                                         try {
-                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(webUrl))
+                                            val intent =
+                                                Intent(Intent.ACTION_VIEW, webUrl.toUri())
                                             context.startActivity(intent)
                                         } catch (e: Exception) {
                                             // Ignore
@@ -198,8 +208,7 @@ fun MemoItem(
                                     },
                                     leadingIcon = {
                                         Icon(Icons.Outlined.Language, contentDescription = null)
-                                    }
-                                )
+                                    })
                             }
                             if (onUpsertReaction != null) {
                                 DropdownMenuItem(
@@ -210,32 +219,37 @@ fun MemoItem(
                                     },
                                     leadingIcon = {
                                         Icon(Icons.Outlined.AddReaction, contentDescription = null)
-                                    }
-                                )
+                                    })
                             }
                             if (onEdit != null) {
-                                DropdownMenuItem(text = { Text(stringResource(R.string.memo_action_edit)) }, onClick = {
-                                    showMenu = false
-                                    onEdit()
-                                }, leadingIcon = {
-                                    Icon(
-                                        Icons.Outlined.Edit, contentDescription = null
-                                    )
-                                })
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.memo_action_edit)) },
+                                    onClick = {
+                                        showMenu = false
+                                        onEdit()
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Outlined.Edit, contentDescription = null
+                                        )
+                                    })
                             }
                             if (onDelete != null) {
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.memo_action_delete)) }, onClick = {
-                                    showMenu = false
-                                    onDelete()
-                                }, leadingIcon = {
-                                    Icon(
-                                        Icons.Outlined.Delete, contentDescription = null
+                                    text = { Text(stringResource(R.string.memo_action_delete)) },
+                                    onClick = {
+                                        showMenu = false
+                                        onDelete()
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Outlined.Delete, contentDescription = null
+                                        )
+                                    },
+                                    colors = MenuDefaults.itemColors(
+                                        textColor = MaterialTheme.colorScheme.error,
+                                        leadingIconColor = MaterialTheme.colorScheme.error
                                     )
-                                }, colors = MenuDefaults.itemColors(
-                                    textColor = MaterialTheme.colorScheme.error,
-                                    leadingIconColor = MaterialTheme.colorScheme.error
-                                )
                                 )
                             }
                         }
@@ -252,26 +266,24 @@ fun MemoItem(
                             if (maxHeight != Dp.Unspecified) {
                                 Modifier
                                     .heightIn(max = maxHeight)
-                                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                    .graphicsLayer {
+                                        compositingStrategy = CompositingStrategy.Offscreen
+                                    }
                                     .drawWithContent {
                                         drawContent()
                                         if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
                                             drawRect(
                                                 brush = Brush.verticalGradient(
-                                                    0.7f to Color.Black,
-                                                    1.0f to Color.Transparent
-                                                ),
-                                                blendMode = BlendMode.DstIn
+                                                    0.7f to Color.Black, 1.0f to Color.Transparent
+                                                ), blendMode = BlendMode.DstIn
                                             )
                                         }
                                     }
                             } else {
                                 Modifier
-                            }
-                        )
-                ) {
+                            })) {
                     Markdown(
-                        content = memo.content,
+                        markdownState = markdownState,
                         imageTransformer = Coil2ImageTransformerImpl,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -284,7 +296,12 @@ fun MemoItem(
                         onClick = {
                             if (isClickable) {
                                 val label = loc.placeholder ?: ""
-                                val geoUri = "geo:${loc.latitude},${loc.longitude}?q=${loc.latitude},${loc.longitude}${if (label.isNotEmpty()) "(${Uri.encode(label)})" else ""}"
+                                val geoUri =
+                                    "geo:${loc.latitude},${loc.longitude}?q=${loc.latitude},${loc.longitude}${
+                                        if (label.isNotEmpty()) "(${
+                                            Uri.encode(label)
+                                        })" else ""
+                                    }"
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(geoUri))
                                 context.startActivity(intent)
                             }
@@ -345,35 +362,41 @@ fun MemoItem(
                                     modifier = Modifier
                                         .size(width = 240.dp, height = 160.dp)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .then(if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
-                                            Modifier.clickable {
-                                                try {
-                                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(attachment.externalLink))
-                                                    context.startActivity(intent)
-                                                } catch (e: Exception) {
-                                                    // Ignore
+                                        .then(
+                                            if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
+                                                Modifier.clickable {
+                                                    try {
+                                                        val intent = Intent(
+                                                            Intent.ACTION_VIEW,
+                                                            Uri.parse(attachment.externalLink)
+                                                        )
+                                                        context.startActivity(intent)
+                                                    } catch (e: Exception) {
+                                                        // Ignore
+                                                    }
                                                 }
-                                            }
-                                        } else Modifier),
-                                    contentScale = ContentScale.Crop
-                                )
+                                            } else Modifier),
+                                    contentScale = ContentScale.Crop)
                             } else {
                                 Card(
                                     modifier = Modifier
                                         .size(width = 200.dp, height = 100.dp)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .then(if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
-                                            Modifier.clickable {
-                                                try {
-                                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(attachment.externalLink))
-                                                    context.startActivity(intent)
-                                                } catch (e: Exception) {
-                                                    // Ignore
+                                        .then(
+                                            if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
+                                                Modifier.clickable {
+                                                    try {
+                                                        val intent = Intent(
+                                                            Intent.ACTION_VIEW,
+                                                            Uri.parse(attachment.externalLink)
+                                                        )
+                                                        context.startActivity(intent)
+                                                    } catch (e: Exception) {
+                                                        // Ignore
+                                                    }
                                                 }
-                                            }
-                                        } else Modifier),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                                ) {
+                                            } else Modifier),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                                     Column(
                                         modifier = Modifier
                                             .fillMaxSize()
@@ -415,33 +438,28 @@ fun MemoItem(
                         groupedReactions.forEach { (type, reactionList) ->
                             val myReaction = reactionList.find { it.creator == currentUser?.name }
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (myReaction != null) {
+                                shape = RoundedCornerShape(12.dp), color = if (myReaction != null) {
                                     MaterialTheme.colorScheme.primaryContainer
                                 } else {
                                     MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                },
-                                border = if (myReaction != null) {
+                                }, border = if (myReaction != null) {
                                     null
                                 } else {
                                     null
-                                },
-                                onClick = {
+                                }, onClick = {
                                     if (myReaction != null) {
                                         // Pass the emoji type or the reaction name to the viewmodel
                                         onDeleteReaction?.invoke(type)
                                     } else {
                                         onUpsertReaction?.invoke(type)
                                     }
-                                }
-                            ) {
+                                }) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = type,
-                                        style = MaterialTheme.typography.labelMedium
+                                        text = type, style = MaterialTheme.typography.labelMedium
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
@@ -468,23 +486,20 @@ fun MemoItem(
             onReactionSelected = { emoji ->
                 onUpsertReaction?.invoke(emoji)
                 showReactionPicker = false
-            }
-        )
+            })
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReactionPickerDialog(
-    onDismiss: () -> Unit,
-    onReactionSelected: (String) -> Unit
+    onDismiss: () -> Unit, onReactionSelected: (String) -> Unit
 ) {
-    val commonEmojis = listOf("👍", "👎", "❤️", "🔥", "🥰", "👏", "😄", "🤔", "🥳", "👀", "😕", "😢", "😡", "\uD83D\uDE2D")
-    
+    val commonEmojis =
+        listOf("👍", "👎", "❤️", "🔥", "🥰", "👏", "😄", "🤔", "🥳", "👀", "😕", "😢", "😡", "\uD83D\uDE2D")
+
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        dragHandle = { BottomSheetDefaults.DragHandle() }
-    ) {
+        onDismissRequest = onDismiss, dragHandle = { BottomSheetDefaults.DragHandle() }) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -496,7 +511,7 @@ fun ReactionPickerDialog(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
-            
+
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),

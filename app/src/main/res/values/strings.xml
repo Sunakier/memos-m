@@ -87,4 +87,8 @@
     <string name="common_save">Save</string>
     <string name="common_cancel">Cancel</string>
     <string name="memo_input_add_tag">Add tag</string>
+
+    <string name="memo_search_placeholder">Search memos...</string>
+    <string name="memo_search_hint">Enter text to search</string>
+    <string name="memo_search_no_results">No results found</string>
 </resources>
