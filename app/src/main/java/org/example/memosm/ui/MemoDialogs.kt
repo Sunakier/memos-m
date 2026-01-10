@@ -11,12 +11,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.window.core.layout.WindowWidthSizeClass
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemoComposerDialog(
     onDismiss: () -> Unit,
@@ -28,101 +26,91 @@ fun MemoComposerDialog(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val adaptiveInfo = currentWindowAdaptiveInfo()
-    val isTablet = adaptiveInfo.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
+    // WindowSizeClass.isWidthAtLeastBreakpoint(600) is the modern way to check for medium/expanded width
+    val isTablet = adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(600)
+    
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
 
-    Dialog(
-        onDismissRequest = onDismiss, properties = DialogProperties(
-            usePlatformDefaultWidth = false, decorFitsSystemWindows = false
-        )
-    ) {
-        val surfaceModifier = if (isTablet) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        modifier = if (isTablet) {
             Modifier
                 .widthIn(max = 800.dp)
                 .fillMaxWidth(0.8f)
-                .wrapContentHeight()
         } else {
-            Modifier.fillMaxSize()
-        }
-
-        val shape = if (isTablet) RoundedCornerShape(24.dp) else RoundedCornerShape(0.dp)
-
-        Box(
-            modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
+            Modifier.fillMaxWidth()
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentWindowInsets = { WindowInsets(0) }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = if (isTablet) 24.dp else 16.dp)
+                .padding(bottom = 16.dp)
+                .navigationBarsPadding()
+                .imePadding()
         ) {
-            Surface(
-                modifier = surfaceModifier,
-                shape = shape,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(if (isTablet) 24.dp else 16.dp)
-                        .statusBarsPadding()
-                        .navigationBarsPadding()
-                        .imePadding()
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        if (!isTablet) {
-                            IconButton(onClick = onDismiss) {
-                                Icon(
-                                    imageVector = Icons.Default.Close, contentDescription = "Close"
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    MemoComposer(
-                        onPublish = { content, visibility, attachments ->
-                        when {
-                            initialMemo != null -> {
-                                viewModel.updateMemo(
-                                    initialMemo, content, visibility, attachments
-                                ) {
-                                    onDismiss()
-                                }
-                            }
-
-                            parentMemo != null -> {
-                                viewModel.createComment(parentMemo, content)
-                                onDismiss()
-                            }
-
-                            else -> {
-                                viewModel.createMemo(content, visibility, attachments) {
-                                    onDismiss()
-                                }
-                            }
-                        }
-                    },
-                        onUploadFile = { uri, context ->
-                            viewModel.uploadAttachment(uri, context)
-                        },
-                        availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
-                        token = uiState.token,
-                        isPosting = uiState.isPosting,
-                        initialContent = initialMemo?.content ?: "",
-                        initialVisibility = initialMemo?.visibility ?: parentMemo?.visibility
-                        ?: uiState.userSettings?.memoVisibility ?: "PRIVATE",
-                        initialAttachments = initialMemo?.attachments ?: emptyList(),
-                        placeholder = placeholder,
-                        autoFocus = true,
-                        onCancel = onDismiss
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Default.Close, contentDescription = "Close"
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            MemoComposer(
+                onPublish = { content, visibility, attachments ->
+                    when {
+                        initialMemo != null -> {
+                            viewModel.updateMemo(
+                                initialMemo, content, visibility, attachments
+                            ) {
+                                onDismiss()
+                            }
+                        }
+
+                        parentMemo != null -> {
+                            viewModel.createComment(parentMemo, content)
+                            onDismiss()
+                        }
+
+                        else -> {
+                            viewModel.createMemo(content, visibility, attachments) {
+                                onDismiss()
+                            }
+                        }
+                    }
+                },
+                onUploadFile = { uri, context ->
+                    viewModel.uploadAttachment(uri, context)
+                },
+                availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
+                token = uiState.token,
+                isPosting = uiState.isPosting,
+                initialContent = initialMemo?.content ?: "",
+                initialVisibility = initialMemo?.visibility ?: parentMemo?.visibility
+                ?: uiState.userSettings?.memoVisibility ?: "PRIVATE",
+                initialAttachments = initialMemo?.attachments ?: emptyList(),
+                placeholder = placeholder,
+                autoFocus = true,
+                onCancel = onDismiss
+            )
         }
     }
 }
