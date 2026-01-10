@@ -88,9 +88,8 @@ fun ExploreScreen(viewModel: MemosViewModel) {
                         if (initialState == null) {
                             // First time appearing: scale + fade
                             (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(
-                                initialScale = 0.92f,
-                                animationSpec = tween(220, delayMillis = 90)
-                                )).togetherWith(fadeOut(animationSpec = tween(90)))
+                                initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)
+                            )).togetherWith(fadeOut(animationSpec = tween(90)))
                         } else {
                             // Switching between memos: smooth crossfade
                             fadeIn(animationSpec = tween(300)).togetherWith(
@@ -102,10 +101,10 @@ fun ExploreScreen(viewModel: MemosViewModel) {
                         (slideInVertically(
                             initialOffsetY = { it }, animationSpec = tween(300)
                         ) + fadeIn()).togetherWith(
-                                slideOutVertically(
-                                    targetOffsetY = { it }, animationSpec = tween(300)
-                                ) + fadeOut()
-                            )
+                            slideOutVertically(
+                                targetOffsetY = { it }, animationSpec = tween(300)
+                            ) + fadeOut()
+                        )
                     }
                 }, label = "ExploreDetailPaneTransition"
             ) { memoKey ->
@@ -147,7 +146,7 @@ private fun ExploreMemosListPane(
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
-    
+
     var memoToEdit by remember { mutableStateOf<Memo?>(null) }
     var memoToDelete by remember { mutableStateOf<Memo?>(null) }
 
@@ -204,10 +203,13 @@ private fun ExploreMemosListPane(
                                 focusManager.clearFocus()
                                 onMemoClick(memo)
                             },
-                            onEdit = if (isOwner) { { memoToEdit = memo } } else null,
-                            onDelete = if (isOwner) { { memoToDelete = memo } } else null,
-                            modifier = Modifier.widthIn(max = 800.dp)
-                        )
+                            onEdit = if (isOwner) {
+                                { memoToEdit = memo }
+                            } else null,
+                            onDelete = if (isOwner) {
+                                { memoToDelete = memo }
+                            } else null,
+                            modifier = Modifier.widthIn(max = 800.dp))
                     }
                 }
 
@@ -226,23 +228,17 @@ private fun ExploreMemosListPane(
             }
         }
     }
-    
+
     memoToEdit?.let { memo ->
         MemoEditDialog(
-            memo = memo,
-            onDismiss = { memoToEdit = null },
-            viewModel = viewModel
+            memo = memo, onDismiss = { memoToEdit = null }, viewModel = viewModel
         )
     }
-    
+
     memoToDelete?.let { memo ->
-        DeleteConfirmationDialog(
-            memo = memo,
-            onDismiss = { memoToDelete = null },
-            onConfirm = {
-                viewModel.deleteMemo(memo)
-                memoToDelete = null
-            }
-        )
+        DeleteConfirmationDialog(memo = memo, onDismiss = { memoToDelete = null }, onConfirm = {
+            viewModel.deleteMemo(memo)
+            memoToDelete = null
+        })
     }
 }
