@@ -212,24 +212,32 @@ private fun MemosListPane(
             ) {
                 // Top input card
                 item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
-                    ) {
-                        Card(modifier = Modifier.widthIn(max = 800.dp)) {
-                            MemoComposer(
-                                onPublish = { content, visibility, attachments ->
-                                viewModel.createMemo(content, visibility, attachments)
-                            },
-                                onUploadFile = { uri, context ->
-                                    viewModel.uploadAttachment(uri, context)
+                    if (uiState.isDraftLoaded) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
+                        ) {
+                            Card(modifier = Modifier.widthIn(max = 800.dp)) {
+                                MemoComposer(
+                                    onPublish = { content, visibility, attachments ->
+                                    viewModel.createMemo(content, visibility, attachments)
                                 },
-                                availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
-                                token = uiState.token,
-                                modifier = Modifier.padding(16.dp),
-                                isPosting = uiState.isPosting,
-                                initialVisibility = uiState.userSettings?.memoVisibility
-                                    ?: "PRIVATE"
-                            )
+                                    onUploadFile = { uri, context ->
+                                        viewModel.uploadAttachment(uri, context)
+                                    },
+                                    onDraftChanged = { content, visibility, attachments ->
+                                        viewModel.saveDraft(content, visibility, attachments)
+                                    },
+                                    availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
+                                    token = uiState.token,
+                                    modifier = Modifier.padding(16.dp),
+                                    isPosting = uiState.isPosting,
+                                    initialContent = uiState.draftMemo?.content ?: "",
+                                    initialAttachments = uiState.draftMemo?.attachments
+                                        ?: emptyList(),
+                                    initialVisibility = uiState.draftMemo?.visibility
+                                        ?: uiState.userSettings?.memoVisibility ?: "PRIVATE"
+                                )
+                            }
                         }
                     }
                 }

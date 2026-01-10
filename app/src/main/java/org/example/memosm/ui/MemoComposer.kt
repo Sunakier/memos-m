@@ -43,7 +43,8 @@ fun MemoComposer(
     initialAttachments: List<Attachment> = emptyList(),
     placeholder: String = "What's on your mind?",
     autoFocus: Boolean = false,
-    onCancel: (() -> Unit)? = null
+    onCancel: (() -> Unit)? = null,
+    onDraftChanged: ((String, String, List<Attachment>) -> Unit)? = null
 ) {
     val contentState = rememberTextFieldState(initialContent)
     var visibility by remember(initialVisibility) { mutableStateOf(initialVisibility) }
@@ -72,11 +73,23 @@ fun MemoComposer(
                 scope.launch {
                     val attachment = onUploadFile(uri, context)
                     if (attachment != null) {
-                        draftAttachments = draftAttachments.map {
+                        val updated = draftAttachments.map {
                             if (it.first == uri) uri to attachment else it
                         }
+                        draftAttachments = updated
+                        onDraftChanged?.invoke(
+                            contentState.text.toString(),
+                            visibility,
+                            updated.mapNotNull { it.second }
+                        )
                     } else {
-                        draftAttachments = draftAttachments.filter { it.first != uri }
+                        val updated = draftAttachments.filter { it.first != uri }
+                        draftAttachments = updated
+                        onDraftChanged?.invoke(
+                            contentState.text.toString(),
+                            visibility,
+                            updated.mapNotNull { it.second }
+                        )
                     }
                     isUploadingCount--
                 }
@@ -84,7 +97,28 @@ fun MemoComposer(
         }
     }
 
+    // Monitor content changes
+    LaunchedEffect(contentState.text) {
+        onDraftChanged?.invoke(
+            contentState.text.toString(),
+            visibility,
+            draftAttachments.mapNotNull { it.second }
+        )
+    }
+
+    // Monitor visibility changes
+    LaunchedEffect(visibility) {
+        onDraftChanged?.invoke(
+            contentState.text.toString(),
+            visibility,
+            draftAttachments.mapNotNull { it.second }
+        )
+    }
+
     BoxWithConstraints(modifier = modifier) {
+        // Breakpoints for hiding text to save space. 
+        // We're less aggressive now: hiding visibility text only when very narrow, 
+        // and publish text only as a last resort.
         val showVisibilityLabel = maxWidth > 440.dp
         val showPublishLabel = maxWidth > 300.dp
 
@@ -163,8 +197,13 @@ fun MemoComposer(
 
                             IconButton(
                                 onClick = {
-                                    draftAttachments =
-                                        draftAttachments.filter { it.second != attachment || (it.first != uri && uri != Uri.EMPTY) }
+                                    val updated = draftAttachments.filter { it.second != attachment || (it.first != uri && uri != Uri.EMPTY) }
+                                    draftAttachments = updated
+                                    onDraftChanged?.invoke(
+                                        contentState.text.toString(),
+                                        visibility,
+                                        updated.mapNotNull { it.second }
+                                    )
                                 },
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)

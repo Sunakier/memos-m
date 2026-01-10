@@ -18,6 +18,7 @@ class DataStoreManager(private val context: Context) {
         val HOST_URL = stringPreferencesKey("host_url")
         val ACCESS_TOKEN = stringPreferencesKey("access_token")
         val ATTACHMENT_CELL_WIDTH = floatPreferencesKey("attachment_cell_width")
+        val MEMO_DRAFT_JSON = stringPreferencesKey("memo_draft_json")
     }
 
     val hostUrl: Flow<String?> = context.dataStore.data.map { preferences ->
@@ -32,6 +33,10 @@ class DataStoreManager(private val context: Context) {
         preferences[ATTACHMENT_CELL_WIDTH]
     }
 
+    val memoDraftJson: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[MEMO_DRAFT_JSON]
+    }
+
     suspend fun saveCredentials(url: String, token: String) {
         context.dataStore.edit { preferences ->
             preferences[HOST_URL] = url
@@ -42,6 +47,18 @@ class DataStoreManager(private val context: Context) {
     suspend fun saveAttachmentCellWidth(width: Float) {
         context.dataStore.edit { preferences ->
             preferences[ATTACHMENT_CELL_WIDTH] = width
+        }
+    }
+
+    suspend fun saveMemoDraft(json: String) {
+        context.dataStore.edit { preferences ->
+            preferences[MEMO_DRAFT_JSON] = json
+        }
+    }
+
+    suspend fun clearMemoDraft() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(MEMO_DRAFT_JSON)
         }
     }
 

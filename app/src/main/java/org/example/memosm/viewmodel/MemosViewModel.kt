@@ -7,10 +7,14 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.google.gson.Gson
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -45,7 +49,10 @@ data class MemosUiState(
     val selectedMemo: Memo? = null,
     val selectedMemoComments: List<Memo> = emptyList(),
     val isLoadingComments: Boolean = false,
-    val attachmentCellWidth: Float = 240f
+    val attachmentCellWidth: Float = 240f,
+    // Draft state
+    val draftMemo: Memo? = null,
+    val isDraftLoaded: Boolean = false
 )
 
 class MemosViewModel(
@@ -58,6 +65,8 @@ class MemosViewModel(
     val uiState: StateFlow<MemosUiState> = _uiState.asStateFlow()
 
     private val sanitizedBaseUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+    private val gson = Gson()
+    private var draftSaveJob: Job? = null
 
     private val api: MemosApi by lazy {
         val logging = HttpLoggingInterceptor().apply {
@@ -83,6 +92,25 @@ class MemosViewModel(
                 }
             }
         }
+        
+        // Load draft
+        viewModelScope.launch {
+            val draftJson = dataStoreManager.memoDraftJson.first()
+            val draft = if (!draftJson.isNullOrBlank()) {
+                try {
+                    gson.fromJson(draftJson, Memo::class.java)
+                } catch (e: Exception) {
+                    Log.e("MemosViewModel", "Error parsing draft JSON", e)
+                    null
+                }
+            } else null
+            
+            _uiState.value = _uiState.value.copy(
+                draftMemo = draft,
+                isDraftLoaded = true
+            )
+        }
+        
         refreshAll()
     }
 
@@ -167,8 +195,6 @@ class MemosViewModel(
             val response = api.listAttachments(pageToken = currentToken)
             val rawAttachments = response.attachments ?: emptyList()
             
-            // Check for ring buffer behavior: if loadMore and the results are already in our list, stop.
-            // Or if nextPageToken is null/blank/same as current.
             val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
             
             val processedAttachments = rawAttachments.map { processAttachment(it) }
@@ -246,7 +272,6 @@ class MemosViewModel(
             val stats = api.getUserStats(userId)
             val shortcuts = api.getShortcuts(userId)
             
-            // Try to fetch general settings directly using "GENERAL" as documented
             val generalSetting = try {
                 api.getUserSetting(userId, "GENERAL").generalSetting
             } catch (e: Exception) {
@@ -330,7 +355,6 @@ class MemosViewModel(
                 val response = api.listMemos(pageToken = currentToken)
                 val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
                 
-                // Check for ring buffer behavior
                 val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
                 
                 _uiState.value = _uiState.value.copy(
@@ -360,16 +384,13 @@ class MemosViewModel(
                 )
                 val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
                 
-                // Check for ring buffer behavior
                 val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
                 
-                // Collect creators that we don't have details for
                 val unknownCreators = newMemos
                     .mapNotNull { it.creator }
                     .filter { it !in _uiState.value.users }
                     .distinct()
                 
-                // Fetch missing users
                 unknownCreators.forEach { creatorName ->
                     try {
                         val userId = creatorName.removePrefix("users/")
@@ -425,8 +446,11 @@ class MemosViewModel(
                     state = "NORMAL"
                 ))
                 _uiState.value = _uiState.value.copy(
-                    memos = listOf(processMemo(memo)) + _uiState.value.memos, isPosting = false
+                    memos = listOf(processMemo(memo)) + _uiState.value.memos,
+                    isPosting = false,
+                    draftMemo = null
                 )
+                dataStoreManager.clearMemoDraft()
                 onSuccess()
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error creating memo", e)
@@ -434,6 +458,24 @@ class MemosViewModel(
                     isPosting = false, error = "Failed to create memo: ${e.localizedMessage}"
                 )
             }
+        }
+    }
+
+    fun saveDraft(content: String, visibility: String, attachments: List<Attachment>) {
+        val draft = Memo(
+            content = content,
+            visibility = visibility,
+            attachments = attachments
+        )
+        // Update UI state immediately
+        _uiState.value = _uiState.value.copy(draftMemo = draft)
+        
+        // Debounce saving to DataStore
+        draftSaveJob?.cancel()
+        draftSaveJob = viewModelScope.launch {
+            delay(1000) // Wait 1 second before saving to disk
+            val json = gson.toJson(draft)
+            dataStoreManager.saveMemoDraft(json)
         }
     }
 
@@ -570,7 +612,6 @@ class MemosViewModel(
 
     private fun fetchMemoComments(memo: Memo) {
         val memoName = memo.name ?: return
-        // Extract memo ID from name (format: "memos/{id}")
         val memoId = memoName.removePrefix("memos/")
         
         viewModelScope.launch {
@@ -609,7 +650,6 @@ class MemosViewModel(
                 )
                 
                 val updateMask = mutableListOf<String>()
-                // Protobuf field names (snake_case) are standard for update masks in gRPC-gateways
                 if (locale != null) updateMask.add("general_setting.locale")
                 if (memoVisibility != null) updateMask.add("general_setting.memo_visibility")
 
@@ -638,7 +678,6 @@ class MemosViewModel(
     fun updateAttachmentCellWidth(width: Float) {
         viewModelScope.launch {
             dataStoreManager.saveAttachmentCellWidth(width)
-            // No need to update _uiState manually here because init block collects from DataStore
         }
     }
 
