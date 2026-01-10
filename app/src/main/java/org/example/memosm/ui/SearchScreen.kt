@@ -27,7 +27,8 @@ import org.example.memosm.viewmodel.MemosViewModel
 fun MemoSearchBar(
     viewModel: MemosViewModel,
     onMemoClick: (Memo) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    placeholder: String = stringResource(R.string.memo_search_placeholder)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var query by rememberSaveable { mutableStateOf("") }
@@ -60,7 +61,7 @@ fun MemoSearchBar(
                     onSearch = { focusManager.clearFocus() },
                     expanded = expanded,
                     onExpandedChange = { expanded = it },
-                    placeholder = { Text(stringResource(R.string.memo_search_placeholder)) },
+                    placeholder = { Text(placeholder) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = {
                         if (query.isNotEmpty()) {

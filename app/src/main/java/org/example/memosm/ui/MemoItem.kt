@@ -199,8 +199,7 @@ fun MemoItem(
                                         val memoId = memo.name.removePrefix("memos/")
                                         val webUrl = "https://memos.nannoda.com/memos/$memoId"
                                         try {
-                                            val intent =
-                                                Intent(Intent.ACTION_VIEW, webUrl.toUri())
+                                            val intent = Intent(Intent.ACTION_VIEW, webUrl.toUri())
                                             context.startActivity(intent)
                                         } catch (e: Exception) {
                                             // Ignore
@@ -264,24 +263,21 @@ fun MemoItem(
                         .fillMaxWidth()
                         .then(
                             if (maxHeight != Dp.Unspecified) {
-                                Modifier
-                                    .heightIn(max = maxHeight)
-                                    .graphicsLayer {
-                                        compositingStrategy = CompositingStrategy.Offscreen
+                            Modifier.heightIn(max = maxHeight).graphicsLayer {
+                                    compositingStrategy = CompositingStrategy.Offscreen
+                                }.drawWithContent {
+                                    drawContent()
+                                    if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
+                                        drawRect(
+                                            brush = Brush.verticalGradient(
+                                                0.7f to Color.Black, 1.0f to Color.Transparent
+                                            ), blendMode = BlendMode.DstIn
+                                        )
                                     }
-                                    .drawWithContent {
-                                        drawContent()
-                                        if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
-                                            drawRect(
-                                                brush = Brush.verticalGradient(
-                                                    0.7f to Color.Black, 1.0f to Color.Transparent
-                                                ), blendMode = BlendMode.DstIn
-                                            )
-                                        }
-                                    }
-                            } else {
-                                Modifier
-                            })) {
+                                }
+                        } else {
+                            Modifier
+                        })) {
                     Markdown(
                         markdownState = markdownState,
                         imageTransformer = Coil2ImageTransformerImpl,
@@ -290,7 +286,6 @@ fun MemoItem(
                 }
 
                 memo.location?.let { loc ->
-//                    Spacer(modifier = Modifier.height(6.dp))
                     val isClickable = loc.latitude != null && loc.longitude != null
                     Surface(
                         onClick = {
@@ -302,7 +297,7 @@ fun MemoItem(
                                             Uri.encode(label)
                                         })" else ""
                                     }"
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(geoUri))
+                                val intent = Intent(Intent.ACTION_VIEW, geoUri.toUri())
                                 context.startActivity(intent)
                             }
                         },
@@ -364,18 +359,18 @@ fun MemoItem(
                                         .clip(RoundedCornerShape(8.dp))
                                         .then(
                                             if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
-                                                Modifier.clickable {
-                                                    try {
-                                                        val intent = Intent(
-                                                            Intent.ACTION_VIEW,
-                                                            Uri.parse(attachment.externalLink)
-                                                        )
-                                                        context.startActivity(intent)
-                                                    } catch (e: Exception) {
-                                                        // Ignore
-                                                    }
+                                            Modifier.clickable {
+                                                try {
+                                                    val intent = Intent(
+                                                        Intent.ACTION_VIEW,
+                                                        attachment.externalLink.toUri()
+                                                    )
+                                                    context.startActivity(intent)
+                                                } catch (e: Exception) {
+                                                    // Ignore
                                                 }
-                                            } else Modifier),
+                                            }
+                                        } else Modifier),
                                     contentScale = ContentScale.Crop)
                             } else {
                                 Card(
@@ -384,18 +379,18 @@ fun MemoItem(
                                         .clip(RoundedCornerShape(8.dp))
                                         .then(
                                             if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
-                                                Modifier.clickable {
-                                                    try {
-                                                        val intent = Intent(
-                                                            Intent.ACTION_VIEW,
-                                                            Uri.parse(attachment.externalLink)
-                                                        )
-                                                        context.startActivity(intent)
-                                                    } catch (e: Exception) {
-                                                        // Ignore
-                                                    }
+                                            Modifier.clickable {
+                                                try {
+                                                    val intent = Intent(
+                                                        Intent.ACTION_VIEW,
+                                                        attachment.externalLink.toUri()
+                                                    )
+                                                    context.startActivity(intent)
+                                                } catch (e: Exception) {
+                                                    // Ignore
                                                 }
-                                            } else Modifier),
+                                            }
+                                        } else Modifier),
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                                     Column(
                                         modifier = Modifier

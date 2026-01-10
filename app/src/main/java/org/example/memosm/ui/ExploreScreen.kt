@@ -200,7 +200,8 @@ fun ExploreScreen(viewModel: MemosViewModel) {
                             ListDetailPaneScaffoldRole.Detail, MemoKey(id)
                         )
                     }
-                }
+                },
+                placeholder = stringResource(R.string.memo_search_explore_placeholder)
             )
         }
     }
