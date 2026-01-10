@@ -32,6 +32,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
@@ -587,6 +588,7 @@ fun VideoPlayer(
 ) {
     val context = LocalContext.current
     var isFullscreen by remember { mutableStateOf(false) }
+    var isReady by remember { mutableStateOf(false) }
     
     val exoPlayer = remember {
         ExoPlayer.Builder(context).setMediaSourceFactory(
@@ -600,6 +602,15 @@ fun VideoPlayer(
     LaunchedEffect(url) {
         exoPlayer.setMediaItem(MediaItem.fromUri(url))
         exoPlayer.prepare()
+        
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) {
+                    isReady = true
+                }
+            }
+        }
+        exoPlayer.addListener(listener)
     }
 
     DisposableEffect(Unit) {
@@ -608,26 +619,38 @@ fun VideoPlayer(
         }
     }
 
-    AndroidView(
-        factory = { ctx ->
-            PlayerView(ctx).apply {
-                player = exoPlayer
-                useController = true
-                setBackgroundColor(android.graphics.Color.BLACK)
-                setFullscreenButtonClickListener {
-                    isFullscreen = true
+    Box(
+        modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center
+    ) {
+        AndroidView(
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    player = exoPlayer
+                    useController = true
+                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    setFullscreenButtonClickListener {
+                        isFullscreen = true
+                    }
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
                 }
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-            }
-        },
-        update = { view ->
-            view.player = if (isFullscreen) null else exoPlayer
-        },
-        modifier = modifier
-    )
+            },
+            update = { view ->
+                view.player = if (isFullscreen) null else exoPlayer
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(if (isReady) 1f else 0f)
+        )
+        
+        if (!isReady) {
+            CircularProgressIndicator(modifier = Modifier.size(32.dp))
+        }
+    }
 
     if (isFullscreen) {
         Dialog(

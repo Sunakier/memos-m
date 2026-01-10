@@ -1,17 +1,23 @@
 package org.example.memosm.ui
 
+import android.app.DownloadManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Environment
 import android.text.format.Formatter
+import android.widget.Toast
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.staggeredgrid.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BrokenImage
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -144,21 +150,33 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                     columns = StaggeredGridCells.Adaptive(animatedCellWidth),
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 80.dp),
+                    contentPadding = PaddingValues(
+                        start = 12.dp,
+                        top = 12.dp,
+                        end = 12.dp,
+                        bottom = 80.dp
+                    ),
                     verticalItemSpacing = 12.dp,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(
-                        items = uiState.attachments, key = { it.name ?: it.filename }) { attachment ->
+                        items = uiState.attachments,
+                        key = { it.name ?: it.filename }) { attachment ->
                         val key = attachment.name ?: attachment.filename
                         val displayType = attachment.displayType
                         val isAudio = remember(displayType) {
-                            displayType.startsWith("audio/", ignoreCase = true) || displayType.contains("audio", ignoreCase = true)
+                            displayType.startsWith(
+                                "audio/",
+                                ignoreCase = true
+                            ) || displayType.contains("audio", ignoreCase = true)
                         }
                         val isVideo = remember(displayType) {
-                            displayType.startsWith("video/", ignoreCase = true) || displayType.contains("video", ignoreCase = true)
+                            displayType.startsWith(
+                                "video/",
+                                ignoreCase = true
+                            ) || displayType.contains("video", ignoreCase = true)
                         }
-                        
+
                         val ratio = aspectRatios[key] ?: when {
                             isAudio -> 2.5f
                             isVideo -> 1.4f // Normal aspect ratio for card including footer
@@ -218,6 +236,8 @@ fun AttachmentItem(
     onRatioAvailable: (Float) -> Unit
 ) {
     val context = LocalContext.current
+    var showInfoDialog by remember { mutableStateOf(false) }
+    var showDownloadDialog by remember { mutableStateOf(false) }
 
     val formattedDate = remember(attachment.createTime) {
         try {
@@ -225,7 +245,7 @@ fun AttachmentItem(
             val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
             inputFormat.timeZone = TimeZone.getTimeZone("UTC")
             val date = inputFormat.parse(attachment.createTime ?: "")
-            val outputFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+            val outputFormat = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault())
             date?.let { outputFormat.format(it) } ?: ""
         } catch (e: Exception) {
             ""
@@ -243,7 +263,7 @@ fun AttachmentItem(
             "image/", ignoreCase = true
         ) || displayType.contains("image", ignoreCase = true)
     }
-    
+
     val isAudio = remember(displayType) {
         displayType.startsWith(
             "audio/", ignoreCase = true
@@ -258,15 +278,8 @@ fun AttachmentItem(
 
     Card(
         modifier = modifier.clip(RoundedCornerShape(12.dp)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        onClick = {
-            if (!isAudio && !isVideo) {
-                attachment.externalLink?.let { link ->
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
-                    context.startActivity(intent)
-                }
-            }
-        }) {
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
         Column {
             Box(
                 modifier = Modifier
@@ -328,7 +341,9 @@ fun AttachmentItem(
                         url = attachment.externalLink,
                         filename = attachment.filename,
                         token = token,
-                        modifier = Modifier.padding(8.dp).fillMaxWidth()
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .fillMaxWidth()
                     )
                 } else {
                     Text(
@@ -340,26 +355,14 @@ fun AttachmentItem(
                 }
             }
 
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
                 Text(
                     text = attachment.filename,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                        .drawWithContent {
-                            drawContent()
-                            drawRect(
-                                brush = Brush.horizontalGradient(
-                                    0.8f to Color.Black,
-                                    1f to Color.Transparent
-                                ),
-                                blendMode = BlendMode.DstIn
-                            )
-                        }
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Row(
@@ -367,21 +370,125 @@ fun AttachmentItem(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { showInfoDialog = true },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = "Info",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = { showDownloadDialog = true },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Download,
+                                contentDescription = "Download",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        if (!attachment.externalLink.isNullOrBlank()) {
+                            IconButton(
+                                onClick = {
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(attachment.externalLink))
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Language,
+                                    contentDescription = "Open on Web",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
                     Text(
                         text = formattedSize,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
-                    if (formattedDate.isNotEmpty()) {
-                        Text(
-                            text = formattedDate,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
             }
         }
+    }
+
+    if (showInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showInfoDialog = false },
+            title = { Text("Attachment Info") },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AttachmentInfoRow("Filename", attachment.filename)
+                    AttachmentInfoRow("Type", attachment.displayType)
+                    AttachmentInfoRow("Size", formattedSize)
+                    AttachmentInfoRow("Created", formattedDate)
+                    if (attachment.name != null) AttachmentInfoRow("ID", attachment.name)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showInfoDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+
+    if (showDownloadDialog) {
+        AlertDialog(
+            onDismissRequest = { showDownloadDialog = false },
+            title = { Text("Download File") },
+            text = { Text("Do you want to download '${attachment.filename}' to your Downloads folder?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    downloadAttachmentFile(context, attachment, token)
+                    showDownloadDialog = false
+                }) {
+                    Text("Download")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDownloadDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun AttachmentInfoRow(label: String, value: String) {
+    Column {
+        Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+        Text(text = value, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+private fun downloadAttachmentFile(context: Context, attachment: Attachment, token: String) {
+    val url = attachment.externalLink ?: return
+    try {
+        val request = DownloadManager.Request(Uri.parse(url))
+            .setTitle(attachment.filename)
+            .setDescription("Downloading file...")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, attachment.filename)
+            .addRequestHeader("Authorization", "Bearer $token")
+
+        val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        manager.enqueue(request)
+        Toast.makeText(context, "Download started", Toast.LENGTH_SHORT).show()
+    } catch (e: Exception) {
+        Toast.makeText(context, "Download failed: ${e.message}", Toast.LENGTH_LONG).show()
     }
 }
