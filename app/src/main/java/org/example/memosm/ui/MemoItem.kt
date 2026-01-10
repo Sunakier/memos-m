@@ -330,7 +330,7 @@ fun MemoItem(
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 12.dp)
+                            .padding(start = 12.dp, bottom = 4.dp)
                     )
                 }
 
@@ -721,9 +721,11 @@ fun VideoPlayer(
                 }
             }
 
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) {
                 AndroidView(
                     factory = { ctx ->
                         PlayerView(ctx).apply {
