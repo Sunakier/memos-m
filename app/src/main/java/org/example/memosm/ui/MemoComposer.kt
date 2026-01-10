@@ -44,7 +44,8 @@ fun MemoComposer(
     placeholder: String = "What's on your mind?",
     autoFocus: Boolean = false,
     onCancel: (() -> Unit)? = null,
-    onDraftChanged: ((String, String, List<Attachment>) -> Unit)? = null
+    onDraftChanged: ((String, String, List<Attachment>) -> Unit)? = null,
+    submitLabel: String? = null
 ) {
     val contentState = rememberTextFieldState(initialContent)
     var visibility by remember(initialVisibility) { mutableStateOf(initialVisibility) }
@@ -313,9 +314,11 @@ fun MemoComposer(
                             )
                             if (showPublishLabel) {
                                 Spacer(modifier = Modifier.width(8.dp))
-                                val isEdit =
-                                    initialContent.isNotEmpty() || initialAttachments.isNotEmpty()
-                                Text(if (isEdit) "Update" else if (autoFocus) "Post" else "Publish")
+                                val label = submitLabel ?: run {
+                                    val isEdit = initialContent.isNotEmpty() || initialAttachments.isNotEmpty()
+                                    if (isEdit) "Update" else if (autoFocus) "Post" else "Publish"
+                                }
+                                Text(label)
                             }
                         }
                     }

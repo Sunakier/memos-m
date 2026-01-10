@@ -235,7 +235,8 @@ private fun MemosListPane(
                                     initialAttachments = uiState.draftMemo?.attachments
                                         ?: emptyList(),
                                     initialVisibility = uiState.draftMemo?.visibility
-                                        ?: uiState.userSettings?.memoVisibility ?: "PRIVATE"
+                                        ?: uiState.userSettings?.memoVisibility ?: "PRIVATE",
+                                    submitLabel = "Publish"
                                 )
                             }
                         }
