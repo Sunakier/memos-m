@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BrokenImage
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +33,7 @@ import org.example.memosm.viewmodel.MemosViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttachmentsScreen(viewModel: MemosViewModel) {
     val uiState by viewModel.uiState.collectAsState()
@@ -67,83 +69,90 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
         }
     }
 
-    Box(
+    PullToRefreshBox(
+        isRefreshing = uiState.isFetchingAttachments && uiState.attachments.isNotEmpty(),
+        onRefresh = { viewModel.fetchAttachments(loadMore = false) },
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            // Detect pinch-to-zoom gestures globally using the Initial pass
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        val pressedChanges = event.changes.filter { it.pressed }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                // Detect pinch-to-zoom gestures globally using the Initial pass
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            val pressedChanges = event.changes.filter { it.pressed }
 
-                        if (pressedChanges.size >= 2) {
-                            val p1 = pressedChanges[0].position
-                            val p2 = pressedChanges[1].position
-                            val p1Prev = pressedChanges[0].previousPosition
-                            val p2Prev = pressedChanges[1].previousPosition
+                            if (pressedChanges.size >= 2) {
+                                val p1 = pressedChanges[0].position
+                                val p2 = pressedChanges[1].position
+                                val p1Prev = pressedChanges[0].previousPosition
+                                val p2Prev = pressedChanges[1].previousPosition
 
-                            val currentDistance = (p1 - p2).getDistance()
-                            val previousDistance = (p1Prev - p2Prev).getDistance()
+                                val currentDistance = (p1 - p2).getDistance()
+                                val previousDistance = (p1Prev - p2Prev).getDistance()
 
-                            if (previousDistance > 0f && currentDistance > 0f) {
-                                val zoomFactor = currentDistance / previousDistance
-                                if (zoomFactor != 1f) {
-                                    val newWidth =
-                                        (uiState.attachmentCellWidth * zoomFactor).coerceIn(
-                                            minCellWidth.value, maxCellWidth.value
-                                        )
-                                    viewModel.updateAttachmentCellWidth(newWidth)
-                                    // Consume the event to prevent the list from scrolling while zooming
-                                    event.changes.forEach { it.consume() }
+                                if (previousDistance > 0f && currentDistance > 0f) {
+                                    val zoomFactor = currentDistance / previousDistance
+                                    if (zoomFactor != 1f) {
+                                        val newWidth =
+                                            (uiState.attachmentCellWidth * zoomFactor).coerceIn(
+                                                minCellWidth.value, maxCellWidth.value
+                                            )
+                                        viewModel.updateAttachmentCellWidth(newWidth)
+                                        // Consume the event to prevent the list from scrolling while zooming
+                                        event.changes.forEach { it.consume() }
+                                    }
                                 }
                             }
                         }
                     }
+                }) {
+            if (uiState.attachments.isEmpty() && uiState.isFetchingAttachments) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } else if (uiState.attachments.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No attachments found")
                 }
-            }) {
-        if (uiState.attachments.isEmpty() && uiState.isLoading) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-        } else if (uiState.attachments.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No attachments found")
-            }
-        } else {
-            LazyVerticalStaggeredGrid(
-                columns = StaggeredGridCells.Adaptive(animatedCellWidth),
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(12.dp),
-                verticalItemSpacing = 12.dp,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(
-                    items = uiState.attachments, key = { it.name ?: it.filename }) { attachment ->
-                    val key = attachment.name ?: attachment.filename
-                    val ratio = aspectRatios[key] ?: 1.0f
+            } else {
+                LazyVerticalStaggeredGrid(
+                    columns = StaggeredGridCells.Adaptive(animatedCellWidth),
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(12.dp),
+                    verticalItemSpacing = 12.dp,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(
+                        items = uiState.attachments, key = { it.name ?: it.filename }) { attachment ->
+                        val key = attachment.name ?: attachment.filename
+                        val ratio = aspectRatios[key] ?: 1.0f
 
-                    AttachmentItem(
-                        attachment = attachment,
-                        token = uiState.token,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(ratio)
-                            .animateItem(),
-                        onRatioAvailable = { newRatio ->
-                            aspectRatios[key] = newRatio
-                        })
-                }
-
-                if (!uiState.nextAttachmentsPageToken.isNullOrBlank()) {
-                    item(span = StaggeredGridItemSpan.FullLine) {
-                        Box(
+                        AttachmentItem(
+                            attachment = attachment,
+                            token = uiState.token,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(80.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+                                .aspectRatio(ratio)
+                                .animateItem(),
+                            onRatioAvailable = { newRatio ->
+                                aspectRatios[key] = newRatio
+                            })
+                    }
+
+                    if (!uiState.nextAttachmentsPageToken.isNullOrBlank()) {
+                        item(span = StaggeredGridItemSpan.FullLine) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(80.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
                         }
                     }
                 }

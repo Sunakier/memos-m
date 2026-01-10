@@ -16,6 +16,7 @@ import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
 import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -139,6 +140,7 @@ fun ExploreScreen(viewModel: MemosViewModel) {
     })
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExploreMemosListPane(
     viewModel: MemosViewModel, onMemoClick: (Memo) -> Unit, modifier: Modifier = Modifier
@@ -164,14 +166,16 @@ private fun ExploreMemosListPane(
         }
     }
 
-    Box(
+    PullToRefreshBox(
+        isRefreshing = uiState.isExploring && uiState.exploreMemos.isNotEmpty(),
+        onRefresh = { viewModel.fetchExplore(refresh = true) },
         modifier = modifier
             .fillMaxSize()
             .pointerInput(Unit) {
                 detectTapGestures(onTap = {
                     focusManager.clearFocus()
                 })
-            }, contentAlignment = Alignment.TopCenter
+            }
     ) {
         if (uiState.isExploring && uiState.exploreMemos.isEmpty()) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
