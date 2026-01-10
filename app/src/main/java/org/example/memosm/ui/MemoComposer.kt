@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -53,6 +54,15 @@ fun getVisibilityLabel(visibility: String): String {
         "PROTECTED" -> stringResource(R.string.memo_visibility_protected)
         "PRIVATE" -> stringResource(R.string.memo_visibility_private)
         else -> visibility
+    }
+}
+
+fun getVisibilityIcon(visibility: String, outlined: Boolean = false): ImageVector {
+    return when (visibility.uppercase()) {
+        "PUBLIC" -> if (outlined) Icons.Outlined.Public else Icons.Default.Public
+        "PROTECTED" -> if (outlined) Icons.Outlined.Group else Icons.Default.Group
+        "PRIVATE" -> if (outlined) Icons.Outlined.Lock else Icons.Default.Lock
+        else -> if (outlined) Icons.Outlined.Lock else Icons.Default.Lock
     }
 }
 
@@ -114,7 +124,8 @@ fun MemoComposer(
                             contentState.text.toString(),
                             visibility,
                             updated.mapNotNull { it.second },
-                            location)
+                            location
+                        )
                     } else {
                         val updated = draftAttachments.filter { it.first != uri }
                         draftAttachments = updated
@@ -122,7 +133,8 @@ fun MemoComposer(
                             contentState.text.toString(),
                             visibility,
                             updated.mapNotNull { it.second },
-                            location)
+                            location
+                        )
                     }
                     isUploadingCount--
                 }
@@ -163,17 +175,29 @@ fun MemoComposer(
 
     LaunchedEffect(contentState.text) {
         onDraftChanged?.invoke(
-            contentState.text.toString(), visibility, draftAttachments.mapNotNull { it.second }, location)
+            contentState.text.toString(),
+            visibility,
+            draftAttachments.mapNotNull { it.second },
+            location
+        )
     }
 
     LaunchedEffect(visibility) {
         onDraftChanged?.invoke(
-            contentState.text.toString(), visibility, draftAttachments.mapNotNull { it.second }, location)
+            contentState.text.toString(),
+            visibility,
+            draftAttachments.mapNotNull { it.second },
+            location
+        )
     }
 
     LaunchedEffect(location) {
         onDraftChanged?.invoke(
-            contentState.text.toString(), visibility, draftAttachments.mapNotNull { it.second }, location)
+            contentState.text.toString(),
+            visibility,
+            draftAttachments.mapNotNull { it.second },
+            location
+        )
     }
 
     var componentWidth by remember { mutableStateOf(0.dp) }
@@ -268,7 +292,8 @@ fun MemoComposer(
                                     contentState.text.toString(),
                                     visibility,
                                     updated.mapNotNull { it.second },
-                                    location)
+                                    location
+                                )
                             },
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
@@ -331,31 +356,47 @@ fun MemoComposer(
                     onClick = { pickerLauncher.launch("*/*") }, enabled = !isPosting
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.AttachFile, contentDescription = stringResource(R.string.memo_composer_attach_file)
+                        imageVector = Icons.Outlined.AttachFile,
+                        contentDescription = stringResource(R.string.memo_composer_attach_file)
                     )
                 }
                 IconButton(
                     onClick = { pickerLauncher.launch("image/*") }, enabled = !isPosting
                 ) {
-                    Icon(imageVector = Icons.Outlined.Image, contentDescription = stringResource(R.string.memo_composer_add_image))
+                    Icon(
+                        imageVector = Icons.Outlined.Image,
+                        contentDescription = stringResource(R.string.memo_composer_add_image)
+                    )
                 }
                 IconButton(
                     onClick = {
-                        val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                        val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                        
+                        val hasCoarse = ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED
+                        val hasFine = ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED
+
                         if (hasCoarse || hasFine) {
                             fetchLocation()
                         } else {
                             locationPermissionLauncher.launch(
-                                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+                                arrayOf(
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                                )
                             )
                         }
                     },
                     enabled = !isPosting && !isFetchingLocation
                 ) {
                     if (isFetchingLocation) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
                     } else {
                         Icon(
                             imageVector = if (location != null) Icons.Default.Place else Icons.Outlined.Place,
@@ -377,7 +418,7 @@ fun MemoComposer(
                 Box {
                     TextButton(onClick = { expanded = true }, enabled = !isPosting) {
                         Icon(
-                            imageVector = getVisibilityIcon(visibility),
+                            imageVector = getVisibilityIcon(visibility, outlined = true),
                             contentDescription = visibility,
                             modifier = Modifier.size(18.dp)
                         )
@@ -395,7 +436,7 @@ fun MemoComposer(
                             DropdownMenuItem(text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        imageVector = getVisibilityIcon(option),
+                                        imageVector = getVisibilityIcon(option, outlined = true),
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp)
                                     )
@@ -413,7 +454,12 @@ fun MemoComposer(
                 Button(
                     onClick = {
                         val finalAttachments = draftAttachments.mapNotNull { it.second }
-                        onPublish(contentState.text.toString(), visibility, finalAttachments, location)
+                        onPublish(
+                            contentState.text.toString(),
+                            visibility,
+                            finalAttachments,
+                            location
+                        )
                     },
                     enabled = (contentState.text.isNotBlank() || draftAttachments.isNotEmpty()) && !isPosting && isUploadingCount == 0,
                     contentPadding = if (showPublishLabel) ButtonDefaults.ContentPadding else PaddingValues(
@@ -436,7 +482,9 @@ fun MemoComposer(
                             val label = submitLabel ?: run {
                                 val isEdit =
                                     initialContent.isNotEmpty() || initialAttachments.isNotEmpty()
-                                if (isEdit) stringResource(R.string.memo_action_update) else if (autoFocus) stringResource(R.string.memo_action_post) else stringResource(R.string.memo_publish)
+                                if (isEdit) stringResource(R.string.memo_action_update) else if (autoFocus) stringResource(
+                                    R.string.memo_action_post
+                                ) else stringResource(R.string.memo_publish)
                             }
                             Text(label)
                         }
