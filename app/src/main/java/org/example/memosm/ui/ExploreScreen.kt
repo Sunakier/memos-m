@@ -323,6 +323,15 @@ private fun ExploreMemosListPane(
                             onDeleteReaction = { reactionName ->
                                 viewModel.deleteMemoReaction(memo, reactionName)
                             },
+                            onContentUpdate = if (isOwner) { newContent ->
+                                viewModel.updateMemo(
+                                    memo,
+                                    newContent,
+                                    memo.visibility,
+                                    memo.attachments ?: emptyList(),
+                                    memo.location
+                                )
+                            } else null,
                             maxHeight = 400.dp,
                             modifier = Modifier.widthIn(max = 800.dp))
                     }

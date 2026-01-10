@@ -124,6 +124,15 @@ fun MemoDetailPane(
                             onDeleteReaction = { reactionName ->
                                 viewModel.deleteMemoReaction(memo, reactionName)
                             },
+                            onContentUpdate = if (isOwner) { newContent ->
+                                viewModel.updateMemo(
+                                    memo,
+                                    newContent,
+                                    memo.visibility,
+                                    memo.attachments ?: emptyList(),
+                                    memo.location
+                                )
+                            } else null,
                             isDetailView = true
                         )
                     }
@@ -207,6 +216,15 @@ fun MemoDetailPane(
                             onDeleteReaction = { reactionName ->
                                 viewModel.deleteMemoReaction(comment, reactionName)
                             },
+                            onContentUpdate = if (isCommentOwner) { newContent ->
+                                viewModel.updateMemo(
+                                    comment,
+                                    newContent,
+                                    comment.visibility,
+                                    comment.attachments ?: emptyList(),
+                                    comment.location
+                                )
+                            } else null,
                             isDetailView = true
                         )
                     }

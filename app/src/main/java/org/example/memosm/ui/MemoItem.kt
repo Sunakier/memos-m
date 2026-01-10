@@ -62,12 +62,15 @@ import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
+import com.mikepenz.markdown.compose.components.MarkdownComponentModel
+import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.model.markdownAnnotator
 import com.mikepenz.markdown.model.markdownAnnotatorConfig
 import com.mikepenz.markdown.model.rememberMarkdownState
 import kotlinx.coroutines.delay
 import okhttp3.OkHttpClient
+import org.intellij.markdown.ast.getTextInNode
 import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User
@@ -87,6 +90,7 @@ fun MemoItem(
     onDelete: (() -> Unit)? = null,
     onUpsertReaction: ((String) -> Unit)? = null,
     onDeleteReaction: ((String) -> Unit)? = null,
+    onContentUpdate: ((String) -> Unit)? = null,
     maxHeight: Dp = Dp.Unspecified,
     isDetailView: Boolean = false,
     modifier: Modifier = Modifier
@@ -309,6 +313,17 @@ fun MemoItem(
                         imageTransformer = Coil2ImageTransformerImpl,
                         annotator = markdownAnnotator(
                             config = markdownAnnotatorConfig(eolAsNewLine = true)
+                        ),
+                        components = markdownComponents(
+                            checkbox = { model ->
+                                ClickableCheckbox(
+                                    model = model,
+                                    content = memo.content,
+                                    onToggle = if (onContentUpdate != null) { newContent ->
+                                        onContentUpdate(newContent)
+                                    } else null
+                                )
+                            }
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -880,6 +895,52 @@ fun ReactionPickerDialog(
                 }
             }
         }
+    }
+}
+
+/**
+ * A clickable checkbox component for markdown task lists.
+ * When clicked, it toggles the checkbox state in the content and calls onToggle with the updated content.
+ */
+@Composable
+private fun ClickableCheckbox(
+    model: MarkdownComponentModel,
+    content: String,
+    onToggle: ((String) -> Unit)?
+) {
+    val nodeText = model.node.getTextInNode(content)
+    val isChecked = nodeText.contains("[x]") || nodeText.contains("[X]")
+
+    val isClickable = onToggle != null
+
+    Row(modifier = Modifier.padding(end = 4.dp)) {
+        Checkbox(
+            checked = isChecked,
+            onCheckedChange = if (isClickable) { _ ->
+                // Find the checkbox pattern in the content and toggle it
+                val startOffset = model.node.startOffset
+                val endOffset = model.node.endOffset
+
+                // Get the text of this specific checkbox node
+                val checkboxText = content.substring(startOffset, endOffset)
+
+                // Toggle the checkbox state
+                val newCheckboxText = if (isChecked) {
+                    checkboxText.replace("[x]", "[ ]", ignoreCase = true)
+                } else {
+                    checkboxText.replace("[ ]", "[x]")
+                }
+
+                // Create the new content with the toggled checkbox
+                val newContent = content.substring(0, startOffset) +
+                    newCheckboxText +
+                    content.substring(endOffset)
+
+                onToggle(newContent)
+            } else null,
+            modifier = Modifier.size(20.dp),
+            enabled = isClickable
+        )
     }
 }
 

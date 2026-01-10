@@ -110,11 +110,13 @@ fun MemoSearchBar(
         containerFocusRequester.requestFocus()
     }
 
-    Box(modifier = modifier
-        .fillMaxWidth()
-        .focusRequester(containerFocusRequester)
-        .focusable()
-        .zIndex(1f)) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .focusRequester(containerFocusRequester)
+            .focusable()
+            .zIndex(1f)
+    ) {
         SearchBar(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -126,7 +128,7 @@ fun MemoSearchBar(
                     onQueryChange = { query = it },
                     onSearch = { focusManager.clearFocus() },
                     expanded = expanded,
-                    onExpandedChange = { 
+                    onExpandedChange = {
                         expanded = it
                         onExpandedChange(it)
                     },
@@ -147,7 +149,7 @@ fun MemoSearchBar(
                 )
             },
             expanded = expanded,
-            onExpandedChange = { 
+            onExpandedChange = {
                 expanded = it
                 onExpandedChange(it)
             },
@@ -173,7 +175,17 @@ fun MemoSearchBar(
                 onOrderByChange = { orderBy = it },
                 onMemoClick = { memo ->
                     onMemoClick(memo)
-                })
+                },
+                onContentUpdate = { memo, newContent ->
+                    viewModel.updateMemo(
+                        memo,
+                        newContent,
+                        memo.visibility,
+                        memo.attachments ?: emptyList(),
+                        memo.location
+                    )
+                }
+            )
         }
     }
 }
@@ -193,7 +205,8 @@ private fun SearchResultContent(
     onStartDateSelected: (Long?) -> Unit,
     onEndDateSelected: (Long?) -> Unit,
     onOrderByChange: (String) -> Unit,
-    onMemoClick: (Memo) -> Unit
+    onMemoClick: (Memo) -> Unit,
+    onContentUpdate: (Memo, String) -> Unit
 ) {
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
@@ -427,14 +440,38 @@ private fun SearchResultContent(
                         onDismissRequest = { showSortMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Newest First", style = MaterialTheme.typography.bodyMedium) },
-                            leadingIcon = { Icon(Icons.Outlined.ArrowDownward, null, Modifier.size(18.dp)) },
-                            onClick = { onOrderByChange("display_time desc"); showSortMenu = false },
+                            text = {
+                                Text(
+                                    "Newest First",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Outlined.ArrowDownward,
+                                    null,
+                                    Modifier.size(18.dp)
+                                )
+                            },
+                            onClick = {
+                                onOrderByChange("display_time desc"); showSortMenu = false
+                            },
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                         )
                         DropdownMenuItem(
-                            text = { Text("Oldest First", style = MaterialTheme.typography.bodyMedium) },
-                            leadingIcon = { Icon(Icons.Outlined.ArrowUpward, null, Modifier.size(18.dp)) },
+                            text = {
+                                Text(
+                                    "Oldest First",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Outlined.ArrowUpward,
+                                    null,
+                                    Modifier.size(18.dp)
+                                )
+                            },
                             onClick = { onOrderByChange("display_time asc"); showSortMenu = false },
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                         )
@@ -477,6 +514,7 @@ private fun SearchResultContent(
         } else {
             items(filteredMemos, key = { it.name ?: it.content.hashCode() }) { memo ->
                 Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
+                    val isOwner = memo.creator == uiState.user?.name
                     MemoItem(
                         memo = memo,
                         user = uiState.users[memo.creator],
@@ -484,7 +522,11 @@ private fun SearchResultContent(
                         token = uiState.token,
                         onClick = {
                             onMemoClick(memo)
-                        })
+                        },
+                        onContentUpdate = if (isOwner) { newContent ->
+                            onContentUpdate(memo, newContent)
+                        } else null
+                    )
                 }
             }
         }
