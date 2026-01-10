@@ -130,12 +130,16 @@ fun MemosListScreen(viewModel: MemosViewModel) {
             }
     }
 
-    val isDetailVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
-    val isListVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
+    val isDetailVisible =
+        navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
+    val isListVisible =
+        navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
     val isDualPane = isListVisible && isDetailVisible
 
     var isSearchExpanded by remember { mutableStateOf(false) }
-    val showSearchBar = (!isScrollingDown || listState.firstVisibleItemIndex == 0)
+    val showSearchBar by remember {
+        derivedStateOf { !isScrollingDown || listState.firstVisibleItemIndex == 0 }
+    }
 
     NavigableListDetailPaneScaffold(
         modifier = Modifier
@@ -173,7 +177,8 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                                 scope.launch {
                                     val id = memo.name ?: memo.content.hashCode().toString()
                                     navigator.navigateTo(
-                                        ListDetailPaneScaffoldRole.Detail, MemoKey(id, fromSearch = true)
+                                        ListDetailPaneScaffoldRole.Detail,
+                                        MemoKey(id, fromSearch = true)
                                     )
                                 }
                             },
@@ -193,7 +198,8 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                             if (initialState == null) {
                                 // First time appearing: scale + fade
                                 (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(
-                                    initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)
+                                    initialScale = 0.92f,
+                                    animationSpec = tween(220, delayMillis = 90)
                                 )).togetherWith(fadeOut(animationSpec = tween(90)))
                             } else {
                                 // Switching between memos: smooth crossfade
@@ -264,10 +270,11 @@ private fun MemosListPane(
     LaunchedEffect(listState, uiState.isLoading, uiState.nextPageToken) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .collect { lastIndex ->
-                if (lastIndex != null && 
-                    !uiState.isLoading && 
-                    uiState.nextPageToken != null && 
-                    lastIndex >= listState.layoutInfo.totalItemsCount - 5) {
+                if (lastIndex != null &&
+                    !uiState.isLoading &&
+                    uiState.nextPageToken != null &&
+                    lastIndex >= listState.layoutInfo.totalItemsCount - 5
+                ) {
                     viewModel.loadMore()
                 }
             }
@@ -305,7 +312,12 @@ private fun MemosListPane(
                 modifier = Modifier
                     .fillMaxSize()
                     .statusBarsPadding(),
-                contentPadding = PaddingValues(start = 16.dp, top = 88.dp, end = 16.dp, bottom = 80.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    top = 88.dp,
+                    end = 16.dp,
+                    bottom = 80.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -313,24 +325,39 @@ private fun MemosListPane(
                 item {
                     if (uiState.isDraftLoaded) {
                         Box(
-                            modifier = Modifier.fillMaxWidth(), 
+                            modifier = Modifier.fillMaxWidth(),
                             contentAlignment = Alignment.Center
                         ) {
                             Card(modifier = Modifier.widthIn(max = 800.dp)) {
                                 MemoComposer(
                                     onPublish = { content, visibility, attachments, location ->
-                                    viewModel.createMemo(content, visibility, attachments, location)
-                                },
+                                        viewModel.createMemo(
+                                            content,
+                                            visibility,
+                                            attachments,
+                                            location
+                                        )
+                                    },
                                     onUploadFile = { uri, context ->
                                         viewModel.uploadAttachment(uri, context)
                                     },
                                     onDraftChanged = { content, visibility, attachments, location ->
-                                        viewModel.saveDraft(content, visibility, attachments, location)
+                                        viewModel.saveDraft(
+                                            content,
+                                            visibility,
+                                            attachments,
+                                            location
+                                        )
                                     },
                                     availableTags = uiState.userStats?.tagCount?.keys
                                         ?: emptySet(),
                                     token = uiState.token,
-                                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp),
+                                    modifier = Modifier.padding(
+                                        start = 16.dp,
+                                        top = 16.dp,
+                                        end = 16.dp,
+                                        bottom = 16.dp
+                                    ),
                                     isPosting = uiState.isPosting,
                                     initialContent = uiState.draftMemo?.content ?: "",
                                     initialAttachments = uiState.draftMemo?.attachments
