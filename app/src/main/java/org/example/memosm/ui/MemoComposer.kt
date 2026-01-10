@@ -14,7 +14,10 @@ import androidx.compose.foundation.text.input.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -176,7 +179,7 @@ fun MemoComposer(
                                         .padding(4.dp), contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
+                                        imageVector = Icons.AutoMirrored.Outlined.InsertDriveFile,
                                         contentDescription = null
                                     )
                                 }
@@ -236,14 +239,14 @@ fun MemoComposer(
                         onClick = { pickerLauncher.launch("*/*") }, enabled = !isPosting
                     ) {
                         Icon(
-                            imageVector = Icons.Default.AttachFile,
+                            imageVector = Icons.Outlined.AttachFile,
                             contentDescription = "Attach File"
                         )
                     }
                     IconButton(
                         onClick = { pickerLauncher.launch("image/*") }, enabled = !isPosting
                     ) {
-                        Icon(imageVector = Icons.Default.Image, contentDescription = "Add Image")
+                        Icon(imageVector = Icons.Outlined.Image, contentDescription = "Add Image")
                     }
                 }
 
