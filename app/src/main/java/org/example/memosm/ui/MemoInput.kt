@@ -140,7 +140,7 @@ fun MemoInput(
             Popup(alignment = Alignment.TopStart, offset = popupOffset) {
                 Surface(
                     modifier = Modifier
-                        .widthIn(min = 120.dp, max = 240.dp)
+                        .widthIn(min = 100.dp, max = 200.dp)
                         .heightIn(max = 200.dp),
                     shape = RoundedCornerShape(8.dp),
                     tonalElevation = 3.dp,
