@@ -53,7 +53,9 @@ data class MemosUiState(
     val attachmentCellWidth: Float = 240f,
     // Draft state
     val draftMemo: Memo? = null,
-    val isDraftLoaded: Boolean = false
+    val isDraftLoaded: Boolean = false,
+    // Filter state
+    val selectedTags: Set<String> = emptySet()
 )
 
 class MemosViewModel(
@@ -120,7 +122,11 @@ class MemosViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 // Fetch memos first
-                val memoResponse = api.listMemos()
+                val filter = if (_uiState.value.selectedTags.isNotEmpty()) {
+                    _uiState.value.selectedTags.joinToString(" && ") { "tag == \"$it\"" }
+                } else null
+                
+                val memoResponse = api.listMemos(filter = filter)
                 val newMemos = memoResponse.memos?.map { processMemo(it) } ?: emptyList()
 
                 _uiState.value = _uiState.value.copy(
@@ -357,7 +363,11 @@ class MemosViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val response = api.listMemos(pageToken = currentToken)
+                val filter = if (_uiState.value.selectedTags.isNotEmpty()) {
+                    _uiState.value.selectedTags.joinToString(" && ") { "tag == \"$it\"" }
+                } else null
+                
+                val response = api.listMemos(pageToken = currentToken, filter = filter)
                 val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
                 
                 val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
@@ -431,6 +441,13 @@ class MemosViewModel(
         if (_uiState.value.exploreNextPageToken != null && !_uiState.value.isExploring) {
             fetchExplore()
         }
+    }
+
+    fun toggleTagFilter(tag: String) {
+        val current = _uiState.value.selectedTags
+        val next = if (tag in current) current - tag else current + tag
+        _uiState.value = _uiState.value.copy(selectedTags = next)
+        refreshAll()
     }
 
     fun createMemo(

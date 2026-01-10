@@ -5,8 +5,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
@@ -192,8 +196,7 @@ private fun MemosListPane(
                 detectTapGestures(onTap = {
                     focusManager.clearFocus()
                 })
-            }
-    ) {
+            }) {
         if (uiState.isLoading && uiState.memos.isEmpty()) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else {
@@ -219,8 +222,8 @@ private fun MemosListPane(
                                 key(uiState.draftMemo == null) {
                                     MemoComposer(
                                         onPublish = { content, visibility, attachments ->
-                                            viewModel.createMemo(content, visibility, attachments)
-                                        },
+                                        viewModel.createMemo(content, visibility, attachments)
+                                    },
                                         onUploadFile = { uri, context ->
                                             viewModel.uploadAttachment(uri, context)
                                         },
@@ -240,6 +243,29 @@ private fun MemosListPane(
                                         submitLabel = "Publish"
                                     )
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // Horizontal Tag Row
+                val tags = uiState.userStats?.tagCount?.keys?.toList() ?: emptyList()
+                if (tags.isNotEmpty()) {
+                    item {
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
+                        ) {
+                            items(tags) { tag ->
+                                FilterChip(
+                                    selected = tag in uiState.selectedTags,
+                                    onClick = { viewModel.toggleTagFilter(tag) },
+                                    label = { Text("#$tag") },
+                                    shape = RoundedCornerShape(16.dp)
+                                )
                             }
                         }
                     }
