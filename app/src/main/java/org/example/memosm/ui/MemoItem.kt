@@ -3,6 +3,7 @@ package org.example.memosm.ui
 import android.content.Intent
 import android.net.Uri
 import android.text.format.DateUtils
+import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,6 +19,8 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,19 +40,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.model.rememberMarkdownState
+import kotlinx.coroutines.delay
+import okhttp3.OkHttpClient
+import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User
-import org.example.memosm.R
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.core.net.toUri
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MemoItem(
     memo: Memo,
@@ -343,6 +354,12 @@ fun MemoItem(
                                 ) || attachment.displayType.contains("image", ignoreCase = true)
                             }
 
+                            val isAudio = remember(attachment.displayType) {
+                                attachment.displayType.startsWith(
+                                    "audio/", ignoreCase = true
+                                ) || attachment.displayType.contains("audio", ignoreCase = true)
+                            }
+
                             if (isImage) {
                                 val context = LocalContext.current
                                 val imageRequest = remember(attachment.externalLink, token) {
@@ -372,6 +389,13 @@ fun MemoItem(
                                             }
                                         } else Modifier),
                                     contentScale = ContentScale.Crop)
+                            } else if (isAudio && !attachment.externalLink.isNullOrBlank()) {
+                                AudioPlayer(
+                                    url = attachment.externalLink,
+                                    filename = attachment.filename,
+                                    token = token,
+                                    modifier = Modifier.width(240.dp)
+                                )
                             } else {
                                 Card(
                                     modifier = Modifier
@@ -485,7 +509,138 @@ fun MemoItem(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@androidx.annotation.OptIn(UnstableApi::class)
+@Composable
+fun AudioPlayer(
+    url: String, filename: String, token: String, modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).setMediaSourceFactory(
+            DefaultMediaSourceFactory(context).setDataSourceFactory(
+                OkHttpDataSource.Factory(OkHttpClient.Builder().build())
+                    .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
+            )
+        ).build()
+    }
+
+    var isPlaying by remember { mutableStateOf(false) }
+    var progress by remember { mutableFloatStateOf(0f) }
+    var duration by remember { mutableLongStateOf(0L) }
+    var currentPosition by remember { mutableLongStateOf(0L) }
+    var isPrepared by remember { mutableStateOf(false) }
+
+    DisposableEffect(url) {
+        val mediaItem = MediaItem.fromUri(url)
+        exoPlayer.setMediaItem(mediaItem)
+        exoPlayer.prepare()
+
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) {
+                    isPrepared = true
+                    duration = exoPlayer.duration
+                } else if (playbackState == Player.STATE_ENDED) {
+                    isPlaying = false
+                    progress = 0f
+                    currentPosition = 0
+                }
+            }
+
+            override fun onIsPlayingChanged(playing: Boolean) {
+                isPlaying = playing
+            }
+        }
+
+        exoPlayer.addListener(listener)
+
+        onDispose {
+            exoPlayer.removeListener(listener)
+            exoPlayer.release()
+        }
+    }
+
+    LaunchedEffect(isPlaying) {
+        while (isPlaying) {
+            currentPosition = exoPlayer.currentPosition
+            progress = if (duration > 0) currentPosition.toFloat() / duration else 0f
+            delay(500)
+        }
+    }
+
+    Card(
+        modifier = modifier.height(100.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = filename,
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()
+            ) {
+                IconButton(
+                    onClick = {
+                        if (isPrepared) {
+                            if (isPlaying) {
+                                exoPlayer.pause()
+                            } else {
+                                exoPlayer.play()
+                            }
+                        }
+                    }, enabled = isPrepared
+                ) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause" else "Play"
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Slider(
+                        value = progress, onValueChange = {
+                            if (isPrepared) {
+                                progress = it
+                                exoPlayer.seekTo((it * duration).toLong())
+                            }
+                        }, modifier = Modifier.height(24.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = formatTime(currentPosition),
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                        Text(
+                            text = formatTime(duration), style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun formatTime(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return String.format(Locale.US, "%02d:%02d", minutes, seconds)
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ReactionPickerDialog(
     onDismiss: () -> Unit, onReactionSelected: (String) -> Unit

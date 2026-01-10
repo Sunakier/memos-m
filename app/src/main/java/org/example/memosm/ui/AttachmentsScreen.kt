@@ -229,9 +229,12 @@ fun AttachmentItem(
         modifier = modifier.clip(RoundedCornerShape(12.dp)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         onClick = {
-            attachment.externalLink?.let { link ->
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
-                context.startActivity(intent)
+            if (!attachment.displayType.startsWith("audio/", ignoreCase = true) && 
+                !attachment.displayType.contains("audio", ignoreCase = true)) {
+                attachment.externalLink?.let { link ->
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
+                    context.startActivity(intent)
+                }
             }
         }) {
         Column {
@@ -240,6 +243,12 @@ fun AttachmentItem(
                 displayType.startsWith(
                     "image/", ignoreCase = true
                 ) || displayType.contains("image", ignoreCase = true)
+            }
+            
+            val isAudio = remember(displayType) {
+                displayType.startsWith(
+                    "audio/", ignoreCase = true
+                ) || displayType.contains("audio", ignoreCase = true)
             }
 
             Box(
@@ -291,6 +300,13 @@ fun AttachmentItem(
                             modifier = Modifier.size(32.dp)
                         )
                     }
+                } else if (isAudio && !attachment.externalLink.isNullOrBlank()) {
+                    AudioPlayer(
+                        url = attachment.externalLink,
+                        filename = attachment.filename,
+                        token = token,
+                        modifier = Modifier.padding(8.dp)
+                    )
                 } else {
                     Text(
                         text = attachment.filename,
