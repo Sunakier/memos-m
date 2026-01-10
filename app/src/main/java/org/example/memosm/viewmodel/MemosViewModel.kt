@@ -457,7 +457,7 @@ class MemosViewModel(
         }
     }
 
-    fun prepareSearch(isExplore: Boolean, filter: String? = null) {
+    fun prepareSearch(isExplore: Boolean, filter: String? = null, orderBy: String? = null) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSearching = true, searchMemos = emptyList())
             try {
@@ -466,7 +466,7 @@ class MemosViewModel(
                     if (baseFilter != null) "$baseFilter && $filter" else filter
                 } else baseFilter
 
-                val response = api.listMemos(filter = finalFilter, pageSize = 200)
+                val response = api.listMemos(filter = finalFilter, orderBy = orderBy, pageSize = 200)
                 val searchMemos = response.memos?.map { processMemo(it) } ?: emptyList()
                 
                 _uiState.value = _uiState.value.copy(

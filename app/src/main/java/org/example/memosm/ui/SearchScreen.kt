@@ -6,20 +6,25 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.ArrowDownward
+import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.isTraversalGroup
@@ -54,6 +59,7 @@ fun MemoSearchBar(
     var searchSelectedTags by rememberSaveable { mutableStateOf(setOf<String>()) }
     var startDateMillis by rememberSaveable { mutableStateOf<Long?>(null) }
     var endDateMillis by rememberSaveable { mutableStateOf<Long?>(null) }
+    var orderBy by rememberSaveable { mutableStateOf("display_time desc") }
 
     // Aggregate tags from the search pool to be context-accurate
     val availableTags = remember(uiState.searchMemos, uiState.userStats, isExplore) {
@@ -73,7 +79,7 @@ fun MemoSearchBar(
     }
 
     // Effect to trigger server-side search whenever filters change
-    LaunchedEffect(query, searchSelectedTags, startDateMillis, endDateMillis, expanded) {
+    LaunchedEffect(query, searchSelectedTags, startDateMillis, endDateMillis, orderBy, expanded) {
         if (expanded) {
             val filters = mutableListOf<String>()
 
@@ -95,7 +101,7 @@ fun MemoSearchBar(
             }
 
             val filterString = if (filters.isEmpty()) null else filters.joinToString(" && ")
-            viewModel.prepareSearch(isExplore, filterString)
+            viewModel.prepareSearch(isExplore, filterString, orderBy)
         }
     }
 
@@ -138,6 +144,7 @@ fun MemoSearchBar(
                 selectedTags = searchSelectedTags,
                 startDateMillis = startDateMillis,
                 endDateMillis = endDateMillis,
+                orderBy = orderBy,
                 availableTags = availableTags,
                 filteredMemos = uiState.searchMemos,
                 uiState = uiState,
@@ -151,9 +158,8 @@ fun MemoSearchBar(
                 },
                 onStartDateSelected = { startDateMillis = it },
                 onEndDateSelected = { endDateMillis = it },
+                onOrderByChange = { orderBy = it },
                 onMemoClick = { memo ->
-                    // Expanded state is preserved, we'll show details in a dialog
-                    // We call onMemoClick just in case parent needs to know, but we handle showing detail locally
                     onMemoClick(memo)
                 })
         }
@@ -167,6 +173,7 @@ private fun SearchResultContent(
     selectedTags: Set<String>,
     startDateMillis: Long?,
     endDateMillis: Long?,
+    orderBy: String,
     availableTags: Map<String, Int>,
     filteredMemos: List<Memo>,
     uiState: org.example.memosm.viewmodel.MemosUiState,
@@ -174,11 +181,13 @@ private fun SearchResultContent(
     onTagClick: (String) -> Unit,
     onStartDateSelected: (Long?) -> Unit,
     onEndDateSelected: (Long?) -> Unit,
+    onOrderByChange: (String) -> Unit,
     onMemoClick: (Memo) -> Unit
 ) {
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
     var detailMemo by remember { mutableStateOf<Memo?>(null) }
+    var showSortMenu by remember { mutableStateOf(false) }
 
     if (showStartDatePicker) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = startDateMillis)
@@ -223,12 +232,10 @@ private fun SearchResultContent(
     }
 
     detailMemo?.let { memo ->
-        // Use a full-screen dialog to show memo details without closing search
         Dialog(
             onDismissRequest = { detailMemo = null },
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
-            // Need to fetch comments for the selected memo
             LaunchedEffect(memo) {
                 viewModel.selectMemo(memo)
             }
@@ -256,12 +263,12 @@ private fun SearchResultContent(
         contentPadding = PaddingValues(bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // Date Selector Section
+        // Dates Section
         item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 DateSelectorCard(
@@ -374,6 +381,80 @@ private fun SearchResultContent(
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        // Sort Section
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                ExposedDropdownMenuBox(
+                    expanded = showSortMenu,
+                    onExpandedChange = { showSortMenu = it }
+                ) {
+                    val sortLabel = when (orderBy) {
+                        "display_time desc" -> "Newest First"
+                        "display_time asc" -> "Oldest First"
+                        else -> "Sort"
+                    }
+                    val sortIcon = when (orderBy) {
+                        "display_time desc" -> Icons.Outlined.ArrowDownward
+                        "display_time asc" -> Icons.Outlined.ArrowUpward
+                        else -> Icons.AutoMirrored.Outlined.Sort
+                    }
+
+                    Surface(
+                        onClick = { showSortMenu = true },
+                        modifier = Modifier
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true),
+                        shape = RoundedCornerShape(32.dp),
+                        color = Color.Transparent
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                .widthIn(min = 160.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = sortIcon,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = sortLabel,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = showSortMenu)
+                        }
+                    }
+
+                    ExposedDropdownMenu(
+                        expanded = showSortMenu,
+                        onDismissRequest = { showSortMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Newest First", style = MaterialTheme.typography.bodyMedium) },
+                            leadingIcon = { Icon(Icons.Outlined.ArrowDownward, null, Modifier.size(18.dp)) },
+                            onClick = { onOrderByChange("display_time desc"); showSortMenu = false },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Oldest First", style = MaterialTheme.typography.bodyMedium) },
+                            leadingIcon = { Icon(Icons.Outlined.ArrowUpward, null, Modifier.size(18.dp)) },
+                            onClick = { onOrderByChange("display_time asc"); showSortMenu = false },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
                     }
                 }
             }
