@@ -460,6 +460,13 @@ fun MemoComposer(
                     }
                 }
 
+                val label = submitLabel ?: run {
+                    val isEdit = initialContent.isNotEmpty() || initialAttachments.isNotEmpty()
+                    if (isEdit) stringResource(R.string.memo_action_update)
+                    else if (autoFocus) stringResource(R.string.memo_action_post)
+                    else stringResource(R.string.memo_publish)
+                }
+
                 Button(
                     onClick = {
                         val finalAttachments = draftAttachments.mapNotNull { it.second }
@@ -478,8 +485,8 @@ fun MemoComposer(
                 ) {
                     if (isPosting) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(actionIconSize),
+                            color = LocalContentColor.current,
                             strokeWidth = 2.dp
                         )
                     } else {
@@ -488,17 +495,10 @@ fun MemoComposer(
                             contentDescription = stringResource(R.string.memo_publish),
                             modifier = Modifier.size(actionIconSize)
                         )
-                        if (showPublishLabel) {
-                            Spacer(modifier = Modifier.width(if (isCompact) 4.dp else 8.dp))
-                            val label = submitLabel ?: run {
-                                val isEdit =
-                                    initialContent.isNotEmpty() || initialAttachments.isNotEmpty()
-                                if (isEdit) stringResource(R.string.memo_action_update) else if (autoFocus) stringResource(
-                                    R.string.memo_action_post
-                                ) else stringResource(R.string.memo_publish)
-                            }
-                            Text(label)
-                        }
+                    }
+                    if (showPublishLabel) {
+                        Spacer(modifier = Modifier.width(if (isCompact) 4.dp else 8.dp))
+                        Text(label)
                     }
                 }
             }
