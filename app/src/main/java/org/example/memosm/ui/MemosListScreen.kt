@@ -197,13 +197,20 @@ private fun MemosListPane(
         if (uiState.isLoading && uiState.memos.isEmpty()) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else if (uiState.error != null && uiState.memos.isEmpty()) {
-            Text(
-                text = uiState.error!!,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(16.dp)
-            )
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = uiState.error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(16.dp)
+                )
+                Button(onClick = { viewModel.refreshAll() }) {
+                    Text("Retry")
+                }
+            }
         } else {
             LazyColumn(
                 state = listState,
@@ -221,27 +228,32 @@ private fun MemosListPane(
                             modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
                         ) {
                             Card(modifier = Modifier.widthIn(max = 800.dp)) {
-                                MemoComposer(
-                                    onPublish = { content, visibility, attachments ->
-                                        viewModel.createMemo(content, visibility, attachments)
-                                    },
-                                    onUploadFile = { uri, context ->
-                                        viewModel.uploadAttachment(uri, context)
-                                    },
-                                    onDraftChanged = { content, visibility, attachments ->
-                                        viewModel.saveDraft(content, visibility, attachments)
-                                    },
-                                    availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
-                                    token = uiState.token,
-                                    modifier = Modifier.padding(16.dp),
-                                    isPosting = uiState.isPosting,
-                                    initialContent = uiState.draftMemo?.content ?: "",
-                                    initialAttachments = uiState.draftMemo?.attachments
-                                        ?: emptyList(),
-                                    initialVisibility = uiState.draftMemo?.visibility
-                                        ?: uiState.userSettings?.memoVisibility ?: "PRIVATE",
-                                    submitLabel = "Publish"
-                                )
+                                // Key the composer by whether a draft exists. 
+                                // When a publish is successful, draftMemo becomes null, 
+                                // triggering a reset of the internal composer state.
+                                key(uiState.draftMemo == null) {
+                                    MemoComposer(
+                                        onPublish = { content, visibility, attachments ->
+                                            viewModel.createMemo(content, visibility, attachments)
+                                        },
+                                        onUploadFile = { uri, context ->
+                                            viewModel.uploadAttachment(uri, context)
+                                        },
+                                        onDraftChanged = { content, visibility, attachments ->
+                                            viewModel.saveDraft(content, visibility, attachments)
+                                        },
+                                        availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
+                                        token = uiState.token,
+                                        modifier = Modifier.padding(16.dp),
+                                        isPosting = uiState.isPosting,
+                                        initialContent = uiState.draftMemo?.content ?: "",
+                                        initialAttachments = uiState.draftMemo?.attachments
+                                            ?: emptyList(),
+                                        initialVisibility = uiState.draftMemo?.visibility
+                                            ?: uiState.userSettings?.memoVisibility ?: "PRIVATE",
+                                        submitLabel = "Publish"
+                                    )
+                                }
                             }
                         }
                     }
