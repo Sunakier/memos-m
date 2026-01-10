@@ -80,7 +80,6 @@ fun MemoComposer(
     initialLocation: Location? = null,
     placeholder: String = stringResource(R.string.memo_composer_placeholder),
     autoFocus: Boolean = false,
-    onCancel: (() -> Unit)? = null,
     onDraftChanged: ((String, String, List<Attachment>, Location?) -> Unit)? = null,
     submitLabel: String? = null
 ) {
@@ -210,6 +209,10 @@ fun MemoComposer(
         // We use componentWidth == 0.dp to default to true before first measurement.
         val showVisibilityLabel = componentWidth > 440.dp || componentWidth == 0.dp
         val showPublishLabel = componentWidth > 300.dp || componentWidth == 0.dp
+        val isCompact = componentWidth < 380.dp && componentWidth != 0.dp
+        
+        val actionIconSize = if (isCompact) 20.dp else 24.dp
+        val actionButtonSize = if (isCompact) 36.dp else 48.dp
 
         MemoInput(
             contentState = contentState,
@@ -353,19 +356,25 @@ fun MemoComposer(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(
-                    onClick = { pickerLauncher.launch("*/*") }, enabled = !isPosting
+                    onClick = { pickerLauncher.launch("*/*") }, 
+                    enabled = !isPosting,
+                    modifier = Modifier.size(actionButtonSize)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.AttachFile,
-                        contentDescription = stringResource(R.string.memo_composer_attach_file)
+                        contentDescription = stringResource(R.string.memo_composer_attach_file),
+                        modifier = Modifier.size(actionIconSize)
                     )
                 }
                 IconButton(
-                    onClick = { pickerLauncher.launch("image/*") }, enabled = !isPosting
+                    onClick = { pickerLauncher.launch("image/*") }, 
+                    enabled = !isPosting,
+                    modifier = Modifier.size(actionButtonSize)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Image,
-                        contentDescription = stringResource(R.string.memo_composer_add_image)
+                        contentDescription = stringResource(R.string.memo_composer_add_image),
+                        modifier = Modifier.size(actionIconSize)
                     )
                 }
                 IconButton(
@@ -390,33 +399,33 @@ fun MemoComposer(
                             )
                         }
                     },
-                    enabled = !isPosting && !isFetchingLocation
+                    enabled = !isPosting && !isFetchingLocation,
+                    modifier = Modifier.size(actionButtonSize)
                 ) {
                     if (isFetchingLocation) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(actionIconSize),
                             strokeWidth = 2.dp
                         )
                     } else {
                         Icon(
                             imageVector = if (location != null) Icons.Default.Place else Icons.Outlined.Place,
                             contentDescription = stringResource(R.string.memo_composer_add_location),
-                            tint = if (location != null) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                            tint = if (location != null) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                            modifier = Modifier.size(actionIconSize)
                         )
                     }
                 }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (onCancel != null) {
-                    TextButton(onClick = onCancel, enabled = !isPosting) {
-                        Text(stringResource(R.string.common_cancel))
-                    }
-                    Spacer(modifier = Modifier.width(if (showPublishLabel) 8.dp else 4.dp))
-                }
-
                 Box {
-                    TextButton(onClick = { expanded = true }, enabled = !isPosting) {
+                    TextButton(
+                        onClick = { expanded = true }, 
+                        enabled = !isPosting,
+                        contentPadding = if (isCompact) PaddingValues(horizontal = 8.dp) else ButtonDefaults.TextButtonContentPadding,
+                        modifier = if (isCompact) Modifier.height(actionButtonSize) else Modifier
+                    ) {
                         Icon(
                             imageVector = getVisibilityIcon(visibility, outlined = true),
                             contentDescription = visibility,
@@ -463,8 +472,9 @@ fun MemoComposer(
                     },
                     enabled = (contentState.text.isNotBlank() || draftAttachments.isNotEmpty()) && !isPosting && isUploadingCount == 0,
                     contentPadding = if (showPublishLabel) ButtonDefaults.ContentPadding else PaddingValues(
-                        horizontal = 12.dp
-                    )
+                        horizontal = if (isCompact) 8.dp else 12.dp
+                    ),
+                    modifier = if (isCompact) Modifier.height(actionButtonSize) else Modifier
                 ) {
                     if (isPosting) {
                         CircularProgressIndicator(
@@ -475,10 +485,11 @@ fun MemoComposer(
                     } else {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = stringResource(R.string.memo_publish)
+                            contentDescription = stringResource(R.string.memo_publish),
+                            modifier = Modifier.size(actionIconSize)
                         )
                         if (showPublishLabel) {
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(if (isCompact) 4.dp else 8.dp))
                             val label = submitLabel ?: run {
                                 val isEdit =
                                     initialContent.isNotEmpty() || initialAttachments.isNotEmpty()

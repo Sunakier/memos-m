@@ -95,7 +95,6 @@ fun MemoComposerDialog(
                 initialLocation = initialMemo?.location,
                 placeholder = placeholder,
                 autoFocus = true,
-                onCancel = onDismiss
             )
         }
     }

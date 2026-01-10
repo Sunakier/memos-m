@@ -259,7 +259,7 @@ private fun MemosListPane(
                                         availableTags = uiState.userStats?.tagCount?.keys
                                             ?: emptySet(),
                                         token = uiState.token,
-                                        modifier = Modifier.padding(16.dp),
+                                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
                                         isPosting = uiState.isPosting,
                                         initialContent = uiState.draftMemo?.content ?: "",
                                         initialAttachments = uiState.draftMemo?.attachments
@@ -291,7 +291,6 @@ private fun MemosListPane(
                             state = tagListState,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp)
                                 .graphicsLayer {
                                     compositingStrategy = CompositingStrategy.Offscreen
                                 }
