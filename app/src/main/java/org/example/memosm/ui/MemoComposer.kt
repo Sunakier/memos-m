@@ -146,8 +146,7 @@ fun MemoComposer(
         isFetchingLocation = true
         val cancellationTokenSource = CancellationTokenSource()
         fusedLocationClient.getCurrentLocation(
-            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-            cancellationTokenSource.token
+            Priority.PRIORITY_BALANCED_POWER_ACCURACY, cancellationTokenSource.token
         ).addOnSuccessListener { androidLoc ->
             if (androidLoc != null) {
                 location = Location(
@@ -165,9 +164,7 @@ fun MemoComposer(
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        ) {
+        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true || permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
             fetchLocation()
         }
     }
@@ -210,7 +207,7 @@ fun MemoComposer(
         val showVisibilityLabel = componentWidth > 440.dp || componentWidth == 0.dp
         val showPublishLabel = componentWidth > 300.dp || componentWidth == 0.dp
         val isCompact = componentWidth < 380.dp && componentWidth != 0.dp
-        
+
         val actionIconSize = if (isCompact) 20.dp else 24.dp
         val actionButtonSize = if (isCompact) 36.dp else 48.dp
 
@@ -319,33 +316,26 @@ fun MemoComposer(
 
         location?.let { loc ->
             Spacer(modifier = Modifier.height(8.dp))
-            InputChip(
-                selected = true,
-                onClick = { showLocationEditDialog = true },
-                label = {
-                    Text(
-                        text = loc.placeholder ?: "${loc.latitude}, ${loc.longitude}",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.memo_composer_remove_location),
-                        modifier = Modifier
-                            .size(18.dp)
-                            .noRippleClickable { location = null }
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Place,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            )
+            InputChip(selected = true, onClick = { showLocationEditDialog = true }, label = {
+                Text(
+                    text = loc.placeholder ?: "${loc.latitude}, ${loc.longitude}",
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }, trailingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.memo_composer_remove_location),
+                    modifier = Modifier
+                        .size(18.dp)
+                        .noRippleClickable { location = null })
+            }, leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Place,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+            })
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -356,7 +346,7 @@ fun MemoComposer(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(
-                    onClick = { pickerLauncher.launch("*/*") }, 
+                    onClick = { pickerLauncher.launch("*/*") },
                     enabled = !isPosting,
                     modifier = Modifier.size(actionButtonSize)
                 ) {
@@ -367,7 +357,7 @@ fun MemoComposer(
                     )
                 }
                 IconButton(
-                    onClick = { pickerLauncher.launch("image/*") }, 
+                    onClick = { pickerLauncher.launch("image/*") },
                     enabled = !isPosting,
                     modifier = Modifier.size(actionButtonSize)
                 ) {
@@ -380,12 +370,10 @@ fun MemoComposer(
                 IconButton(
                     onClick = {
                         val hasCoarse = ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.ACCESS_COARSE_LOCATION
+                            context, Manifest.permission.ACCESS_COARSE_LOCATION
                         ) == PackageManager.PERMISSION_GRANTED
                         val hasFine = ContextCompat.checkSelfPermission(
-                            context,
-                            Manifest.permission.ACCESS_FINE_LOCATION
+                            context, Manifest.permission.ACCESS_FINE_LOCATION
                         ) == PackageManager.PERMISSION_GRANTED
 
                         if (hasCoarse || hasFine) {
@@ -404,8 +392,7 @@ fun MemoComposer(
                 ) {
                     if (isFetchingLocation) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(actionIconSize),
-                            strokeWidth = 2.dp
+                            modifier = Modifier.size(actionIconSize), strokeWidth = 2.dp
                         )
                     } else {
                         Icon(
@@ -421,7 +408,7 @@ fun MemoComposer(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box {
                     TextButton(
-                        onClick = { expanded = true }, 
+                        onClick = { expanded = true },
                         enabled = !isPosting,
                         contentPadding = if (isCompact) PaddingValues(horizontal = 8.dp) else ButtonDefaults.TextButtonContentPadding,
                         modifier = if (isCompact) Modifier.height(actionButtonSize) else Modifier
@@ -471,10 +458,7 @@ fun MemoComposer(
                     onClick = {
                         val finalAttachments = draftAttachments.mapNotNull { it.second }
                         onPublish(
-                            contentState.text.toString(),
-                            visibility,
-                            finalAttachments,
-                            location
+                            contentState.text.toString(), visibility, finalAttachments, location
                         )
                     },
                     enabled = (contentState.text.isNotBlank() || draftAttachments.isNotEmpty()) && !isPosting && isUploadingCount == 0,
@@ -556,7 +540,6 @@ fun MemoComposer(
                 TextButton(onClick = { showLocationEditDialog = false }) {
                     Text(stringResource(R.string.common_cancel))
                 }
-            }
-        )
+            })
     }
 }

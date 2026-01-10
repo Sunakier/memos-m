@@ -38,9 +38,7 @@ fun MemoInput(
     minHeightInLines: Int = 3,
     maxHeightInLines: Int = Int.MAX_VALUE
 ) {
-    val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
-    var isActivated by remember { mutableStateOf(autoFocus) }
 
     // Tag autocomplete logic
     var showTagPopup by remember { mutableStateOf(false) }
@@ -92,37 +90,17 @@ fun MemoInput(
             onTextLayout = { getLayout -> textLayoutResult = getLayout() },
             modifier = Modifier
                 .fillMaxWidth()
-                .focusRequester(focusRequester)
-                .onFocusChanged {
-                    if (it.isFocused) isActivated = true
-                },
+                .focusRequester(focusRequester),
             placeholder = { Text(placeholder) },
             lineLimits = TextFieldLineLimits.MultiLine(
                 minHeightInLines = minHeightInLines, maxHeightInLines = maxHeightInLines
             ),
-            enabled = enabled && isActivated,
+            enabled = enabled,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
             )
         )
-
-        // Overlay to catch the first tap if not activated
-        if (!isActivated && enabled) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        isActivated = true
-                        scope.launch {
-                            delay(10)
-                            focusRequester.requestFocus()
-                        }
-                    })
-        }
 
         if (showTagPopup && filteredTags.isNotEmpty()) {
             val popupOffset = remember(textLayoutResult, contentState.selection, density) {
