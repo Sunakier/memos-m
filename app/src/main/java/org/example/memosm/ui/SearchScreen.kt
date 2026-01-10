@@ -310,7 +310,7 @@ private fun SearchResultContent(
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                         CompositionLocalProvider(
-                            LocalMinimumInteractiveComponentEnforcement provides false
+                            LocalMinimumInteractiveComponentSize provides 0.dp
                         ) {
                             FlowRow(
                                 modifier = Modifier
