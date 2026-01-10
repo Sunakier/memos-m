@@ -1,6 +1,11 @@
 package org.example.memosm.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -50,17 +55,21 @@ fun MemoSearchBar(
         }
     }
 
-    // Aggregate tags from the search pool
-    val availableTags = remember(uiState.searchMemos) {
-        val tags = mutableMapOf<String, Int>()
-        uiState.searchMemos.forEach { memo ->
-            val regex = "#(\\w+)".toRegex()
-            regex.findAll(memo.content).forEach { match ->
-                val tag = match.groupValues[1]
-                tags[tag] = (tags[tag] ?: 0) + 1
+    // Aggregate tags from the search pool to be context-accurate
+    val availableTags = remember(uiState.searchMemos, uiState.userStats, isExplore) {
+        if (isExplore) {
+            val tags = mutableMapOf<String, Int>()
+            uiState.searchMemos.forEach { memo ->
+                val regex = "#(\\w+)".toRegex()
+                regex.findAll(memo.content).forEach { match ->
+                    val tag = match.groupValues[1]
+                    tags[tag] = (tags[tag] ?: 0) + 1
+                }
             }
+            tags.toList().sortedByDescending { it.second }.toMap()
+        } else {
+            uiState.userStats?.tagCount ?: emptyMap()
         }
-        tags.toList().sortedByDescending { it.second }.toMap()
     }
 
     val filteredMemos = remember(query, searchSelectedTags, uiState.searchMemos) {
@@ -144,7 +153,7 @@ private fun SearchResultContent(
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         if (uiState.isSearching && uiState.searchMemos.isEmpty()) {
             item {
@@ -160,7 +169,7 @@ private fun SearchResultContent(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 4.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                     ),
@@ -198,15 +207,19 @@ private fun SearchResultContent(
                                             }
                                         }
                                     },
-                                    trailingIcon = if (isSelected) {
-                                        {
+                                    trailingIcon = {
+                                        AnimatedVisibility(
+                                            visible = isSelected,
+                                            enter = fadeIn() + expandHorizontally(),
+                                            exit = fadeOut() + shrinkHorizontally()
+                                        ) {
                                             Icon(
                                                 imageVector = Icons.Default.Close,
                                                 contentDescription = null,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                         }
-                                    } else null,
+                                    },
                                     shape = RoundedCornerShape(12.dp),
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -241,7 +254,7 @@ private fun SearchResultContent(
             }
         } else {
             items(filteredMemos, key = { it.name ?: it.content.hashCode() }) { memo ->
-                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
                     MemoItem(
                         memo = memo,
                         user = uiState.users[memo.creator],
