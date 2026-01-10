@@ -1,5 +1,7 @@
 package org.example.memosm.ui
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -11,6 +13,7 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -40,7 +43,7 @@ fun MainScreen(
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var currentDestination by remember { mutableStateOf(MainDestination.MEMOS) }
+    var currentDestination by rememberSaveable { mutableStateOf(MainDestination.MEMOS) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
     val viewModel: MemosViewModel =
         viewModel(factory = MemosViewModel.provideFactory(baseUrl, token, dataStoreManager))
@@ -115,11 +118,45 @@ fun MainScreen(
             }
         }, modifier = modifier
     ) {
-        when (currentDestination) {
-            MainDestination.MEMOS -> MemosListScreen(viewModel)
-            MainDestination.EXPLORE -> ExploreScreen(viewModel)
-            MainDestination.ATTACHMENTS -> AttachmentsScreen(viewModel)
-            MainDestination.PROFILE -> ProfileScreen(viewModel, onLogout)
+        Box(Modifier.fillMaxSize()) {
+            // Use Box to keep all screens in memory but only show the active one.
+            // This preserves scroll state and other UI state within each screen.
+            
+            // Memos Screen
+            androidx.compose.animation.AnimatedVisibility(
+                visible = currentDestination == MainDestination.MEMOS,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                MemosListScreen(viewModel)
+            }
+            
+            // Explore Screen
+            androidx.compose.animation.AnimatedVisibility(
+                visible = currentDestination == MainDestination.EXPLORE,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                ExploreScreen(viewModel)
+            }
+            
+            // Attachments Screen
+            androidx.compose.animation.AnimatedVisibility(
+                visible = currentDestination == MainDestination.ATTACHMENTS,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                AttachmentsScreen(viewModel)
+            }
+            
+            // Profile Screen
+            androidx.compose.animation.AnimatedVisibility(
+                visible = currentDestination == MainDestination.PROFILE,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                ProfileScreen(viewModel, onLogout)
+            }
         }
     }
 }
