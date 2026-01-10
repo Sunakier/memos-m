@@ -24,6 +24,12 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
@@ -206,7 +212,7 @@ private fun MemosListPane(
                 modifier = Modifier
                     .fillMaxSize()
                     .statusBarsPadding(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -214,7 +220,7 @@ private fun MemosListPane(
                 item {
                     if (uiState.isDraftLoaded) {
                         Box(
-                            modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 16.dp), contentAlignment = Alignment.Center
                         ) {
                             Card(modifier = Modifier.widthIn(max = 800.dp)) {
                                 // Key the composer by whether a draft exists. 
@@ -249,7 +255,7 @@ private fun MemosListPane(
                     }
                 }
 
-                // Horizontal Tag Row
+                // Horizontal Tag Row - Edge to edge with fading hint
                 val tags = uiState.userStats?.tagCount?.keys?.toList() ?: emptyList()
                 if (tags.isNotEmpty()) {
                     item {
@@ -257,16 +263,45 @@ private fun MemosListPane(
                             state = tagListState,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
+                                .padding(vertical = 4.dp)
+                                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                .drawWithContent {
+                                    drawContent()
+                                    // Fading edge hint
+                                    val startGradient = Brush.horizontalGradient(
+                                        0f to Color.Transparent,
+                                        0.02f to Color.Black
+                                    )
+                                    val endGradient = Brush.horizontalGradient(
+                                        0.98f to Color.Black,
+                                        1f to Color.Transparent
+                                    )
+                                    if (tagListState.canScrollBackward) {
+                                        drawRect(brush = startGradient, blendMode = BlendMode.DstIn)
+                                    }
+                                    if (tagListState.canScrollForward) {
+                                        drawRect(brush = endGradient, blendMode = BlendMode.DstIn)
+                                    }
+                                },
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(horizontal = 4.dp)
+                            contentPadding = PaddingValues(horizontal = 16.dp)
                         ) {
                             items(tags) { tag ->
+                                val isSelected = tag in uiState.selectedTags
                                 FilterChip(
-                                    selected = tag in uiState.selectedTags,
+                                    selected = isSelected,
                                     onClick = { viewModel.toggleTagFilter(tag) },
                                     label = { Text("#$tag") },
-                                    shape = RoundedCornerShape(16.dp)
+                                    shape = RoundedCornerShape(16.dp),
+                                    trailingIcon = if (isSelected) {
+                                        {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    } else null
                                 )
                             }
                         }
@@ -295,7 +330,7 @@ private fun MemosListPane(
                 } else {
                     items(uiState.memos, key = { it.name ?: it.content.hashCode() }) { memo ->
                         Box(
-                            modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), contentAlignment = Alignment.Center
                         ) {
                             val isOwner = memo.creator == uiState.user?.name
                             MemoItem(
