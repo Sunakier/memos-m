@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import kotlinx.coroutines.launch
@@ -97,7 +98,8 @@ fun MemoComposer(
             Spacer(modifier = Modifier.height(12.dp))
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                contentPadding = PaddingValues(top = 8.dp, end = 8.dp)
             ) {
                 items(draftAttachments) { (uri, attachment) ->
                     val isImage = remember(uri, attachment) {
@@ -162,8 +164,10 @@ fun MemoComposer(
                             },
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
+                                .offset(x = 4.dp, y = (-4).dp)
                                 .size(24.dp)
                                 .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                .zIndex(1f)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
