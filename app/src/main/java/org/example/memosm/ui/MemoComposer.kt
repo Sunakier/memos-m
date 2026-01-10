@@ -370,6 +370,24 @@ fun MemoComposer(
                         extensionIsAudio || attachmentIsAudio
                     }
 
+                    val isVideo = remember(uri, attachment) {
+                        // Check by file extension using Android's MimeTypeMap
+                        val path = uri.path ?: ""
+                        val filename = attachment?.filename ?: ""
+                        val pathExt = android.webkit.MimeTypeMap.getFileExtensionFromUrl(path)
+                        val filenameExt = filename.substringAfterLast('.', "").lowercase()
+                        val mimeTypeMap = android.webkit.MimeTypeMap.getSingleton()
+
+                        val extensionMimeType = mimeTypeMap.getMimeTypeFromExtension(pathExt)
+                            ?: mimeTypeMap.getMimeTypeFromExtension(filenameExt)
+                        val extensionIsVideo = extensionMimeType?.startsWith("video/") == true
+
+                        // Also check MIME type from attachment
+                        val attachmentIsVideo = attachment?.displayType?.startsWith("video/", ignoreCase = true) == true
+
+                        extensionIsVideo || attachmentIsVideo
+                    }
+
                     val audioUrl = remember(uri, attachment) {
                         // Prefer attachment externalLink when available (after upload completes)
                         attachment?.externalLink ?: if (uri != Uri.EMPTY) uri.toString() else null
@@ -398,6 +416,20 @@ fun MemoComposer(
                                 token = token,
                                 modifier = Modifier.fillMaxSize()
                             )
+                        } else if (isVideo) {
+                            // Video thumbnail or player can be added here
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .padding(4.dp), contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Videocam,
+                                    contentDescription = null
+                                )
+                            }
                         } else {
                             Box(
                                 modifier = Modifier
@@ -407,7 +439,7 @@ fun MemoComposer(
                                     .padding(4.dp), contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = if (isAudio) Icons.Outlined.Audiotrack else Icons.AutoMirrored.Outlined.InsertDriveFile,
+                                    imageVector = Icons.AutoMirrored.Outlined.InsertDriveFile,
                                     contentDescription = null
                                 )
                             }
