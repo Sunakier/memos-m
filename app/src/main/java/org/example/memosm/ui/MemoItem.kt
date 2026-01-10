@@ -383,7 +383,8 @@ fun MemoItem(
                                 },
                                 onClick = {
                                     if (myReaction != null) {
-                                        onDeleteReaction?.invoke(myReaction.name ?: "")
+                                        // Pass the emoji type or the reaction name to the viewmodel
+                                        onDeleteReaction?.invoke(type)
                                     } else {
                                         onUpsertReaction?.invoke(type)
                                     }

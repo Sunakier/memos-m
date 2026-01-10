@@ -231,6 +231,7 @@ private fun ExploreMemosListPane(
                         MemoItem(
                             memo = memo,
                             user = uiState.users[memo.creator],
+                            currentUser = uiState.user,
                             token = uiState.token,
                             colors = if (memo == uiState.selectedMemo) {
                                 CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
@@ -247,6 +248,12 @@ private fun ExploreMemosListPane(
                             onDelete = if (isOwner) {
                                 { memoToDelete = memo }
                             } else null,
+                            onUpsertReaction = { emoji ->
+                                viewModel.upsertMemoReaction(memo, emoji)
+                            },
+                            onDeleteReaction = { reactionName ->
+                                viewModel.deleteMemoReaction(memo, reactionName)
+                            },
                             maxHeight = 400.dp,
                             modifier = Modifier.widthIn(max = 800.dp))
                     }

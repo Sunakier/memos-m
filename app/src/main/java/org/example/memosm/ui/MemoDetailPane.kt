@@ -103,6 +103,7 @@ fun MemoDetailPane(
                         MemoItem(
                             memo = memo,
                             user = uiState.users[memo.creator],
+                            currentUser = uiState.user,
                             token = token,
                             colors = CardDefaults.cardColors(),
                             onEdit = if (isOwner) {
@@ -110,7 +111,14 @@ fun MemoDetailPane(
                             } else null,
                             onDelete = if (isOwner) {
                                 { memoToDelete = memo }
-                            } else null)
+                            } else null,
+                            onUpsertReaction = { emoji ->
+                                viewModel.upsertMemoReaction(memo, emoji)
+                            },
+                            onDeleteReaction = { reactionName ->
+                                viewModel.deleteMemoReaction(memo, reactionName)
+                            }
+                        )
                     }
 
                     // Comments section header
@@ -175,6 +183,7 @@ fun MemoDetailPane(
                         MemoItem(
                             memo = comment,
                             user = uiState.users[comment.creator],
+                            currentUser = uiState.user,
                             token = token,
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -182,7 +191,14 @@ fun MemoDetailPane(
                                 { memoToEdit = comment }
                             } else null, onDelete = if (isCommentOwner) {
                                 { memoToDelete = comment }
-                            } else null)
+                            } else null,
+                            onUpsertReaction = { emoji ->
+                                viewModel.upsertMemoReaction(comment, emoji)
+                            },
+                            onDeleteReaction = { reactionName ->
+                                viewModel.deleteMemoReaction(comment, reactionName)
+                            }
+                        )
                     }
                 }
             }
