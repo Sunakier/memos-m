@@ -1,9 +1,14 @@
 package org.example.memosm.ui
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.text.format.DateUtils
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -43,6 +48,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -579,6 +586,8 @@ fun VideoPlayer(
     url: String, token: String, modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    var isFullscreen by remember { mutableStateOf(false) }
+    
     val exoPlayer = remember {
         ExoPlayer.Builder(context).setMediaSourceFactory(
             DefaultMediaSourceFactory(context).setDataSourceFactory(
@@ -605,14 +614,69 @@ fun VideoPlayer(
                 player = exoPlayer
                 useController = true
                 setBackgroundColor(android.graphics.Color.BLACK)
+                setFullscreenButtonClickListener {
+                    isFullscreen = true
+                }
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
             }
         },
+        update = { view ->
+            view.player = if (isFullscreen) null else exoPlayer
+        },
         modifier = modifier
     )
+
+    if (isFullscreen) {
+        Dialog(
+            onDismissRequest = { isFullscreen = false },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = false
+            )
+        ) {
+            val activity = context.findActivity()
+            DisposableEffect(Unit) {
+                val originalOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                onDispose {
+                    activity?.requestedOrientation = originalOrientation
+                }
+            }
+
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+                AndroidView(
+                    factory = { ctx ->
+                        PlayerView(ctx).apply {
+                            player = exoPlayer
+                            useController = true
+                            setBackgroundColor(android.graphics.Color.BLACK)
+                            setFullscreenButtonClickListener {
+                                isFullscreen = false
+                            }
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+    }
+}
+
+fun Context.findActivity(): Activity? {
+    var context = this
+    while (context is ContextWrapper) {
+        if (context is Activity) return context
+        context = context.baseContext
+    }
+    return null
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)
