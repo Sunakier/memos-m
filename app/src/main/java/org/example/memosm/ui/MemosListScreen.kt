@@ -195,22 +195,17 @@ private fun MemosListPane(
     var memoToEdit by remember { mutableStateOf<Memo?>(null) }
     var memoToDelete by remember { mutableStateOf<Memo?>(null) }
 
-    // Use a SideEffect or LaunchedEffect with listState to trigger loads
-    val shouldLoadMore = remember {
-        derivedStateOf {
-            val layoutInfo = listState.layoutInfo
-            val totalItemsNumber = layoutInfo.totalItemsCount
-            val lastVisibleItemIndex = (layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) + 1
-
-            // Trigger when within 5 items of the end, and we have items, and we're not already loading
-            totalItemsNumber > 0 && lastVisibleItemIndex >= totalItemsNumber - 5
-        }
-    }
-
-    LaunchedEffect(shouldLoadMore.value, uiState.isLoading, uiState.nextPageToken) {
-        if (shouldLoadMore.value && !uiState.isLoading && uiState.nextPageToken != null) {
-            viewModel.loadMore()
-        }
+    // Use a snapshotFlow for more robust infinite scroll detection
+    LaunchedEffect(listState, uiState.isLoading, uiState.nextPageToken) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+            .collect { lastIndex ->
+                if (lastIndex != null && 
+                    !uiState.isLoading && 
+                    uiState.nextPageToken != null && 
+                    lastIndex >= listState.layoutInfo.totalItemsCount - 5) {
+                    viewModel.loadMore()
+                }
+            }
     }
 
     PullToRefreshBox(

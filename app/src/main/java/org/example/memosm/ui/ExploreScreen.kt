@@ -168,18 +168,17 @@ private fun ExploreMemosListPane(
     var memoToEdit by remember { mutableStateOf<Memo?>(null) }
     var memoToDelete by remember { mutableStateOf<Memo?>(null) }
 
-    val shouldLoadMore = remember {
-        derivedStateOf {
-            val lastVisibleItem =
-                listState.layoutInfo.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf false
-            lastVisibleItem.index >= listState.layoutInfo.totalItemsCount - 5
-        }
-    }
-
-    LaunchedEffect(shouldLoadMore.value) {
-        if (shouldLoadMore.value) {
-            viewModel.loadMoreExplore()
-        }
+    // Use a snapshotFlow for more robust infinite scroll detection
+    LaunchedEffect(listState, uiState.isExploring, uiState.exploreNextPageToken) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+            .collect { lastIndex ->
+                if (lastIndex != null && 
+                    !uiState.isExploring && 
+                    uiState.exploreNextPageToken != null && 
+                    lastIndex >= listState.layoutInfo.totalItemsCount - 5) {
+                    viewModel.loadMoreExplore()
+                }
+            }
     }
 
     PullToRefreshBox(

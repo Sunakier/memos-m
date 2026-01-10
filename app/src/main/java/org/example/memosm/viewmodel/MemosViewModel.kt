@@ -72,6 +72,7 @@ class MemosViewModel(
     private val sanitizedBaseUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
     private val gson = Gson()
     private var draftSaveJob: Job? = null
+    private val DEFAULT_PAGE_SIZE = 20
 
     private val api: MemosApi by lazy {
         val logging = HttpLoggingInterceptor().apply {
@@ -134,7 +135,7 @@ class MemosViewModel(
                     "tag in [$tagsFilter]"
                 } else null
                 
-                val memoResponse = api.listMemos(filter = filter)
+                val memoResponse = api.listMemos(filter = filter, pageSize = DEFAULT_PAGE_SIZE)
                 val newMemos = memoResponse.memos?.map { processMemo(it) } ?: emptyList()
 
                 _uiState.value = _uiState.value.copy(
@@ -214,7 +215,7 @@ class MemosViewModel(
         if (loadMore && currentToken == null) return
 
         try {
-            val response = api.listAttachments(pageToken = currentToken)
+            val response = api.listAttachments(pageToken = currentToken, pageSize = DEFAULT_PAGE_SIZE)
             val rawAttachments = response.attachments ?: emptyList()
             
             val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
@@ -383,7 +384,7 @@ class MemosViewModel(
                     "tag in [$tagsFilter]"
                 } else null
                 
-                val response = api.listMemos(pageToken = currentToken, filter = filter)
+                val response = api.listMemos(pageToken = currentToken, filter = filter, pageSize = DEFAULT_PAGE_SIZE)
                 val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
                 
                 val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
@@ -415,7 +416,8 @@ class MemosViewModel(
             try {
                 val response = api.listMemos(
                     pageToken = currentToken,
-                    filter = "visibility in ['PUBLIC', 'PROTECTED']"
+                    filter = "visibility in ['PUBLIC', 'PROTECTED']",
+                    pageSize = DEFAULT_PAGE_SIZE
                 )
                 val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
                 
