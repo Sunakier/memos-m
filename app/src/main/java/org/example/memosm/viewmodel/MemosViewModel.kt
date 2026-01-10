@@ -544,10 +544,27 @@ class MemosViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isPosting = true)
             try {
+                // Upload any cached attachments that have base64 content but no server-assigned name
+                val processedAttachments = attachments?.map { attachment ->
+                    if (attachment.name == null && !attachment.content.isNullOrBlank()) {
+                        // This is a cached attachment with base64 content - upload it first
+                        try {
+                            val uploaded = api.createAttachment(attachment)
+                            Log.d("MemosViewModel", "Uploaded cached attachment: ${uploaded.name}")
+                            uploaded
+                        } catch (e: Exception) {
+                            Log.e("MemosViewModel", "Failed to upload cached attachment", e)
+                            throw e
+                        }
+                    } else {
+                        attachment
+                    }
+                }
+
                 val memo = api.createMemo(Memo(
                     content = content, 
                     visibility = visibility,
-                    attachments = attachments,
+                    attachments = processedAttachments,
                     location = location,
                     state = "NORMAL"
                 ))

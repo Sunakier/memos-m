@@ -55,7 +55,11 @@ import coil.request.ImageRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
+import android.provider.OpenableColumns
+import android.util.Base64
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
@@ -78,6 +82,53 @@ fun getVisibilityIcon(visibility: String, outlined: Boolean = false): ImageVecto
         "PROTECTED" -> if (outlined) Icons.Outlined.Group else Icons.Default.Group
         "PRIVATE" -> if (outlined) Icons.Outlined.Lock else Icons.Default.Lock
         else -> if (outlined) Icons.Outlined.Lock else Icons.Default.Lock
+    }
+}
+
+/**
+ * Converts a local Uri to an Attachment with base64-encoded content for draft caching.
+ * Returns null if the file cannot be read.
+ */
+suspend fun uriToBase64Attachment(uri: Uri, context: Context): Attachment? = withContext(Dispatchers.IO) {
+    try {
+        val contentResolver = context.contentResolver
+
+        // Get filename
+        val fileName = run {
+            var name: String? = null
+            if (uri.scheme == "content") {
+                contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        if (index != -1) name = cursor.getString(index)
+                    }
+                }
+            }
+            name ?: uri.path?.substringAfterLast('/') ?: "attachment_${System.currentTimeMillis()}"
+        }
+
+        // Get MIME type
+        val resolverMimeType = contentResolver.getType(uri)
+        val mimeType = if (resolverMimeType == null || resolverMimeType == "application/octet-stream") {
+            val ext = MimeTypeMap.getFileExtensionFromUrl(uri.toString()).lowercase()
+            MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: resolverMimeType ?: "application/octet-stream"
+        } else {
+            resolverMimeType
+        }
+
+        // Read and encode content
+        val inputStream = contentResolver.openInputStream(uri) ?: return@withContext null
+        val bytes = inputStream.use { it.readBytes() }
+        val base64Content = Base64.encodeToString(bytes, Base64.NO_WRAP)
+
+        Attachment(
+            filename = fileName,
+            type = mimeType,
+            content = base64Content
+        )
+    } catch (e: Exception) {
+        Log.e("MemoComposer", "Error converting Uri to base64 Attachment", e)
+        null
     }
 }
 
@@ -235,11 +286,26 @@ fun MemoComposer(
     }
 
     // TRIGGER CACHE UPDATE when local changes occur
+    // Convert local Uri attachments to base64 for caching
     LaunchedEffect(contentState.text, visibility, draftAttachments, location) {
-        onDraftChanged?.invoke(
+        if (onDraftChanged == null) return@LaunchedEffect
+
+        val allAttachments = draftAttachments.mapNotNull { (uri, existingAttachment) ->
+            if (existingAttachment != null) {
+                // Already have an Attachment (either uploaded or previously cached)
+                existingAttachment
+            } else if (uri != Uri.EMPTY) {
+                // Local file - convert to base64 for caching
+                uriToBase64Attachment(uri, context)
+            } else {
+                null
+            }
+        }
+
+        onDraftChanged.invoke(
             contentState.text.toString(),
             visibility,
-            draftAttachments.mapNotNull { it.second },
+            allAttachments,
             location
         )
     }
@@ -275,7 +341,7 @@ fun MemoComposer(
             ) {
                 items(draftAttachments, key = { (uri, attachment) ->
                     if (uri != Uri.EMPTY) uri.toString()
-                    else attachment?.name ?: attachment?.externalLink ?: "unknown"
+                    else attachment?.name ?: attachment?.filename ?: attachment?.externalLink ?: "unknown"
                 }) { (uri, attachment) ->
                     val mimeType = remember(uri, attachment) {
                         if (uri != Uri.EMPTY) {
@@ -301,16 +367,57 @@ fun MemoComposer(
                         "video/", ignoreCase = true
                     ) || mimeType.contains("video", ignoreCase = true)
 
+                    // For audio: Uri > externalLink > base64 content (written to temp file)
                     val audioUrl = remember(uri, attachment) {
-                        if (uri != Uri.EMPTY) uri.toString()
-                        else attachment?.externalLink
+                        when {
+                            uri != Uri.EMPTY -> uri.toString()
+                            !attachment?.externalLink.isNullOrBlank() -> attachment.externalLink
+                            isAudio && !attachment?.content.isNullOrBlank() -> {
+                                // Decode base64 and write to temp file for playback
+                                try {
+                                    val bytes = Base64.decode(attachment.content, Base64.NO_WRAP)
+                                    val ext = when {
+                                        mimeType.contains("aac") -> "aac"
+                                        mimeType.contains("mp3") || mimeType.contains("mpeg") -> "mp3"
+                                        mimeType.contains("ogg") -> "ogg"
+                                        mimeType.contains("wav") -> "wav"
+                                        mimeType.contains("m4a") -> "m4a"
+                                        else -> "aac"
+                                    }
+                                    val tempFile = File(context.cacheDir, "cached_audio_${attachment.filename.hashCode()}.$ext")
+                                    if (!tempFile.exists() || tempFile.length() != bytes.size.toLong()) {
+                                        tempFile.writeBytes(bytes)
+                                    }
+                                    tempFile.toUri().toString()
+                                } catch (e: Exception) {
+                                    Log.e("MemoComposer", "Error creating temp audio file", e)
+                                    null
+                                }
+                            }
+                            else -> null
+                        }
                     }
 
                     val isUploading = uri in uploadingUris
 
                     Box(modifier = Modifier.size(80.dp, 80.dp)) {
                         if (isImage) {
-                            val model = if (uri != Uri.EMPTY) uri else attachment?.externalLink
+                            // Priority: Uri > externalLink > base64 content
+                            val model = remember(uri, attachment) {
+                                when {
+                                    uri != Uri.EMPTY -> uri
+                                    !attachment?.externalLink.isNullOrBlank() -> attachment.externalLink
+                                    !attachment?.content.isNullOrBlank() -> {
+                                        // Decode base64 content to byte array for Coil
+                                        try {
+                                            Base64.decode(attachment.content, Base64.NO_WRAP)
+                                        } catch (e: Exception) {
+                                            null
+                                        }
+                                    }
+                                    else -> null
+                                }
+                            }
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current).data(model)
                                     .addHeader("Authorization", "Bearer $token").crossfade(true)
