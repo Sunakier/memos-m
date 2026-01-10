@@ -96,7 +96,7 @@ class MemosViewModel(
 
                 _uiState.value = _uiState.value.copy(
                     memos = newMemos,
-                    nextPageToken = memoResponse.nextPageToken
+                    nextPageToken = if (memoResponse.nextPageToken.isNullOrBlank()) null else memoResponse.nextPageToken
                 )
 
                 // Fetch attachments
@@ -166,11 +166,16 @@ class MemosViewModel(
         try {
             val response = api.listAttachments(pageToken = currentToken)
             val rawAttachments = response.attachments ?: emptyList()
+            
+            // Check for ring buffer behavior: if loadMore and the results are already in our list, stop.
+            // Or if nextPageToken is null/blank/same as current.
+            val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
+            
             val processedAttachments = rawAttachments.map { processAttachment(it) }
 
             _uiState.value = _uiState.value.copy(
                 attachments = if (loadMore) _uiState.value.attachments + processedAttachments else processedAttachments,
-                nextAttachmentsPageToken = response.nextPageToken
+                nextAttachmentsPageToken = newNextPageToken
             )
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error fetching attachments", e)
@@ -316,15 +321,21 @@ class MemosViewModel(
         }
 
         if (_uiState.value.isLoading) return
+        val currentToken = _uiState.value.nextPageToken
+        if (currentToken == null) return
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val response = api.listMemos(pageToken = _uiState.value.nextPageToken)
+                val response = api.listMemos(pageToken = currentToken)
                 val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
+                
+                // Check for ring buffer behavior
+                val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
+                
                 _uiState.value = _uiState.value.copy(
                     memos = _uiState.value.memos + newMemos,
-                    nextPageToken = response.nextPageToken,
+                    nextPageToken = newNextPageToken,
                 )
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error fetching more memos", e)
@@ -337,16 +348,20 @@ class MemosViewModel(
 
     fun fetchExplore(refresh: Boolean = false) {
         if (_uiState.value.isExploring && !refresh) return
+        val currentToken = if (refresh) null else _uiState.value.exploreNextPageToken
+        if (!refresh && currentToken == null) return
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isExploring = true)
             try {
-                val currentToken = if (refresh) null else _uiState.value.exploreNextPageToken
                 val response = api.listMemos(
                     pageToken = currentToken,
                     filter = "visibility in ['PUBLIC', 'PROTECTED']"
                 )
                 val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
+                
+                // Check for ring buffer behavior
+                val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
                 
                 // Collect creators that we don't have details for
                 val unknownCreators = newMemos
@@ -370,7 +385,7 @@ class MemosViewModel(
 
                 _uiState.value = _uiState.value.copy(
                     exploreMemos = if (refresh) newMemos else _uiState.value.exploreMemos + newMemos,
-                    exploreNextPageToken = response.nextPageToken,
+                    exploreNextPageToken = newNextPageToken,
                     isExploring = false
                 )
             } catch (e: Exception) {
