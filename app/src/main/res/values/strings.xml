@@ -51,6 +51,7 @@
     <string name="memo_unknown_time">UNKNOWN</string>
     <string name="memo_action_update">Update</string>
     <string name="memo_action_post">Post</string>
+    <string name="memo_action_add_reaction">Add Reaction</string>
 
     <string name="memo_composer_placeholder">What\'s on your mind?</string>
     <string name="memo_composer_remove_attachment">Remove</string>

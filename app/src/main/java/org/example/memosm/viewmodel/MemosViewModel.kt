@@ -729,6 +729,70 @@ class MemosViewModel(
         }
     }
 
+    fun upsertMemoReaction(memo: Memo, reactionType: String) {
+        val memoName = memo.name ?: return
+        val memoId = memoName.removePrefix("memos/")
+        
+        viewModelScope.launch {
+            try {
+                api.upsertMemoReaction(
+                    memo = memoId,
+                    request = UpsertMemoReactionRequest(
+                        name = memoName,
+                        reaction = Reaction(
+                            contentId = memoName,
+                            reactionType = reactionType
+                        )
+                    )
+                )
+                // Refresh the memo to get updated reactions
+                refreshMemo(memoName)
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error upserting reaction", e)
+            }
+        }
+    }
+
+    fun deleteMemoReaction(memo: Memo, reactionName: String) {
+        val memoName = memo.name ?: return
+        val memoId = memoName.removePrefix("memos/")
+        
+        viewModelScope.launch {
+            try {
+                api.deleteMemoReaction(memoId, reactionName.removePrefix("memos/$memoId/reactions/"))
+                refreshMemo(memoName)
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error deleting reaction", e)
+            }
+        }
+    }
+
+    private suspend fun refreshMemo(memoName: String) {
+        try {
+            val updatedMemo = api.getMemo(memoName.removePrefix("memos/"))
+            val processed = processMemo(updatedMemo)
+            
+            val updatedMemos = _uiState.value.memos.map {
+                if (it.name == memoName) processed else it
+            }
+            val updatedExploreMemos = _uiState.value.exploreMemos.map {
+                if (it.name == memoName) processed else it
+            }
+            val updatedComments = _uiState.value.selectedMemoComments.map {
+                if (it.name == memoName) processed else it
+            }
+            
+            _uiState.value = _uiState.value.copy(
+                memos = updatedMemos,
+                exploreMemos = updatedExploreMemos,
+                selectedMemoComments = updatedComments,
+                selectedMemo = if (_uiState.value.selectedMemo?.name == memoName) processed else _uiState.value.selectedMemo
+            )
+        } catch (e: Exception) {
+            Log.e("MemosViewModel", "Error refreshing memo after reaction", e)
+        }
+    }
+
     fun updateAttachmentCellWidth(width: Float) {
         viewModelScope.launch {
             dataStoreManager.saveAttachmentCellWidth(width)

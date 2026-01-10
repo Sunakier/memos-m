@@ -3,6 +3,7 @@ package org.example.memosm.ui
 import android.content.Intent
 import android.net.Uri
 import android.text.format.DateUtils
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -11,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.AddReaction
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,19 +42,24 @@ import org.example.memosm.model.User
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MemoItem(
     memo: Memo,
     user: User? = null,
+    currentUser: User? = null,
     token: String,
     colors: CardColors = CardDefaults.cardColors(),
     onClick: (() -> Unit)? = null,
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
+    onUpsertReaction: ((String) -> Unit)? = null,
+    onDeleteReaction: ((String) -> Unit)? = null,
     maxHeight: Dp = Dp.Unspecified,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var showReactionPicker by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     val unknownTime = stringResource(R.string.memo_unknown_time)
@@ -156,7 +163,7 @@ fun MemoItem(
                     }
                 }
 
-                if (onEdit != null || onDelete != null) {
+                if (onEdit != null || onDelete != null || onUpsertReaction != null) {
                     Box {
                         IconButton(
                             onClick = { showMenu = true }, modifier = Modifier.size(32.dp)
@@ -169,6 +176,18 @@ fun MemoItem(
                         }
                         DropdownMenu(
                             expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            if (onUpsertReaction != null) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.memo_action_add_reaction)) },
+                                    onClick = {
+                                        showMenu = false
+                                        showReactionPicker = true
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Outlined.AddReaction, contentDescription = null)
+                                    }
+                                )
+                            }
                             if (onEdit != null) {
                                 DropdownMenuItem(text = { Text(stringResource(R.string.memo_action_edit)) }, onClick = {
                                     showMenu = false
@@ -331,6 +350,121 @@ fun MemoItem(
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+
+                // Reactions
+                val reactions = remember(memo.reactions) {
+                    memo.reactions ?: emptyList()
+                }
+                if (reactions.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val groupedReactions = remember(reactions) {
+                        reactions.groupBy { it.reactionType }
+                    }
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        groupedReactions.forEach { (type, reactionList) ->
+                            val myReaction = reactionList.find { it.creator == currentUser?.name }
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (myReaction != null) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                },
+                                border = if (myReaction != null) {
+                                    null
+                                } else {
+                                    null
+                                },
+                                onClick = {
+                                    if (myReaction != null) {
+                                        onDeleteReaction?.invoke(myReaction.name ?: "")
+                                    } else {
+                                        onUpsertReaction?.invoke(type)
+                                    }
+                                }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = type,
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = reactionList.size.toString(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (myReaction != null) {
+                                            MaterialTheme.colorScheme.onPrimaryContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showReactionPicker) {
+        ReactionPickerDialog(
+            onDismiss = { showReactionPicker = false },
+            onReactionSelected = { emoji ->
+                onUpsertReaction?.invoke(emoji)
+                showReactionPicker = false
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReactionPickerDialog(
+    onDismiss: () -> Unit,
+    onReactionSelected: (String) -> Unit
+) {
+    val commonEmojis = listOf("👍", "👎", "❤️", "🔥", "🥰", "👏", "😄", "🤔", "🥳", "👀", "😕", "😢", "😡", "\uD83D\uDE2D")
+    
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp, start = 16.dp, end = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = stringResource(R.string.memo_action_add_reaction),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                commonEmojis.forEach { emoji ->
+                    Surface(
+                        onClick = { onReactionSelected(emoji) },
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(text = emoji, style = MaterialTheme.typography.headlineMedium)
                         }
                     }
                 }

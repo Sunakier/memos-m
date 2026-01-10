@@ -238,10 +238,8 @@ private fun MemosListPane(
                 item {
                     if (uiState.isDraftLoaded) {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .padding(top = 16.dp), contentAlignment = Alignment.Center
+                            modifier = Modifier.fillMaxWidth(), 
+                            contentAlignment = Alignment.Center
                         ) {
                             Card(modifier = Modifier.widthIn(max = 800.dp)) {
                                 // Key the composer by whether a draft exists. 
@@ -313,8 +311,7 @@ private fun MemosListPane(
                                         drawRect(brush = endGradient, blendMode = BlendMode.DstIn)
                                     }
                                 },
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(sortedTags, key = { it }) { tag ->
                                 val count = tagMap[tag] ?: 0
@@ -377,26 +374,36 @@ private fun MemosListPane(
                 } else {
                     items(uiState.memos, key = { it.name ?: it.content.hashCode() }) { memo ->
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             contentAlignment = Alignment.Center
                         ) {
                             val isOwner = memo.creator == uiState.user?.name
                             MemoItem(
-                                memo = memo, user = null, // Profile pic removed from Memos tab
-                                token = uiState.token, colors = if (memo == uiState.selectedMemo) {
+                                memo = memo,
+                                user = null, // Profile pic removed from Memos tab
+                                currentUser = uiState.user,
+                                token = uiState.token,
+                                colors = if (memo == uiState.selectedMemo) {
                                     CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                                 } else {
                                     CardDefaults.cardColors()
-                                }, onClick = {
+                                },
+                                onClick = {
                                     focusManager.clearFocus()
                                     onMemoClick(memo)
-                                }, onEdit = if (isOwner) {
+                                },
+                                onEdit = if (isOwner) {
                                     { memoToEdit = memo }
-                                } else null, onDelete = if (isOwner) {
+                                } else null,
+                                onDelete = if (isOwner) {
                                     { memoToDelete = memo }
                                 } else null,
+                                onUpsertReaction = { emoji ->
+                                    viewModel.upsertMemoReaction(memo, emoji)
+                                },
+                                onDeleteReaction = { reactionName ->
+                                    viewModel.deleteMemoReaction(memo, reactionName)
+                                },
                                 maxHeight = 400.dp,
                                 modifier = Modifier.widthIn(max = 800.dp))
                         }
