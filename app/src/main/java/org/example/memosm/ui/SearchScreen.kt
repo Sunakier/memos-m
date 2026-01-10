@@ -76,24 +76,24 @@ fun MemoSearchBar(
     LaunchedEffect(query, searchSelectedTags, startDateMillis, endDateMillis, expanded) {
         if (expanded) {
             val filters = mutableListOf<String>()
-            
+
             if (query.isNotBlank()) {
                 filters.add("content.contains(\"$query\")")
             }
-            
+
             searchSelectedTags.forEach { tag ->
                 filters.add("tag in [\"$tag\"]")
             }
-            
+
             if (startDateMillis != null) {
                 filters.add("created_ts >= ${startDateMillis!! / 1000}")
             }
-            
+
             if (endDateMillis != null) {
                 // End date inclusive: add one day minus one second
                 filters.add("created_ts < ${(endDateMillis!! + 86400000L) / 1000}")
             }
-            
+
             val filterString = if (filters.isEmpty()) null else filters.joinToString(" && ")
             viewModel.prepareSearch(isExplore, filterString)
         }
@@ -182,50 +182,42 @@ private fun SearchResultContent(
 
     if (showStartDatePicker) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = startDateMillis)
-        DatePickerDialog(
-            onDismissRequest = { showStartDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    onStartDateSelected(datePickerState.selectedDateMillis)
-                    showStartDatePicker = false
-                }) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    onStartDateSelected(null)
-                    showStartDatePicker = false
-                }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
+        DatePickerDialog(onDismissRequest = { showStartDatePicker = false }, confirmButton = {
+            TextButton(onClick = {
+                onStartDateSelected(datePickerState.selectedDateMillis)
+                showStartDatePicker = false
+            }) {
+                Text(stringResource(android.R.string.ok))
             }
-        ) {
+        }, dismissButton = {
+            TextButton(onClick = {
+                onStartDateSelected(null)
+                showStartDatePicker = false
+            }) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        }) {
             DatePicker(state = datePickerState)
         }
     }
 
     if (showEndDatePicker) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = endDateMillis)
-        DatePickerDialog(
-            onDismissRequest = { showEndDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    onEndDateSelected(datePickerState.selectedDateMillis)
-                    showEndDatePicker = false
-                }) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    onEndDateSelected(null)
-                    showEndDatePicker = false
-                }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
+        DatePickerDialog(onDismissRequest = { showEndDatePicker = false }, confirmButton = {
+            TextButton(onClick = {
+                onEndDateSelected(datePickerState.selectedDateMillis)
+                showEndDatePicker = false
+            }) {
+                Text(stringResource(android.R.string.ok))
             }
-        ) {
+        }, dismissButton = {
+            TextButton(onClick = {
+                onEndDateSelected(null)
+                showEndDatePicker = false
+            }) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        }) {
             DatePicker(state = datePickerState)
         }
     }
@@ -242,16 +234,16 @@ private fun SearchResultContent(
             }
 
             val detailUiState by viewModel.uiState.collectAsState()
-            
+
             MemoDetailPane(
                 memo = memo,
                 comments = detailUiState.selectedMemoComments,
                 isLoadingComments = detailUiState.isLoadingComments,
                 token = detailUiState.token,
                 showBackButton = true,
-                onBack = { 
+                onBack = {
                     viewModel.clearSelectedMemo()
-                    detailMemo = null 
+                    detailMemo = null
                 },
                 viewModel = viewModel,
                 modifier = Modifier.fillMaxSize()
@@ -369,8 +361,12 @@ private fun SearchResultContent(
                                         border = FilterChipDefaults.filterChipBorder(
                                             enabled = true,
                                             selected = isSelected,
-                                            borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                            selectedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                            borderColor = MaterialTheme.colorScheme.outline.copy(
+                                                alpha = 0.5f
+                                            ),
+                                            selectedBorderColor = MaterialTheme.colorScheme.primary.copy(
+                                                alpha = 0.5f
+                                            ),
                                             borderWidth = 0.5.dp,
                                             selectedBorderWidth = 0.5.dp
                                         )
@@ -405,7 +401,9 @@ private fun SearchResultContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (query.isBlank() && selectedTags.isEmpty() && startDateMillis == null && endDateMillis == null) stringResource(R.string.memo_search_hint)
+                        text = if (query.isBlank() && selectedTags.isEmpty() && startDateMillis == null && endDateMillis == null) stringResource(
+                            R.string.memo_search_hint
+                        )
                         else stringResource(R.string.memo_search_no_results),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -420,7 +418,7 @@ private fun SearchResultContent(
                         user = uiState.users[memo.creator],
                         currentUser = uiState.user,
                         token = uiState.token,
-                        onClick = { 
+                        onClick = {
                             detailMemo = memo
                             onMemoClick(memo)
                         })
@@ -440,12 +438,9 @@ private fun DateSelectorCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
+        modifier = modifier, colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        ),
-        shape = RoundedCornerShape(12.dp),
-        onClick = onClick
+        ), shape = RoundedCornerShape(12.dp), onClick = onClick
     ) {
         Row(
             modifier = Modifier
@@ -462,7 +457,9 @@ private fun DateSelectorCard(
                 )
                 val dateText = remember(dateMillis) {
                     if (dateMillis != null) {
-                        SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(dateMillis))
+                        SimpleDateFormat(
+                            "MMM dd, yyyy", Locale.getDefault()
+                        ).format(Date(dateMillis))
                     } else {
                         "Any"
                     }
@@ -475,8 +472,7 @@ private fun DateSelectorCard(
             }
             if (dateMillis != null) {
                 IconButton(
-                    onClick = onClear,
-                    modifier = Modifier.size(20.dp)
+                    onClick = onClear, modifier = Modifier.size(20.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
