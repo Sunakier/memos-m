@@ -219,8 +219,8 @@ private fun MemosListPane(
                             Card(modifier = Modifier.widthIn(max = 800.dp)) {
                                 MemoComposer(
                                     onPublish = { content, visibility, attachments ->
-                                    viewModel.createMemo(content, visibility, attachments)
-                                },
+                                        viewModel.createMemo(content, visibility, attachments)
+                                    },
                                     onUploadFile = { uri, context ->
                                         viewModel.uploadAttachment(uri, context)
                                     },
