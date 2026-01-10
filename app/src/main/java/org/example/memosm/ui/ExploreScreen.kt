@@ -166,9 +166,19 @@ private fun ExploreMemosListPane(
         }
     }
 
+    var isManualRefreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.isExploring) {
+        if (!uiState.isExploring) {
+            isManualRefreshing = false
+        }
+    }
+
     PullToRefreshBox(
-        isRefreshing = uiState.isExploring && uiState.exploreMemos.isNotEmpty(),
-        onRefresh = { viewModel.fetchExplore(refresh = true) },
+        isRefreshing = isManualRefreshing,
+        onRefresh = {
+            isManualRefreshing = true
+            viewModel.fetchExplore(refresh = true)
+        },
         modifier = modifier
             .fillMaxSize()
             .pointerInput(Unit) {
@@ -177,7 +187,7 @@ private fun ExploreMemosListPane(
                 })
             }
     ) {
-        if (uiState.isExploring && uiState.exploreMemos.isEmpty()) {
+        if (uiState.isExploring && uiState.exploreMemos.isEmpty() && !isManualRefreshing) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else if (uiState.error != null && uiState.exploreMemos.isEmpty()) {
             Column(

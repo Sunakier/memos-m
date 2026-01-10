@@ -194,9 +194,19 @@ private fun MemosListPane(
         }
     }
 
+    var isManualRefreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.isLoading) {
+        if (!uiState.isLoading) {
+            isManualRefreshing = false
+        }
+    }
+
     PullToRefreshBox(
-        isRefreshing = uiState.isLoading && uiState.memos.isNotEmpty(),
-        onRefresh = { viewModel.refreshAll() },
+        isRefreshing = isManualRefreshing,
+        onRefresh = {
+            isManualRefreshing = true
+            viewModel.refreshAll()
+        },
         modifier = modifier
             .fillMaxSize()
             .pointerInput(Unit) {
@@ -204,7 +214,7 @@ private fun MemosListPane(
                     focusManager.clearFocus()
                 })
             }) {
-        if (uiState.isLoading && uiState.memos.isEmpty()) {
+        if (uiState.isLoading && uiState.memos.isEmpty() && !isManualRefreshing) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else {
             LazyColumn(
@@ -232,8 +242,8 @@ private fun MemosListPane(
                                 key(uiState.draftMemo == null) {
                                     MemoComposer(
                                         onPublish = { content, visibility, attachments ->
-                                            viewModel.createMemo(content, visibility, attachments)
-                                        },
+                                        viewModel.createMemo(content, visibility, attachments)
+                                    },
                                         onUploadFile = { uri, context ->
                                             viewModel.uploadAttachment(uri, context)
                                         },

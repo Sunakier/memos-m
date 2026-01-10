@@ -69,9 +69,19 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
         }
     }
 
+    var isManualRefreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.isFetchingAttachments) {
+        if (!uiState.isFetchingAttachments) {
+            isManualRefreshing = false
+        }
+    }
+
     PullToRefreshBox(
-        isRefreshing = uiState.isFetchingAttachments && uiState.attachments.isNotEmpty(),
-        onRefresh = { viewModel.fetchAttachments(loadMore = false) },
+        isRefreshing = isManualRefreshing,
+        onRefresh = {
+            isManualRefreshing = true
+            viewModel.fetchAttachments(loadMore = false)
+        },
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
@@ -111,9 +121,9 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                         }
                     }
                 }) {
-            if (uiState.attachments.isEmpty() && uiState.isFetchingAttachments) {
+            if (uiState.attachments.isEmpty() && uiState.isFetchingAttachments && !isManualRefreshing) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else if (uiState.attachments.isEmpty()) {
+            } else if (uiState.attachments.isEmpty() && !uiState.isFetchingAttachments) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No attachments found")
                 }
