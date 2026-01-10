@@ -33,8 +33,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
@@ -153,7 +151,6 @@ fun MemoSearchBar(
                 availableTags = availableTags,
                 filteredMemos = uiState.searchMemos,
                 uiState = uiState,
-                viewModel = viewModel,
                 onTagClick = { tag ->
                     searchSelectedTags = if (tag in searchSelectedTags) {
                         searchSelectedTags - tag
@@ -182,7 +179,6 @@ private fun SearchResultContent(
     availableTags: Map<String, Int>,
     filteredMemos: List<Memo>,
     uiState: org.example.memosm.viewmodel.MemosUiState,
-    viewModel: MemosViewModel,
     onTagClick: (String) -> Unit,
     onStartDateSelected: (Long?) -> Unit,
     onEndDateSelected: (Long?) -> Unit,
@@ -191,7 +187,6 @@ private fun SearchResultContent(
 ) {
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
-    var detailMemo by remember { mutableStateOf<Memo?>(null) }
     var showSortMenu by remember { mutableStateOf(false) }
 
     if (showStartDatePicker) {
@@ -233,33 +228,6 @@ private fun SearchResultContent(
             }
         }) {
             DatePicker(state = datePickerState)
-        }
-    }
-
-    detailMemo?.let { memo ->
-        Dialog(
-            onDismissRequest = { detailMemo = null },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            LaunchedEffect(memo) {
-                viewModel.selectMemo(memo)
-            }
-
-            val detailUiState by viewModel.uiState.collectAsState()
-
-            MemoDetailPane(
-                memo = memo,
-                comments = detailUiState.selectedMemoComments,
-                isLoadingComments = detailUiState.isLoadingComments,
-                token = detailUiState.token,
-                showBackButton = true,
-                onBack = {
-                    viewModel.clearSelectedMemo()
-                    detailMemo = null
-                },
-                viewModel = viewModel,
-                modifier = Modifier.fillMaxSize()
-            )
         }
     }
 
@@ -425,7 +393,8 @@ private fun SearchResultContent(
                             modifier = Modifier
                                 .padding(horizontal = 12.dp, vertical = 8.dp)
                                 .widthIn(min = 160.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Icon(
                                 imageVector = sortIcon,
                                 contentDescription = null,
@@ -504,7 +473,6 @@ private fun SearchResultContent(
                         currentUser = uiState.user,
                         token = uiState.token,
                         onClick = {
-                            detailMemo = memo
                             onMemoClick(memo)
                         })
                 }

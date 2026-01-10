@@ -79,7 +79,8 @@ fun MemosListScreen(viewModel: MemosViewModel) {
             val selectedId =
                 uiState.selectedMemo?.let { it.name ?: it.content.hashCode().toString() }
             if (currentMemoKey.id != selectedId) {
-                val memo = uiState.memos.find {
+                val pool = if (currentMemoKey.fromSearch) uiState.searchMemos else uiState.memos
+                val memo = pool.find {
                     (it.name ?: it.content.hashCode().toString()) == currentMemoKey.id
                 }
                 if (memo != null) {
@@ -122,9 +123,9 @@ fun MemosListScreen(viewModel: MemosViewModel) {
 
     val isDetailVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
     val isListVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
-    val isFullScreenDetail = isDetailVisible && !isListVisible
+    val isDualPane = isListVisible && isDetailVisible
 
-    val showSearchBar = !isFullScreenDetail && (!isScrollingDown || listState.firstVisibleItemIndex == 0)
+    val showSearchBar = !isDualPane && (!isScrollingDown || listState.firstVisibleItemIndex == 0)
 
     Box(modifier = Modifier.fillMaxSize()) {
         NavigableListDetailPaneScaffold(
@@ -147,9 +148,9 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                             })
 
                         // Overlay SearchBar on the list pane for tablets (dual pane)
-                        if (isListVisible && isDetailVisible) {
+                        if (isDualPane) {
                             AnimatedVisibility(
-                                visible = showSearchBar,
+                                visible = !isScrollingDown || listState.firstVisibleItemIndex == 0,
                                 enter = slideInVertically { -it } + fadeIn(),
                                 exit = slideOutVertically { -it } + fadeOut(),
                                 modifier = Modifier.align(Alignment.TopCenter)
@@ -161,7 +162,7 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                                         scope.launch {
                                             val id = memo.name ?: memo.content.hashCode().toString()
                                             navigator.navigateTo(
-                                                ListDetailPaneScaffoldRole.Detail, MemoKey(id)
+                                                ListDetailPaneScaffoldRole.Detail, MemoKey(id, fromSearch = true)
                                             )
                                         }
                                     }
@@ -174,7 +175,6 @@ fun MemosListScreen(viewModel: MemosViewModel) {
             detailPane = {
                 AnimatedPane {
                     val currentMemoKey = navigator.currentDestination?.contentKey
-                    val isDualPane = isListVisible && isDetailVisible
 
                     AnimatedContent(
                         targetState = currentMemoKey, transitionSpec = {
@@ -202,9 +202,10 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                             }
                         }, label = "DetailPaneTransition"
                     ) { memoKey ->
-                        val memo = remember(memoKey, uiState.memos) {
+                        val memo = remember(memoKey, uiState.memos, uiState.searchMemos) {
                             memoKey?.let { key ->
-                                uiState.memos.find {
+                                val pool = if (key.fromSearch) uiState.searchMemos else uiState.memos
+                                pool.find {
                                     (it.name ?: it.content.hashCode().toString()) == key.id
                                 }
                             }
@@ -233,7 +234,7 @@ fun MemosListScreen(viewModel: MemosViewModel) {
             })
 
         // Overlay M3 SearchBar globally for mobile (single pane)
-        if (!(isListVisible && isDetailVisible)) {
+        if (!isDualPane) {
             AnimatedVisibility(
                 visible = showSearchBar,
                 enter = slideInVertically { -it } + fadeIn(),
@@ -247,7 +248,7 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                         scope.launch {
                             val id = memo.name ?: memo.content.hashCode().toString()
                             navigator.navigateTo(
-                                ListDetailPaneScaffoldRole.Detail, MemoKey(id)
+                                ListDetailPaneScaffoldRole.Detail, MemoKey(id, fromSearch = true)
                             )
                         }
                     }

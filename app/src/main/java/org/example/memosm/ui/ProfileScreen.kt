@@ -1,5 +1,6 @@
 package org.example.memosm.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -270,8 +271,9 @@ fun TagsCard(tagCount: Map<String, Int>) {
                     tagCount.forEach { (tag, count) ->
                         Surface(
                             shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -287,7 +289,7 @@ fun TagsCard(tagCount: Map<String, Int>) {
                                     Text(
                                         text = count.toString(),
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
                                             alpha = 0.7f
                                         )
                                     )
