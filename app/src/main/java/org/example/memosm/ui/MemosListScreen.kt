@@ -196,21 +196,6 @@ private fun MemosListPane(
     ) {
         if (uiState.isLoading && uiState.memos.isEmpty()) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-        } else if (uiState.error != null && uiState.memos.isEmpty()) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = uiState.error!!,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(16.dp)
-                )
-                Button(onClick = { viewModel.refreshAll() }) {
-                    Text("Retry")
-                }
-            }
         } else {
             LazyColumn(
                 state = listState,
@@ -221,7 +206,7 @@ private fun MemosListPane(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Top input card
+                // Top input card - Show even if there is an error
                 item {
                     if (uiState.isDraftLoaded) {
                         Box(
@@ -242,7 +227,8 @@ private fun MemosListPane(
                                         onDraftChanged = { content, visibility, attachments ->
                                             viewModel.saveDraft(content, visibility, attachments)
                                         },
-                                        availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
+                                        availableTags = uiState.userStats?.tagCount?.keys
+                                            ?: emptySet(),
                                         token = uiState.token,
                                         modifier = Modifier.padding(16.dp),
                                         isPosting = uiState.isPosting,
@@ -259,37 +245,58 @@ private fun MemosListPane(
                     }
                 }
 
-                items(uiState.memos, key = { it.name ?: it.content.hashCode() }) { memo ->
-                    Box(
-                        modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
-                    ) {
-                        val isOwner = memo.creator == uiState.user?.name
-                        MemoItem(
-                            memo = memo, user = null, // Profile pic removed from Memos tab
-                            token = uiState.token, colors = if (memo == uiState.selectedMemo) {
-                                CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                            } else {
-                                CardDefaults.cardColors()
-                            }, onClick = {
-                                focusManager.clearFocus()
-                                onMemoClick(memo)
-                            }, onEdit = if (isOwner) {
-                                { memoToEdit = memo }
-                            } else null, onDelete = if (isOwner) {
-                                { memoToDelete = memo }
-                            } else null, modifier = Modifier.widthIn(max = 800.dp))
-                    }
-                }
-
-                if (uiState.isLoading && uiState.memos.isNotEmpty()) {
+                if (uiState.error != null && uiState.memos.isEmpty()) {
                     item {
-                        Box(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
+                                .padding(vertical = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            CircularProgressIndicator()
+                            Text(
+                                text = uiState.error!!,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                            Button(onClick = { viewModel.refreshAll() }) {
+                                Text("Retry")
+                            }
+                        }
+                    }
+                } else {
+                    items(uiState.memos, key = { it.name ?: it.content.hashCode() }) { memo ->
+                        Box(
+                            modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
+                        ) {
+                            val isOwner = memo.creator == uiState.user?.name
+                            MemoItem(
+                                memo = memo, user = null, // Profile pic removed from Memos tab
+                                token = uiState.token, colors = if (memo == uiState.selectedMemo) {
+                                    CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                                } else {
+                                    CardDefaults.cardColors()
+                                }, onClick = {
+                                    focusManager.clearFocus()
+                                    onMemoClick(memo)
+                                }, onEdit = if (isOwner) {
+                                    { memoToEdit = memo }
+                                } else null, onDelete = if (isOwner) {
+                                    { memoToDelete = memo }
+                                } else null, modifier = Modifier.widthIn(max = 800.dp))
+                        }
+                    }
+
+                    if (uiState.isLoading && uiState.memos.isNotEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
                         }
                     }
                 }

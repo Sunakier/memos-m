@@ -179,6 +179,21 @@ private fun ExploreMemosListPane(
     ) {
         if (uiState.isExploring && uiState.exploreMemos.isEmpty()) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        } else if (uiState.error != null && uiState.exploreMemos.isEmpty()) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = uiState.error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(16.dp)
+                )
+                Button(onClick = { viewModel.fetchExplore(refresh = true) }) {
+                    Text("Retry")
+                }
+            }
         } else {
             LazyColumn(
                 state = listState,
