@@ -99,6 +99,10 @@ dependencies {
     implementation(libs.protobuf.kotlin.lite)
     implementation(libs.google.play.services.location)
 
+    implementation(libs.multiplatform.markdown.renderer.android)
+    implementation(libs.multiplatform.markdown.renderer.m3)
+    implementation(libs.multiplatform.markdown.renderer.coil2)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

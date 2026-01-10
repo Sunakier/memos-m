@@ -17,6 +17,7 @@ lifecycleViewmodelCompose = "2.10.0"
 datastore = "1.2.0"
 coil = "2.7.0"
 playServicesLocation = "21.3.0"
+multiplatformMarkdownRenderer = "0.39.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -48,6 +49,9 @@ retrofit-protobuf = { group = "com.squareup.retrofit2", name = "converter-protob
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
 protobuf-kotlin-lite = { group = "com.google.protobuf", name = "protobuf-kotlin-lite", version.ref = "protobuf" }
 google-play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+multiplatform-markdown-renderer-android = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-android", version.ref = "multiplatformMarkdownRenderer" }
+multiplatform-markdown-renderer-m3 = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-m3", version.ref = "multiplatformMarkdownRenderer" }
+multiplatform-markdown-renderer-coil2 = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-coil2", version.ref = "multiplatformMarkdownRenderer" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -24,6 +24,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
+import com.mikepenz.markdown.m3.Markdown
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User
 import java.text.SimpleDateFormat
@@ -188,7 +190,11 @@ fun MemoItem(
             Spacer(modifier = Modifier.height(if (user != null) 10.dp else 2.dp))
 
             Column(modifier = Modifier.padding(start = 4.dp, end = 8.dp)) {
-                Text(text = memo.content, style = MaterialTheme.typography.bodyLarge)
+                Markdown(
+                    content = memo.content,
+                    imageTransformer = Coil2ImageTransformerImpl,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 memo.location?.let { loc ->
 //                    Spacer(modifier = Modifier.height(6.dp))
