@@ -28,6 +28,7 @@ import java.io.InputStream
 data class MemosUiState(
     val memos: List<Memo> = emptyList(),
     val exploreMemos: List<Memo> = emptyList(),
+    val searchMemos: List<Memo> = emptyList(),
     val attachments: List<Attachment> = emptyList(),
     val user: User? = null,
     val users: Map<String, User> = emptyMap(), // Cache for users in explore
@@ -38,6 +39,7 @@ data class MemosUiState(
     val instanceProfile: InstanceProfile? = null,
     val isLoading: Boolean = false,
     val isExploring: Boolean = false,
+    val isSearching: Boolean = false,
     val isPosting: Boolean = false,
     val isFetchingAttachments: Boolean = false,
     val error: String? = null,
@@ -453,6 +455,47 @@ class MemosViewModel(
                     isExploring = false,
                     isRefreshing = if (refresh && updateRefreshingState) false else _uiState.value.isRefreshing
                 )
+            }
+        }
+    }
+
+    fun prepareSearch(isExplore: Boolean) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isSearching = true, searchMemos = emptyList())
+            try {
+                // Fetch a larger set for searching
+                val filter = if (isExplore) "visibility in ['PUBLIC', 'PROTECTED']" else null
+                val response = api.listMemos(filter = filter, pageSize = 200) // Fetch up to 200 for local search
+                val searchMemos = response.memos?.map { processMemo(it) } ?: emptyList()
+                
+                _uiState.value = _uiState.value.copy(
+                    searchMemos = searchMemos,
+                    isSearching = false
+                )
+                
+                // Fetch user info for creators in search results if explore
+                if (isExplore) {
+                    val unknownCreators = searchMemos
+                        .mapNotNull { it.creator }
+                        .filter { it !in _uiState.value.users }
+                        .distinct()
+                    
+                    unknownCreators.forEach { creatorName ->
+                        try {
+                            val userId = creatorName.removePrefix("users/")
+                            val user = api.getUser(userId)
+                            val processedUser = processUser(user)
+                            _uiState.value = _uiState.value.copy(
+                                users = _uiState.value.users + (creatorName to processedUser)
+                            )
+                        } catch (e: Exception) {
+                            Log.e("MemosViewModel", "Error fetching user $creatorName for search", e)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error preparing search", e)
+                _uiState.value = _uiState.value.copy(isSearching = false)
             }
         }
     }

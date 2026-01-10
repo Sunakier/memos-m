@@ -192,6 +192,7 @@ fun ExploreScreen(viewModel: MemosViewModel) {
         ) {
             MemoSearchBar(
                 viewModel = viewModel,
+                isExplore = true,
                 onMemoClick = { memo ->
                     focusManager.clearFocus()
                     scope.launch {
