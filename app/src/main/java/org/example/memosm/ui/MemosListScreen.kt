@@ -259,7 +259,7 @@ private fun MemosListPane(
                                         availableTags = uiState.userStats?.tagCount?.keys
                                             ?: emptySet(),
                                         token = uiState.token,
-                                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
+                                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp),
                                         isPosting = uiState.isPosting,
                                         initialContent = uiState.draftMemo?.content ?: "",
                                         initialAttachments = uiState.draftMemo?.attachments
