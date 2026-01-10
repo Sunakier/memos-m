@@ -409,6 +409,21 @@ private fun MemosListPane(
                                 CircularProgressIndicator()
                             }
                         }
+                    } else if (!uiState.isLoading && uiState.nextPageToken == null && uiState.memos.isNotEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp, horizontal = 16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "You've reached the end",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
+                        }
                     }
                 }
             }
