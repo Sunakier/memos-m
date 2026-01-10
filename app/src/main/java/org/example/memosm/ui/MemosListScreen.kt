@@ -220,7 +220,10 @@ private fun MemosListPane(
                 item {
                     if (uiState.isDraftLoaded) {
                         Box(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 16.dp), contentAlignment = Alignment.Center
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .padding(top = 16.dp), contentAlignment = Alignment.Center
                         ) {
                             Card(modifier = Modifier.widthIn(max = 800.dp)) {
                                 // Key the composer by whether a draft exists. 
@@ -229,8 +232,8 @@ private fun MemosListPane(
                                 key(uiState.draftMemo == null) {
                                     MemoComposer(
                                         onPublish = { content, visibility, attachments ->
-                                        viewModel.createMemo(content, visibility, attachments)
-                                    },
+                                            viewModel.createMemo(content, visibility, attachments)
+                                        },
                                         onUploadFile = { uri, context ->
                                             viewModel.uploadAttachment(uri, context)
                                         },
@@ -257,28 +260,32 @@ private fun MemosListPane(
 
                 // Horizontal Tag Row - Edge to edge with fading hint
                 val tagMap = uiState.userStats?.tagCount ?: emptyMap()
-                if (tagMap.isNotEmpty()) {
-                    item {
+                item(key = "tag_row") {
+                    AnimatedVisibility(
+                        visible = tagMap.isNotEmpty(),
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
                         val sortedTags = remember(tagMap) {
                             tagMap.keys.toList().sortedByDescending { tagMap[it] ?: 0 }
                         }
-                        
+
                         LazyRow(
                             state = tagListState,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
-                                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                .graphicsLayer {
+                                    compositingStrategy = CompositingStrategy.Offscreen
+                                }
                                 .drawWithContent {
                                     drawContent()
                                     // Fading edge hint - more aggressive (15% fade)
                                     val startGradient = Brush.horizontalGradient(
-                                        0f to Color.Transparent,
-                                        0.15f to Color.Black
+                                        0f to Color.Transparent, 0.15f to Color.Black
                                     )
                                     val endGradient = Brush.horizontalGradient(
-                                        0.85f to Color.Black,
-                                        1f to Color.Transparent
+                                        0.85f to Color.Black, 1f to Color.Transparent
                                     )
                                     if (tagListState.canScrollBackward) {
                                         drawRect(brush = startGradient, blendMode = BlendMode.DstIn)
@@ -290,13 +297,13 @@ private fun MemosListPane(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             contentPadding = PaddingValues(horizontal = 16.dp)
                         ) {
-                            items(sortedTags) { tag ->
+                            items(sortedTags, key = { it }) { tag ->
                                 val count = tagMap[tag] ?: 0
                                 val isSelected = tag in uiState.selectedTags
                                 FilterChip(
                                     selected = isSelected,
                                     onClick = { viewModel.toggleTagFilter(tag) },
-                                    label = { 
+                                    label = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text("#$tag")
                                             if (count > 0) {
@@ -304,10 +311,12 @@ private fun MemosListPane(
                                                 Text(
                                                     text = count.toString(),
                                                     style = MaterialTheme.typography.labelSmall,
-                                                    color = if (isSelected) 
-                                                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                                                    else 
-                                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(
+                                                        alpha = 0.7f
+                                                    )
+                                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                        alpha = 0.7f
+                                                    )
                                                 )
                                             }
                                         }
@@ -321,8 +330,7 @@ private fun MemosListPane(
                                                 modifier = Modifier.size(16.dp)
                                             )
                                         }
-                                    } else null
-                                )
+                                    } else null)
                             }
                         }
                     }
@@ -350,7 +358,10 @@ private fun MemosListPane(
                 } else {
                     items(uiState.memos, key = { it.name ?: it.content.hashCode() }) { memo ->
                         Box(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), contentAlignment = Alignment.Center
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             val isOwner = memo.creator == uiState.user?.name
                             MemoItem(
