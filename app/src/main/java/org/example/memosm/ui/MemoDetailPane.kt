@@ -70,12 +70,14 @@ fun MemoDetailPane(
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             }, floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { showCommentDialog = true },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add Comment")
+                if (uiState.user != null) {
+                    FloatingActionButton(
+                        onClick = { showCommentDialog = true },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = "Add Comment")
+                    }
                 }
             }, containerColor = Color.Transparent, modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
@@ -98,6 +100,7 @@ fun MemoDetailPane(
                     item(key = "original_${memo.name ?: memo.content.hashCode()}") {
                         MemoItem(
                             memo = memo,
+                            user = uiState.users[memo.creator],
                             token = token,
                             colors = CardDefaults.cardColors(),
                             onEdit = if (isOwner) {
@@ -168,7 +171,10 @@ fun MemoDetailPane(
                         key = { "comment_${it.name ?: it.content.hashCode()}" }) { comment ->
                         val isCommentOwner = comment.creator == uiState.user?.name
                         MemoItem(
-                            memo = comment, token = token, colors = CardDefaults.cardColors(
+                            memo = comment,
+                            user = uiState.users[comment.creator],
+                            token = token,
+                            colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
                             ), onEdit = if (isCommentOwner) {
                                 { memoToEdit = comment }
