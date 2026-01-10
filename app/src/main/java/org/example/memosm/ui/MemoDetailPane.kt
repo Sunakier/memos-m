@@ -1,6 +1,5 @@
 package org.example.memosm.ui
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -48,37 +47,37 @@ fun MemoDetailPane(
     ) {
         Scaffold(
             topBar = {
-            TopAppBar(
-                title = {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
-                }
-            },
-                navigationIcon = {
-                    if (showBackButton) {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back"
-                            )
+                TopAppBar(
+                    title = {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            Text("Memo Details", modifier = Modifier.widthIn(max = 600.dp))
                         }
-                    }
-                },
-                windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
-        }, floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showCommentDialog = true },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Add Comment")
-            }
-        }, containerColor = Color.Transparent, modifier = Modifier.fillMaxSize()
+                    },
+                    navigationIcon = {
+                        if (showBackButton) {
+                            IconButton(onClick = onBack) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back"
+                                )
+                            }
+                        }
+                    },
+                    windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            }, floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { showCommentDialog = true },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add Comment")
+                }
+            }, containerColor = Color.Transparent, modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
             Box(
                 modifier = Modifier
@@ -170,12 +169,12 @@ fun MemoDetailPane(
                         val isCommentOwner = comment.creator == uiState.user?.name
                         MemoItem(
                             memo = comment, token = token, colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ), onEdit = if (isCommentOwner) {
-                            { memoToEdit = comment }
-                        } else null, onDelete = if (isCommentOwner) {
-                            { memoToDelete = comment }
-                        } else null)
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            ), onEdit = if (isCommentOwner) {
+                                { memoToEdit = comment }
+                            } else null, onDelete = if (isCommentOwner) {
+                                { memoToDelete = comment }
+                            } else null)
                     }
                 }
             }

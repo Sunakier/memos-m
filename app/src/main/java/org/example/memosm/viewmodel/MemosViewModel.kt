@@ -54,6 +54,7 @@ data class MemosUiState(
     // Draft state
     val draftMemo: Memo? = null,
     val isDraftLoaded: Boolean = false,
+    val composerResetToken: Int = 0,
     // Filter state
     val selectedTags: Set<String> = emptySet()
 )
@@ -472,7 +473,8 @@ class MemosViewModel(
                 _uiState.value = _uiState.value.copy(
                     memos = listOf(processMemo(memo)) + _uiState.value.memos,
                     isPosting = false,
-                    draftMemo = null
+                    draftMemo = null,
+                    composerResetToken = _uiState.value.composerResetToken + 1
                 )
                 dataStoreManager.clearMemoDraft()
                 onSuccess()
