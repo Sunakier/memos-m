@@ -43,6 +43,7 @@
     <string name="memo_action_edit">編集</string>
     <string name="memo_action_delete">削除</string>
     <string name="memo_action_more">メニュー</string>
+    <string name="memo_action_open_web">Webで開く</string>
     <string name="memo_publish">公開</string>
     <string name="memo_list_end">最後まで読み込みました</string>
     <string name="memo_unknown_user">不明</string>
