@@ -338,7 +338,8 @@ private fun MemosListPane(
                                     initialVisibility = uiState.draftMemo?.visibility
                                         ?: uiState.userSettings?.memoVisibility ?: "PRIVATE",
                                     initialLocation = uiState.draftMemo?.location,
-                                    submitLabel = stringResource(R.string.memo_publish)
+                                    submitLabel = stringResource(R.string.memo_publish),
+                                    resetToken = uiState.composerResetToken
                                 )
                             }
                         }

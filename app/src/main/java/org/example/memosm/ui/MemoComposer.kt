@@ -96,19 +96,24 @@ fun MemoComposer(
     placeholder: String = stringResource(R.string.memo_composer_placeholder),
     autoFocus: Boolean = false,
     onDraftChanged: ((String, String, List<Attachment>, Location?) -> Unit)? = null,
-    submitLabel: String? = null
+    submitLabel: String? = null,
+    resetToken: Any? = null
 ) {
-    val contentState = rememberTextFieldState(initialContent)
-    var visibility by remember(initialVisibility) { mutableStateOf(initialVisibility) }
-    var expanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
-    val draftAttachmentsState = remember(initialAttachments) {
+    // We use resetToken to reset the internal state when necessary (e.g. after post or when changing which memo to edit)
+    val contentState = remember(resetToken) { TextFieldState(initialContent) }
+    var visibility by remember(resetToken) { mutableStateOf(initialVisibility) }
+    var location by remember(resetToken) { mutableStateOf(initialLocation) }
+
+    val draftAttachmentsState = remember(resetToken) {
         val initial: List<Pair<Uri, Attachment?>> =
             initialAttachments.map { Uri.EMPTY to (it as Attachment?) }
         mutableStateOf(initial)
     }
     var draftAttachments by draftAttachmentsState
-    var location by remember(initialLocation) { mutableStateOf(initialLocation) }
+
+    var expanded by remember { mutableStateOf(false) }
     var showLocationEditDialog by remember { mutableStateOf(false) }
 
     var isUploadingCount by remember { mutableIntStateOf(0) }
@@ -116,7 +121,6 @@ fun MemoComposer(
     var isFetchingLocation by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
     val density = LocalDensity.current
 
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
@@ -189,8 +193,7 @@ fun MemoComposer(
             val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 MediaRecorder(context)
             } else {
-                @Suppress("DEPRECATION")
-                MediaRecorder()
+                @Suppress("DEPRECATION") MediaRecorder()
             }
 
             recorder.apply {
@@ -288,21 +291,14 @@ fun MemoComposer(
                         }
                     }
 
-//                    Log the mime type for debugging:
-                    Log.d("MemoComposer", "mimeType: $mimeType")
-
-
                     val isImage = mimeType.startsWith(
-                        "image/",
-                        ignoreCase = true
+                        "image/", ignoreCase = true
                     ) || mimeType.contains("image", ignoreCase = true)
                     val isAudio = mimeType.startsWith(
-                        "audio/",
-                        ignoreCase = true
+                        "audio/", ignoreCase = true
                     ) || mimeType.contains("audio", ignoreCase = true)
                     val isVideo = mimeType.startsWith(
-                        "video/",
-                        ignoreCase = true
+                        "video/", ignoreCase = true
                     ) || mimeType.contains("video", ignoreCase = true)
 
                     val audioUrl = remember(uri, attachment) {
@@ -328,9 +324,7 @@ fun MemoComposer(
                             )
                         } else if (isAudio && !audioUrl.isNullOrBlank()) {
                             MiniAudioPlayer(
-                                url = audioUrl,
-                                token = token,
-                                modifier = Modifier.fillMaxSize()
+                                url = audioUrl, token = token, modifier = Modifier.fillMaxSize()
                             )
                         } else {
                             Box(
@@ -345,8 +339,7 @@ fun MemoComposer(
                                         isAudio -> Icons.Outlined.Audiotrack
                                         isVideo -> Icons.Outlined.Videocam
                                         else -> Icons.AutoMirrored.Outlined.InsertDriveFile
-                                    },
-                                    contentDescription = null
+                                    }, contentDescription = null
                                 )
                             }
                         }
@@ -450,8 +443,7 @@ fun MemoComposer(
                         } else {
                             val permission = Manifest.permission.RECORD_AUDIO
                             if (ContextCompat.checkSelfPermission(
-                                    context,
-                                    permission
+                                    context, permission
                                 ) == PackageManager.PERMISSION_GRANTED
                             ) {
                                 startRecording()
@@ -459,9 +451,7 @@ fun MemoComposer(
                                 audioPermissionLauncher.launch(permission)
                             }
                         }
-                    },
-                    enabled = !isPosting,
-                    modifier = Modifier.size(actionButtonSize)
+                    }, enabled = !isPosting, modifier = Modifier.size(actionButtonSize)
                 ) {
                     Icon(
                         imageVector = if (isRecording) Icons.Default.Mic else Icons.Outlined.MicNone,
@@ -571,6 +561,10 @@ fun MemoComposer(
                                 uploadingUris = uploadingUris - uri
                                 if (attachment != null) {
                                     uploadedAttachments.add(attachment)
+                                    // Update local draft state immediately as we upload
+                                    draftAttachments = draftAttachments.map {
+                                        if (it.first == uri) uri to attachment else it
+                                    }
                                 }
                                 isUploadingCount--
                             }
@@ -620,8 +614,7 @@ fun MemoComposer(
             onDismissRequest = { showLocationEditDialog = false },
             title = { Text(stringResource(R.string.memo_composer_edit_location)) },
             text = {
-                @Suppress("LocalVariableName")
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                @Suppress("LocalVariableName") Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = tempPlaceholder,
                         onValueChange = { tempPlaceholder = it },
@@ -678,8 +671,7 @@ fun MiniAudioPlayer(url: String, token: String, modifier: Modifier = Modifier) {
                 .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
         )
         ExoPlayer.Builder(context)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
-            .build()
+            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory)).build()
     }
 
     var isPlaying by remember { mutableStateOf(false) }
