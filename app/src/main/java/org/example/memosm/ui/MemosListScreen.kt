@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -42,6 +43,19 @@ import org.example.memosm.viewmodel.MemosViewModel
 @Composable
 fun MemosListScreen(viewModel: MemosViewModel) {
     val uiState by viewModel.uiState.collectAsState()
+    val listState = rememberLazyListState()
+    val tagListState = rememberLazyListState()
+
+    // Double tap refresh logic: scroll to top
+    // We keep track of the last processed trigger to avoid scrolling to top 
+    // when just navigating back to this screen.
+    var lastProcessedTrigger by remember { mutableLongStateOf(uiState.refreshTrigger) }
+    LaunchedEffect(uiState.refreshTrigger) {
+        if (uiState.refreshTrigger > lastProcessedTrigger) {
+            listState.animateScrollToItem(0)
+        }
+        lastProcessedTrigger = uiState.refreshTrigger
+    }
 
     val scaffoldDirective = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo()).copy(
         defaultPanePreferredWidth = 600.dp
@@ -87,7 +101,10 @@ fun MemosListScreen(viewModel: MemosViewModel) {
     NavigableListDetailPaneScaffold(navigator = navigator, listPane = {
         AnimatedPane {
             MemosListPane(
-                viewModel = viewModel, onMemoClick = { memo ->
+                viewModel = viewModel,
+                listState = listState,
+                tagListState = tagListState,
+                onMemoClick = { memo ->
                     focusManager.clearFocus()
                     scope.launch {
                         val id = memo.name ?: memo.content.hashCode().toString()
@@ -166,23 +183,17 @@ fun MemosListScreen(viewModel: MemosViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MemosListPane(
-    viewModel: MemosViewModel, onMemoClick: (Memo) -> Unit, modifier: Modifier = Modifier
+    viewModel: MemosViewModel,
+    listState: LazyListState,
+    tagListState: LazyListState,
+    onMemoClick: (Memo) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val listState = rememberLazyListState()
-    val tagListState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
-    val scope = rememberCoroutineScope()
 
     var memoToEdit by remember { mutableStateOf<Memo?>(null) }
     var memoToDelete by remember { mutableStateOf<Memo?>(null) }
-
-    // Double tap refresh logic: scroll to top
-    LaunchedEffect(uiState.refreshTrigger) {
-        if (uiState.refreshTrigger > 0L) {
-            listState.animateScrollToItem(0)
-        }
-    }
 
     // Use a SideEffect or LaunchedEffect with listState to trigger loads
     val shouldLoadMore = remember {

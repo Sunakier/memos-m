@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.BrokenImage
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,10 +59,14 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
     )
 
     // Double tap refresh logic: scroll to top
+    // We keep track of the last processed trigger to avoid scrolling to top 
+    // when just navigating back to this screen.
+    var lastProcessedTrigger by rememberSaveable { mutableLongStateOf(uiState.refreshTrigger) }
     LaunchedEffect(uiState.refreshTrigger) {
-        if (uiState.refreshTrigger > 0L) {
+        if (uiState.refreshTrigger > lastProcessedTrigger) {
             listState.animateScrollToItem(0)
         }
+        lastProcessedTrigger = uiState.refreshTrigger
     }
 
     val shouldLoadMore = remember {
