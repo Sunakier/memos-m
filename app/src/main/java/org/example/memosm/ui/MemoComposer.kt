@@ -7,6 +7,8 @@ import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Build
+import android.util.Log
+import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -110,6 +112,7 @@ fun MemoComposer(
     var showLocationEditDialog by remember { mutableStateOf(false) }
 
     var isUploadingCount by remember { mutableIntStateOf(0) }
+    var uploadingUris by remember { mutableStateOf(setOf<Uri>()) }
     var isFetchingLocation by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
@@ -129,32 +132,6 @@ fun MemoComposer(
         if (uris.isNotEmpty()) {
             uris.forEach { uri ->
                 draftAttachments = draftAttachments + (uri to null)
-                isUploadingCount++
-                scope.launch {
-                    val attachment = onUploadFile(uri, context)
-                    if (attachment != null) {
-                        val updated = draftAttachments.map {
-                            if (it.first == uri) uri to attachment else it
-                        }
-                        draftAttachments = updated
-                        onDraftChanged?.invoke(
-                            contentState.text.toString(),
-                            visibility,
-                            updated.mapNotNull { it.second },
-                            location
-                        )
-                    } else {
-                        val updated = draftAttachments.filter { it.first != uri }
-                        draftAttachments = updated
-                        onDraftChanged?.invoke(
-                            contentState.text.toString(),
-                            visibility,
-                            updated.mapNotNull { it.second },
-                            location
-                        )
-                    }
-                    isUploadingCount--
-                }
             }
         }
     }
@@ -198,32 +175,6 @@ fun MemoComposer(
             currentRecordFile?.let { file ->
                 val uri = file.toUri()
                 draftAttachments = draftAttachments + (uri to null)
-                isUploadingCount++
-                scope.launch {
-                    val attachment = onUploadFile(uri, context)
-                    if (attachment != null) {
-                        val updated = draftAttachments.map {
-                            if (it.first == uri) uri to attachment else it
-                        }
-                        draftAttachments = updated
-                        onDraftChanged?.invoke(
-                            contentState.text.toString(),
-                            visibility,
-                            updated.mapNotNull { it.second },
-                            location
-                        )
-                    } else {
-                        val updated = draftAttachments.filter { it.first != uri }
-                        draftAttachments = updated
-                        onDraftChanged?.invoke(
-                            contentState.text.toString(),
-                            visibility,
-                            updated.mapNotNull { it.second },
-                            location
-                        )
-                    }
-                    isUploadingCount--
-                }
             }
         } catch (e: Exception) {
             Toast.makeText(context, "Failed to stop recording", Toast.LENGTH_SHORT).show()
@@ -234,14 +185,14 @@ fun MemoComposer(
         try {
             val file = File(context.cacheDir, "record_${System.currentTimeMillis()}.aac")
             currentRecordFile = file
-            
+
             val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 MediaRecorder(context)
             } else {
                 @Suppress("DEPRECATION")
                 MediaRecorder()
             }
-            
+
             recorder.apply {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
@@ -253,7 +204,8 @@ fun MemoComposer(
             mediaRecorder = recorder
             isRecording = true
         } catch (e: Exception) {
-            Toast.makeText(context, "Failed to start recording: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Failed to start recording: ${e.message}", Toast.LENGTH_SHORT)
+                .show()
         }
     }
 
@@ -273,30 +225,14 @@ fun MemoComposer(
                 try {
                     mediaRecorder?.stop()
                     mediaRecorder?.release()
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
             }
         }
     }
 
-    LaunchedEffect(contentState.text) {
-        onDraftChanged?.invoke(
-            contentState.text.toString(),
-            visibility,
-            draftAttachments.mapNotNull { it.second },
-            location
-        )
-    }
-
-    LaunchedEffect(visibility) {
-        onDraftChanged?.invoke(
-            contentState.text.toString(),
-            visibility,
-            draftAttachments.mapNotNull { it.second },
-            location
-        )
-    }
-
-    LaunchedEffect(location) {
+    // TRIGGER CACHE UPDATE when local changes occur
+    LaunchedEffect(contentState.text, visibility, draftAttachments, location) {
         onDraftChanged?.invoke(
             contentState.text.toString(),
             visibility,
@@ -311,8 +247,6 @@ fun MemoComposer(
         modifier = modifier.onSizeChanged {
             componentWidth = with(density) { it.width.toDp() }
         }) {
-        // Breakpoints for hiding text based on measured width.
-        // We use componentWidth == 0.dp to default to true before first measurement.
         val showVisibilityLabel = componentWidth > 440.dp || componentWidth == 0.dp
         val showPublishLabel = componentWidth > 300.dp || componentWidth == 0.dp
         val isCompact = componentWidth < 380.dp && componentWidth != 0.dp
@@ -340,63 +274,45 @@ fun MemoComposer(
                     if (uri != Uri.EMPTY) uri.toString()
                     else attachment?.name ?: attachment?.externalLink ?: "unknown"
                 }) { (uri, attachment) ->
-                    val isImage = remember(uri, attachment) {
+                    val mimeType = remember(uri, attachment) {
                         if (uri != Uri.EMPTY) {
-                            context.contentResolver.getType(uri)?.startsWith("image/") == true
+                            val crType = context.contentResolver.getType(uri)
+                            if (crType != null) crType
+                            else {
+                                val ext =
+                                    MimeTypeMap.getFileExtensionFromUrl(uri.toString()).lowercase()
+                                MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: ""
+                            }
                         } else {
-                            attachment?.displayType?.startsWith(
-                                "image/", ignoreCase = true
-                            ) == true || attachment?.displayType?.contains(
-                                "image", ignoreCase = true
-                            ) == true
+                            attachment?.displayType ?: ""
                         }
                     }
-                    
-                    val isAudio = remember(uri, attachment) {
-                        // Check by file extension using Android's MimeTypeMap
-                        val path = uri.path ?: ""
-                        val filename = attachment?.filename ?: ""
-                        val pathExt = android.webkit.MimeTypeMap.getFileExtensionFromUrl(path)
-                        val filenameExt = filename.substringAfterLast('.', "").lowercase()
-                        val mimeTypeMap = android.webkit.MimeTypeMap.getSingleton()
 
-                        val extensionMimeType = mimeTypeMap.getMimeTypeFromExtension(pathExt)
-                            ?: mimeTypeMap.getMimeTypeFromExtension(filenameExt)
-                        val extensionIsAudio = extensionMimeType?.startsWith("audio/") == true
+//                    Log the mime type for debugging:
+                    Log.d("MemoComposer", "mimeType: $mimeType")
 
-                        // Also check MIME type from attachment
-                        val attachmentIsAudio = attachment?.displayType?.startsWith("audio/", ignoreCase = true) == true
 
-                        extensionIsAudio || attachmentIsAudio
-                    }
-
-                    val isVideo = remember(uri, attachment) {
-                        // Check by file extension using Android's MimeTypeMap
-                        val path = uri.path ?: ""
-                        val filename = attachment?.filename ?: ""
-                        val pathExt = android.webkit.MimeTypeMap.getFileExtensionFromUrl(path)
-                        val filenameExt = filename.substringAfterLast('.', "").lowercase()
-                        val mimeTypeMap = android.webkit.MimeTypeMap.getSingleton()
-
-                        val extensionMimeType = mimeTypeMap.getMimeTypeFromExtension(pathExt)
-                            ?: mimeTypeMap.getMimeTypeFromExtension(filenameExt)
-                        val extensionIsVideo = extensionMimeType?.startsWith("video/") == true
-
-                        // Also check MIME type from attachment
-                        val attachmentIsVideo = attachment?.displayType?.startsWith("video/", ignoreCase = true) == true
-
-                        extensionIsVideo || attachmentIsVideo
-                    }
+                    val isImage = mimeType.startsWith(
+                        "image/",
+                        ignoreCase = true
+                    ) || mimeType.contains("image", ignoreCase = true)
+                    val isAudio = mimeType.startsWith(
+                        "audio/",
+                        ignoreCase = true
+                    ) || mimeType.contains("audio", ignoreCase = true)
+                    val isVideo = mimeType.startsWith(
+                        "video/",
+                        ignoreCase = true
+                    ) || mimeType.contains("video", ignoreCase = true)
 
                     val audioUrl = remember(uri, attachment) {
-                        // Prefer attachment externalLink when available (after upload completes)
-                        attachment?.externalLink ?: if (uri != Uri.EMPTY) uri.toString() else null
+                        if (uri != Uri.EMPTY) uri.toString()
+                        else attachment?.externalLink
                     }
 
-                    // Show smaller size during upload (when attachment is null)
-                    val isUploading = attachment == null && uri != Uri.EMPTY
+                    val isUploading = uri in uploadingUris
 
-                    Box(modifier = Modifier.size(80.dp)) {
+                    Box(modifier = Modifier.size(80.dp, 80.dp)) {
                         if (isImage) {
                             val model = if (uri != Uri.EMPTY) uri else attachment?.externalLink
                             AsyncImage(
@@ -416,20 +332,6 @@ fun MemoComposer(
                                 token = token,
                                 modifier = Modifier.fillMaxSize()
                             )
-                        } else if (isVideo) {
-                            // Video thumbnail or player can be added here
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                                    .padding(4.dp), contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Videocam,
-                                    contentDescription = null
-                                )
-                            }
                         } else {
                             Box(
                                 modifier = Modifier
@@ -439,7 +341,11 @@ fun MemoComposer(
                                     .padding(4.dp), contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.InsertDriveFile,
+                                    imageVector = when {
+                                        isAudio -> Icons.Outlined.Audiotrack
+                                        isVideo -> Icons.Outlined.Videocam
+                                        else -> Icons.AutoMirrored.Outlined.InsertDriveFile
+                                    },
                                     contentDescription = null
                                 )
                             }
@@ -464,12 +370,6 @@ fun MemoComposer(
                                 val updated =
                                     draftAttachments.filter { it.second != attachment || (it.first != uri && uri != Uri.EMPTY) }
                                 draftAttachments = updated
-                                onDraftChanged?.invoke(
-                                    contentState.text.toString(),
-                                    visibility,
-                                    updated.mapNotNull { it.second },
-                                    location
-                                )
                             },
                             modifier = Modifier
                                 .align(Alignment.TopEnd)
@@ -549,7 +449,11 @@ fun MemoComposer(
                             stopRecording()
                         } else {
                             val permission = Manifest.permission.RECORD_AUDIO
-                            if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+                            if (ContextCompat.checkSelfPermission(
+                                    context,
+                                    permission
+                                ) == PackageManager.PERMISSION_GRANTED
+                            ) {
                                 startRecording()
                             } else {
                                 audioPermissionLauncher.launch(permission)
@@ -655,10 +559,29 @@ fun MemoComposer(
 
                 Button(
                     onClick = {
-                        val finalAttachments = draftAttachments.mapNotNull { it.second }
-                        onPublish(
-                            contentState.text.toString(), visibility, finalAttachments, location
-                        )
+                        scope.launch {
+                            val pendingUploads =
+                                draftAttachments.filter { it.second == null && it.first != Uri.EMPTY }
+                            val uploadedAttachments = mutableListOf<Attachment>()
+
+                            for ((uri, _) in pendingUploads) {
+                                isUploadingCount++
+                                uploadingUris = uploadingUris + uri
+                                val attachment = onUploadFile(uri, context)
+                                uploadingUris = uploadingUris - uri
+                                if (attachment != null) {
+                                    uploadedAttachments.add(attachment)
+                                }
+                                isUploadingCount--
+                            }
+
+                            val existingAttachments = draftAttachments.mapNotNull { it.second }
+                            val finalAttachments = existingAttachments + uploadedAttachments
+
+                            onPublish(
+                                contentState.text.toString(), visibility, finalAttachments, location
+                            )
+                        }
                     },
                     enabled = (contentState.text.isNotBlank() || draftAttachments.isNotEmpty()) && !isPosting && isUploadingCount == 0,
                     contentPadding = if (showPublishLabel) ButtonDefaults.ContentPadding else PaddingValues(
@@ -758,9 +681,9 @@ fun MiniAudioPlayer(url: String, token: String, modifier: Modifier = Modifier) {
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
             .build()
     }
-    
+
     var isPlaying by remember { mutableStateOf(false) }
-    
+
     LaunchedEffect(url) {
         exoPlayer.setMediaItem(MediaItem.fromUri(url))
         exoPlayer.prepare()
@@ -771,6 +694,7 @@ fun MiniAudioPlayer(url: String, token: String, modifier: Modifier = Modifier) {
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
             }
+
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_ENDED) {
                     exoPlayer.seekTo(0)
