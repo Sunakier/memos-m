@@ -267,13 +267,13 @@ private fun MemosListPane(
                                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                                 .drawWithContent {
                                     drawContent()
-                                    // Fading edge hint
+                                    // Fading edge hint - more aggressive (10% fade)
                                     val startGradient = Brush.horizontalGradient(
                                         0f to Color.Transparent,
-                                        0.02f to Color.Black
+                                        0.1f to Color.Black
                                     )
                                     val endGradient = Brush.horizontalGradient(
-                                        0.98f to Color.Black,
+                                        0.9f to Color.Black,
                                         1f to Color.Transparent
                                     )
                                     if (tagListState.canScrollBackward) {
