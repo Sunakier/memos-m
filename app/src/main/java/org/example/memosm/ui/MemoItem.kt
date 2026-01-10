@@ -187,11 +187,11 @@ fun MemoItem(
             }
             Spacer(modifier = Modifier.height(if (user != null) 10.dp else 2.dp))
 
-            Column(modifier = Modifier.padding(start = 4.dp, end = 12.dp)) {
+            Column(modifier = Modifier.padding(start = 4.dp, end = 8.dp)) {
                 Text(text = memo.content, style = MaterialTheme.typography.bodyLarge)
 
                 memo.location?.let { loc ->
-                    Spacer(modifier = Modifier.height(8.dp))
+//                    Spacer(modifier = Modifier.height(6.dp))
                     val isClickable = loc.latitude != null && loc.longitude != null
                     Surface(
                         onClick = {
@@ -203,7 +203,7 @@ fun MemoItem(
                         },
                         enabled = isClickable,
                         shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                     ) {
                         Row(
@@ -218,7 +218,7 @@ fun MemoItem(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = loc.placeholder ?: "${loc.latitude}, ${loc.longitude}",
-                                style = MaterialTheme.typography.labelSmall,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
