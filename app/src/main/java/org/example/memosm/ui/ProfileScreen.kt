@@ -150,7 +150,8 @@ fun ProfileHeader(user: User) {
                 Spacer(modifier = Modifier.width(24.dp))
                 Column {
                     Text(
-                        text = user.displayName ?: user.username ?: stringResource(R.string.memo_unknown_user),
+                        text = user.displayName ?: user.username
+                        ?: stringResource(R.string.memo_unknown_user),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -252,7 +253,9 @@ fun TagsCard(tagCount: Map<String, Int>) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                stringResource(R.string.profile_stats_tags), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
+                stringResource(R.string.profile_stats_tags),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -390,7 +393,9 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                     headlineContent = { Text(stringResource(R.string.profile_settings_visibility)) },
                     supportingContent = {
                         Text(
-                            text = if (settings.memoVisibility.isNullOrBlank()) getVisibilityLabel("PRIVATE") else getVisibilityLabel(settings.memoVisibility),
+                            text = if (settings.memoVisibility.isNullOrBlank()) getVisibilityLabel("PRIVATE") else getVisibilityLabel(
+                                settings.memoVisibility
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -410,10 +415,12 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                     modifier = Modifier.align(Alignment.BottomEnd)
                 ) {
                     listOf("PRIVATE", "PROTECTED", "PUBLIC").forEach { visibility ->
-                        DropdownMenuItem(text = { Text(getVisibilityLabel(visibility)) }, onClick = {
-                            onUpdate(null, visibility)
-                            showVisibilityMenu = false
-                        })
+                        DropdownMenuItem(
+                            text = { Text(getVisibilityLabel(visibility)) },
+                            onClick = {
+                                onUpdate(null, visibility)
+                                showVisibilityMenu = false
+                            })
                     }
                 }
             }
@@ -477,7 +484,8 @@ fun WebhooksCard(webhooks: List<UserWebhook>) {
                     ListItem(
                         headlineContent = {
                         Text(
-                            webhook.displayName ?: webhook.name ?: stringResource(R.string.memo_unknown_user)
+                            webhook.displayName ?: webhook.name
+                            ?: stringResource(R.string.memo_unknown_user)
                         )
                     }, supportingContent = {
                         Text(
@@ -508,9 +516,18 @@ fun InstanceCard(instance: InstanceProfile) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
-            InfoRow(stringResource(R.string.profile_instance_version), instance.version ?: stringResource(R.string.memo_unknown_user))
-            InfoRow(stringResource(R.string.profile_instance_mode), instance.mode ?: stringResource(R.string.memo_unknown_user))
-            InfoRow(stringResource(R.string.profile_instance_url), instance.instanceUrl ?: stringResource(R.string.memo_unknown_user))
+            InfoRow(
+                stringResource(R.string.profile_instance_version),
+                instance.version ?: stringResource(R.string.memo_unknown_user)
+            )
+            InfoRow(
+                stringResource(R.string.profile_instance_mode),
+                instance.mode ?: stringResource(R.string.memo_unknown_user)
+            )
+            InfoRow(
+                stringResource(R.string.profile_instance_url),
+                instance.instanceUrl ?: stringResource(R.string.memo_unknown_user)
+            )
         }
     }
 }
@@ -533,7 +550,9 @@ fun LogoutCard(onLogout: () -> Unit) {
             Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null)
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                stringResource(R.string.profile_logout), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
+                stringResource(R.string.profile_logout),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
             )
         }
     }

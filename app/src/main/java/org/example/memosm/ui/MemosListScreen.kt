@@ -105,8 +105,7 @@ fun MemosListScreen(viewModel: MemosViewModel) {
     var previousScrollOffset by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(listState) {
-        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
-            .collect { (currentIndex, currentOffset) ->
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (currentIndex, currentOffset) ->
                 if (currentIndex > previousIndex) {
                     isScrollingDown = true
                 } else if (currentIndex < previousIndex) {
@@ -121,116 +120,112 @@ fun MemosListScreen(viewModel: MemosViewModel) {
             }
     }
 
-    val isDetailVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
-    val isListVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
+    val isDetailVisible =
+        navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
+    val isListVisible =
+        navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
     val isDualPane = isListVisible && isDetailVisible
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     val showSearchBar = (!isScrollingDown || listState.firstVisibleItemIndex == 0)
 
-    NavigableListDetailPaneScaffold(
-        navigator = navigator,
-        listPane = {
-            AnimatedPane {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    MemosListPane(
-                        viewModel = viewModel,
-                        listState = listState,
-                        tagListState = tagListState,
-                        onMemoClick = { memo ->
-                            focusManager.clearFocus()
-                            scope.launch {
-                                val id = memo.name ?: memo.content.hashCode().toString()
-                                navigator.navigateTo(
-                                    ListDetailPaneScaffoldRole.Detail, MemoKey(id)
-                                )
-                            }
-                        })
-
-                    // Overlay SearchBar on the list pane
-                    AnimatedVisibility(
-                        visible = showSearchBar && (!isSearchExpanded || isDualPane || !isDetailVisible),
-                        enter = slideInVertically { -it } + fadeIn(),
-                        exit = slideOutVertically { -it } + fadeOut(),
-                        modifier = Modifier.align(Alignment.TopCenter)
-                    ) {
-                        MemoSearchBar(
-                            viewModel = viewModel,
-                            onMemoClick = { memo ->
-                                focusManager.clearFocus()
-                                scope.launch {
-                                    val id = memo.name ?: memo.content.hashCode().toString()
-                                    navigator.navigateTo(
-                                        ListDetailPaneScaffoldRole.Detail, MemoKey(id, fromSearch = true)
-                                    )
-                                }
-                            },
-                            onExpandedChange = { isSearchExpanded = it }
-                        )
-                    }
-                }
-            }
-        },
-        detailPane = {
-            AnimatedPane {
-                val currentMemoKey = navigator.currentDestination?.contentKey
-
-                AnimatedContent(
-                    targetState = currentMemoKey, transitionSpec = {
-                        if (isDualPane) {
-                            if (initialState == null) {
-                                // First time appearing: scale + fade
-                                (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(
-                                    initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)
-                                )).togetherWith(fadeOut(animationSpec = tween(90)))
-                            } else {
-                                // Switching between memos: smooth crossfade
-                                fadeIn(animationSpec = tween(300)).togetherWith(
-                                    fadeOut(animationSpec = tween(300))
-                                )
-                            }
-                        } else {
-                            // Mobile: swipe up (slide from bottom)
-                            (slideInVertically(
-                                initialOffsetY = { it }, animationSpec = tween(300)
-                            ) + fadeIn()).togetherWith(
-                                slideOutVertically(
-                                    targetOffsetY = { it }, animationSpec = tween(300)
-                                ) + fadeOut()
+    NavigableListDetailPaneScaffold(navigator = navigator, listPane = {
+        AnimatedPane {
+            Box(modifier = Modifier.fillMaxSize()) {
+                MemosListPane(
+                    viewModel = viewModel,
+                    listState = listState,
+                    tagListState = tagListState,
+                    onMemoClick = { memo ->
+                        focusManager.clearFocus()
+                        scope.launch {
+                            val id = memo.name ?: memo.content.hashCode().toString()
+                            navigator.navigateTo(
+                                ListDetailPaneScaffoldRole.Detail, MemoKey(id)
                             )
                         }
-                    }, label = "DetailPaneTransition"
-                ) { memoKey ->
-                    val memo = remember(memoKey, uiState.memos, uiState.searchMemos) {
-                        memoKey?.let { key ->
-                            val pool = if (key.fromSearch) uiState.searchMemos else uiState.memos
-                            pool.find {
-                                (it.name ?: it.content.hashCode().toString()) == key.id
-                            }
-                        }
-                    }
+                    })
 
-                    if (memo != null) {
-                        MemoDetailPane(
-                            memo = memo,
-                            comments = uiState.selectedMemoComments,
-                            isLoadingComments = uiState.isLoadingComments,
-                            token = uiState.token,
-                            showBackButton = navigator.canNavigateBack(),
-                            onBack = {
-                                focusManager.clearFocus()
-                                scope.launch {
-                                    navigator.navigateBack()
-                                }
-                            },
-                            viewModel = viewModel
-                        )
-                    } else if (isDualPane) {
-                        MemoDetailPlaceholder()
-                    }
+                // Overlay SearchBar on the list pane
+                AnimatedVisibility(
+                    visible = showSearchBar && (!isSearchExpanded || isDualPane || !isDetailVisible),
+                    enter = slideInVertically { -it } + fadeIn(),
+                    exit = slideOutVertically { -it } + fadeOut(),
+                    modifier = Modifier.align(Alignment.TopCenter)) {
+                    MemoSearchBar(viewModel = viewModel, onMemoClick = { memo ->
+                        focusManager.clearFocus()
+                        scope.launch {
+                            val id = memo.name ?: memo.content.hashCode().toString()
+                            navigator.navigateTo(
+                                ListDetailPaneScaffoldRole.Detail,
+                                MemoKey(id, fromSearch = true)
+                            )
+                        }
+                    }, onExpandedChange = { isSearchExpanded = it })
                 }
             }
-        })
+        }
+    }, detailPane = {
+        AnimatedPane {
+            val currentMemoKey = navigator.currentDestination?.contentKey
+
+            AnimatedContent(
+                targetState = currentMemoKey, transitionSpec = {
+                    if (isDualPane) {
+                        if (initialState == null) {
+                            // First time appearing: scale + fade
+                            (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(
+                                initialScale = 0.92f,
+                                animationSpec = tween(220, delayMillis = 90)
+                            )).togetherWith(fadeOut(animationSpec = tween(90)))
+                        } else {
+                            // Switching between memos: smooth crossfade
+                            fadeIn(animationSpec = tween(300)).togetherWith(
+                                fadeOut(animationSpec = tween(300))
+                            )
+                        }
+                    } else {
+                        // Mobile: swipe up (slide from bottom)
+                        (slideInVertically(
+                            initialOffsetY = { it }, animationSpec = tween(300)
+                        ) + fadeIn()).togetherWith(
+                            slideOutVertically(
+                                targetOffsetY = { it }, animationSpec = tween(300)
+                            ) + fadeOut()
+                        )
+                    }
+                }, label = "DetailPaneTransition"
+            ) { memoKey ->
+                val memo = remember(memoKey, uiState.memos, uiState.searchMemos) {
+                    memoKey?.let { key ->
+                        val pool = if (key.fromSearch) uiState.searchMemos else uiState.memos
+                        pool.find {
+                            (it.name ?: it.content.hashCode().toString()) == key.id
+                        }
+                    }
+                }
+
+                if (memo != null) {
+                    MemoDetailPane(
+                        memo = memo,
+                        comments = uiState.selectedMemoComments,
+                        isLoadingComments = uiState.isLoadingComments,
+                        token = uiState.token,
+                        showBackButton = navigator.canNavigateBack(),
+                        onBack = {
+                            focusManager.clearFocus()
+                            scope.launch {
+                                navigator.navigateBack()
+                            }
+                        },
+                        viewModel = viewModel
+                    )
+                } else if (isDualPane) {
+                    MemoDetailPlaceholder()
+                }
+            }
+        }
+    })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -250,41 +245,31 @@ private fun MemosListPane(
 
     // Use a snapshotFlow for more robust infinite scroll detection
     LaunchedEffect(listState, uiState.isLoading, uiState.nextPageToken) {
-        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
-            .collect { lastIndex ->
-                if (lastIndex != null && 
-                    !uiState.isLoading && 
-                    uiState.nextPageToken != null && 
-                    lastIndex >= listState.layoutInfo.totalItemsCount - 5) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }.collect { lastIndex ->
+                if (lastIndex != null && !uiState.isLoading && uiState.nextPageToken != null && lastIndex >= listState.layoutInfo.totalItemsCount - 5) {
                     viewModel.loadMore()
                 }
             }
     }
 
     val pullToRefreshState = rememberPullToRefreshState()
-    PullToRefreshBox(
-        isRefreshing = uiState.isRefreshing,
-        onRefresh = {
-            viewModel.refreshAll()
-        },
-        state = pullToRefreshState,
-        modifier = modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = {
-                    focusManager.clearFocus()
-                })
-            },
-        indicator = {
-            PullToRefreshDefaults.Indicator(
-                state = pullToRefreshState,
-                isRefreshing = uiState.isRefreshing,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 88.dp)
-            )
-        }
-    ) {
+    PullToRefreshBox(isRefreshing = uiState.isRefreshing, onRefresh = {
+        viewModel.refreshAll()
+    }, state = pullToRefreshState, modifier = modifier
+        .fillMaxSize()
+        .pointerInput(Unit) {
+            detectTapGestures(onTap = {
+                focusManager.clearFocus()
+            })
+        }, indicator = {
+        PullToRefreshDefaults.Indicator(
+            state = pullToRefreshState,
+            isRefreshing = uiState.isRefreshing,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 88.dp)
+        )
+    }) {
         if (uiState.isLoading && uiState.memos.isEmpty() && !uiState.isRefreshing) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else {
@@ -293,7 +278,9 @@ private fun MemosListPane(
                 modifier = Modifier
                     .fillMaxSize()
                     .statusBarsPadding(),
-                contentPadding = PaddingValues(start = 16.dp, top = 88.dp, end = 16.dp, bottom = 80.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp, top = 88.dp, end = 16.dp, bottom = 80.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -301,25 +288,30 @@ private fun MemosListPane(
                 item {
                     if (uiState.isDraftLoaded) {
                         Box(
-                            modifier = Modifier.fillMaxWidth(), 
-                            contentAlignment = Alignment.Center
+                            modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
                         ) {
                             Card(modifier = Modifier.widthIn(max = 800.dp)) {
                                 key(uiState.draftMemo == null) {
                                     MemoComposer(
                                         onPublish = { content, visibility, attachments, location ->
-                                        viewModel.createMemo(content, visibility, attachments, location)
+                                        viewModel.createMemo(
+                                            content, visibility, attachments, location
+                                        )
                                     },
                                         onUploadFile = { uri, context ->
                                             viewModel.uploadAttachment(uri, context)
                                         },
                                         onDraftChanged = { content, visibility, attachments, location ->
-                                            viewModel.saveDraft(content, visibility, attachments, location)
+                                            viewModel.saveDraft(
+                                                content, visibility, attachments, location
+                                            )
                                         },
                                         availableTags = uiState.userStats?.tagCount?.keys
                                             ?: emptySet(),
                                         token = uiState.token,
-                                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp),
+                                        modifier = Modifier.padding(
+                                            start = 16.dp, top = 16.dp, end = 16.dp, bottom = 16.dp
+                                        ),
                                         isPosting = uiState.isPosting,
                                         initialContent = uiState.draftMemo?.content ?: "",
                                         initialAttachments = uiState.draftMemo?.attachments
@@ -432,8 +424,7 @@ private fun MemosListPane(
                 } else {
                     items(uiState.memos, key = { it.name ?: it.content.hashCode() }) { memo ->
                         Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
+                            modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
                         ) {
                             val isOwner = memo.creator == uiState.user?.name
                             MemoItem(
@@ -463,7 +454,8 @@ private fun MemosListPane(
                                     viewModel.deleteMemoReaction(memo, reactionName)
                                 },
                                 maxHeight = 400.dp,
-                                modifier = Modifier.widthIn(max = 800.dp))
+                                modifier = Modifier.widthIn(max = 800.dp)
+                            )
                         }
                     }
 
