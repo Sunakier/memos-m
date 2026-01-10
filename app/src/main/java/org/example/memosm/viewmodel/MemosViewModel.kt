@@ -45,6 +45,7 @@ data class MemosUiState(
     val exploreNextPageToken: String? = null,
     val nextAttachmentsPageToken: String? = null,
     val isRefreshing: Boolean = false,
+    val refreshTrigger: Long = 0L, // Used to trigger scroll to top
     val token: String = "",
     // Detail pane state
     val selectedMemo: Memo? = null,
@@ -120,7 +121,12 @@ class MemosViewModel(
 
     fun refreshAll() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(
+                isLoading = true, 
+                isRefreshing = true,
+                refreshTrigger = System.currentTimeMillis(),
+                error = null
+            )
             try {
                 // Fetch memos first
                 val filter = if (_uiState.value.selectedTags.isNotEmpty()) {
@@ -140,7 +146,7 @@ class MemosViewModel(
                 loadAttachmentsInternal(loadMore = false)
 
                 // Fetch explore memos
-                fetchExplore(refresh = true)
+                fetchExplore(refresh = true, updateRefreshingState = false)
 
                 // Fetch instance profile
                 try {
@@ -166,7 +172,7 @@ class MemosViewModel(
                 Log.e("MemosViewModel", "Error during refreshAll", e)
                 _uiState.value = _uiState.value.copy(error = e.localizedMessage)
             } finally {
-                _uiState.value = _uiState.value.copy(isLoading = false)
+                _uiState.value = _uiState.value.copy(isLoading = false, isRefreshing = false)
             }
         }
     }
@@ -190,9 +196,16 @@ class MemosViewModel(
     fun fetchAttachments(loadMore: Boolean = false) {
         if (_uiState.value.isFetchingAttachments) return
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isFetchingAttachments = true)
+            _uiState.value = _uiState.value.copy(
+                isFetchingAttachments = true,
+                isRefreshing = if (!loadMore) true else _uiState.value.isRefreshing,
+                refreshTrigger = if (!loadMore) System.currentTimeMillis() else _uiState.value.refreshTrigger
+            )
             loadAttachmentsInternal(loadMore)
-            _uiState.value = _uiState.value.copy(isFetchingAttachments = false)
+            _uiState.value = _uiState.value.copy(
+                isFetchingAttachments = false,
+                isRefreshing = if (!loadMore) false else _uiState.value.isRefreshing
+            )
         }
     }
 
@@ -388,13 +401,17 @@ class MemosViewModel(
         }
     }
 
-    fun fetchExplore(refresh: Boolean = false) {
+    fun fetchExplore(refresh: Boolean = false, updateRefreshingState: Boolean = true) {
         if (_uiState.value.isExploring && !refresh) return
         val currentToken = if (refresh) null else _uiState.value.exploreNextPageToken
         if (!refresh && currentToken == null) return
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isExploring = true)
+            _uiState.value = _uiState.value.copy(
+                isExploring = true,
+                isRefreshing = if (refresh && updateRefreshingState) true else _uiState.value.isRefreshing,
+                refreshTrigger = if (refresh && updateRefreshingState) System.currentTimeMillis() else _uiState.value.refreshTrigger
+            )
             try {
                 val response = api.listMemos(
                     pageToken = currentToken,
@@ -425,11 +442,15 @@ class MemosViewModel(
                 _uiState.value = _uiState.value.copy(
                     exploreMemos = if (refresh) newMemos else _uiState.value.exploreMemos + newMemos,
                     exploreNextPageToken = newNextPageToken,
-                    isExploring = false
+                    isExploring = false,
+                    isRefreshing = if (refresh && updateRefreshingState) false else _uiState.value.isRefreshing
                 )
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error fetching explore memos", e)
-                _uiState.value = _uiState.value.copy(isExploring = false)
+                _uiState.value = _uiState.value.copy(
+                    isExploring = false,
+                    isRefreshing = if (refresh && updateRefreshingState) false else _uiState.value.isRefreshing
+                )
             }
         }
     }

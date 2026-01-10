@@ -172,9 +172,17 @@ private fun MemosListPane(
     val listState = rememberLazyListState()
     val tagListState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
 
     var memoToEdit by remember { mutableStateOf<Memo?>(null) }
     var memoToDelete by remember { mutableStateOf<Memo?>(null) }
+
+    // Double tap refresh logic: scroll to top
+    LaunchedEffect(uiState.refreshTrigger) {
+        if (uiState.refreshTrigger > 0L) {
+            listState.animateScrollToItem(0)
+        }
+    }
 
     // Use a SideEffect or LaunchedEffect with listState to trigger loads
     val shouldLoadMore = remember {
@@ -194,17 +202,9 @@ private fun MemosListPane(
         }
     }
 
-    var isManualRefreshing by remember { mutableStateOf(false) }
-    LaunchedEffect(uiState.isLoading) {
-        if (!uiState.isLoading) {
-            isManualRefreshing = false
-        }
-    }
-
     PullToRefreshBox(
-        isRefreshing = isManualRefreshing,
+        isRefreshing = uiState.isRefreshing,
         onRefresh = {
-            isManualRefreshing = true
             viewModel.refreshAll()
         },
         modifier = modifier
@@ -214,7 +214,7 @@ private fun MemosListPane(
                     focusManager.clearFocus()
                 })
             }) {
-        if (uiState.isLoading && uiState.memos.isEmpty() && !isManualRefreshing) {
+        if (uiState.isLoading && uiState.memos.isEmpty() && !uiState.isRefreshing) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else {
             LazyColumn(

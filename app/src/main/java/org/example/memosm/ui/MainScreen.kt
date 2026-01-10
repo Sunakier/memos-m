@@ -36,6 +36,7 @@ fun MainScreen(
     modifier: Modifier = Modifier
 ) {
     var currentDestination by remember { mutableStateOf(MainDestination.MEMOS) }
+    var lastTapTime by remember { mutableLongStateOf(0L) }
     val viewModel: MemosViewModel =
         viewModel(factory = MemosViewModel.provideFactory(baseUrl, token, dataStoreManager))
     val uiState by viewModel.uiState.collectAsState()
@@ -52,7 +53,17 @@ fun MainScreen(
             MainDestination.entries.forEach { destination ->
                 item(selected = currentDestination == destination, onClick = {
                     focusManager.clearFocus()
+                    val currentTime = System.currentTimeMillis()
+                    if (currentDestination == destination && currentTime - lastTapTime < 500) {
+                        when (destination) {
+                            MainDestination.MEMOS -> viewModel.refreshAll()
+                            MainDestination.EXPLORE -> viewModel.fetchExplore(refresh = true)
+                            MainDestination.ATTACHMENTS -> viewModel.fetchAttachments()
+                            else -> {}
+                        }
+                    }
                     currentDestination = destination
+                    lastTapTime = currentTime
                 }, icon = {
                     val isSelected = currentDestination == destination
                     when (destination) {

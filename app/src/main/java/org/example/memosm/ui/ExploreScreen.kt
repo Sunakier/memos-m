@@ -152,6 +152,13 @@ private fun ExploreMemosListPane(
     var memoToEdit by remember { mutableStateOf<Memo?>(null) }
     var memoToDelete by remember { mutableStateOf<Memo?>(null) }
 
+    // Double tap refresh logic: scroll to top
+    LaunchedEffect(uiState.refreshTrigger) {
+        if (uiState.refreshTrigger > 0L) {
+            listState.animateScrollToItem(0)
+        }
+    }
+
     val shouldLoadMore = remember {
         derivedStateOf {
             val lastVisibleItem =
@@ -166,17 +173,9 @@ private fun ExploreMemosListPane(
         }
     }
 
-    var isManualRefreshing by remember { mutableStateOf(false) }
-    LaunchedEffect(uiState.isExploring) {
-        if (!uiState.isExploring) {
-            isManualRefreshing = false
-        }
-    }
-
     PullToRefreshBox(
-        isRefreshing = isManualRefreshing,
+        isRefreshing = uiState.isRefreshing,
         onRefresh = {
-            isManualRefreshing = true
             viewModel.fetchExplore(refresh = true)
         },
         modifier = modifier
@@ -187,7 +186,7 @@ private fun ExploreMemosListPane(
                 })
             }
     ) {
-        if (uiState.isExploring && uiState.exploreMemos.isEmpty() && !isManualRefreshing) {
+        if (uiState.isExploring && uiState.exploreMemos.isEmpty() && !uiState.isRefreshing) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else if (uiState.error != null && uiState.exploreMemos.isEmpty()) {
             Column(

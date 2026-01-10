@@ -57,6 +57,13 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
         ), label = "CellWidthAnimation"
     )
 
+    // Double tap refresh logic: scroll to top
+    LaunchedEffect(uiState.refreshTrigger) {
+        if (uiState.refreshTrigger > 0L) {
+            listState.animateScrollToItem(0)
+        }
+    }
+
     val shouldLoadMore = remember {
         derivedStateOf {
             val totalItemsCount = listState.layoutInfo.totalItemsCount
@@ -75,17 +82,9 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
         }
     }
 
-    var isManualRefreshing by remember { mutableStateOf(false) }
-    LaunchedEffect(uiState.isFetchingAttachments) {
-        if (!uiState.isFetchingAttachments) {
-            isManualRefreshing = false
-        }
-    }
-
     PullToRefreshBox(
-        isRefreshing = isManualRefreshing,
+        isRefreshing = uiState.isRefreshing,
         onRefresh = {
-            isManualRefreshing = true
             viewModel.fetchAttachments(loadMore = false)
         },
         modifier = Modifier
@@ -127,7 +126,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                         }
                     }
                 }) {
-            if (uiState.attachments.isEmpty() && uiState.isFetchingAttachments && !isManualRefreshing) {
+            if (uiState.attachments.isEmpty() && uiState.isFetchingAttachments && !uiState.isRefreshing) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (uiState.attachments.isEmpty() && !uiState.isFetchingAttachments) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
