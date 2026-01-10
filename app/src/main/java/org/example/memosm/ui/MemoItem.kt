@@ -236,8 +236,9 @@ fun MemoItem(
                     Surface(
                         onClick = {
                             if (isClickable) {
-                                val uri = "https://www.openstreetmap.org/?mlat=${loc.latitude}&mlon=${loc.longitude}#map=17/${loc.latitude}/${loc.longitude}"
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
+                                val label = loc.placeholder ?: ""
+                                val geoUri = "geo:${loc.latitude},${loc.longitude}?q=${loc.latitude},${loc.longitude}${if (label.isNotEmpty()) "(${Uri.encode(label)})" else ""}"
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(geoUri))
                                 context.startActivity(intent)
                             }
                         },
