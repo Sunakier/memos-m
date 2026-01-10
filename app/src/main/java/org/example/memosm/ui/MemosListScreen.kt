@@ -22,6 +22,8 @@ import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -256,18 +258,30 @@ private fun MemosListPane(
             }
     }
 
+    val pullToRefreshState = rememberPullToRefreshState()
     PullToRefreshBox(
         isRefreshing = uiState.isRefreshing,
         onRefresh = {
             viewModel.refreshAll()
         },
+        state = pullToRefreshState,
         modifier = modifier
             .fillMaxSize()
             .pointerInput(Unit) {
                 detectTapGestures(onTap = {
                     focusManager.clearFocus()
                 })
-            }) {
+            },
+        indicator = {
+            PullToRefreshDefaults.Indicator(
+                state = pullToRefreshState,
+                isRefreshing = uiState.isRefreshing,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 88.dp)
+            )
+        }
+    ) {
         if (uiState.isLoading && uiState.memos.isEmpty() && !uiState.isRefreshing) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
         } else {
