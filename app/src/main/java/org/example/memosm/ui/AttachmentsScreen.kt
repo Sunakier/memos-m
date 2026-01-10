@@ -142,7 +142,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                     columns = StaggeredGridCells.Adaptive(animatedCellWidth),
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(12.dp),
+                    contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 80.dp),
                     verticalItemSpacing = 12.dp,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -163,15 +163,30 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                             })
                     }
 
-                    if (!uiState.nextAttachmentsPageToken.isNullOrBlank()) {
+                    if (uiState.isFetchingAttachments && uiState.attachments.isNotEmpty()) {
                         item(span = StaggeredGridItemSpan.FullLine) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(80.dp),
+                                    .padding(16.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 CircularProgressIndicator()
+                            }
+                        }
+                    } else if (!uiState.isFetchingAttachments && uiState.nextAttachmentsPageToken.isNullOrBlank() && uiState.attachments.isNotEmpty()) {
+                        item(span = StaggeredGridItemSpan.FullLine) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp, horizontal = 16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "You've reached the end",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
                             }
                         }
                     }
