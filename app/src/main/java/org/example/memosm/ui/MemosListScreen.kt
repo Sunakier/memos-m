@@ -164,6 +164,7 @@ private fun MemosListPane(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
+    val tagListState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
 
     var memoToEdit by remember { mutableStateOf<Memo?>(null) }
@@ -253,6 +254,7 @@ private fun MemosListPane(
                 if (tags.isNotEmpty()) {
                     item {
                         LazyRow(
+                            state = tagListState,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
