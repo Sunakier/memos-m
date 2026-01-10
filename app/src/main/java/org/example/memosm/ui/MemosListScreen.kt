@@ -256,9 +256,13 @@ private fun MemosListPane(
                 }
 
                 // Horizontal Tag Row - Edge to edge with fading hint
-                val tags = uiState.userStats?.tagCount?.keys?.toList() ?: emptyList()
-                if (tags.isNotEmpty()) {
+                val tagMap = uiState.userStats?.tagCount ?: emptyMap()
+                if (tagMap.isNotEmpty()) {
                     item {
+                        val sortedTags = remember(tagMap) {
+                            tagMap.keys.toList().sortedByDescending { tagMap[it] ?: 0 }
+                        }
+                        
                         LazyRow(
                             state = tagListState,
                             modifier = Modifier
@@ -267,13 +271,13 @@ private fun MemosListPane(
                                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                                 .drawWithContent {
                                     drawContent()
-                                    // Fading edge hint - more aggressive (10% fade)
+                                    // Fading edge hint - more aggressive (15% fade)
                                     val startGradient = Brush.horizontalGradient(
                                         0f to Color.Transparent,
-                                        0.1f to Color.Black
+                                        0.15f to Color.Black
                                     )
                                     val endGradient = Brush.horizontalGradient(
-                                        0.9f to Color.Black,
+                                        0.85f to Color.Black,
                                         1f to Color.Transparent
                                     )
                                     if (tagListState.canScrollBackward) {
@@ -286,12 +290,28 @@ private fun MemosListPane(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             contentPadding = PaddingValues(horizontal = 16.dp)
                         ) {
-                            items(tags) { tag ->
+                            items(sortedTags) { tag ->
+                                val count = tagMap[tag] ?: 0
                                 val isSelected = tag in uiState.selectedTags
                                 FilterChip(
                                     selected = isSelected,
                                     onClick = { viewModel.toggleTagFilter(tag) },
-                                    label = { Text("#$tag") },
+                                    label = { 
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("#$tag")
+                                            if (count > 0) {
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = count.toString(),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = if (isSelected) 
+                                                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                                    else 
+                                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                                )
+                                            }
+                                        }
+                                    },
                                     shape = RoundedCornerShape(16.dp),
                                     trailingIcon = if (isSelected) {
                                         {
