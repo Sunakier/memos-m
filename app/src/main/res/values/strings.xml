@@ -45,6 +45,7 @@
     <string name="memo_action_edit">Edit</string>
     <string name="memo_action_delete">Delete</string>
     <string name="memo_action_more">More</string>
+    <string name="memo_action_open_web">Open on Web</string>
     <string name="memo_publish">Publish</string>
     <string name="memo_list_end">You\'ve reached the end</string>
     <string name="memo_unknown_user">Unknown</string>

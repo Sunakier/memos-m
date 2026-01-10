@@ -49,6 +49,7 @@
     <string name="memo_unknown_time">不明</string>
     <string name="memo_action_update">更新</string>
     <string name="memo_action_post">投稿</string>
+    <string name="memo_action_add_reaction">リアクションを追加</string>
 
     <string name="memo_composer_placeholder">今思ったことは…</string>
     <string name="memo_composer_remove_attachment">削除</string>

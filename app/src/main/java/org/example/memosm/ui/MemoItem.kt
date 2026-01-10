@@ -12,7 +12,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AddReaction
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -56,6 +61,7 @@ fun MemoItem(
     onUpsertReaction: ((String) -> Unit)? = null,
     onDeleteReaction: ((String) -> Unit)? = null,
     maxHeight: Dp = Dp.Unspecified,
+    isDetailView: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -113,7 +119,7 @@ fun MemoItem(
                             )
                         } else {
                             Icon(
-                                imageVector = Icons.Default.AccountCircle,
+                                imageVector = Icons.Outlined.AccountCircle,
                                 contentDescription = null,
                                 modifier = Modifier.size(28.dp),
                                 tint = MaterialTheme.colorScheme.outline
@@ -163,19 +169,38 @@ fun MemoItem(
                     }
                 }
 
-                if (onEdit != null || onDelete != null || onUpsertReaction != null) {
+                if (onEdit != null || onDelete != null || onUpsertReaction != null || memo.name != null) {
                     Box {
                         IconButton(
                             onClick = { showMenu = true }, modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.MoreVert,
+                                imageVector = Icons.Outlined.MoreVert,
                                 contentDescription = stringResource(R.string.memo_action_more),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
                         DropdownMenu(
                             expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            if (memo.name != null) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.memo_action_open_web)) },
+                                    onClick = {
+                                        showMenu = false
+                                        val memoId = memo.name.removePrefix("memos/")
+                                        val webUrl = "https://memos.nannoda.com/memos/$memoId"
+                                        try {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(webUrl))
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            // Ignore
+                                        }
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Outlined.Language, contentDescription = null)
+                                    }
+                                )
+                            }
                             if (onUpsertReaction != null) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.memo_action_add_reaction)) },
@@ -194,7 +219,7 @@ fun MemoItem(
                                     onEdit()
                                 }, leadingIcon = {
                                     Icon(
-                                        Icons.Default.Edit, contentDescription = null
+                                        Icons.Outlined.Edit, contentDescription = null
                                     )
                                 })
                             }
@@ -205,7 +230,7 @@ fun MemoItem(
                                     onDelete()
                                 }, leadingIcon = {
                                     Icon(
-                                        Icons.Default.Delete, contentDescription = null
+                                        Icons.Outlined.Delete, contentDescription = null
                                     )
                                 }, colors = MenuDefaults.itemColors(
                                     textColor = MaterialTheme.colorScheme.error,
@@ -319,14 +344,34 @@ fun MemoItem(
                                     contentDescription = attachment.filename,
                                     modifier = Modifier
                                         .size(width = 240.dp, height = 160.dp)
-                                        .clip(RoundedCornerShape(8.dp)),
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .then(if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
+                                            Modifier.clickable {
+                                                try {
+                                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(attachment.externalLink))
+                                                    context.startActivity(intent)
+                                                } catch (e: Exception) {
+                                                    // Ignore
+                                                }
+                                            }
+                                        } else Modifier),
                                     contentScale = ContentScale.Crop
                                 )
                             } else {
                                 Card(
                                     modifier = Modifier
                                         .size(width = 200.dp, height = 100.dp)
-                                        .clip(RoundedCornerShape(8.dp)),
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .then(if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
+                                            Modifier.clickable {
+                                                try {
+                                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(attachment.externalLink))
+                                                    context.startActivity(intent)
+                                                } catch (e: Exception) {
+                                                    // Ignore
+                                                }
+                                            }
+                                        } else Modifier),
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                                 ) {
                                     Column(

@@ -43,12 +43,14 @@
     <string name="memo_action_edit">Bearbeiten</string>
     <string name="memo_action_delete">Löschen</string>
     <string name="memo_action_more">Mehr</string>
+    <string name="memo_action_open_web">Im Web öffnen</string>
     <string name="memo_publish">Veröffentlichen</string>
     <string name="memo_list_end">Du hast das Ende erreicht</string>
     <string name="memo_unknown_user">Unbekannt</string>
     <string name="memo_unknown_time">UNBEKANNT</string>
     <string name="memo_action_update">Aktualisieren</string>
     <string name="memo_action_post">Posten</string>
+    <string name="memo_action_add_reaction">Reaktion hinzufügen</string>
 
     <string name="memo_composer_placeholder">Was geht dir durch den Kopf?</string>
     <string name="memo_composer_remove_attachment">Entfernen</string>

@@ -49,39 +49,45 @@ fun MemoDetailPane(
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            Text(stringResource(R.string.memo_detail_title), modifier = Modifier.widthIn(max = 600.dp))
-                        }
-                    },
-                    navigationIcon = {
-                        if (showBackButton) {
-                            IconButton(onClick = onBack) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = stringResource(R.string.memo_detail_back)
-                                )
-                            }
-                        }
-                    },
-                    windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-                )
-            }, floatingActionButton = {
-                if (uiState.user != null) {
-                    FloatingActionButton(
-                        onClick = { showCommentDialog = true },
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.memo_detail_add_comment))
-                    }
+            TopAppBar(
+                title = {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Text(
+                        stringResource(R.string.memo_detail_title),
+                        modifier = Modifier.widthIn(max = 600.dp)
+                    )
                 }
-            }, containerColor = Color.Transparent, modifier = Modifier.fillMaxSize()
+            },
+                navigationIcon = {
+                    if (showBackButton) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.memo_detail_back)
+                            )
+                        }
+                    }
+                },
+                windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
+        }, floatingActionButton = {
+            if (uiState.user != null) {
+                FloatingActionButton(
+                    onClick = { showCommentDialog = true },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.memo_detail_add_comment)
+                    )
+                }
+            }
+        }, containerColor = Color.Transparent, modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
             Box(
                 modifier = Modifier
@@ -117,7 +123,8 @@ fun MemoDetailPane(
                             },
                             onDeleteReaction = { reactionName ->
                                 viewModel.deleteMemoReaction(memo, reactionName)
-                            }
+                            },
+                            isDetailView = true
                         )
                     }
 
@@ -187,9 +194,11 @@ fun MemoDetailPane(
                             token = token,
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            ), onEdit = if (isCommentOwner) {
+                            ),
+                            onEdit = if (isCommentOwner) {
                                 { memoToEdit = comment }
-                            } else null, onDelete = if (isCommentOwner) {
+                            } else null,
+                            onDelete = if (isCommentOwner) {
                                 { memoToDelete = comment }
                             } else null,
                             onUpsertReaction = { emoji ->
@@ -197,7 +206,8 @@ fun MemoDetailPane(
                             },
                             onDeleteReaction = { reactionName ->
                                 viewModel.deleteMemoReaction(comment, reactionName)
-                            }
+                            },
+                            isDetailView = true
                         )
                     }
                 }
