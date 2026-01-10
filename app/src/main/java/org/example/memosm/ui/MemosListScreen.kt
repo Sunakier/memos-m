@@ -228,7 +228,7 @@ private fun MemosListPane(
                 modifier = Modifier
                     .fillMaxSize()
                     .statusBarsPadding(),
-                contentPadding = PaddingValues(bottom = 16.dp),
+                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 80.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -394,7 +394,9 @@ private fun MemosListPane(
                                     { memoToEdit = memo }
                                 } else null, onDelete = if (isOwner) {
                                     { memoToDelete = memo }
-                                } else null, modifier = Modifier.widthIn(max = 800.dp))
+                                } else null,
+                                maxHeight = 400.dp,
+                                modifier = Modifier.widthIn(max = 800.dp))
                         }
                     }
 

@@ -16,11 +16,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -40,6 +47,7 @@ fun MemoItem(
     onClick: (() -> Unit)? = null,
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
+    maxHeight: Dp = Dp.Unspecified,
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -190,11 +198,37 @@ fun MemoItem(
             Spacer(modifier = Modifier.height(if (user != null) 10.dp else 2.dp))
 
             Column(modifier = Modifier.padding(start = 4.dp, end = 8.dp)) {
-                Markdown(
-                    content = memo.content,
-                    imageTransformer = Coil2ImageTransformerImpl,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (maxHeight != Dp.Unspecified) {
+                                Modifier
+                                    .heightIn(max = maxHeight)
+                                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                    .drawWithContent {
+                                        drawContent()
+                                        if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
+                                            drawRect(
+                                                brush = Brush.verticalGradient(
+                                                    0.7f to Color.Black,
+                                                    1.0f to Color.Transparent
+                                                ),
+                                                blendMode = BlendMode.DstIn
+                                            )
+                                        }
+                                    }
+                            } else {
+                                Modifier
+                            }
+                        )
+                ) {
+                    Markdown(
+                        content = memo.content,
+                        imageTransformer = Coil2ImageTransformerImpl,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
                 memo.location?.let { loc ->
 //                    Spacer(modifier = Modifier.height(6.dp))

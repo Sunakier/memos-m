@@ -245,6 +245,7 @@ private fun ExploreMemosListPane(
                             onDelete = if (isOwner) {
                                 { memoToDelete = memo }
                             } else null,
+                            maxHeight = 400.dp,
                             modifier = Modifier.widthIn(max = 800.dp))
                     }
                 }
