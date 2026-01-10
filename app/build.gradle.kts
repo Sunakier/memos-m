@@ -105,6 +105,7 @@ dependencies {
     implementation(libs.multiplatform.markdown.renderer.coil2)
 
     implementation(libs.media3.exoplayer)
+    implementation(libs.media3.exoplayer.dash)
     implementation(libs.media3.ui)
     implementation(libs.media3.common)
     implementation(libs.media3.datasource.okhttp)

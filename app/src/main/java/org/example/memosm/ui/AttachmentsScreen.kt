@@ -151,7 +151,19 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                     items(
                         items = uiState.attachments, key = { it.name ?: it.filename }) { attachment ->
                         val key = attachment.name ?: attachment.filename
-                        val ratio = aspectRatios[key] ?: 1.0f
+                        val displayType = attachment.displayType
+                        val isAudio = remember(displayType) {
+                            displayType.startsWith("audio/", ignoreCase = true) || displayType.contains("audio", ignoreCase = true)
+                        }
+                        val isVideo = remember(displayType) {
+                            displayType.startsWith("video/", ignoreCase = true) || displayType.contains("video", ignoreCase = true)
+                        }
+                        
+                        val ratio = aspectRatios[key] ?: when {
+                            isAudio -> 2.5f
+                            isVideo -> 1.4f // Normal aspect ratio for card including footer
+                            else -> 1.0f
+                        }
 
                         AttachmentItem(
                             attachment = attachment,
@@ -225,12 +237,30 @@ fun AttachmentItem(
         Formatter.formatFileSize(context, bytes)
     }
 
+    val displayType = attachment.displayType
+    val isImage = remember(displayType) {
+        displayType.startsWith(
+            "image/", ignoreCase = true
+        ) || displayType.contains("image", ignoreCase = true)
+    }
+    
+    val isAudio = remember(displayType) {
+        displayType.startsWith(
+            "audio/", ignoreCase = true
+        ) || displayType.contains("audio", ignoreCase = true)
+    }
+
+    val isVideo = remember(displayType) {
+        displayType.startsWith(
+            "video/", ignoreCase = true
+        ) || displayType.contains("video", ignoreCase = true)
+    }
+
     Card(
         modifier = modifier.clip(RoundedCornerShape(12.dp)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         onClick = {
-            if (!attachment.displayType.startsWith("audio/", ignoreCase = true) && 
-                !attachment.displayType.contains("audio", ignoreCase = true)) {
+            if (!isAudio && !isVideo) {
                 attachment.externalLink?.let { link ->
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(link))
                     context.startActivity(intent)
@@ -238,19 +268,6 @@ fun AttachmentItem(
             }
         }) {
         Column {
-            val displayType = attachment.displayType
-            val isImage = remember(displayType) {
-                displayType.startsWith(
-                    "image/", ignoreCase = true
-                ) || displayType.contains("image", ignoreCase = true)
-            }
-            
-            val isAudio = remember(displayType) {
-                displayType.startsWith(
-                    "audio/", ignoreCase = true
-                ) || displayType.contains("audio", ignoreCase = true)
-            }
-
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -300,12 +317,18 @@ fun AttachmentItem(
                             modifier = Modifier.size(32.dp)
                         )
                     }
+                } else if (isVideo && !attachment.externalLink.isNullOrBlank()) {
+                    VideoPlayer(
+                        url = attachment.externalLink,
+                        token = token,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 } else if (isAudio && !attachment.externalLink.isNullOrBlank()) {
                     AudioPlayer(
                         url = attachment.externalLink,
                         filename = attachment.filename,
                         token = token,
-                        modifier = Modifier.padding(8.dp)
+                        modifier = Modifier.padding(8.dp).fillMaxWidth()
                     )
                 } else {
                     Text(

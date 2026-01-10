@@ -3,12 +3,14 @@ package org.example.memosm.ui
 import android.content.Intent
 import android.net.Uri
 import android.text.format.DateUtils
+import android.view.ViewGroup
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -40,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -47,6 +50,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
@@ -343,99 +347,47 @@ fun MemoItem(
 
                 if (attachments.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(bottom = 4.dp)
-                    ) {
-                        items(attachments, key = { it.externalLink ?: it.filename }) { attachment ->
-                            val isImage = remember(attachment.displayType) {
-                                attachment.displayType.startsWith(
-                                    "image/", ignoreCase = true
-                                ) || attachment.displayType.contains("image", ignoreCase = true)
+                    if (isDetailView) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            attachments.forEach { attachment ->
+                                AttachmentDisplay(attachment, token, isDetailView)
                             }
-
-                            val isAudio = remember(attachment.displayType) {
-                                attachment.displayType.startsWith(
-                                    "audio/", ignoreCase = true
-                                ) || attachment.displayType.contains("audio", ignoreCase = true)
-                            }
-
-                            if (isImage) {
-                                val context = LocalContext.current
-                                val imageRequest = remember(attachment.externalLink, token) {
-                                    ImageRequest.Builder(context).data(attachment.externalLink)
-                                        .addHeader("Authorization", "Bearer $token").crossfade(true)
-                                        .build()
-                                }
-
-                                AsyncImage(
-                                    model = imageRequest,
-                                    contentDescription = attachment.filename,
-                                    modifier = Modifier
-                                        .size(width = 240.dp, height = 160.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .then(
-                                            if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
-                                            Modifier.clickable {
-                                                try {
-                                                    val intent = Intent(
-                                                        Intent.ACTION_VIEW,
-                                                        attachment.externalLink.toUri()
-                                                    )
-                                                    context.startActivity(intent)
-                                                } catch (e: Exception) {
-                                                    // Ignore
-                                                }
-                                            }
-                                        } else Modifier),
-                                    contentScale = ContentScale.Crop)
-                            } else if (isAudio && !attachment.externalLink.isNullOrBlank()) {
-                                AudioPlayer(
-                                    url = attachment.externalLink,
-                                    filename = attachment.filename,
-                                    token = token,
-                                    modifier = Modifier.width(240.dp)
-                                )
-                            } else {
-                                Card(
-                                    modifier = Modifier
-                                        .size(width = 200.dp, height = 100.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .then(
-                                            if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
-                                            Modifier.clickable {
-                                                try {
-                                                    val intent = Intent(
-                                                        Intent.ACTION_VIEW,
-                                                        attachment.externalLink.toUri()
-                                                    )
-                                                    context.startActivity(intent)
-                                                } catch (e: Exception) {
-                                                    // Ignore
-                                                }
-                                            }
-                                        } else Modifier),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(8.dp),
-                                        verticalArrangement = Arrangement.Center,
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(
-                                            text = attachment.filename,
-                                            style = MaterialTheme.typography.labelMedium,
-                                            maxLines = 2,
-                                            modifier = Modifier.padding(bottom = 4.dp)
-                                        )
-                                        Text(
-                                            text = attachment.displayType,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    } else {
+                        val scrollState = rememberLazyListState()
+                        LazyRow(
+                            state = scrollState,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(bottom = 4.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                .drawWithContent {
+                                    drawContent()
+                                    val canScrollBackward = scrollState.canScrollBackward
+                                    val canScrollForward = scrollState.canScrollForward
+                                    
+                                    if (canScrollBackward || canScrollForward) {
+                                        val leftFade = if (canScrollBackward) Color.Transparent else Color.Black
+                                        val rightFade = if (canScrollForward) Color.Transparent else Color.Black
+                                        
+                                        drawRect(
+                                            brush = Brush.horizontalGradient(
+                                                0f to leftFade,
+                                                0.05f to Color.Black,
+                                                0.95f to Color.Black,
+                                                1f to rightFade
+                                            ),
+                                            blendMode = BlendMode.DstIn
                                         )
                                     }
                                 }
+                        ) {
+                            items(attachments, key = { it.externalLink ?: it.filename }) { attachment ->
+                                AttachmentDisplay(attachment, token, isDetailView)
                             }
                         }
                     }
@@ -507,6 +459,160 @@ fun MemoItem(
                 showReactionPicker = false
             })
     }
+}
+
+@Composable
+fun AttachmentDisplay(
+    attachment: org.example.memosm.model.Attachment,
+    token: String,
+    isDetailView: Boolean
+) {
+    val isImage = remember(attachment.displayType) {
+        attachment.displayType.startsWith(
+            "image/", ignoreCase = true
+        ) || attachment.displayType.contains("image", ignoreCase = true)
+    }
+
+    val isAudio = remember(attachment.displayType) {
+        attachment.displayType.startsWith(
+            "audio/", ignoreCase = true
+        ) || attachment.displayType.contains("audio", ignoreCase = true)
+    }
+
+    val isVideo = remember(attachment.displayType) {
+        attachment.displayType.startsWith(
+            "video/", ignoreCase = true
+        ) || attachment.displayType.contains("video", ignoreCase = true)
+    }
+
+    if (isImage) {
+        val context = LocalContext.current
+        val imageRequest = remember(attachment.externalLink, token) {
+            ImageRequest.Builder(context).data(attachment.externalLink)
+                .addHeader("Authorization", "Bearer $token").crossfade(true)
+                .build()
+        }
+
+        AsyncImage(
+            model = imageRequest,
+            contentDescription = attachment.filename,
+            modifier = Modifier
+                .then(if (isDetailView) Modifier.fillMaxWidth() else Modifier.size(width = 240.dp, height = 160.dp))
+                .clip(RoundedCornerShape(8.dp))
+                .then(
+                    if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
+                        Modifier.clickable {
+                            try {
+                                val intent = Intent(
+                                    Intent.ACTION_VIEW,
+                                    attachment.externalLink.toUri()
+                                )
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                // Ignore
+                            }
+                        }
+                    } else Modifier),
+            contentScale = if (isDetailView) ContentScale.FillWidth else ContentScale.Crop)
+    } else if (isVideo && !attachment.externalLink.isNullOrBlank()) {
+        VideoPlayer(
+            url = attachment.externalLink,
+            token = token,
+            modifier = Modifier
+                .then(if (isDetailView) Modifier.fillMaxWidth().aspectRatio(16/9f) else Modifier.size(width = 280.dp, height = 180.dp))
+                .clip(RoundedCornerShape(8.dp))
+        )
+    } else if (isAudio && !attachment.externalLink.isNullOrBlank()) {
+        AudioPlayer(
+            url = attachment.externalLink,
+            filename = attachment.filename,
+            token = token,
+            modifier = Modifier.then(if (isDetailView) Modifier.fillMaxWidth() else Modifier.width(240.dp))
+        )
+    } else {
+        val context = LocalContext.current
+        Card(
+            modifier = Modifier
+                .then(if (isDetailView) Modifier.fillMaxWidth() else Modifier.size(width = 200.dp, height = 100.dp))
+                .clip(RoundedCornerShape(8.dp))
+                .then(
+                    if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
+                        Modifier.clickable {
+                            try {
+                                val intent = Intent(
+                                    Intent.ACTION_VIEW,
+                                    attachment.externalLink.toUri()
+                                )
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                // Ignore
+                            }
+                        }
+                    } else Modifier),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = attachment.filename,
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 2,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                Text(
+                    text = attachment.displayType,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@androidx.annotation.OptIn(UnstableApi::class)
+@Composable
+fun VideoPlayer(
+    url: String, token: String, modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).setMediaSourceFactory(
+            DefaultMediaSourceFactory(context).setDataSourceFactory(
+                OkHttpDataSource.Factory(OkHttpClient.Builder().build())
+                    .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
+            )
+        ).build()
+    }
+
+    LaunchedEffect(url) {
+        exoPlayer.setMediaItem(MediaItem.fromUri(url))
+        exoPlayer.prepare()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+
+    AndroidView(
+        factory = { ctx ->
+            PlayerView(ctx).apply {
+                player = exoPlayer
+                useController = true
+                setBackgroundColor(android.graphics.Color.BLACK)
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+        },
+        modifier = modifier
+    )
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)
