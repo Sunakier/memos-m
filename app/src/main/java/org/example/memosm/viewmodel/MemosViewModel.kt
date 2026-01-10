@@ -33,6 +33,7 @@ data class MemosUiState(
     val users: Map<String, User> = emptyMap(), // Cache for users in explore
     val userStats: UserStats? = null,
     val userSettings: UserGeneralSetting? = null,
+    val webhooks: List<UserWebhook> = emptyList(),
     val shortcuts: List<Shortcut> = emptyList(),
     val instanceProfile: InstanceProfile? = null,
     val isLoading: Boolean = false,
@@ -271,6 +272,7 @@ class MemosViewModel(
 
             val stats = api.getUserStats(userId)
             val shortcuts = api.getShortcuts(userId)
+            val webhooks = try { api.listUserWebhooks(userId).webhooks ?: emptyList() } catch (e: Exception) { emptyList() }
             
             val generalSetting = try {
                 api.getUserSetting(userId, "GENERAL").generalSetting
@@ -287,6 +289,7 @@ class MemosViewModel(
             _uiState.value = _uiState.value.copy(
                 userStats = stats,
                 shortcuts = shortcuts.shortcuts ?: emptyList(),
+                webhooks = webhooks,
                 userSettings = generalSetting
             )
         } catch (e: Exception) {
@@ -307,6 +310,7 @@ class MemosViewModel(
                 user.name?.removePrefix("users/")?.let { userId ->
                     val stats = api.getUserStats(userId)
                     val shortcuts = api.getShortcuts(userId)
+                    val webhooks = try { api.listUserWebhooks(userId).webhooks ?: emptyList() } catch (e: Exception) { emptyList() }
                     
                     val generalSetting = try {
                         api.getUserSetting(userId, "GENERAL").generalSetting
@@ -321,6 +325,7 @@ class MemosViewModel(
                     _uiState.value = _uiState.value.copy(
                         userStats = stats,
                         shortcuts = shortcuts.shortcuts ?: emptyList(),
+                        webhooks = webhooks,
                         userSettings = generalSetting
                     )
                 }

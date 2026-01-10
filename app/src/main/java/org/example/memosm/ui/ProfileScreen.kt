@@ -10,9 +10,9 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.Shortcut
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Tag
+import androidx.compose.material.icons.outlined.Webhook
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,6 +33,7 @@ fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit) {
     val user = uiState.user
     val stats = uiState.userStats
     val shortcuts = uiState.shortcuts
+    val webhooks = uiState.webhooks
     val instance = uiState.instanceProfile
     val userSettings = uiState.userSettings
 
@@ -59,6 +60,10 @@ fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit) {
                     item {
                         StatsCard(stats)
                     }
+                    
+                    item {
+                        TagsCard(stats.tagCount ?: emptyMap())
+                    }
                 }
 
                 if (userSettings != null) {
@@ -70,10 +75,12 @@ fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit) {
                     }
                 }
 
-                if (shortcuts.isNotEmpty()) {
-                    item {
-                        ShortcutsCard(shortcuts)
-                    }
+                item {
+                    ShortcutsCard(shortcuts)
+                }
+
+                item {
+                    WebhooksCard(webhooks)
                 }
 
                 if (instance != null) {
@@ -83,11 +90,18 @@ fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit) {
                 }
 
                 item {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                }
+
+                item {
                     LogoutCard(onLogout)
                 }
 
                 item {
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(64.dp))
                 }
             } else if (uiState.isLoading) {
                 item {
@@ -160,7 +174,8 @@ fun ProfileHeader(user: User) {
 fun StatsCard(stats: UserStats) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 "Statistics",
@@ -168,44 +183,128 @@ fun StatsCard(stats: UserStats) {
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.Start)
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // First Row
             Row(
-                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 StatItem(
                     label = "Memos",
                     value = (stats.totalMemoCount ?: 0).toString(),
-                    icon = Icons.AutoMirrored.Outlined.LibraryBooks
+                    icon = Icons.AutoMirrored.Outlined.LibraryBooks,
+                    modifier = Modifier.weight(1f)
                 )
                 StatItem(
                     label = "Tags",
                     value = (stats.tagCount?.size ?: 0).toString(),
-                    icon = Icons.Outlined.Tag
+                    icon = Icons.Outlined.Tag,
+                    modifier = Modifier.weight(1f)
                 )
                 StatItem(
                     label = "Pinned",
                     value = (stats.pinnedMemos?.size ?: 0).toString(),
-                    icon = Icons.Outlined.PushPin
+                    icon = Icons.Outlined.PushPin,
+                    modifier = Modifier.weight(1f)
                 )
             }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-            Text("Content Breakdown", style = MaterialTheme.typography.labelLarge)
-            Spacer(modifier = Modifier.height(8.dp))
+            
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 16.dp, horizontal = 24.dp),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            )
+            
+            // Second Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(48.dp, Alignment.CenterHorizontally)
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                StatSubItem("Links", stats.memoTypeStats?.linkCount ?: 0)
-                StatSubItem("Code", stats.memoTypeStats?.codeCount ?: 0)
-                StatSubItem("Todo", stats.memoTypeStats?.todoCount ?: 0)
+                StatItem(
+                    label = "Links",
+                    value = (stats.memoTypeStats?.linkCount ?: 0).toString(),
+                    icon = Icons.Default.Link,
+                    modifier = Modifier.weight(1f)
+                )
+                StatItem(
+                    label = "Code",
+                    value = (stats.memoTypeStats?.codeCount ?: 0).toString(),
+                    icon = Icons.Default.Code,
+                    modifier = Modifier.weight(1f)
+                )
+                StatItem(
+                    label = "Todo",
+                    value = (stats.memoTypeStats?.todoCount ?: 0).toString(),
+                    icon = Icons.Default.CheckBox,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun TagsCard(tagCount: Map<String, Int>) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                "Tags",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            if (tagCount.isEmpty()) {
+                Text(
+                    text = "No tags found",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    tagCount.forEach { (tag, count) ->
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "#$tag",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                if (count > 1) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = count.toString(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun StatItem(label: String, value: String, icon: ImageVector) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+fun StatItem(label: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(
             icon,
             contentDescription = null,
@@ -214,18 +313,6 @@ fun StatItem(label: String, value: String, icon: ImageVector) {
         )
         Text(
             text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
-        )
-        Text(text = label, style = MaterialTheme.typography.labelSmall)
-    }
-}
-
-@Composable
-fun StatSubItem(label: String, count: Int) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = count.toString(),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold
         )
         Text(text = label, style = MaterialTheme.typography.labelSmall)
     }
@@ -343,14 +430,67 @@ fun ShortcutsCard(shortcuts: List<Shortcut>) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
-            shortcuts.forEach { shortcut ->
-                ListItem(
-                    headlineContent = { Text(shortcut.title ?: "") }, leadingContent = {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Shortcut, contentDescription = null
-                    )
-                }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            
+            if (shortcuts.isEmpty()) {
+                Text(
+                    text = "No shortcuts configured",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
+            } else {
+                shortcuts.forEach { shortcut ->
+                    ListItem(
+                        headlineContent = { Text(shortcut.title ?: "") }, leadingContent = {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Shortcut, contentDescription = null
+                        )
+                    }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WebhooksCard(webhooks: List<UserWebhook>) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                "Webhooks",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            if (webhooks.isEmpty()) {
+                Text(
+                    text = "No webhooks configured",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            } else {
+                webhooks.forEach { webhook ->
+                    ListItem(
+                        headlineContent = { Text(webhook.displayName ?: webhook.name ?: "Unknown") },
+                        supportingContent = {
+                            Text(
+                                text = webhook.url,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        },
+                        leadingContent = {
+                            Icon(
+                                Icons.Outlined.Webhook, contentDescription = null
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
             }
         }
     }
