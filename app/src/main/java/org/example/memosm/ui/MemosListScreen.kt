@@ -131,19 +131,44 @@ fun MemosListScreen(viewModel: MemosViewModel) {
             navigator = navigator,
             listPane = {
                 AnimatedPane {
-                    MemosListPane(
-                        viewModel = viewModel,
-                        listState = listState,
-                        tagListState = tagListState,
-                        onMemoClick = { memo ->
-                            focusManager.clearFocus()
-                            scope.launch {
-                                val id = memo.name ?: memo.content.hashCode().toString()
-                                navigator.navigateTo(
-                                    ListDetailPaneScaffoldRole.Detail, MemoKey(id)
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        MemosListPane(
+                            viewModel = viewModel,
+                            listState = listState,
+                            tagListState = tagListState,
+                            onMemoClick = { memo ->
+                                focusManager.clearFocus()
+                                scope.launch {
+                                    val id = memo.name ?: memo.content.hashCode().toString()
+                                    navigator.navigateTo(
+                                        ListDetailPaneScaffoldRole.Detail, MemoKey(id)
+                                    )
+                                }
+                            })
+
+                        // Overlay SearchBar on the list pane for tablets (dual pane)
+                        if (isListVisible && isDetailVisible) {
+                            AnimatedVisibility(
+                                visible = showSearchBar,
+                                enter = slideInVertically { -it } + fadeIn(),
+                                exit = slideOutVertically { -it } + fadeOut(),
+                                modifier = Modifier.align(Alignment.TopCenter)
+                            ) {
+                                MemoSearchBar(
+                                    viewModel = viewModel,
+                                    onMemoClick = { memo ->
+                                        focusManager.clearFocus()
+                                        scope.launch {
+                                            val id = memo.name ?: memo.content.hashCode().toString()
+                                            navigator.navigateTo(
+                                                ListDetailPaneScaffoldRole.Detail, MemoKey(id)
+                                            )
+                                        }
+                                    }
                                 )
                             }
-                        })
+                        }
+                    }
                 }
             },
             detailPane = {
@@ -207,25 +232,27 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                 }
             })
 
-        // Overlay M3 SearchBar with scroll and detail page awareness
-        AnimatedVisibility(
-            visible = showSearchBar,
-            enter = slideInVertically { -it } + fadeIn(),
-            exit = slideOutVertically { -it } + fadeOut(),
-            modifier = Modifier.align(Alignment.TopCenter)
-        ) {
-            MemoSearchBar(
-                viewModel = viewModel,
-                onMemoClick = { memo ->
-                    focusManager.clearFocus()
-                    scope.launch {
-                        val id = memo.name ?: memo.content.hashCode().toString()
-                        navigator.navigateTo(
-                            ListDetailPaneScaffoldRole.Detail, MemoKey(id)
-                        )
+        // Overlay M3 SearchBar globally for mobile (single pane)
+        if (!(isListVisible && isDetailVisible)) {
+            AnimatedVisibility(
+                visible = showSearchBar,
+                enter = slideInVertically { -it } + fadeIn(),
+                exit = slideOutVertically { -it } + fadeOut(),
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
+                MemoSearchBar(
+                    viewModel = viewModel,
+                    onMemoClick = { memo ->
+                        focusManager.clearFocus()
+                        scope.launch {
+                            val id = memo.name ?: memo.content.hashCode().toString()
+                            navigator.navigateTo(
+                                ListDetailPaneScaffoldRole.Detail, MemoKey(id)
+                            )
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     }
 }

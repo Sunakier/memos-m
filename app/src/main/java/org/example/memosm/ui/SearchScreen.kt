@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,12 +25,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.isTraversalGroup
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -54,6 +54,7 @@ fun MemoSearchBar(
     var query by rememberSaveable { mutableStateOf("") }
     var expanded by rememberSaveable { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val containerFocusRequester = remember { FocusRequester() }
 
     // Maintain a set of selected tags for AND filtering within the search context
     var searchSelectedTags by rememberSaveable { mutableStateOf(setOf<String>()) }
@@ -105,14 +106,18 @@ fun MemoSearchBar(
         }
     }
 
+    // Capture initial focus on the container to prevent the SearchBar from auto-focusing
+    LaunchedEffect(Unit) {
+        containerFocusRequester.requestFocus()
+    }
+
     Box(modifier = modifier
         .fillMaxWidth()
-        .semantics { isTraversalGroup = true }
+        .focusRequester(containerFocusRequester)
+        .focusable()
         .zIndex(1f)) {
         SearchBar(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .semantics { traversalIndex = 0f },
+            modifier = Modifier.align(Alignment.TopCenter),
             inputField = {
                 SearchBarDefaults.InputField(
                     query = query,
@@ -420,8 +425,7 @@ private fun SearchResultContent(
                             modifier = Modifier
                                 .padding(horizontal = 12.dp, vertical = 8.dp)
                                 .widthIn(min = 160.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                            verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = sortIcon,
                                 contentDescription = null,

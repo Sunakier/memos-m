@@ -85,4 +85,8 @@
     <string name="common_save">Speichern</string>
     <string name="common_cancel">Abbrechen</string>
     <string name="memo_input_add_tag">Tag hinzufügen</string>
+    <string name="memo_search_placeholder">Memos durchsuchen...</string>
+    <string name="memo_search_explore_placeholder">Entdecken durchsuchen...</string>
+    <string name="memo_search_hint">Text zum Suchen eingeben</string>
+    <string name="memo_search_no_results">Keine Ergebnisse gefunden</string>
 </resources>

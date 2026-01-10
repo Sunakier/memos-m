@@ -86,4 +86,8 @@
 
     <string name="common_save">保存</string>
     <string name="common_cancel">キャンセル</string>
+    <string name="memo_search_placeholder">メモを検索...</string>
+    <string name="memo_search_explore_placeholder">共有メモを検索...</string>
+    <string name="memo_search_hint">検索するテキストを入力</string>
+    <string name="memo_search_no_results">結果が見つかりません</string>
 </resources>

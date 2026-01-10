@@ -49,6 +49,8 @@
     <string name="memo_unknown_time">未知时间</string>
     <string name="memo_action_update">更新</string>
     <string name="memo_action_post">发表</string>
+    <string name="memo_action_open_web">在 Web 上打开</string>
+    <string name="memo_action_add_reaction">添加反应</string>
 
     <string name="memo_composer_placeholder">有什么新鲜事？</string>
     <string name="memo_composer_remove_attachment">移除附件</string>
@@ -83,4 +85,8 @@
     <string name="common_save">保存</string>
     <string name="common_cancel">取消</string>
     <string name="memo_input_add_tag">添加标签</string>
+    <string name="memo_search_placeholder">搜索笔记...</string>
+    <string name="memo_search_explore_placeholder">搜索探索...</string>
+    <string name="memo_search_hint">输入要搜索的文本</string>
+    <string name="memo_search_no_results">未找到结果</string>
 </resources>
