@@ -44,12 +44,12 @@
     <string name="memo_action_delete">削除</string>
     <string name="memo_action_more">メニュー</string>
     <string name="memo_action_open_web">Webで開く</string>
-    <string name="memo_publish">公開</string>
+    <string name="memo_publish">ポストする</string>
     <string name="memo_list_end">最後まで読み込みました</string>
     <string name="memo_unknown_user">不明</string>
     <string name="memo_unknown_time">不明</string>
     <string name="memo_action_update">更新</string>
-    <string name="memo_action_post">投稿</string>
+    <string name="memo_action_post">返信</string>
     <string name="memo_action_add_reaction">リアクションを追加</string>
 
     <string name="memo_composer_placeholder">今思ったことは…</string>
@@ -71,10 +71,10 @@
     <string name="memo_dialog_delete_confirm">このメモを削除してもよろしいですか？この操作は取り消せません。</string>
 
     <string name="memo_detail_title">メモの詳細</string>
-    <string name="memo_detail_comments">コメント (%1$d)</string>
-    <string name="memo_detail_no_comments">コメントはまだありません</string>
-    <string name="memo_detail_add_comment">コメントを追加</string>
-    <string name="memo_detail_comment_placeholder">コメントを入力...</string>
+    <string name="memo_detail_comments">返信 (%1$d)</string>
+    <string name="memo_detail_no_comments">返信はまだありません</string>
+    <string name="memo_detail_add_comment">返信を追加</string>
+    <string name="memo_detail_comment_placeholder">返信を入力...</string>
     <string name="memo_detail_back">戻る</string>
     <string name="memo_detail_placeholder">メモを選択して詳細を表示</string>
 
