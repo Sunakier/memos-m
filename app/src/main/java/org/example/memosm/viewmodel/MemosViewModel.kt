@@ -123,7 +123,8 @@ class MemosViewModel(
             try {
                 // Fetch memos first
                 val filter = if (_uiState.value.selectedTags.isNotEmpty()) {
-                    _uiState.value.selectedTags.joinToString(" && ") { "tag == \"$it\"" }
+                    val tagsFilter = _uiState.value.selectedTags.joinToString(", ") { "\"$it\"" }
+                    "tag in [$tagsFilter]"
                 } else null
                 
                 val memoResponse = api.listMemos(filter = filter)
@@ -364,7 +365,8 @@ class MemosViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val filter = if (_uiState.value.selectedTags.isNotEmpty()) {
-                    _uiState.value.selectedTags.joinToString(" && ") { "tag == \"$it\"" }
+                    val tagsFilter = _uiState.value.selectedTags.joinToString(", ") { "\"$it\"" }
+                    "tag in [$tagsFilter]"
                 } else null
                 
                 val response = api.listMemos(pageToken = currentToken, filter = filter)
