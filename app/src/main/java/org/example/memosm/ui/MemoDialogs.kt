@@ -28,7 +28,7 @@ fun MemoComposerDialog(
     val adaptiveInfo = currentWindowAdaptiveInfo()
     // WindowSizeClass.isWidthAtLeastBreakpoint(600) is the modern way to check for medium/expanded width
     val isTablet = adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(600)
-    
+
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
@@ -45,8 +45,7 @@ fun MemoComposerDialog(
             Modifier.fillMaxWidth()
         },
         containerColor = MaterialTheme.colorScheme.surface,
-        contentWindowInsets = { WindowInsets(0) }
-    ) {
+        contentWindowInsets = { WindowInsets(0) }) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -55,48 +54,36 @@ fun MemoComposerDialog(
                 .navigationBarsPadding()
                 .imePadding()
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = Icons.Default.Close, contentDescription = "Close"
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
 
             MemoComposer(
                 onPublish = { content, visibility, attachments ->
-                    when {
-                        initialMemo != null -> {
-                            viewModel.updateMemo(
-                                initialMemo, content, visibility, attachments
-                            ) {
-                                onDismiss()
-                            }
-                        }
-
-                        parentMemo != null -> {
-                            viewModel.createComment(parentMemo, content)
+                when {
+                    initialMemo != null -> {
+                        viewModel.updateMemo(
+                            initialMemo, content, visibility, attachments
+                        ) {
                             onDismiss()
                         }
+                    }
 
-                        else -> {
-                            viewModel.createMemo(content, visibility, attachments) {
-                                onDismiss()
-                            }
+                    parentMemo != null -> {
+                        viewModel.createComment(parentMemo, content)
+                        onDismiss()
+                    }
+
+                    else -> {
+                        viewModel.createMemo(content, visibility, attachments) {
+                            onDismiss()
                         }
                     }
-                },
+                }
+            },
                 onUploadFile = { uri, context ->
                     viewModel.uploadAttachment(uri, context)
                 },

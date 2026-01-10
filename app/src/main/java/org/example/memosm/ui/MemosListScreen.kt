@@ -103,8 +103,7 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                         if (initialState == null) {
                             // First time appearing: scale + fade
                             (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(
-                                initialScale = 0.92f,
-                                animationSpec = tween(220, delayMillis = 90)
+                                initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)
                             )).togetherWith(fadeOut(animationSpec = tween(90)))
                         } else {
                             // Switching between memos: smooth crossfade
@@ -166,16 +165,20 @@ private fun MemosListPane(
     var memoToEdit by remember { mutableStateOf<Memo?>(null) }
     var memoToDelete by remember { mutableStateOf<Memo?>(null) }
 
+    // Use a SideEffect or LaunchedEffect with listState to trigger loads
     val shouldLoadMore = remember {
         derivedStateOf {
-            val lastVisibleItem =
-                listState.layoutInfo.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf false
-            lastVisibleItem.index >= listState.layoutInfo.totalItemsCount - 5
+            val layoutInfo = listState.layoutInfo
+            val totalItemsNumber = layoutInfo.totalItemsCount
+            val lastVisibleItemIndex = (layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0) + 1
+
+            // Trigger when within 5 items of the end, and we have items, and we're not already loading
+            totalItemsNumber > 0 && lastVisibleItemIndex >= totalItemsNumber - 5
         }
     }
 
-    LaunchedEffect(shouldLoadMore.value) {
-        if (shouldLoadMore.value) {
+    LaunchedEffect(shouldLoadMore.value, uiState.isLoading, uiState.nextPageToken) {
+        if (shouldLoadMore.value && !uiState.isLoading && uiState.nextPageToken != null) {
             viewModel.loadMore()
         }
     }
