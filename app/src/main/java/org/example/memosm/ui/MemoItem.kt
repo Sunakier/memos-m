@@ -63,6 +63,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
 import com.mikepenz.markdown.m3.Markdown
+import com.mikepenz.markdown.model.markdownAnnotator
+import com.mikepenz.markdown.model.markdownAnnotatorConfig
 import com.mikepenz.markdown.model.rememberMarkdownState
 import kotlinx.coroutines.delay
 import okhttp3.OkHttpClient
@@ -109,6 +111,7 @@ fun MemoItem(
         }
     }
 
+    // Configure markdown to treat single newlines as line breaks (memos-style)
     val markdownState = if (memo.content.length < 1000) rememberMarkdownState(
         memo.content, retainState = true, immediate = true
     ) else rememberMarkdownState(
@@ -304,6 +307,9 @@ fun MemoItem(
                     Markdown(
                         markdownState = markdownState,
                         imageTransformer = Coil2ImageTransformerImpl,
+                        annotator = markdownAnnotator(
+                            config = markdownAnnotatorConfig(eolAsNewLine = true)
+                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
