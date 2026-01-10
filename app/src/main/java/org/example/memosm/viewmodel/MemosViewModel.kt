@@ -236,13 +236,20 @@ class MemosViewModel(
         Log.d("MemosViewModel", "Starting upload for URI: $uri")
         return try {
             val contentResolver = context.contentResolver
-            val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
+            val fileName = getFileName(uri, context) ?: "upload_${System.currentTimeMillis()}"
+
+            // Get MIME type from content resolver, but fall back to extension-based detection
+            val resolverMimeType = contentResolver.getType(uri)
+            val mimeType = if (resolverMimeType == null || resolverMimeType == "application/octet-stream") {
+                getMimeTypeFromExtension(fileName) ?: resolverMimeType ?: "application/octet-stream"
+            } else {
+                resolverMimeType
+            }
+
             val inputStream: InputStream? = contentResolver.openInputStream(uri)
             val bytes = inputStream?.readBytes() ?: return null
             inputStream.close()
 
-            val fileName = getFileName(uri, context) ?: "upload_${System.currentTimeMillis()}"
-            
             // Memos API expects bytes to be Base64 encoded in JSON
             val base64Content = Base64.encodeToString(bytes, Base64.NO_WRAP)
             Log.d("MemosViewModel", "Encoded file to Base64, size: ${base64Content.length}")
@@ -282,6 +289,12 @@ class MemosViewModel(
             val cut = path.lastIndexOf('/')
             if (cut != -1) path.substring(cut + 1) else path
         }
+    }
+
+    private fun getMimeTypeFromExtension(fileName: String): String? {
+        val extension = fileName.substringAfterLast('.', "").lowercase()
+        if (extension.isEmpty()) return null
+        return android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
     }
 
     private suspend fun fetchUserDetails(userId: String) {

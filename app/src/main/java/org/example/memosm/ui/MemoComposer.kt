@@ -4,7 +4,10 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.media.MediaRecorder
 import android.net.Uri
+import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -32,20 +35,30 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Location
+import java.io.File
 
 @Composable
 fun getVisibilityLabel(visibility: String): String {
@@ -104,6 +117,11 @@ fun MemoComposer(
     val density = LocalDensity.current
 
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+    // Audio recording state
+    var mediaRecorder by remember { mutableStateOf<MediaRecorder?>(null) }
+    var isRecording by remember { mutableStateOf(false) }
+    var currentRecordFile by remember { mutableStateOf<File?>(null) }
 
     val pickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -169,6 +187,97 @@ fun MemoComposer(
         }
     }
 
+    fun stopRecording() {
+        try {
+            mediaRecorder?.stop()
+            mediaRecorder?.reset()
+            mediaRecorder?.release()
+            mediaRecorder = null
+            isRecording = false
+
+            currentRecordFile?.let { file ->
+                val uri = file.toUri()
+                draftAttachments = draftAttachments + (uri to null)
+                isUploadingCount++
+                scope.launch {
+                    val attachment = onUploadFile(uri, context)
+                    if (attachment != null) {
+                        val updated = draftAttachments.map {
+                            if (it.first == uri) uri to attachment else it
+                        }
+                        draftAttachments = updated
+                        onDraftChanged?.invoke(
+                            contentState.text.toString(),
+                            visibility,
+                            updated.mapNotNull { it.second },
+                            location
+                        )
+                    } else {
+                        val updated = draftAttachments.filter { it.first != uri }
+                        draftAttachments = updated
+                        onDraftChanged?.invoke(
+                            contentState.text.toString(),
+                            visibility,
+                            updated.mapNotNull { it.second },
+                            location
+                        )
+                    }
+                    isUploadingCount--
+                }
+            }
+        } catch (e: Exception) {
+            Toast.makeText(context, "Failed to stop recording", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun startRecording() {
+        try {
+            val file = File(context.cacheDir, "record_${System.currentTimeMillis()}.aac")
+            currentRecordFile = file
+            
+            val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(context)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
+            }
+            
+            recorder.apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setOutputFile(file.absolutePath)
+                prepare()
+                start()
+            }
+            mediaRecorder = recorder
+            isRecording = true
+        } catch (e: Exception) {
+            Toast.makeText(context, "Failed to start recording: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            startRecording()
+        } else {
+            Toast.makeText(context, "Microphone permission required", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            if (isRecording) {
+                try {
+                    mediaRecorder?.stop()
+                    mediaRecorder?.release()
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
     LaunchedEffect(contentState.text) {
         onDraftChanged?.invoke(
             contentState.text.toString(),
@@ -227,7 +336,10 @@ fun MemoComposer(
                 verticalAlignment = Alignment.CenterVertically,
                 contentPadding = PaddingValues(top = 8.dp, end = 8.dp)
             ) {
-                items(draftAttachments) { (uri, attachment) ->
+                items(draftAttachments, key = { (uri, attachment) ->
+                    if (uri != Uri.EMPTY) uri.toString()
+                    else attachment?.name ?: attachment?.externalLink ?: "unknown"
+                }) { (uri, attachment) ->
                     val isImage = remember(uri, attachment) {
                         if (uri != Uri.EMPTY) {
                             context.contentResolver.getType(uri)?.startsWith("image/") == true
@@ -239,6 +351,32 @@ fun MemoComposer(
                             ) == true
                         }
                     }
+                    
+                    val isAudio = remember(uri, attachment) {
+                        // Check by file extension using Android's MimeTypeMap
+                        val path = uri.path ?: ""
+                        val filename = attachment?.filename ?: ""
+                        val pathExt = android.webkit.MimeTypeMap.getFileExtensionFromUrl(path)
+                        val filenameExt = filename.substringAfterLast('.', "").lowercase()
+                        val mimeTypeMap = android.webkit.MimeTypeMap.getSingleton()
+
+                        val extensionMimeType = mimeTypeMap.getMimeTypeFromExtension(pathExt)
+                            ?: mimeTypeMap.getMimeTypeFromExtension(filenameExt)
+                        val extensionIsAudio = extensionMimeType?.startsWith("audio/") == true
+
+                        // Also check MIME type from attachment
+                        val attachmentIsAudio = attachment?.displayType?.startsWith("audio/", ignoreCase = true) == true
+
+                        extensionIsAudio || attachmentIsAudio
+                    }
+
+                    val audioUrl = remember(uri, attachment) {
+                        // Prefer attachment externalLink when available (after upload completes)
+                        attachment?.externalLink ?: if (uri != Uri.EMPTY) uri.toString() else null
+                    }
+
+                    // Show smaller size during upload (when attachment is null)
+                    val isUploading = attachment == null && uri != Uri.EMPTY
 
                     Box(modifier = Modifier.size(80.dp)) {
                         if (isImage) {
@@ -254,6 +392,12 @@ fun MemoComposer(
                                     .background(MaterialTheme.colorScheme.surfaceVariant),
                                 contentScale = ContentScale.Crop
                             )
+                        } else if (isAudio && !audioUrl.isNullOrBlank()) {
+                            MiniAudioPlayer(
+                                url = audioUrl,
+                                token = token,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         } else {
                             Box(
                                 modifier = Modifier
@@ -263,13 +407,13 @@ fun MemoComposer(
                                     .padding(4.dp), contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.InsertDriveFile,
+                                    imageVector = if (isAudio) Icons.Outlined.Audiotrack else Icons.AutoMirrored.Outlined.InsertDriveFile,
                                     contentDescription = null
                                 )
                             }
                         }
 
-                        if (attachment == null) {
+                        if (isUploading) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -364,6 +508,29 @@ fun MemoComposer(
                     Icon(
                         imageVector = Icons.Outlined.Image,
                         contentDescription = stringResource(R.string.memo_composer_add_image),
+                        modifier = Modifier.size(actionIconSize)
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        if (isRecording) {
+                            stopRecording()
+                        } else {
+                            val permission = Manifest.permission.RECORD_AUDIO
+                            if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+                                startRecording()
+                            } else {
+                                audioPermissionLauncher.launch(permission)
+                            }
+                        }
+                    },
+                    enabled = !isPosting,
+                    modifier = Modifier.size(actionButtonSize)
+                ) {
+                    Icon(
+                        imageVector = if (isRecording) Icons.Default.Mic else Icons.Outlined.MicNone,
+                        contentDescription = "Record Audio",
+                        tint = if (isRecording) MaterialTheme.colorScheme.error else LocalContentColor.current,
                         modifier = Modifier.size(actionIconSize)
                     )
                 }
@@ -498,6 +665,7 @@ fun MemoComposer(
             onDismissRequest = { showLocationEditDialog = false },
             title = { Text(stringResource(R.string.memo_composer_edit_location)) },
             text = {
+                @Suppress("LocalVariableName")
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = tempPlaceholder,
@@ -541,5 +709,64 @@ fun MemoComposer(
                     Text(stringResource(R.string.common_cancel))
                 }
             })
+    }
+}
+
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@Composable
+fun MiniAudioPlayer(url: String, token: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val exoPlayer = remember {
+        val dataSourceFactory = DefaultDataSource.Factory(
+            context,
+            OkHttpDataSource.Factory(OkHttpClient.Builder().build())
+                .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
+        )
+        ExoPlayer.Builder(context)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
+            .build()
+    }
+    
+    var isPlaying by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(url) {
+        exoPlayer.setMediaItem(MediaItem.fromUri(url))
+        exoPlayer.prepare()
+    }
+
+    DisposableEffect(Unit) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(playing: Boolean) {
+                isPlaying = playing
+            }
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == Player.STATE_ENDED) {
+                    exoPlayer.seekTo(0)
+                    exoPlayer.pause()
+                }
+            }
+        }
+        exoPlayer.addListener(listener)
+        onDispose {
+            exoPlayer.removeListener(listener)
+            exoPlayer.release()
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center
+    ) {
+        IconButton(onClick = {
+            if (isPlaying) exoPlayer.pause() else exoPlayer.play()
+        }) {
+            Icon(
+                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
     }
 }
