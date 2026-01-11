@@ -88,31 +88,26 @@ private fun ClickableCheckbox(
     val nodeText = model.node.getTextInNode(content)
     val isChecked = nodeText.contains("[x]") || nodeText.contains("[X]")
 
-    val isClickable = onToggle != null
-
     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-        Checkbox(checked = isChecked, onCheckedChange = if (isClickable) { _ ->
-            // Find the checkbox pattern in the content and toggle it
-            val startOffset = model.node.startOffset
-            val endOffset = model.node.endOffset
-
-            // Get the text of this specific checkbox node
-            val checkboxText = content.substring(startOffset, endOffset)
-
-            // Toggle the checkbox state
-            val newCheckboxText = if (isChecked) {
-                checkboxText.replace("[x]", "[ ]", ignoreCase = true)
-            } else {
-                checkboxText.replace("[ ]", "[x]")
-            }
-
-            // Create the new content with the toggled checkbox
-            val newContent =
-                content.take(startOffset) + newCheckboxText + content.substring(endOffset)
-            onToggle?.invoke(newContent)
-        } else null, modifier = Modifier
-            .padding(end = 4.dp)
-            .size(20.dp), enabled = isClickable)
+        Checkbox(
+            checked = isChecked,
+            onCheckedChange = if (onToggle != null) { _ ->
+                val startOffset = model.node.startOffset
+                val endOffset = model.node.endOffset
+                val checkboxText = content.substring(startOffset, endOffset)
+                val newCheckboxText = if (isChecked) {
+                    checkboxText.replace("[x]", "[ ]", ignoreCase = true)
+                } else {
+                    checkboxText.replace("[ ]", "[x]")
+                }
+                val newContent = content.take(startOffset) + newCheckboxText + content.substring(endOffset)
+                onToggle(newContent)
+            } else null,
+            modifier = Modifier
+                .padding(end = 4.dp)
+                .size(20.dp),
+            enabled = onToggle != null
+        )
     }
 }
 
@@ -195,9 +190,9 @@ fun CustomMarkdownTable(
     val tableCornerSize = LocalMarkdownDimens.current.tableCornerSize
     val tableCellPadding = LocalMarkdownDimens.current.tableCellPadding
     val backgroundColor = LocalMarkdownColors.current.tableBackground
-
-    // 1. Higher contrast header background
-    val headerBackground = MaterialTheme.colorScheme.secondaryContainer
+    
+    // 1. Significantly higher contrast header background
+    val headerBackground = MaterialTheme.colorScheme.primaryContainer
 
     val horizontalScrollState = rememberScrollState()
     val columnWidths = remember(node) { mutableStateMapOf<Int, Int>() }
@@ -205,14 +200,18 @@ fun CustomMarkdownTable(
     Box(
         modifier = Modifier
             .padding(vertical = 8.dp)
-            // 2. Clip the container and set background to avoid gaps
             .clip(RoundedCornerShape(tableCornerSize))
             .background(backgroundColor)
             .horizontalScroll(horizontalScrollState)
     ) {
         Column {
             // Header Row
-            Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth() // 2. Cover entire row width to avoid gaps on the right
+                    .height(IntrinsicSize.Min)
+                    .background(headerBackground) // 3. Single background for the entire row
+            ) {
                 (0 until columnCount).forEach { columnIndex ->
                     val cellNode = headerCells.getOrNull(columnIndex)
 
@@ -222,9 +221,8 @@ fun CustomMarkdownTable(
                     ) { widthModifier ->
                         Box(
                             modifier = widthModifier
-                                .background(headerBackground)
                                 .padding(tableCellPadding)
-                                .fillMaxHeight() // Fill full row height
+                                .fillMaxHeight()
                         ) {
                             if (cellNode != null) {
                                 MarkdownElement(
@@ -286,8 +284,7 @@ private fun TableCell(
             columnWidths[columnIndex] = maxWidth
         }
 
-        // 3. Ensure the height matches the row height by using constraints.minHeight
-        // provided by Row(Modifier.height(IntrinsicSize.Min))
+        // Match row height: Use constraints.minHeight provided by Row(Modifier.height(IntrinsicSize.Min))
         val height = constraints.minHeight.coerceAtLeast(placeable.height)
 
         layout(width = maxWidth, height = height) {
