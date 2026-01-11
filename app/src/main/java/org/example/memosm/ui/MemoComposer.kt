@@ -37,7 +37,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -57,6 +56,7 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import android.provider.OpenableColumns
 import android.util.Base64
+import androidx.compose.ui.platform.LocalResources
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -89,48 +89,50 @@ fun getVisibilityIcon(visibility: String, outlined: Boolean = false): ImageVecto
  * Converts a local Uri to an Attachment with base64-encoded content for draft caching.
  * Returns null if the file cannot be read.
  */
-suspend fun uriToBase64Attachment(uri: Uri, context: Context): Attachment? = withContext(Dispatchers.IO) {
-    try {
-        val contentResolver = context.contentResolver
+suspend fun uriToBase64Attachment(uri: Uri, context: Context): Attachment? =
+    withContext(Dispatchers.IO) {
+        try {
+            val contentResolver = context.contentResolver
 
-        // Get filename
-        val fileName = run {
-            var name: String? = null
-            if (uri.scheme == "content") {
-                contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                        if (index != -1) name = cursor.getString(index)
+            // Get filename
+            val fileName = run {
+                var name: String? = null
+                if (uri.scheme == "content") {
+                    contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                            if (index != -1) name = cursor.getString(index)
+                        }
                     }
                 }
+                name ?: uri.path?.substringAfterLast('/')
+                ?: "attachment_${System.currentTimeMillis()}"
             }
-            name ?: uri.path?.substringAfterLast('/') ?: "attachment_${System.currentTimeMillis()}"
+
+            // Get MIME type
+            val resolverMimeType = contentResolver.getType(uri)
+            val mimeType =
+                if (resolverMimeType == null || resolverMimeType == "application/octet-stream") {
+                    val ext = MimeTypeMap.getFileExtensionFromUrl(uri.toString()).lowercase()
+                    MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: resolverMimeType
+                    ?: "application/octet-stream"
+                } else {
+                    resolverMimeType
+                }
+
+            // Read and encode content
+            val inputStream = contentResolver.openInputStream(uri) ?: return@withContext null
+            val bytes = inputStream.use { it.readBytes() }
+            val base64Content = Base64.encodeToString(bytes, Base64.NO_WRAP)
+
+            Attachment(
+                filename = fileName, type = mimeType, content = base64Content
+            )
+        } catch (e: Exception) {
+            Log.e("MemoComposer", "Error converting Uri to base64 Attachment", e)
+            null
         }
-
-        // Get MIME type
-        val resolverMimeType = contentResolver.getType(uri)
-        val mimeType = if (resolverMimeType == null || resolverMimeType == "application/octet-stream") {
-            val ext = MimeTypeMap.getFileExtensionFromUrl(uri.toString()).lowercase()
-            MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: resolverMimeType ?: "application/octet-stream"
-        } else {
-            resolverMimeType
-        }
-
-        // Read and encode content
-        val inputStream = contentResolver.openInputStream(uri) ?: return@withContext null
-        val bytes = inputStream.use { it.readBytes() }
-        val base64Content = Base64.encodeToString(bytes, Base64.NO_WRAP)
-
-        Attachment(
-            filename = fileName,
-            type = mimeType,
-            content = base64Content
-        )
-    } catch (e: Exception) {
-        Log.e("MemoComposer", "Error converting Uri to base64 Attachment", e)
-        null
     }
-}
 
 @Composable
 fun MemoComposer(
@@ -151,6 +153,7 @@ fun MemoComposer(
     resetToken: Any? = null
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     // We use resetToken to reset the internal state when necessary (e.g. after post or when changing which memo to edit)
     val contentState = remember(resetToken) { TextFieldState(initialContent) }
@@ -191,6 +194,8 @@ fun MemoComposer(
         }
     }
 
+    val locationPlaceHolder = stringResource(R.string.memo_composer_location_default_placeholder)
+
     @SuppressLint("MissingPermission")
     fun fetchLocation() {
         isFetchingLocation = true
@@ -202,7 +207,7 @@ fun MemoComposer(
                 location = Location(
                     latitude = androidLoc.latitude,
                     longitude = androidLoc.longitude,
-                    placeholder = context.getString(R.string.memo_composer_location_default_placeholder)
+                    placeholder = locationPlaceHolder
                 )
             }
             isFetchingLocation = false
@@ -219,6 +224,9 @@ fun MemoComposer(
         }
     }
 
+
+    val recordErrorText = stringResource(R.string.memo_composer_error_stop_recording)
+
     fun stopRecording() {
         try {
             mediaRecorder?.stop()
@@ -232,9 +240,17 @@ fun MemoComposer(
                 draftAttachments = draftAttachments + (uri to null)
             }
         } catch (e: Exception) {
-            Toast.makeText(context, context.getString(R.string.memo_composer_error_stop_recording), Toast.LENGTH_SHORT).show()
+            Log.e("MemoComposer", "Error stopping recording", e)
+            Toast.makeText(
+                context,
+                recordErrorText,
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
+
+//    val startRecordErrorText = stringResource(R.string.memo_composer_error_start_recording)
+
 
     fun startRecording() {
         try {
@@ -258,7 +274,8 @@ fun MemoComposer(
             mediaRecorder = recorder
             isRecording = true
         } catch (e: Exception) {
-            val message = context.getString(R.string.memo_composer_error_start_recording, e.message ?: "")
+            val message =
+                resources.getString(R.string.memo_composer_error_start_recording, e.message ?: "")
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
@@ -269,7 +286,11 @@ fun MemoComposer(
         if (isGranted) {
             startRecording()
         } else {
-            Toast.makeText(context, context.getString(R.string.memo_composer_error_microphone_permission), Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                resources.getString(R.string.memo_composer_error_microphone_permission),
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
@@ -303,10 +324,7 @@ fun MemoComposer(
         }
 
         onDraftChanged.invoke(
-            contentState.text.toString(),
-            visibility,
-            allAttachments,
-            location
+            contentState.text.toString(), visibility, allAttachments, location
         )
     }
 
@@ -341,7 +359,8 @@ fun MemoComposer(
             ) {
                 items(draftAttachments, key = { (uri, attachment) ->
                     if (uri != Uri.EMPTY) uri.toString()
-                    else attachment?.name ?: attachment?.filename ?: attachment?.externalLink ?: "unknown"
+                    else attachment?.name ?: attachment?.filename ?: attachment?.externalLink
+                    ?: "unknown"
                 }) { (uri, attachment) ->
                     val mimeType = remember(uri, attachment) {
                         if (uri != Uri.EMPTY) {
@@ -384,7 +403,10 @@ fun MemoComposer(
                                         mimeType.contains("m4a") -> "m4a"
                                         else -> "aac"
                                     }
-                                    val tempFile = File(context.cacheDir, "cached_audio_${attachment.filename.hashCode()}.$ext")
+                                    val tempFile = File(
+                                        context.cacheDir,
+                                        "cached_audio_${attachment.filename.hashCode()}.$ext"
+                                    )
                                     if (!tempFile.exists() || tempFile.length() != bytes.size.toLong()) {
                                         tempFile.writeBytes(bytes)
                                     }
@@ -394,6 +416,7 @@ fun MemoComposer(
                                     null
                                 }
                             }
+
                             else -> null
                         }
                     }
@@ -411,10 +434,11 @@ fun MemoComposer(
                                         // Decode base64 content to byte array for Coil
                                         try {
                                             Base64.decode(attachment.content, Base64.NO_WRAP)
-                                        } catch (e: Exception) {
+                                        } catch (_: Exception) {
                                             null
                                         }
                                     }
+
                                     else -> null
                                 }
                             }
@@ -562,7 +586,9 @@ fun MemoComposer(
                 ) {
                     Icon(
                         imageVector = if (isRecording) Icons.Default.Mic else Icons.Outlined.MicNone,
-                        contentDescription = stringResource(R.string.memo_composer_error_microphone_permission).removeSuffix(" required"), // Best effort if no specific string
+                        contentDescription = stringResource(R.string.memo_composer_error_microphone_permission).removeSuffix(
+                            " required"
+                        ), // Best effort if no specific string
                         tint = if (isRecording) MaterialTheme.colorScheme.error else LocalContentColor.current,
                         modifier = Modifier.size(actionIconSize)
                     )
@@ -721,7 +747,7 @@ fun MemoComposer(
             onDismissRequest = { showLocationEditDialog = false },
             title = { Text(stringResource(R.string.memo_composer_edit_location)) },
             text = {
-                @Suppress("LocalVariableName") Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = tempPlaceholder,
                         onValueChange = { tempPlaceholder = it },
@@ -819,7 +845,9 @@ fun MiniAudioPlayer(url: String, token: String, modifier: Modifier = Modifier) {
         }) {
             Icon(
                 imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = if (isPlaying) stringResource(R.string.memo_action_pause) else stringResource(R.string.memo_action_play),
+                contentDescription = if (isPlaying) stringResource(R.string.memo_action_pause) else stringResource(
+                    R.string.memo_action_play
+                ),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
