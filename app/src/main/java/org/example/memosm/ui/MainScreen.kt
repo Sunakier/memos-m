@@ -11,10 +11,13 @@ import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -54,109 +57,175 @@ fun MainScreen(
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
 
-    // State holder to preserve UI state (scroll position, search state, navigator state) across tab switches
     val saveableStateHolder = rememberSaveableStateHolder()
 
-    // Flag to hide nav bar (e.g. when in archived memos detail on mobile)
     var isNavBarVisible by remember { mutableStateOf(true) }
 
-    // Ensure focus is cleared whenever we switch screens
     DisposableEffect(currentDestination) {
         focusManager.clearFocus()
         onDispose { }
     }
 
-    NavigationSuiteScaffold(
-        navigationSuiteItems = {
-            if (isNavBarVisible) {
-                MainDestination.entries.forEach { destination ->
-                    item(selected = currentDestination == destination, onClick = {
-                        focusManager.clearFocus()
-                        val currentTime = System.currentTimeMillis()
-                        if (currentDestination == destination && currentTime - lastTapTime < 500) {
-                            when (destination) {
-                                MainDestination.MEMOS -> viewModel.refreshAll()
-                                MainDestination.EXPLORE -> viewModel.fetchExplore(refresh = true)
-                                MainDestination.ATTACHMENTS -> viewModel.fetchAttachments()
-                                else -> {}
-                            }
-                        }
-                        currentDestination = destination
-                        lastTapTime = currentTime
-                    }, icon = {
-                        val isSelected = currentDestination == destination
-                        when (destination) {
-                            MainDestination.MEMOS -> Icon(
-                                if (isSelected) Icons.AutoMirrored.Filled.LibraryBooks else Icons.AutoMirrored.Outlined.LibraryBooks,
-                                contentDescription = null
-                            )
+    val adaptiveInfo = currentWindowAdaptiveInfo()
+    val layoutType = NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(adaptiveInfo)
+    val isMobile = layoutType == NavigationSuiteType.NavigationBar
 
-                            MainDestination.EXPLORE -> Icon(
-                                if (isSelected) Icons.Default.Public else Icons.Outlined.Public,
-                                contentDescription = null
-                            )
+    @Composable
+    fun NavigationIcon(destination: MainDestination, isSelected: Boolean) {
+        when (destination) {
+            MainDestination.MEMOS -> Icon(
+                if (isSelected) Icons.AutoMirrored.Filled.LibraryBooks else Icons.AutoMirrored.Outlined.LibraryBooks,
+                contentDescription = null
+            )
 
-                            MainDestination.ATTACHMENTS -> Icon(
-                                if (isSelected) Icons.Default.Attachment else Icons.Outlined.Attachment,
-                                contentDescription = null
-                            )
+            MainDestination.EXPLORE -> Icon(
+                if (isSelected) Icons.Default.Public else Icons.Outlined.Public,
+                contentDescription = null
+            )
 
-                            MainDestination.PROFILE -> {
-                                val avatarUrl = uiState.user?.avatarUrl
-                                if (avatarUrl != null) {
-                                    AsyncImage(
-                                        model = avatarUrl,
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .size(24.dp)
-                                            .clip(CircleShape)
-                                            .then(
-                                                if (isSelected) Modifier.border(
-                                                    2.dp, MaterialTheme.colorScheme.primary, CircleShape
-                                                ) else Modifier
-                                            ),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    Icon(
-                                        if (isSelected) Icons.Default.Person else Icons.Outlined.Person,
-                                        contentDescription = null
-                                    )
-                                }
-                            }
-                        }
-                    }, label = { Text(stringResource(destination.labelRes)) })
+            MainDestination.ATTACHMENTS -> Icon(
+                if (isSelected) Icons.Default.Attachment else Icons.Outlined.Attachment,
+                contentDescription = null
+            )
+
+            MainDestination.PROFILE -> {
+                val avatarUrl = uiState.user?.avatarUrl
+                if (avatarUrl != null) {
+                    AsyncImage(
+                        model = avatarUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .then(
+                                if (isSelected) Modifier.border(
+                                    2.dp, MaterialTheme.colorScheme.primary, CircleShape
+                                ) else Modifier
+                            ),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        if (isSelected) Icons.Default.Person else Icons.Outlined.Person,
+                        contentDescription = null
+                    )
                 }
             }
-        }, modifier = modifier
+        }
+    }
+
+    fun handleDestinationClick(destination: MainDestination) {
+        focusManager.clearFocus()
+        val currentTime = System.currentTimeMillis()
+        if (currentDestination == destination && currentTime - lastTapTime < 500) {
+            when (destination) {
+                MainDestination.MEMOS -> viewModel.refreshAll()
+                MainDestination.EXPLORE -> viewModel.fetchExplore(refresh = true)
+                MainDestination.ATTACHMENTS -> viewModel.fetchAttachments()
+                else -> {}
+            }
+        }
+        currentDestination = destination
+        lastTapTime = currentTime
+    }
+
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
-        // AnimatedContent handles the transition between screens
-        AnimatedContent(
-            targetState = currentDestination, transitionSpec = {
-                fadeIn(animationSpec = tween(220)) togetherWith fadeOut(animationSpec = tween(220))
-            }, label = "MainScreenDestinationTransition", modifier = Modifier.fillMaxSize()
-        ) { targetDestination ->
-            // SaveableStateProvider ensures that all rememberSaveable states (like scroll position)
-            // are preserved and restored when switching back to this tab.
-            saveableStateHolder.SaveableStateProvider(targetDestination) {
-                when (targetDestination) {
-                    MainDestination.MEMOS -> {
-                        isNavBarVisible = true
-                        MemosScreen(viewModel)
+        Box(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxSize()) {
+                // Navigation Rail for tablets/desktops
+                if (!isMobile) {
+                    NavigationRail(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        contentColor = contentColorFor(MaterialTheme.colorScheme.surfaceContainer)
+                    ) {
+                        Spacer(Modifier.weight(1f))
+                        MainDestination.entries.forEach { destination ->
+                            NavigationRailItem(
+                                selected = currentDestination == destination,
+                                onClick = { handleDestinationClick(destination) },
+                                icon = {
+                                    NavigationIcon(
+                                        destination,
+                                        currentDestination == destination
+                                    )
+                                },
+                                label = { Text(stringResource(destination.labelRes)) }
+                            )
+                        }
+                        Spacer(Modifier.weight(1f))
                     }
-                    MainDestination.EXPLORE -> {
-                        isNavBarVisible = true
-                        ExploreScreen(viewModel)
+                }
+
+                Box(Modifier.weight(1f).fillMaxHeight()) {
+                    // Content
+                    AnimatedContent(
+                        targetState = currentDestination,
+                        transitionSpec = {
+                            fadeIn(animationSpec = tween(220)) togetherWith fadeOut(
+                                animationSpec = tween(220)
+                            )
+                        },
+                        label = "MainScreenDestinationTransition",
+                        modifier = Modifier.fillMaxSize()
+                    ) { targetDestination ->
+                        saveableStateHolder.SaveableStateProvider(targetDestination) {
+                            when (targetDestination) {
+                                MainDestination.MEMOS -> MemosScreen(
+                                    viewModel = viewModel,
+                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
+                                )
+
+                                MainDestination.EXPLORE -> ExploreScreen(
+                                    viewModel = viewModel,
+                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
+                                )
+
+                                MainDestination.ATTACHMENTS -> AttachmentsScreen(
+                                    viewModel = viewModel,
+                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
+                                )
+
+                                MainDestination.PROFILE -> ProfileScreen(
+                                    viewModel = viewModel,
+                                    onLogout = onLogout,
+                                    onToggleNavBar = { visible -> if (isMobile) isNavBarVisible = visible }
+                                )
+                            }
+                        }
                     }
-                    MainDestination.ATTACHMENTS -> {
-                        isNavBarVisible = true
-                        AttachmentsScreen(viewModel)
+                }
+            }
+
+            // Bottom Navigation Bar for mobile (moved outside Row to avoid RowScope ambiguity)
+            if (isMobile) {
+                Box(Modifier.align(Alignment.BottomCenter)) {
+                    AnimatedVisibility(
+                        visible = isNavBarVisible,
+                        enter = slideInVertically(initialOffsetY = { it }),
+                        exit = slideOutVertically(targetOffsetY = { it })
+                    ) {
+                        NavigationBar(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            contentColor = contentColorFor(MaterialTheme.colorScheme.surfaceContainer)
+                        ) {
+                            MainDestination.entries.forEach { destination ->
+                                NavigationBarItem(
+                                    selected = currentDestination == destination,
+                                    onClick = { handleDestinationClick(destination) },
+                                    icon = {
+                                        NavigationIcon(
+                                            destination,
+                                            currentDestination == destination
+                                        )
+                                    },
+                                    label = { Text(stringResource(destination.labelRes)) }
+                                )
+                            }
+                        }
                     }
-                    MainDestination.PROFILE -> ProfileScreen(
-                        viewModel = viewModel,
-                        onLogout = onLogout,
-                        onToggleNavBar = { visible -> isNavBarVisible = visible }
-                    )
                 }
             }
         }

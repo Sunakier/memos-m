@@ -49,7 +49,7 @@ import org.example.memosm.ui.components.item.VideoPlayer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AttachmentsScreen(viewModel: MemosViewModel) {
+fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit = {}) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyStaggeredGridState()
     val aspectRatios = remember { mutableStateMapOf<String, Float>() }
@@ -64,6 +64,33 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
             dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow
         ), label = "CellWidthAnimation"
     )
+
+    // Scroll direction tracking for nav bar visibility
+    var isScrollingDown by remember { mutableStateOf(false) }
+    var previousIndex by remember { mutableIntStateOf(0) }
+    var previousScrollOffset by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (currentIndex, currentOffset) ->
+            val wasScrollingDown = isScrollingDown
+            if (currentIndex > previousIndex) {
+                isScrollingDown = true
+            } else if (currentIndex < previousIndex) {
+                isScrollingDown = false
+            } else if (currentOffset > previousScrollOffset + 10) {
+                isScrollingDown = true
+            } else if (currentOffset < previousScrollOffset - 10) {
+                isScrollingDown = false
+            }
+
+            if (wasScrollingDown != isScrollingDown) {
+                onToggleNavBar(!isScrollingDown)
+            }
+
+            previousIndex = currentIndex
+            previousScrollOffset = currentOffset
+        }
+    }
 
     // Double tap refresh logic: scroll to top
     // We keep track of the last processed trigger to avoid scrolling to top 

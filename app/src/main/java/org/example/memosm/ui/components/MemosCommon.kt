@@ -49,7 +49,8 @@ fun MemosScaffold(
     listState: LazyListState,
     listPane: @Composable BoxScope.(onMemoClick: (Memo) -> Unit) -> Unit,
     topBar: @Composable (isDetailVisible: Boolean, isDualPane: Boolean) -> Unit = { _, _ -> },
-    overlay: @Composable BoxScope.(onMemoClick: (Memo) -> Unit, showSearchBar: Boolean, isSearchExpanded: Boolean, onSearchExpandedChange: (Boolean) -> Unit, isDualPane: Boolean, isDetailVisible: Boolean) -> Unit = { _, _, _, _, _, _ -> }
+    overlay: @Composable BoxScope.(onMemoClick: (Memo) -> Unit, showSearchBar: Boolean, isSearchExpanded: Boolean, onSearchExpandedChange: (Boolean) -> Unit, isDualPane: Boolean, isDetailVisible: Boolean) -> Unit = { _, _, _, _, _, _ -> },
+    onToggleNavBar: (Boolean) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusRequester = remember { FocusRequester() }
@@ -98,6 +99,7 @@ fun MemosScaffold(
 
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (currentIndex, currentOffset) ->
+            val wasScrollingDown = isScrollingDown
             if (currentIndex > previousIndex) {
                 isScrollingDown = true
             } else if (currentIndex < previousIndex) {
@@ -107,6 +109,11 @@ fun MemosScaffold(
             } else if (currentOffset < previousScrollOffset - 10) {
                 isScrollingDown = false
             }
+
+            if (wasScrollingDown != isScrollingDown) {
+                onToggleNavBar(!isScrollingDown)
+            }
+
             previousIndex = currentIndex
             previousScrollOffset = currentOffset
         }

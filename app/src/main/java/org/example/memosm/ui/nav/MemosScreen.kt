@@ -30,7 +30,7 @@ import org.example.memosm.ui.components.MemosScaffold
 import org.example.memosm.viewmodel.MemosViewModel
 
 @Composable
-fun MemosScreen(viewModel: MemosViewModel) {
+fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit = {}) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
 
@@ -47,6 +47,7 @@ fun MemosScreen(viewModel: MemosViewModel) {
         viewModel = viewModel,
         memos = uiState.memos,
         listState = listState,
+        onToggleNavBar = onToggleNavBar,
         listPane = { onMemoClick ->
             MemosListPane(
                 viewModel = viewModel,
