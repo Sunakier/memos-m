@@ -179,7 +179,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel) {
                         }
 
                         val ratio = aspectRatios[key] ?: when {
-                            isAudio -> 2.5f
+                            isAudio -> 2.0f
                             isVideo -> 1.4f // Normal aspect ratio for card including footer
                             else -> 1.0f
                         }

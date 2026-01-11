@@ -31,6 +31,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.UiComposable
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
@@ -79,6 +80,7 @@ import java.util.*
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MemoItem(
+    modifier: Modifier = Modifier,
     memo: Memo,
     user: User? = null,
     currentUser: User? = null,
@@ -92,7 +94,6 @@ fun MemoItem(
     onContentUpdate: ((String) -> Unit)? = null,
     maxHeight: Dp = Dp.Unspecified,
     isDetailView: Boolean = false,
-    modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showReactionPicker by remember { mutableStateOf(false) }
@@ -231,13 +232,19 @@ fun MemoItem(
                                             val intent = Intent(Intent.ACTION_VIEW, webUrl.toUri())
                                             context.startActivity(intent)
                                         } catch (e: Exception) {
-                                            // Ignore
+                                            android.util.Log.e(
+                                                "MemoItem",
+                                                "Failed to open web URL: $webUrl",
+                                                e
+                                            )
                                         }
                                     },
                                     leadingIcon = {
                                         Icon(Icons.Outlined.Language, contentDescription = null)
                                     })
                             }
+
+
                             if (onUpsertReaction != null) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.memo_action_add_reaction)) },
@@ -553,7 +560,11 @@ fun AttachmentDisplay(
                                 )
                                 context.startActivity(intent)
                             } catch (e: Exception) {
-                                // Ignore
+                                android.util.Log.w(
+                                    "MemoItem",
+                                    "Failed to open attachment URL: ${attachment.externalLink}",
+                                    e
+                                )
                             }
                         }
                     } else Modifier),
@@ -602,7 +613,11 @@ fun AttachmentDisplay(
                                 )
                                 context.startActivity(intent)
                             } catch (e: Exception) {
-                                // Ignore
+                                android.util.Log.w(
+                                    "MemoItem",
+                                    "Failed to open attachment URL: ${attachment.externalLink}",
+                                    e
+                                )
                             }
                         }
                     } else Modifier),
