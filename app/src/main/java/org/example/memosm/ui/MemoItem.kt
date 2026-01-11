@@ -66,6 +66,8 @@ import com.mikepenz.markdown.compose.LocalMarkdownComponents
 import com.mikepenz.markdown.compose.MarkdownElement
 import com.mikepenz.markdown.compose.components.MarkdownComponentModel
 import com.mikepenz.markdown.compose.components.markdownComponents
+import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
+import com.mikepenz.markdown.compose.elements.highlightedCodeFence
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.model.markdownAnnotator
 import com.mikepenz.markdown.model.markdownAnnotatorConfig
@@ -322,23 +324,29 @@ fun MemoItem(
                         annotator = markdownAnnotator(
                             config = markdownAnnotatorConfig(eolAsNewLine = true)
                         ),
-                        components = markdownComponents(checkbox = { model ->
-                            ClickableCheckbox(
-                                model = model,
-                                content = memo.content,
-                                onToggle = if (onContentUpdate != null) { newContent ->
-                                    onContentUpdate(newContent)
-                                } else null)
-                        }, blockQuote = { model ->
-                            CustomMarkdownBlockQuote(
-                                content = model.content,
-                                node = model.node,
-                                style = model.typography.quote
-                            )
-                        }),
+                        components = markdownComponents(
+                            checkbox = { model ->
+                                ClickableCheckbox(
+                                    model = model,
+                                    content = memo.content,
+                                    onToggle = if (onContentUpdate != null) { newContent ->
+                                        onContentUpdate(newContent)
+                                    } else null)
+                            },
+                            blockQuote = { model ->
+                                CustomMarkdownBlockQuote(
+                                    content = model.content,
+                                    node = model.node,
+                                    style = model.typography.quote
+                                )
+                            },
+                            codeBlock = highlightedCodeBlock,
+                            codeFence = highlightedCodeFence,
+                        ),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 12.dp, bottom = 4.dp))
+                            .padding(start = 12.dp, bottom = 4.dp)
+                    )
                 }
 
                 memo.location?.let { loc ->

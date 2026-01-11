@@ -119,6 +119,7 @@ dependencies {
     implementation(libs.multiplatform.markdown.renderer.android)
     implementation(libs.multiplatform.markdown.renderer.m3)
     implementation(libs.multiplatform.markdown.renderer.coil2)
+    implementation(libs.multiplatform.markdown.renderer.code)
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.dash)
