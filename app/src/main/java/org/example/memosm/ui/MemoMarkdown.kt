@@ -1,20 +1,21 @@
 package org.example.memosm.ui
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -64,8 +65,7 @@ fun MemoMarkdown(
             },
             table = { model ->
                 CustomMarkdownTable(
-                    content = model.content,
-                    node = model.node
+                    content = model.content, node = model.node
                 )
             },
             horizontalRule = {
@@ -179,81 +179,114 @@ fun CustomMarkdownTable(
     content: String,
     node: ASTNode
 ) {
-    val tableMaxWidth = LocalMarkdownDimens.current.tableMaxWidth
-    val tableCellWidth = LocalMarkdownDimens.current.tableCellWidth
-    val tableCornerSize = LocalMarkdownDimens.current.tableCornerSize
-    val tableCellPadding = LocalMarkdownDimens.current.tableCellPadding
-
     val header = remember(node) { node.findChildOfType(GFMElementTypes.HEADER) }
     val rows = remember(node) { node.children.filter { it.type == GFMElementTypes.ROW } }
 
-    val columnsCount = remember(header) {
-        header?.children?.count { it.type == GFMTokenTypes.CELL } ?: 0
+    val headerCells = remember(header) {
+        header?.children?.filter { it.type == GFMTokenTypes.CELL } ?: emptyList()
     }
 
-    if (columnsCount == 0) return
+    val rowCells = remember(rows) {
+        rows.map { row -> row.children.filter { it.type == GFMTokenTypes.CELL } }
+    }
 
-    val tableWidth = tableCellWidth * columnsCount
-    val backgroundCodeColor = LocalMarkdownColors.current.tableBackground
+    val columnCount = headerCells.size
+    if (columnCount == 0) return
+
     val markdownComponents = LocalMarkdownComponents.current
+    val tableCornerSize = LocalMarkdownDimens.current.tableCornerSize
+    val tableCellPadding = LocalMarkdownDimens.current.tableCellPadding
+    val backgroundColor = LocalMarkdownColors.current.tableBackground
+    val headerBackground = MaterialTheme.colorScheme.surfaceVariant
 
-    BoxWithConstraints(
+    val horizontalScrollState = rememberScrollState()
+    val columnWidths = remember { mutableStateMapOf<Int, Int>() }
+
+    Box(
         modifier = Modifier
-            .background(backgroundCodeColor, RoundedCornerShape(tableCornerSize))
-            .widthIn(max = tableMaxWidth)
+            .background(backgroundColor, RoundedCornerShape(tableCornerSize))
+            .horizontalScroll(horizontalScrollState)
+            .padding(4.dp)
     ) {
-        val scrollable = maxWidth <= tableWidth
-        
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(columnsCount),
-            modifier = (if (scrollable) {
-                Modifier
-                    .horizontalScroll(rememberScrollState())
-                    .requiredWidth(tableWidth)
-            } else {
-                Modifier.fillMaxWidth()
-            }).heightIn(max = 2000.dp),
-            userScrollEnabled = false
-        ) {
-            // Header
-            header?.let { h ->
-                val cells = h.children.filter { it.type == GFMTokenTypes.CELL }
-                items(cells) { cell ->
-                    Box(modifier = Modifier.padding(tableCellPadding)) {
-                        MarkdownElement(
-                            node = cell,
-                            components = markdownComponents,
-                            content = content,
-                            includeSpacer = false
-                        )
+        Column {
+            Row {
+                (0 until columnCount).forEach { columnIndex ->
+                    val cellNode = headerCells.getOrNull(columnIndex)
+
+                    TableCell(
+                        columnIndex = columnIndex,
+                        columnWidths = columnWidths
+                    ) { widthModifier ->
+                        Box(
+                            modifier = widthModifier
+                                .background(headerBackground)
+                                .padding(tableCellPadding)
+                        ) {
+                            if (cellNode != null) {
+                                MarkdownElement(
+                                    node = cellNode,
+                                    components = markdownComponents,
+                                    content = content,
+                                    includeSpacer = false
+                                )
+                            }
+                        }
                     }
                 }
             }
+            // ---------- BODY ----------
+            rowCells.forEach { row ->
+                Row {
+                    (0 until columnCount).forEach { columnIndex ->
+                        val cellNode = row.getOrNull(columnIndex)
 
-            // Divider line across all columns
-            item(span = { GridItemSpan(columnsCount) }) {
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    thickness = 1.dp
-                )
-            }
-
-            // Rows
-            rows.forEach { row ->
-                val cells = row.children.filter { it.type == GFMTokenTypes.CELL }
-                items(cells) { cell ->
-                    Box(modifier = Modifier.padding(tableCellPadding)) {
-                        MarkdownElement(
-                            node = cell,
-                            components = markdownComponents,
-                            content = content,
-                            includeSpacer = false
-                        )
+                        TableCell(
+                            columnIndex = columnIndex,
+                            columnWidths = columnWidths
+                        ) { widthModifier ->
+                            Box(
+                                modifier = widthModifier
+                                    .padding(tableCellPadding)
+                            ) {
+                                if (cellNode != null) {
+                                    MarkdownElement(
+                                        node = cellNode,
+                                        components = markdownComponents,
+                                        content = content,
+                                        includeSpacer = false
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun TableCell(
+    columnIndex: Int,
+    columnWidths: MutableMap<Int, Int>,
+    content: @Composable (Modifier) -> Unit
+) {
+    val widthModifier = Modifier.layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+
+        val existingWidth = columnWidths[columnIndex] ?: 0
+        val maxWidth = maxOf(existingWidth, placeable.width)
+
+        if (maxWidth > existingWidth) {
+            columnWidths[columnIndex] = maxWidth
+        }
+
+        layout(width = maxWidth, height = placeable.height) {
+            placeable.placeRelative(0, 0)
+        }
+    }
+
+    content(widthModifier)
 }
 
 @Composable
@@ -263,9 +296,7 @@ fun MarkdownDivider(
     thickness: Dp = LocalMarkdownDimens.current.dividerThickness,
 ) {
     HorizontalDivider(
-        modifier = modifier,
-        thickness = thickness,
-        color = color
+        modifier = modifier, thickness = thickness, color = color
     )
 }
 
@@ -276,8 +307,6 @@ fun VerticalMarkdownDivider(
     thickness: Dp = LocalMarkdownDimens.current.dividerThickness,
 ) {
     VerticalDivider(
-        modifier = modifier,
-        thickness = thickness,
-        color = color
+        modifier = modifier, thickness = thickness, color = color
     )
 }
