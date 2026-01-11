@@ -17,7 +17,6 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -129,21 +128,21 @@ fun MainScreen(
         lastTapTime = currentTime
     }
 
-    Surface(
+    Scaffold(
         modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Box(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxSize()) {
-                // Navigation Rail for tablets/desktops
-                if (!isMobile) {
-                    NavigationRail(
+        bottomBar = {
+            if (isMobile) {
+                AnimatedVisibility(
+                    visible = isNavBarVisible,
+                    enter = slideInVertically(initialOffsetY = { it }),
+                    exit = slideOutVertically(targetOffsetY = { it })
+                ) {
+                    NavigationBar(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         contentColor = contentColorFor(MaterialTheme.colorScheme.surfaceContainer)
                     ) {
-                        Spacer(Modifier.weight(1f))
                         MainDestination.entries.forEach { destination ->
-                            NavigationRailItem(
+                            NavigationBarItem(
                                 selected = currentDestination == destination,
                                 onClick = { handleDestinationClick(destination) },
                                 icon = {
@@ -155,75 +154,79 @@ fun MainScreen(
                                 label = { Text(stringResource(destination.labelRes)) }
                             )
                         }
-                        Spacer(Modifier.weight(1f))
-                    }
-                }
-
-                Box(Modifier.weight(1f).fillMaxHeight()) {
-                    // Content
-                    AnimatedContent(
-                        targetState = currentDestination,
-                        transitionSpec = {
-                            fadeIn(animationSpec = tween(220)) togetherWith fadeOut(
-                                animationSpec = tween(220)
-                            )
-                        },
-                        label = "MainScreenDestinationTransition",
-                        modifier = Modifier.fillMaxSize()
-                    ) { targetDestination ->
-                        saveableStateHolder.SaveableStateProvider(targetDestination) {
-                            when (targetDestination) {
-                                MainDestination.MEMOS -> MemosScreen(
-                                    viewModel = viewModel,
-                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
-                                )
-
-                                MainDestination.EXPLORE -> ExploreScreen(
-                                    viewModel = viewModel,
-                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
-                                )
-
-                                MainDestination.ATTACHMENTS -> AttachmentsScreen(
-                                    viewModel = viewModel,
-                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
-                                )
-
-                                MainDestination.PROFILE -> ProfileScreen(
-                                    viewModel = viewModel,
-                                    onLogout = onLogout,
-                                    onToggleNavBar = { visible -> if (isMobile) isNavBarVisible = visible }
-                                )
-                            }
-                        }
                     }
                 }
             }
-
-            // Bottom Navigation Bar for mobile (moved outside Row to avoid RowScope ambiguity)
-            if (isMobile) {
-                Box(Modifier.align(Alignment.BottomCenter)) {
-                    AnimatedVisibility(
-                        visible = isNavBarVisible,
-                        enter = slideInVertically(initialOffsetY = { it }),
-                        exit = slideOutVertically(targetOffsetY = { it })
-                    ) {
-                        NavigationBar(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                            contentColor = contentColorFor(MaterialTheme.colorScheme.surfaceContainer)
-                        ) {
-                            MainDestination.entries.forEach { destination ->
-                                NavigationBarItem(
-                                    selected = currentDestination == destination,
-                                    onClick = { handleDestinationClick(destination) },
-                                    icon = {
-                                        NavigationIcon(
-                                            destination,
-                                            currentDestination == destination
-                                        )
-                                    },
-                                    label = { Text(stringResource(destination.labelRes)) }
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { paddingValues ->
+        Row(
+            Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Navigation Rail for tablets/desktops
+            if (!isMobile) {
+                NavigationRail(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = contentColorFor(MaterialTheme.colorScheme.surfaceContainer)
+                ) {
+                    Spacer(Modifier.weight(1f))
+                    MainDestination.entries.forEach { destination ->
+                        NavigationRailItem(
+                            selected = currentDestination == destination,
+                            onClick = { handleDestinationClick(destination) },
+                            icon = {
+                                NavigationIcon(
+                                    destination,
+                                    currentDestination == destination
                                 )
-                            }
+                            },
+                            label = { Text(stringResource(destination.labelRes)) }
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                }
+            }
+
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            ) {
+                // Content
+                AnimatedContent(
+                    targetState = currentDestination,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(220)) togetherWith fadeOut(
+                            animationSpec = tween(220)
+                        )
+                    },
+                    label = "MainScreenDestinationTransition",
+                    modifier = Modifier.fillMaxSize()
+                ) { targetDestination ->
+                    saveableStateHolder.SaveableStateProvider(targetDestination) {
+                        when (targetDestination) {
+                            MainDestination.MEMOS -> MemosScreen(
+                                viewModel = viewModel,
+                                onToggleNavBar = { if (isMobile) isNavBarVisible = it }
+                            )
+
+                            MainDestination.EXPLORE -> ExploreScreen(
+                                viewModel = viewModel,
+                                onToggleNavBar = { if (isMobile) isNavBarVisible = it }
+                            )
+
+                            MainDestination.ATTACHMENTS -> AttachmentsScreen(
+                                viewModel = viewModel,
+                                onToggleNavBar = { if (isMobile) isNavBarVisible = it }
+                            )
+
+                            MainDestination.PROFILE -> ProfileScreen(
+                                viewModel = viewModel,
+                                onLogout = onLogout,
+                                onToggleNavBar = { visible -> if (isMobile) isNavBarVisible = visible }
+                            )
                         }
                     }
                 }
