@@ -173,6 +173,7 @@ fun MemoComposer(
     var isUploadingCount by remember { mutableIntStateOf(0) }
     var uploadingUris by remember { mutableStateOf(setOf<Uri>()) }
     var isFetchingLocation by remember { mutableStateOf(false) }
+    var showActionOverflowMenu by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -331,8 +332,8 @@ fun MemoComposer(
         modifier = modifier.onSizeChanged {
             componentWidth = with(density) { it.width.toDp() }
         }) {
-        val showVisibilityLabel = componentWidth > 440.dp || componentWidth == 0.dp
-        val showPublishLabel = componentWidth > 350.dp || componentWidth == 0.dp
+        val showVisibilityLabel = componentWidth > 480.dp || componentWidth == 0.dp
+        val showPublishLabel = componentWidth > 410.dp || componentWidth == 0.dp
         val isCompact = componentWidth < 380.dp && componentWidth != 0.dp
 
         val actionIconSize = if (isCompact) 20.dp else 24.dp
