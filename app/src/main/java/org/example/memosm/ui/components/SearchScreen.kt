@@ -1,4 +1,4 @@
-package org.example.memosm.ui
+package org.example.memosm.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -6,7 +6,6 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,9 +34,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import org.example.memosm.R
 import org.example.memosm.model.Memo
+import org.example.memosm.ui.components.item.MemoItem
+import org.example.memosm.viewmodel.MemosUiState
 import org.example.memosm.viewmodel.MemosViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.collections.get
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -200,7 +202,7 @@ private fun SearchResultContent(
     orderBy: String,
     availableTags: Map<String, Int>,
     filteredMemos: List<Memo>,
-    uiState: org.example.memosm.viewmodel.MemosUiState,
+    uiState: MemosUiState,
     onTagClick: (String) -> Unit,
     onStartDateSelected: (Long?) -> Unit,
     onEndDateSelected: (Long?) -> Unit,

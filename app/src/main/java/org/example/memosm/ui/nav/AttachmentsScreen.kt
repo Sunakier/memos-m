@@ -1,11 +1,11 @@
-package org.example.memosm.ui
+package org.example.memosm.ui.nav
 
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Environment
 import android.text.format.Formatter
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -25,12 +25,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -42,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
-import coil3.request.crossfade
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
 import org.example.memosm.viewmodel.MemosViewModel
@@ -51,6 +44,8 @@ import java.util.*
 import androidx.core.net.toUri
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
+import org.example.memosm.ui.components.item.AudioPlayer
+import org.example.memosm.ui.components.item.VideoPlayer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -245,7 +240,7 @@ fun AttachmentItem(
             val outputFormat = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault())
             date?.let { outputFormat.format(it) } ?: ""
         } catch (e: Exception) {
-            android.util.Log.e(
+            Log.e(
                 "AttachmentsScreen", "Failed to parse date: ${attachment.createTime}", e
             )
             attachment.createTime ?: ""
@@ -403,7 +398,7 @@ fun AttachmentItem(
                                         )
                                         context.startActivity(intent)
                                     } catch (e: Exception) {
-                                        android.util.Log.e(
+                                        Log.e(
                                             "AttachmentsScreen",
                                             "Failed to open link: ${attachment.externalLink}",
                                             e

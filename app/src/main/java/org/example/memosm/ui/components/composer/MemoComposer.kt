@@ -1,4 +1,4 @@
-package org.example.memosm.ui
+package org.example.memosm.ui.components.composer
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -51,13 +51,14 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import coil3.request.crossfade
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import android.provider.OpenableColumns
 import android.util.Base64
+import androidx.annotation.OptIn
 import androidx.compose.ui.platform.LocalResources
+import androidx.media3.common.util.UnstableApi
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import kotlinx.coroutines.Dispatchers
@@ -923,7 +924,7 @@ fun MemoComposer(
     }
 }
 
-@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@OptIn(UnstableApi::class)
 @Composable
 fun MiniAudioPlayer(url: String, token: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current

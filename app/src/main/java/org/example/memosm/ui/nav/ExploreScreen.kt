@@ -1,16 +1,18 @@
-package org.example.memosm.ui
+package org.example.memosm.ui.nav
 
 import androidx.compose.animation.*
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import org.example.memosm.R
+import org.example.memosm.ui.components.GenericMemosListPane
+import org.example.memosm.ui.components.MemoSearchBar
+import org.example.memosm.ui.components.MemosScaffold
 import org.example.memosm.viewmodel.MemosViewModel
+import kotlin.collections.get
 
 @Composable
 fun ExploreScreen(viewModel: MemosViewModel) {

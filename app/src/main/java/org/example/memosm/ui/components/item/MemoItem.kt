@@ -1,4 +1,4 @@
-package org.example.memosm.ui
+package org.example.memosm.ui.components.item
 
 import android.app.Activity
 import android.content.Context
@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.text.format.DateUtils
+import android.util.Log
 import android.view.ViewGroup
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
@@ -63,12 +64,11 @@ import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.mikepenz.markdown.model.markdownAnnotator
-import com.mikepenz.markdown.model.markdownAnnotatorConfig
 import com.mikepenz.markdown.model.rememberMarkdownState
 import kotlinx.coroutines.delay
 import okhttp3.OkHttpClient
 import org.example.memosm.R
+import org.example.memosm.model.Attachment
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User
 import java.text.SimpleDateFormat
@@ -229,7 +229,7 @@ fun MemoItem(
                                             val intent = Intent(Intent.ACTION_VIEW, webUrl.toUri())
                                             context.startActivity(intent)
                                         } catch (e: Exception) {
-                                            android.util.Log.e(
+                                            Log.e(
                                                 "MemoItem", "Failed to open web URL: $webUrl", e
                                             )
                                         }
@@ -489,7 +489,7 @@ fun MemoItem(
 
 @Composable
 fun AttachmentDisplay(
-    attachment: org.example.memosm.model.Attachment, token: String, isDetailView: Boolean
+    attachment: Attachment, token: String, isDetailView: Boolean
 ) {
     val isImage = remember(attachment.displayType) {
         attachment.displayType.startsWith(
@@ -538,7 +538,7 @@ fun AttachmentDisplay(
                                 )
                                 context.startActivity(intent)
                             } catch (e: Exception) {
-                                android.util.Log.w(
+                                Log.w(
                                     "MemoItem",
                                     "Failed to open attachment URL: ${attachment.externalLink}",
                                     e
@@ -587,7 +587,7 @@ fun AttachmentDisplay(
                                 )
                                 context.startActivity(intent)
                             } catch (e: Exception) {
-                                android.util.Log.w(
+                                Log.w(
                                     "MemoItem",
                                     "Failed to open attachment URL: ${attachment.externalLink}",
                                     e
@@ -620,7 +620,7 @@ fun AttachmentDisplay(
 }
 
 @Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
-@androidx.annotation.OptIn(UnstableApi::class)
+@OptIn(UnstableApi::class)
 @Composable
 fun VideoPlayer(
     url: String, token: String, modifier: Modifier = Modifier
@@ -741,7 +741,7 @@ fun Context.findActivity(): Activity? {
     return null
 }
 
-@androidx.annotation.OptIn(UnstableApi::class)
+@OptIn(UnstableApi::class)
 @Composable
 fun AudioPlayer(
     url: String, filename: String, token: String, modifier: Modifier = Modifier

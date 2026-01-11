@@ -1,7 +1,8 @@
-package org.example.memosm.ui
+package org.example.memosm.ui.nav
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -21,6 +22,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
+import org.example.memosm.model.Memo
+import org.example.memosm.ui.components.GenericMemosListPane
+import org.example.memosm.ui.components.composer.MemoComposer
+import org.example.memosm.ui.components.MemoSearchBar
+import org.example.memosm.ui.components.MemosScaffold
 import org.example.memosm.viewmodel.MemosViewModel
 
 @Composable
@@ -68,8 +74,8 @@ fun MemosScreen(viewModel: MemosViewModel) {
 @Composable
 private fun MemosListPane(
     viewModel: MemosViewModel,
-    listState: androidx.compose.foundation.lazy.LazyListState,
-    onMemoClick: (org.example.memosm.model.Memo) -> Unit
+    listState: LazyListState,
+    onMemoClick: (Memo) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val tagListState = rememberLazyListState()

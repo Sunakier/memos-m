@@ -1,4 +1,4 @@
-package org.example.memosm.ui
+package org.example.memosm.ui.nav
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
@@ -34,6 +34,9 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import org.example.memosm.R
 import org.example.memosm.model.*
+import org.example.memosm.ui.ProfileDetailKey
+import org.example.memosm.ui.components.ArchivedMemosScreen
+import org.example.memosm.ui.components.composer.getVisibilityLabel
 import org.example.memosm.viewmodel.MemosViewModel
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)

@@ -25,6 +25,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import org.example.memosm.R
 import org.example.memosm.data.DataStoreManager
+import org.example.memosm.ui.nav.AttachmentsScreen
+import org.example.memosm.ui.nav.ExploreScreen
+import org.example.memosm.ui.nav.MemosScreen
+import org.example.memosm.ui.nav.ProfileScreen
 import org.example.memosm.viewmodel.MemosViewModel
 
 enum class MainDestination(
@@ -149,7 +153,7 @@ fun MainScreen(
                         AttachmentsScreen(viewModel)
                     }
                     MainDestination.PROFILE -> ProfileScreen(
-                        viewModel = viewModel, 
+                        viewModel = viewModel,
                         onLogout = onLogout,
                         onToggleNavBar = { visible -> isNavBarVisible = visible }
                     )

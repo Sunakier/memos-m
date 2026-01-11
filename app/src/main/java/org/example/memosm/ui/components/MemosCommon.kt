@@ -1,4 +1,4 @@
-package org.example.memosm.ui
+package org.example.memosm.ui.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
@@ -35,6 +35,10 @@ import kotlinx.coroutines.launch
 import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User
+import org.example.memosm.ui.MemoKey
+import org.example.memosm.ui.components.composer.DeleteConfirmationDialog
+import org.example.memosm.ui.components.composer.MemoEditDialog
+import org.example.memosm.ui.components.item.MemoItem
 import org.example.memosm.viewmodel.MemosViewModel
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -199,7 +203,7 @@ fun MemosScaffold(
                         }
 
                         if (memo != null) {
-                            MemoDetailPane(
+                            MemoDetailView(
                                 memo = memo,
                                 comments = uiState.selectedMemoComments,
                                 isLoadingComments = uiState.isLoadingComments,

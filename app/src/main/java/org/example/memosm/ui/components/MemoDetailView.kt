@@ -1,4 +1,4 @@
-package org.example.memosm.ui
+package org.example.memosm.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,11 +18,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.model.Memo
+import org.example.memosm.ui.components.composer.DeleteConfirmationDialog
+import org.example.memosm.ui.components.composer.MemoComposerDialog
+import org.example.memosm.ui.components.composer.MemoEditDialog
+import org.example.memosm.ui.components.item.MemoItem
 import org.example.memosm.viewmodel.MemosViewModel
+import kotlin.collections.get
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MemoDetailPane(
+fun MemoDetailView(
     memo: Memo,
     comments: List<Memo>,
     isLoadingComments: Boolean,
