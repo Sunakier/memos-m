@@ -1,5 +1,7 @@
 package org.example.memosm.ui
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,6 +14,12 @@ import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.automirrored.outlined.Shortcut
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.layout.AnimatedPane
+import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
+import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
+import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
+import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,12 +31,118 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.launch
 import org.example.memosm.R
 import org.example.memosm.model.*
 import org.example.memosm.viewmodel.MemosViewModel
 
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
-fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit, onShowArchived: () -> Unit) {
+fun ProfileScreen(
+    viewModel: MemosViewModel,
+    onLogout: () -> Unit,
+    onToggleNavBar: (Boolean) -> Unit
+) {
+    val navigator = rememberListDetailPaneScaffoldNavigator<ProfileDetailKey>()
+    val scope = rememberCoroutineScope()
+
+    val isDetailVisible =
+        navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
+    val isListVisible =
+        navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
+
+    // Hide nav bar if detail is visible and list is not (mobile detail view)
+    LaunchedEffect(isDetailVisible, isListVisible) {
+        onToggleNavBar(!(isDetailVisible && !isListVisible))
+    }
+
+    NavigableListDetailPaneScaffold(
+        navigator = navigator,
+        listPane = {
+            AnimatedPane {
+                ProfileListPane(
+                    viewModel = viewModel,
+                    onLogout = onLogout,
+                    onShowArchived = {
+                        scope.launch {
+                            navigator.navigateTo(
+                                ListDetailPaneScaffoldRole.Detail,
+                                ProfileDetailKey.Archived
+                            )
+                        }
+                    }
+                )
+            }
+        },
+        detailPane = {
+            AnimatedPane {
+                val currentKey = navigator.currentDestination?.contentKey
+                AnimatedContent(
+                    targetState = currentKey,
+                    transitionSpec = {
+                        val isDualPane = isDetailVisible && isListVisible
+                        if (isDualPane) {
+                            fadeIn(animationSpec = tween(300)).togetherWith(
+                                fadeOut(
+                                    animationSpec = tween(
+                                        300
+                                    )
+                                )
+                            )
+                        } else {
+                            (slideInVertically(
+                                initialOffsetY = { it },
+                                animationSpec = tween(300)
+                            ) + fadeIn())
+                                .togetherWith(
+                                    slideOutVertically(
+                                        targetOffsetY = { it },
+                                        animationSpec = tween(300)
+                                    ) + fadeOut()
+                                )
+                        }
+                    },
+                    label = "ProfileDetailTransition"
+                ) { key ->
+                    when (key) {
+                        is ProfileDetailKey.Archived -> {
+                            ArchivedMemosScreen(
+                                viewModel = viewModel,
+                                onBack = {
+                                    scope.launch {
+                                        navigator.navigateBack()
+                                    }
+                                }
+                            )
+                        }
+
+                        null -> {
+                            if (isDetailVisible && isListVisible) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Select an item to view details",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun ProfileListPane(
+    viewModel: MemosViewModel,
+    onLogout: () -> Unit,
+    onShowArchived: () -> Unit
+) {
     val uiState by viewModel.uiState.collectAsState()
     val user = uiState.user
     val stats = uiState.userStats
@@ -67,8 +181,18 @@ fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit, onShowArchive
                     Card(modifier = Modifier.fillMaxWidth(), onClick = onShowArchived) {
                         ListItem(
                             headlineContent = { Text(stringResource(R.string.profile_archived)) },
-                            leadingContent = { Icon(Icons.Outlined.Archive, contentDescription = null) },
-                            trailingContent = { Icon(Icons.Outlined.ChevronRight, contentDescription = null) },
+                            leadingContent = {
+                                Icon(
+                                    Icons.Outlined.Archive,
+                                    contentDescription = null
+                                )
+                            },
+                            trailingContent = {
+                                Icon(
+                                    Icons.Outlined.ChevronRight,
+                                    contentDescription = null
+                                )
+                            },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
                     }

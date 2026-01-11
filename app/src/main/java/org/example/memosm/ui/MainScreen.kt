@@ -53,6 +53,9 @@ fun MainScreen(
     // State holder to preserve UI state (scroll position, search state, navigator state) across tab switches
     val saveableStateHolder = rememberSaveableStateHolder()
 
+    // Flag to hide nav bar (e.g. when in archived memos detail on mobile)
+    var isNavBarVisible by remember { mutableStateOf(true) }
+
     // Ensure focus is cleared whenever we switch screens
     DisposableEffect(currentDestination) {
         focusManager.clearFocus()
@@ -61,63 +64,65 @@ fun MainScreen(
 
     NavigationSuiteScaffold(
         navigationSuiteItems = {
-            MainDestination.entries.forEach { destination ->
-                item(selected = currentDestination == destination, onClick = {
-                    focusManager.clearFocus()
-                    val currentTime = System.currentTimeMillis()
-                    if (currentDestination == destination && currentTime - lastTapTime < 500) {
-                        when (destination) {
-                            MainDestination.MEMOS -> viewModel.refreshAll()
-                            MainDestination.EXPLORE -> viewModel.fetchExplore(refresh = true)
-                            MainDestination.ATTACHMENTS -> viewModel.fetchAttachments()
-                            else -> {}
-                        }
-                    }
-                    currentDestination = destination
-                    lastTapTime = currentTime
-                }, icon = {
-                    val isSelected = currentDestination == destination
-                    when (destination) {
-                        MainDestination.MEMOS -> Icon(
-                            if (isSelected) Icons.AutoMirrored.Filled.LibraryBooks else Icons.AutoMirrored.Outlined.LibraryBooks,
-                            contentDescription = null
-                        )
-
-                        MainDestination.EXPLORE -> Icon(
-                            if (isSelected) Icons.Default.Public else Icons.Outlined.Public,
-                            contentDescription = null
-                        )
-
-                        MainDestination.ATTACHMENTS -> Icon(
-                            if (isSelected) Icons.Default.Attachment else Icons.Outlined.Attachment,
-                            contentDescription = null
-                        )
-
-                        MainDestination.PROFILE -> {
-                            val avatarUrl = uiState.user?.avatarUrl
-                            if (avatarUrl != null) {
-                                AsyncImage(
-                                    model = avatarUrl,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clip(CircleShape)
-                                        .then(
-                                            if (isSelected) Modifier.border(
-                                                2.dp, MaterialTheme.colorScheme.primary, CircleShape
-                                            ) else Modifier
-                                        ),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Icon(
-                                    if (isSelected) Icons.Default.Person else Icons.Outlined.Person,
-                                    contentDescription = null
-                                )
+            if (isNavBarVisible) {
+                MainDestination.entries.forEach { destination ->
+                    item(selected = currentDestination == destination, onClick = {
+                        focusManager.clearFocus()
+                        val currentTime = System.currentTimeMillis()
+                        if (currentDestination == destination && currentTime - lastTapTime < 500) {
+                            when (destination) {
+                                MainDestination.MEMOS -> viewModel.refreshAll()
+                                MainDestination.EXPLORE -> viewModel.fetchExplore(refresh = true)
+                                MainDestination.ATTACHMENTS -> viewModel.fetchAttachments()
+                                else -> {}
                             }
                         }
-                    }
-                }, label = { Text(stringResource(destination.labelRes)) })
+                        currentDestination = destination
+                        lastTapTime = currentTime
+                    }, icon = {
+                        val isSelected = currentDestination == destination
+                        when (destination) {
+                            MainDestination.MEMOS -> Icon(
+                                if (isSelected) Icons.AutoMirrored.Filled.LibraryBooks else Icons.AutoMirrored.Outlined.LibraryBooks,
+                                contentDescription = null
+                            )
+
+                            MainDestination.EXPLORE -> Icon(
+                                if (isSelected) Icons.Default.Public else Icons.Outlined.Public,
+                                contentDescription = null
+                            )
+
+                            MainDestination.ATTACHMENTS -> Icon(
+                                if (isSelected) Icons.Default.Attachment else Icons.Outlined.Attachment,
+                                contentDescription = null
+                            )
+
+                            MainDestination.PROFILE -> {
+                                val avatarUrl = uiState.user?.avatarUrl
+                                if (avatarUrl != null) {
+                                    AsyncImage(
+                                        model = avatarUrl,
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(CircleShape)
+                                            .then(
+                                                if (isSelected) Modifier.border(
+                                                    2.dp, MaterialTheme.colorScheme.primary, CircleShape
+                                                ) else Modifier
+                                            ),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Icon(
+                                        if (isSelected) Icons.Default.Person else Icons.Outlined.Person,
+                                        contentDescription = null
+                                    )
+                                }
+                            }
+                        }
+                    }, label = { Text(stringResource(destination.labelRes)) })
+                }
             }
         }, modifier = modifier
     ) {
@@ -131,17 +136,23 @@ fun MainScreen(
             // are preserved and restored when switching back to this tab.
             saveableStateHolder.SaveableStateProvider(targetDestination) {
                 when (targetDestination) {
-                    MainDestination.MEMOS -> MemosListScreen(viewModel)
-                    MainDestination.EXPLORE -> ExploreScreen(viewModel)
-                    MainDestination.ATTACHMENTS -> AttachmentsScreen(viewModel)
-                    MainDestination.PROFILE -> {
-                        var showArchived by rememberSaveable { mutableStateOf(false) }
-                        if (showArchived) {
-                            ArchivedMemosScreen(viewModel, onBack = { showArchived = false })
-                        } else {
-                            ProfileScreen(viewModel, onLogout, onShowArchived = { showArchived = true })
-                        }
+                    MainDestination.MEMOS -> {
+                        isNavBarVisible = true
+                        MemosListScreen(viewModel)
                     }
+                    MainDestination.EXPLORE -> {
+                        isNavBarVisible = true
+                        ExploreScreen(viewModel)
+                    }
+                    MainDestination.ATTACHMENTS -> {
+                        isNavBarVisible = true
+                        AttachmentsScreen(viewModel)
+                    }
+                    MainDestination.PROFILE -> ProfileScreen(
+                        viewModel = viewModel, 
+                        onLogout = onLogout,
+                        onToggleNavBar = { visible -> isNavBarVisible = visible }
+                    )
                 }
             }
         }
