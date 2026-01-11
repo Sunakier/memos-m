@@ -155,6 +155,8 @@ fun MemoSearchBar(
                 expanded = it
                 onExpandedChange(it)
             },
+            // Reset window insets to zero since MemosScaffold already handles status bar padding
+            windowInsets = WindowInsets(0, 0, 0, 0)
         ) {
             SearchResultContent(
                 query = query,
