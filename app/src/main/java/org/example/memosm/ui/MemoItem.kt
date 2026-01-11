@@ -865,7 +865,9 @@ fun AudioPlayer(
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play"
+                        contentDescription = if (isPlaying) stringResource(R.string.memo_action_pause) else stringResource(
+                            R.string.memo_action_play
+                        )
                     )
                 }
 

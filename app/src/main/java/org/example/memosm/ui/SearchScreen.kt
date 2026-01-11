@@ -268,14 +268,14 @@ private fun SearchResultContent(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 DateSelectorCard(
-                    label = "Start",
+                    label = stringResource(R.string.search_date_start),
                     dateMillis = startDateMillis,
                     onClick = { showStartDatePicker = true },
                     onClear = { onStartDateSelected(null) },
                     modifier = Modifier.weight(1f)
                 )
                 DateSelectorCard(
-                    label = "End",
+                    label = stringResource(R.string.search_date_end),
                     dateMillis = endDateMillis,
                     onClick = { showEndDatePicker = true },
                     onClear = { onEndDateSelected(null) },
@@ -395,9 +395,9 @@ private fun SearchResultContent(
                     onExpandedChange = { showSortMenu = it }
                 ) {
                     val sortLabel = when (orderBy) {
-                        "display_time desc" -> "Newest First"
-                        "display_time asc" -> "Oldest First"
-                        else -> "Sort"
+                        "display_time desc" -> stringResource(R.string.search_sort_newest)
+                        "display_time asc" -> stringResource(R.string.search_sort_oldest)
+                        else -> stringResource(R.string.search_sort_title)
                     }
                     val sortIcon = when (orderBy) {
                         "display_time desc" -> Icons.Outlined.ArrowDownward
@@ -442,7 +442,7 @@ private fun SearchResultContent(
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    "Newest First",
+                                    stringResource(R.string.search_sort_newest),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             },
@@ -461,7 +461,7 @@ private fun SearchResultContent(
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    "Oldest First",
+                                    stringResource(R.string.search_sort_oldest),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             },
@@ -566,11 +566,11 @@ private fun DateSelectorCard(
                             "MMM dd, yyyy", Locale.getDefault()
                         ).format(Date(dateMillis))
                     } else {
-                        "Any"
+                        "Any" // Will use stringResource(R.string.search_date_any) below
                     }
                 }
                 Text(
-                    text = dateText,
+                    text = if (dateMillis != null) dateText else stringResource(R.string.search_date_any),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )

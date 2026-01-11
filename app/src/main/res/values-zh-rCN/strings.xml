@@ -43,14 +43,16 @@
     <string name="memo_action_edit">编辑</string>
     <string name="memo_action_delete">删除</string>
     <string name="memo_action_more">更多</string>
+    <string name="memo_action_open_web">在 Web 上打开</string>
     <string name="memo_publish">发布</string>
     <string name="memo_list_end">到底了</string>
     <string name="memo_unknown_user">未知用户</string>
     <string name="memo_unknown_time">未知时间</string>
     <string name="memo_action_update">更新</string>
     <string name="memo_action_post">发表</string>
-    <string name="memo_action_open_web">在 Web 上打开</string>
     <string name="memo_action_add_reaction">添加反应</string>
+    <string name="memo_action_play">播放</string>
+    <string name="memo_action_pause">暂停</string>
 
     <string name="memo_composer_placeholder">有什么新鲜事？</string>
     <string name="memo_composer_remove_attachment">移除附件</string>
@@ -62,9 +64,25 @@
     <string name="memo_composer_location_name">名称</string>
     <string name="memo_composer_location_latitude">纬度</string>
     <string name="memo_composer_location_longitude">经度</string>
+    <string name="memo_composer_location_default_placeholder">当前位置</string>
+    <string name="memo_composer_error_stop_recording">停止录音失败</string>
+    <string name="memo_composer_error_start_recording">开始录音失败: %1$s</string>
+    <string name="memo_composer_error_microphone_permission">需要麦克风权限</string>
 
     <string name="attachments_none_found">暂无资源</string>
     <string name="attachments_error">错误</string>
+    <string name="attachments_error_open_link">无法打开链接</string>
+    <string name="attachments_download_started">开始下载</string>
+    <string name="attachments_error_download_failed">下载失败: %1$s</string>
+    <string name="attachments_info_title">附件信息</string>
+    <string name="attachments_info_filename">文件名</string>
+    <string name="attachments_info_type">类型</string>
+    <string name="attachments_info_size">大小</string>
+    <string name="attachments_info_created">创建时间</string>
+    <string name="attachments_info_id">ID</string>
+    <string name="attachments_download_dialog_title">下载文件</string>
+    <string name="attachments_download_dialog_confirm">确定要将 \"%1$s\" 下载到下载文件夹吗？</string>
+    <string name="attachments_download_button">下载</string>
 
     <string name="memo_dialog_edit_title">编辑笔记</string>
     <string name="memo_dialog_delete_title">删除笔记</string>
@@ -84,9 +102,18 @@
 
     <string name="common_save">保存</string>
     <string name="common_cancel">取消</string>
+    <string name="common_close">关闭</string>
+    <string name="common_not_available">无</string>
     <string name="memo_input_add_tag">添加标签</string>
+
     <string name="memo_search_placeholder">搜索笔记...</string>
     <string name="memo_search_explore_placeholder">搜索探索...</string>
     <string name="memo_search_hint">输入要搜索的文本</string>
     <string name="memo_search_no_results">未找到结果</string>
+    <string name="search_date_start">开始</string>
+    <string name="search_date_end">结束</string>
+    <string name="search_date_any">不限</string>
+    <string name="search_sort_title">排序</string>
+    <string name="search_sort_newest">从新到旧</string>
+    <string name="search_sort_oldest">从旧到新</string>
 </resources>

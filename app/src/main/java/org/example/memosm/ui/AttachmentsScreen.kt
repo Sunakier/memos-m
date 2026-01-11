@@ -383,7 +383,7 @@ fun AttachmentItem(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Info,
-                                contentDescription = "Info",
+                                contentDescription = stringResource(R.string.attachments_info_title),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -393,7 +393,7 @@ fun AttachmentItem(
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Download,
-                                contentDescription = "Download",
+                                contentDescription = stringResource(R.string.attachments_download_button),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -415,7 +415,7 @@ fun AttachmentItem(
                                         val errMsg = e.localizedMessage ?: e.javaClass.simpleName
                                         Toast.makeText(
                                             context,
-                                            "Cannot open link: $errMsg",
+                                            context.getString(R.string.attachments_error_open_link) + ": $errMsg",
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
@@ -424,7 +424,7 @@ fun AttachmentItem(
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Language,
-                                    contentDescription = "Open on Web",
+                                    contentDescription = stringResource(R.string.memo_action_open_web),
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -443,22 +443,34 @@ fun AttachmentItem(
     if (showInfoDialog) {
         AlertDialog(
             onDismissRequest = { showInfoDialog = false },
-            title = { Text("Attachment Info") },
+            title = { Text(stringResource(R.string.attachments_info_title)) },
             text = {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    AttachmentInfoRow("Filename", attachment.filename)
-                    AttachmentInfoRow("Type", attachment.displayType)
-                    AttachmentInfoRow("Size", formattedSize)
-                    AttachmentInfoRow("Created", formattedDate)
-                    if (attachment.name != null) AttachmentInfoRow("ID", attachment.name)
+                    AttachmentInfoRow(
+                        stringResource(R.string.attachments_info_filename),
+                        attachment.filename
+                    )
+                    AttachmentInfoRow(
+                        stringResource(R.string.attachments_info_type),
+                        attachment.displayType
+                    )
+                    AttachmentInfoRow(stringResource(R.string.attachments_info_size), formattedSize)
+                    AttachmentInfoRow(
+                        stringResource(R.string.attachments_info_created),
+                        formattedDate
+                    )
+                    if (attachment.name != null) AttachmentInfoRow(
+                        stringResource(R.string.attachments_info_id),
+                        attachment.name
+                    )
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showInfoDialog = false }) {
-                    Text("Close")
+                    Text(stringResource(R.string.common_close))
                 }
             }
         )
@@ -467,19 +479,26 @@ fun AttachmentItem(
     if (showDownloadDialog) {
         AlertDialog(
             onDismissRequest = { showDownloadDialog = false },
-            title = { Text("Download File") },
-            text = { Text("Do you want to download '${attachment.filename}' to your Downloads folder?") },
+            title = { Text(stringResource(R.string.attachments_download_dialog_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.attachments_download_dialog_confirm,
+                        attachment.filename
+                    )
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     downloadAttachmentFile(context, attachment, token)
                     showDownloadDialog = false
                 }) {
-                    Text("Download")
+                    Text(stringResource(R.string.attachments_download_button))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDownloadDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_cancel))
                 }
             }
         )
@@ -503,15 +522,20 @@ private fun downloadAttachmentFile(context: Context, attachment: Attachment, tok
     try {
         val request = DownloadManager.Request(url.toUri())
             .setTitle(attachment.filename)
-            .setDescription("Downloading file...")
+            .setDescription(context.getString(R.string.attachments_download_started))
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, attachment.filename)
             .addRequestHeader("Authorization", "Bearer $token")
 
         val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         manager.enqueue(request)
-        Toast.makeText(context, "Download started", Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            context,
+            context.getString(R.string.attachments_download_started),
+            Toast.LENGTH_SHORT
+        ).show()
     } catch (e: Exception) {
-        Toast.makeText(context, "Download failed: ${e.message}", Toast.LENGTH_LONG).show()
+        val message = context.getString(R.string.attachments_error_download_failed, e.message ?: "")
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
     }
 }

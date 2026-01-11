@@ -51,6 +51,8 @@
     <string name="memo_action_update">Aktualisieren</string>
     <string name="memo_action_post">Posten</string>
     <string name="memo_action_add_reaction">Reaktion hinzufügen</string>
+    <string name="memo_action_play">Abspielen</string>
+    <string name="memo_action_pause">Pause</string>
 
     <string name="memo_composer_placeholder">Was geht dir durch den Kopf?</string>
     <string name="memo_composer_remove_attachment">Entfernen</string>
@@ -62,9 +64,25 @@
     <string name="memo_composer_location_name">Name</string>
     <string name="memo_composer_location_latitude">Breitengrad</string>
     <string name="memo_composer_location_longitude">Längengrad</string>
+    <string name="memo_composer_location_default_placeholder">Aktueller Standort</string>
+    <string name="memo_composer_error_stop_recording">Aufnahme konnte nicht gestoppt werden</string>
+    <string name="memo_composer_error_start_recording">Aufnahme konnte nicht gestartet werden: %1$s</string>
+    <string name="memo_composer_error_microphone_permission">Mikrofonberechtigung erforderlich</string>
 
     <string name="attachments_none_found">Keine Anhänge gefunden</string>
     <string name="attachments_error">Fehler</string>
+    <string name="attachments_error_open_link">Link konnte nicht geöffnet werden</string>
+    <string name="attachments_download_started">Download gestartet</string>
+    <string name="attachments_error_download_failed">Download fehlgeschlagen: %1$s</string>
+    <string name="attachments_info_title">Anhangsinfo</string>
+    <string name="attachments_info_filename">Dateiname</string>
+    <string name="attachments_info_type">Typ</string>
+    <string name="attachments_info_size">Größe</string>
+    <string name="attachments_info_created">Erstellt</string>
+    <string name="attachments_info_id">ID</string>
+    <string name="attachments_download_dialog_title">Datei herunterladen</string>
+    <string name="attachments_download_dialog_confirm">Möchtest du \"%1$s\" in deinen Downloads-Ordner herunterladen?</string>
+    <string name="attachments_download_button">Herunterladen</string>
 
     <string name="memo_dialog_edit_title">Memo bearbeiten</string>
     <string name="memo_dialog_delete_title">Memo löschen</string>
@@ -84,9 +102,17 @@
 
     <string name="common_save">Speichern</string>
     <string name="common_cancel">Abbrechen</string>
+    <string name="common_close">Schließen</string>
+    <string name="common_not_available">N/V</string>
     <string name="memo_input_add_tag">Tag hinzufügen</string>
     <string name="memo_search_placeholder">Memos durchsuchen...</string>
     <string name="memo_search_explore_placeholder">Entdecken durchsuchen...</string>
     <string name="memo_search_hint">Text zum Suchen eingeben</string>
     <string name="memo_search_no_results">Keine Ergebnisse gefunden</string>
+    <string name="search_date_start">Anfang</string>
+    <string name="search_date_end">Ende</string>
+    <string name="search_date_any">Beliebig</string>
+    <string name="search_sort_title">Sortieren</string>
+    <string name="search_sort_newest">Neueste zuerst</string>
+    <string name="search_sort_oldest">Älteste zuerst</string>
 </resources>

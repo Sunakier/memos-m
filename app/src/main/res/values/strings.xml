@@ -53,6 +53,8 @@
     <string name="memo_action_update">Update</string>
     <string name="memo_action_post">Post</string>
     <string name="memo_action_add_reaction">Add Reaction</string>
+    <string name="memo_action_play">Play</string>
+    <string name="memo_action_pause">Pause</string>
 
     <string name="memo_composer_placeholder">What\'s on your mind?</string>
     <string name="memo_composer_remove_attachment">Remove</string>
@@ -64,6 +66,10 @@
     <string name="memo_composer_location_name">Name</string>
     <string name="memo_composer_location_latitude">Latitude</string>
     <string name="memo_composer_location_longitude">Longitude</string>
+    <string name="memo_composer_location_default_placeholder">Current Location</string>
+    <string name="memo_composer_error_stop_recording">Failed to stop recording</string>
+    <string name="memo_composer_error_start_recording">Failed to start recording: %1$s</string>
+    <string name="memo_composer_error_microphone_permission">Microphone permission required</string>
 
     <string name="attachments_none_found">No attachments found</string>
     <string name="attachments_error">Error</string>
@@ -99,10 +105,17 @@
     <string name="common_save">Save</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_close">Close</string>
+    <string name="common_not_available">N/A</string>
     <string name="memo_input_add_tag">Add tag</string>
 
     <string name="memo_search_placeholder">Search memos...</string>
     <string name="memo_search_explore_placeholder">Search explore...</string>
     <string name="memo_search_hint">Enter text to search</string>
     <string name="memo_search_no_results">No results found</string>
+    <string name="search_date_start">Start</string>
+    <string name="search_date_end">End</string>
+    <string name="search_date_any">Any</string>
+    <string name="search_sort_title">Sort</string>
+    <string name="search_sort_newest">Newest First</string>
+    <string name="search_sort_oldest">Oldest First</string>
 </resources>

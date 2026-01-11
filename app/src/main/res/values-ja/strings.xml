@@ -51,6 +51,8 @@
     <string name="memo_action_update">更新</string>
     <string name="memo_action_post">返信</string>
     <string name="memo_action_add_reaction">リアクションを追加</string>
+    <string name="memo_action_play">再生</string>
+    <string name="memo_action_pause">一時停止</string>
 
     <string name="memo_composer_placeholder">今思ったことは…</string>
     <string name="memo_composer_remove_attachment">削除</string>
@@ -62,9 +64,25 @@
     <string name="memo_composer_location_name">名前</string>
     <string name="memo_composer_location_latitude">緯度</string>
     <string name="memo_composer_location_longitude">経度</string>
+    <string name="memo_composer_location_default_placeholder">現在地</string>
+    <string name="memo_composer_error_stop_recording">録音の停止に失敗しました</string>
+    <string name="memo_composer_error_start_recording">録音の開始に失敗しました: %1$s</string>
+    <string name="memo_composer_error_microphone_permission">マイクの権限が必要です</string>
 
     <string name="attachments_none_found">添付ファイルが見つかりません</string>
     <string name="attachments_error">エラー</string>
+    <string name="attachments_error_open_link">リンクを開けません</string>
+    <string name="attachments_download_started">ダウンロードを開始しました</string>
+    <string name="attachments_error_download_failed">ダウンロードに失敗しました: %1$s</string>
+    <string name="attachments_info_title">添付ファイルの情報</string>
+    <string name="attachments_info_filename">ファイル名</string>
+    <string name="attachments_info_type">種類</string>
+    <string name="attachments_info_size">サイズ</string>
+    <string name="attachments_info_created">作成日時</string>
+    <string name="attachments_info_id">ID</string>
+    <string name="attachments_download_dialog_title">ファイルをダウンロード</string>
+    <string name="attachments_download_dialog_confirm">\"%1$s\"をダウンロードフォルダにダウンロードしますか？</string>
+    <string name="attachments_download_button">ダウンロード</string>
 
     <string name="memo_dialog_edit_title">メモを編集</string>
     <string name="memo_dialog_delete_title">メモを削除</string>
@@ -82,12 +100,20 @@
     <string name="memo_visibility_protected">メンバー限定</string>
     <string name="memo_visibility_private">非公開</string>
 
-    <string name="memo_input_add_tag">タグを追加...</string>
-
     <string name="common_save">保存</string>
     <string name="common_cancel">キャンセル</string>
+    <string name="common_close">閉じる</string>
+    <string name="common_not_available">N/A</string>
+    <string name="memo_input_add_tag">タグを追加...</string>
+
     <string name="memo_search_placeholder">メモを検索...</string>
     <string name="memo_search_explore_placeholder">共有メモを検索...</string>
     <string name="memo_search_hint">検索するテキストを入力</string>
     <string name="memo_search_no_results">結果が見つかりません</string>
+    <string name="search_date_start">開始</string>
+    <string name="search_date_end">終了</string>
+    <string name="search_date_any">すべて</string>
+    <string name="search_sort_title">並び替え</string>
+    <string name="search_sort_newest">新しい順</string>
+    <string name="search_sort_oldest">古い順</string>
 </resources>

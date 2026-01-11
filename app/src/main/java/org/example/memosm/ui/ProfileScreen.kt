@@ -156,7 +156,7 @@ fun ProfileHeader(user: User) {
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "@${user.username ?: "unknown"}",
+                        text = "@${user.username ?: stringResource(R.string.memo_unknown_user)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -174,6 +174,7 @@ fun ProfileHeader(user: User) {
 
 @Composable
 fun StatsCard(stats: UserStats?) {
+    val notAvailable = stringResource(R.string.common_not_available)
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally
@@ -194,19 +195,19 @@ fun StatsCard(stats: UserStats?) {
             ) {
                 StatItem(
                     label = stringResource(R.string.profile_stats_memos),
-                    value = stats?.totalMemoCount?.toString() ?: "N/A",
+                    value = stats?.totalMemoCount?.toString() ?: notAvailable,
                     icon = Icons.AutoMirrored.Outlined.LibraryBooks,
                     modifier = Modifier.weight(1f)
                 )
                 StatItem(
                     label = stringResource(R.string.profile_stats_tags),
-                    value = stats?.tagCount?.size?.toString() ?: "N/A",
+                    value = stats?.tagCount?.size?.toString() ?: notAvailable,
                     icon = Icons.Outlined.Tag,
                     modifier = Modifier.weight(1f)
                 )
                 StatItem(
                     label = stringResource(R.string.profile_stats_pinned),
-                    value = stats?.pinnedMemos?.size?.toString() ?: "N/A",
+                    value = stats?.pinnedMemos?.size?.toString() ?: notAvailable,
                     icon = Icons.Outlined.PushPin,
                     modifier = Modifier.weight(1f)
                 )
@@ -226,19 +227,19 @@ fun StatsCard(stats: UserStats?) {
             ) {
                 StatItem(
                     label = stringResource(R.string.profile_stats_links),
-                    value = stats?.memoTypeStats?.linkCount?.toString() ?: "N/A",
+                    value = stats?.memoTypeStats?.linkCount?.toString() ?: notAvailable,
                     icon = Icons.Outlined.Link,
                     modifier = Modifier.weight(1f)
                 )
                 StatItem(
                     label = stringResource(R.string.profile_stats_code),
-                    value = stats?.memoTypeStats?.codeCount?.toString() ?: "N/A",
+                    value = stats?.memoTypeStats?.codeCount?.toString() ?: notAvailable,
                     icon = Icons.Outlined.Code,
                     modifier = Modifier.weight(1f)
                 )
                 StatItem(
                     label = stringResource(R.string.profile_stats_todo),
-                    value = stats?.memoTypeStats?.todoCount?.toString() ?: "N/A",
+                    value = stats?.memoTypeStats?.todoCount?.toString() ?: notAvailable,
                     icon = Icons.Outlined.TaskAlt,
                     modifier = Modifier.weight(1f)
                 )
@@ -450,10 +451,10 @@ fun ShortcutsCard(shortcuts: List<Shortcut>) {
                 shortcuts.forEach { shortcut ->
                     ListItem(
                         headlineContent = { Text(shortcut.title ?: "") }, leadingContent = {
-                        Icon(
-                            Icons.AutoMirrored.Outlined.Shortcut, contentDescription = null
-                        )
-                    }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                            Icon(
+                                Icons.AutoMirrored.Outlined.Shortcut, contentDescription = null
+                            )
+                        }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
                 }
             }
@@ -483,22 +484,22 @@ fun WebhooksCard(webhooks: List<UserWebhook>) {
                 webhooks.forEach { webhook ->
                     ListItem(
                         headlineContent = {
-                        Text(
-                            webhook.displayName ?: webhook.name
-                            ?: stringResource(R.string.memo_unknown_user)
-                        )
-                    }, supportingContent = {
-                        Text(
-                            text = webhook.url,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1
-                        )
-                    }, leadingContent = {
-                        Icon(
-                            Icons.Outlined.Webhook, contentDescription = null
-                        )
-                    }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                            Text(
+                                webhook.displayName ?: webhook.name
+                                ?: stringResource(R.string.memo_unknown_user)
+                            )
+                        }, supportingContent = {
+                            Text(
+                                text = webhook.url,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }, leadingContent = {
+                            Icon(
+                                Icons.Outlined.Webhook, contentDescription = null
+                            )
+                        }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
                 }
             }
@@ -516,17 +517,18 @@ fun InstanceCard(instance: InstanceProfile) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
+            val unknown = stringResource(R.string.memo_unknown_user)
             InfoRow(
                 stringResource(R.string.profile_instance_version),
-                instance.version ?: stringResource(R.string.memo_unknown_user)
+                instance.version ?: unknown
             )
             InfoRow(
                 stringResource(R.string.profile_instance_mode),
-                instance.mode ?: stringResource(R.string.memo_unknown_user)
+                instance.mode ?: unknown
             )
             InfoRow(
                 stringResource(R.string.profile_instance_url),
-                instance.instanceUrl ?: stringResource(R.string.memo_unknown_user)
+                instance.instanceUrl ?: unknown
             )
         }
     }

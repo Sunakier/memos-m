@@ -202,7 +202,7 @@ fun MemoComposer(
                 location = Location(
                     latitude = androidLoc.latitude,
                     longitude = androidLoc.longitude,
-                    placeholder = "Current Location"
+                    placeholder = context.getString(R.string.memo_composer_location_default_placeholder)
                 )
             }
             isFetchingLocation = false
@@ -232,7 +232,7 @@ fun MemoComposer(
                 draftAttachments = draftAttachments + (uri to null)
             }
         } catch (e: Exception) {
-            Toast.makeText(context, "Failed to stop recording", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.memo_composer_error_stop_recording), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -258,8 +258,8 @@ fun MemoComposer(
             mediaRecorder = recorder
             isRecording = true
         } catch (e: Exception) {
-            Toast.makeText(context, "Failed to start recording: ${e.message}", Toast.LENGTH_SHORT)
-                .show()
+            val message = context.getString(R.string.memo_composer_error_start_recording, e.message ?: "")
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -269,7 +269,7 @@ fun MemoComposer(
         if (isGranted) {
             startRecording()
         } else {
-            Toast.makeText(context, "Microphone permission required", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.memo_composer_error_microphone_permission), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -562,7 +562,7 @@ fun MemoComposer(
                 ) {
                     Icon(
                         imageVector = if (isRecording) Icons.Default.Mic else Icons.Outlined.MicNone,
-                        contentDescription = "Record Audio",
+                        contentDescription = stringResource(R.string.memo_composer_error_microphone_permission).removeSuffix(" required"), // Best effort if no specific string
                         tint = if (isRecording) MaterialTheme.colorScheme.error else LocalContentColor.current,
                         modifier = Modifier.size(actionIconSize)
                     )
@@ -819,7 +819,7 @@ fun MiniAudioPlayer(url: String, token: String, modifier: Modifier = Modifier) {
         }) {
             Icon(
                 imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = null,
+                contentDescription = if (isPlaying) stringResource(R.string.memo_action_pause) else stringResource(R.string.memo_action_play),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
