@@ -13,8 +13,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
@@ -178,7 +181,6 @@ fun CustomMarkdownTable(
     val headerCells = remember(header) {
         header?.children?.filter { it.type == GFMTokenTypes.CELL } ?: emptyList()
     }
-
     val rowCells = remember(rows) {
         rows.map { row -> row.children.filter { it.type == GFMTokenTypes.CELL } }
     }
@@ -190,68 +192,57 @@ fun CustomMarkdownTable(
     val tableCornerSize = LocalMarkdownDimens.current.tableCornerSize
     val tableCellPadding = LocalMarkdownDimens.current.tableCellPadding
     val backgroundColor = LocalMarkdownColors.current.tableBackground
-    
-    // 1. Significantly higher contrast header background
     val headerBackground = MaterialTheme.colorScheme.primaryContainer
-
-    val horizontalScrollState = rememberScrollState()
-    val columnWidths = remember(node) { mutableStateMapOf<Int, Int>() }
 
     Box(
         modifier = Modifier
             .padding(vertical = 8.dp)
             .clip(RoundedCornerShape(tableCornerSize))
             .background(backgroundColor)
-            .horizontalScroll(horizontalScrollState)
+            .horizontalScroll(rememberScrollState())
     ) {
-        Column {
-            // Header Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth() // 2. Cover entire row width to avoid gaps on the right
-                    .height(IntrinsicSize.Min)
-                    .background(headerBackground) // 3. Single background for the entire row
-            ) {
-                (0 until columnCount).forEach { columnIndex ->
-                    val cellNode = headerCells.getOrNull(columnIndex)
+        SubcomposeLayout { constraints ->
+            // 1. Subcompose and measure all cells to find the max width per column
+            val columnWidths = IntArray(columnCount) { 0 }
 
-                    TableCell(
-                        columnIndex = columnIndex,
-                        columnWidths = columnWidths
-                    ) { widthModifier ->
-                        Box(
-                            modifier = widthModifier
-                                .padding(tableCellPadding)
-                                .fillMaxHeight()
-                        ) {
-                            if (cellNode != null) {
-                                MarkdownElement(
-                                    node = cellNode,
-                                    components = markdownComponents,
-                                    content = content,
-                                    includeSpacer = false
-                                )
-                            }
-                        }
-                    }
+            // Create a list of all rows (Header + Body)
+            val allRows = listOf(headerCells) + rowCells
+
+            // Measure phase: Determine the max width for each column
+            allRows.forEach { row ->
+                row.forEachIndexed { index, cellNode ->
+                    val placeable = subcompose("measure_${row.hashCode()}_$index") {
+                        MarkdownElement(
+                            node = cellNode,
+                            components = markdownComponents,
+                            content = content,
+                            includeSpacer = false
+                        )
+                    }.first().measure(Constraints()) // Measure with infinite constraints to get natural width
+
+                    columnWidths[index] = maxOf(columnWidths[index], placeable.width + (tableCellPadding.roundToPx() * 2))
                 }
             }
-            // ---------- BODY ----------
-            rowCells.forEach { row ->
-                Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-                    (0 until columnCount).forEach { columnIndex ->
-                        val cellNode = row.getOrNull(columnIndex)
 
-                        TableCell(
-                            columnIndex = columnIndex,
-                            columnWidths = columnWidths
-                        ) { widthModifier ->
-                            Box(
-                                modifier = widthModifier
-                                    .padding(tableCellPadding)
-                                    .fillMaxHeight()
-                            ) {
-                                if (cellNode != null) {
+            val tableWidth = columnWidths.sum()
+
+            // 2. Final composition and placement
+            val contentPlaceables = subcompose("content") {
+                Column {
+                    allRows.forEachIndexed { rowIndex, row ->
+                        val isHeader = rowIndex == 0
+                        Row(
+                            modifier = Modifier
+                                .width(with(LocalDensity.current) { tableWidth.toDp() })
+                                .background(if (isHeader) headerBackground else Color.Transparent)
+                                .height(IntrinsicSize.Min)
+                        ) {
+                            row.forEachIndexed { columnIndex, cellNode ->
+                                Box(
+                                    modifier = Modifier
+                                        .width(with(LocalDensity.current) { columnWidths[columnIndex].toDp() })
+                                        .padding(tableCellPadding)
+                                ) {
                                     MarkdownElement(
                                         node = cellNode,
                                         components = markdownComponents,
@@ -263,38 +254,15 @@ fun CustomMarkdownTable(
                         }
                     }
                 }
+            }.map { it.measure(constraints) }
+
+            // 3. Layout the table
+            layout(tableWidth, contentPlaceables.first().height) {
+                contentPlaceables.forEach { it.placeRelative(0, 0) }
             }
         }
     }
 }
-
-@Composable
-private fun TableCell(
-    columnIndex: Int,
-    columnWidths: MutableMap<Int, Int>,
-    content: @Composable (Modifier) -> Unit
-) {
-    val widthModifier = Modifier.layout { measurable, constraints ->
-        val placeable = measurable.measure(constraints)
-
-        val existingWidth = columnWidths[columnIndex] ?: 0
-        val maxWidth = maxOf(existingWidth, placeable.width)
-
-        if (maxWidth > existingWidth) {
-            columnWidths[columnIndex] = maxWidth
-        }
-
-        // Match row height: Use constraints.minHeight provided by Row(Modifier.height(IntrinsicSize.Min))
-        val height = constraints.minHeight.coerceAtLeast(placeable.height)
-
-        layout(width = maxWidth, height = height) {
-            placeable.placeRelative(0, 0)
-        }
-    }
-
-    content(widthModifier)
-}
-
 @Composable
 fun MarkdownDivider(
     modifier: Modifier = Modifier,
