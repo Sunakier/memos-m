@@ -1,6 +1,7 @@
 package org.example.memosm.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -190,8 +191,8 @@ fun CustomMarkdownTable(
     if (columnCount == 0) return
     val markdownComponents = LocalMarkdownComponents.current
     val tableCellPadding = LocalMarkdownDimens.current.tableCellPadding
-    val headerBackground = MaterialTheme.colorScheme.primaryContainer
-
+    val headerBackground = MaterialTheme.colorScheme.secondaryContainer
+    val lineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f) // Subtle lines
     // Define the spacing between inline elements within a cell
     val inlineSpacing = 4.dp
 
@@ -200,10 +201,11 @@ fun CustomMarkdownTable(
             .padding(vertical = 8.dp)
             .clip(RoundedCornerShape(LocalMarkdownDimens.current.tableCornerSize))
             .background(LocalMarkdownColors.current.tableBackground)
+            .border(1.dp, lineColor, RoundedCornerShape(8.dp)) // Outer border
             .horizontalScroll(rememberScrollState())
     ) {
         SubcomposeLayout { constraints ->
-            val columnWidths = IntArray(columnCount) { 0 }
+            val columnWidths = IntArray(columnCount)
             val allRows = listOf(headerCells) + rowCells
 
             // 1. MEASURE PASS
@@ -243,17 +245,32 @@ fun CustomMarkdownTable(
                                         .padding(tableCellPadding)
                                         .fillMaxHeight()
                                 ) {
-                                    // ADDED: horizontalArrangement and verticalAlignment
                                     FlowRow(
                                         horizontalArrangement = Arrangement.spacedBy(inlineSpacing),
                                         verticalArrangement = Arrangement.Center
                                     ) {
-                                        cellNode?.children?.forEach { child ->
+                                        cellNode.children.forEach { child ->
                                             MarkdownElement(child, markdownComponents, content, false)
                                         }
                                     }
                                 }
+                                // VERTICAL LINE: Add if it's not the last column
+                                if (columnIndex < columnCount - 1) {
+                                    VerticalDivider(
+                                        modifier = Modifier.fillMaxHeight(),
+                                        thickness = 1.dp,
+                                        color = lineColor
+                                    )
+                                }
                             }
+                        }
+                        // 2. Force the HorizontalDivider to match the calculated table width
+                        if (rowIndex < allRows.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.width(with(LocalDensity.current) { tableWidth.toDp() }),
+                                thickness = 1.dp,
+                                color = lineColor
+                            )
                         }
                     }
                 }
