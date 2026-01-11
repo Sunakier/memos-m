@@ -1,6 +1,8 @@
 package org.example.memosm.ui.components
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,6 +17,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -105,13 +109,23 @@ fun MemoDetailView(
                 )
             }, floatingActionButton = {
                 if (uiState.user != null) {
+                    val density = LocalDensity.current
+                    val fabTranslationY by animateFloatAsState(
+                        targetValue = if (isFabVisible) 0f else with(density) { 100.dp.toPx() },
+                        animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f),
+                        label = "fabTranslationY"
+                    )
+
                     AnimatedVisibility(
                         visible = isFabVisible,
-                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                        enter = fadeIn(),
+                        exit = fadeOut()
                     ) {
                         FloatingActionButton(
                             onClick = { showCommentDialog = true },
+                            modifier = Modifier.graphicsLayer {
+                                translationY = fabTranslationY
+                            },
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         ) {
