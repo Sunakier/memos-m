@@ -56,8 +56,8 @@ jobs:
         run: |
           APK_FILE=$(find app/build/outputs/apk/release -name "*.apk" ! -name "*-unsigned.apk" | head -n 1)
           if [ -z "$APK_FILE" ]; then echo "No signed APK found!"; exit 1; fi
-          cp "$APK_FILE" "memos-m-${{ steps.timestamp.outputs.date }}.apk"
-          echo "APK_PATH=memos-m-${{ steps.timestamp.outputs.date }}.apk" >> $GITHUB_ENV
+          cp "$APK_FILE" "memos-latest.apk"
+          echo "APK_PATH=memos-latest.apk" >> $GITHUB_ENV
 
       # -------------------------------
       # FORCE-UPDATE TAG
