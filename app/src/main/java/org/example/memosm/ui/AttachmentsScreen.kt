@@ -47,6 +47,7 @@ import org.example.memosm.model.Attachment
 import org.example.memosm.viewmodel.MemosViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.core.net.toUri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -248,7 +249,12 @@ fun AttachmentItem(
             val outputFormat = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault())
             date?.let { outputFormat.format(it) } ?: ""
         } catch (e: Exception) {
-            ""
+            android.util.Log.e(
+                "AttachmentsScreen",
+                "Failed to parse date: ${attachment.createTime}",
+                e
+            )
+            attachment.createTime ?: ""
         }
     }
 
@@ -395,10 +401,23 @@ fun AttachmentItem(
                             IconButton(
                                 onClick = {
                                     try {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(attachment.externalLink))
+                                        val intent = Intent(
+                                            Intent.ACTION_VIEW,
+                                            attachment.externalLink.toUri()
+                                        )
                                         context.startActivity(intent)
                                     } catch (e: Exception) {
-                                        Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
+                                        android.util.Log.e(
+                                            "AttachmentsScreen",
+                                            "Failed to open link: ${attachment.externalLink}",
+                                            e
+                                        )
+                                        val errMsg = e.localizedMessage ?: e.javaClass.simpleName
+                                        Toast.makeText(
+                                            context,
+                                            "Cannot open link: $errMsg",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                                 },
                                 modifier = Modifier.size(32.dp)
@@ -470,7 +489,11 @@ fun AttachmentItem(
 @Composable
 fun AttachmentInfoRow(label: String, value: String) {
     Column {
-        Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
         Text(text = value, style = MaterialTheme.typography.bodyMedium)
     }
 }
@@ -478,7 +501,7 @@ fun AttachmentInfoRow(label: String, value: String) {
 private fun downloadAttachmentFile(context: Context, attachment: Attachment, token: String) {
     val url = attachment.externalLink ?: return
     try {
-        val request = DownloadManager.Request(Uri.parse(url))
+        val request = DownloadManager.Request(url.toUri())
             .setTitle(attachment.filename)
             .setDescription("Downloading file...")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)

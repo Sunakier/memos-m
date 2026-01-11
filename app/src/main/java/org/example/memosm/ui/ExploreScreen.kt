@@ -65,7 +65,8 @@ fun ExploreScreen(viewModel: MemosViewModel) {
             val selectedId =
                 uiState.selectedMemo?.let { it.name ?: it.content.hashCode().toString() }
             if (currentMemoKey.id != selectedId) {
-                val pool = if (currentMemoKey.fromSearch) uiState.searchMemos else uiState.exploreMemos
+                val pool =
+                    if (currentMemoKey.fromSearch) uiState.searchMemos else uiState.exploreMemos
                 val memo = pool.find {
                     (it.name ?: it.content.hashCode().toString()) == currentMemoKey.id
                 }
@@ -100,12 +101,16 @@ fun ExploreScreen(viewModel: MemosViewModel) {
             }
     }
 
-    val isDetailVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
-    val isListVisible = navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
+    val isDetailVisible =
+        navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
+    val isListVisible =
+        navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
     val isDualPane = isListVisible && isDetailVisible
 
     var isSearchExpanded by remember { mutableStateOf(false) }
-    val showSearchBar = (!isScrollingDown || listState.firstVisibleItemIndex == 0)
+    val showSearchBar by remember {
+        derivedStateOf { !isScrollingDown || listState.firstVisibleItemIndex == 0 }
+    }
 
     NavigableListDetailPaneScaffold(
         navigator = navigator,
@@ -141,7 +146,8 @@ fun ExploreScreen(viewModel: MemosViewModel) {
                                 scope.launch {
                                     val id = memo.name ?: memo.content.hashCode().toString()
                                     navigator.navigateTo(
-                                        ListDetailPaneScaffoldRole.Detail, MemoKey(id, fromSearch = true)
+                                        ListDetailPaneScaffoldRole.Detail,
+                                        MemoKey(id, fromSearch = true)
                                     )
                                 }
                             },
@@ -162,7 +168,8 @@ fun ExploreScreen(viewModel: MemosViewModel) {
                             if (initialState == null) {
                                 // First time appearing: scale + fade
                                 (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(
-                                    initialScale = 0.92f, animationSpec = tween(220, delayMillis = 90)
+                                    initialScale = 0.92f,
+                                    animationSpec = tween(220, delayMillis = 90)
                                 )).togetherWith(fadeOut(animationSpec = tween(90)))
                             } else {
                                 // Switching between memos: smooth crossfade
@@ -184,7 +191,8 @@ fun ExploreScreen(viewModel: MemosViewModel) {
                 ) { memoKey ->
                     val memo = remember(memoKey, uiState.exploreMemos, uiState.searchMemos) {
                         memoKey?.let { key ->
-                            val pool = if (key.fromSearch) uiState.searchMemos else uiState.exploreMemos
+                            val pool =
+                                if (key.fromSearch) uiState.searchMemos else uiState.exploreMemos
                             pool.find {
                                 (it.name ?: it.content.hashCode().toString()) == key.id
                             }
@@ -232,10 +240,11 @@ private fun ExploreMemosListPane(
     LaunchedEffect(listState, uiState.isExploring, uiState.exploreNextPageToken) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .collect { lastIndex ->
-                if (lastIndex != null && 
-                    !uiState.isExploring && 
-                    uiState.exploreNextPageToken != null && 
-                    lastIndex >= listState.layoutInfo.totalItemsCount - 5) {
+                if (lastIndex != null &&
+                    !uiState.isExploring &&
+                    uiState.exploreNextPageToken != null &&
+                    lastIndex >= listState.layoutInfo.totalItemsCount - 5
+                ) {
                     viewModel.loadMoreExplore()
                 }
             }
@@ -288,7 +297,12 @@ private fun ExploreMemosListPane(
                 modifier = Modifier
                     .fillMaxSize()
                     .statusBarsPadding(),
-                contentPadding = PaddingValues(start = 16.dp, top = 88.dp, end = 16.dp, bottom = 80.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    top = 88.dp,
+                    end = 16.dp,
+                    bottom = 80.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {

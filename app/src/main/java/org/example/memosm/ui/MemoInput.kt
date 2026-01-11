@@ -29,10 +29,10 @@ import kotlin.math.roundToInt
 
 @Composable
 fun MemoInput(
+    modifier: Modifier = Modifier,
     contentState: TextFieldState,
     placeholder: String = stringResource(R.string.memo_composer_placeholder),
     availableTags: Set<String>,
-    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     autoFocus: Boolean = false,
     minHeightInLines: Int = 3,
