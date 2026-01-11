@@ -423,6 +423,7 @@ class MemosViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isExploring = true,
+                error = if (refresh) null else _uiState.value.error,
                 isRefreshing = if (refresh && updateRefreshingState) true else _uiState.value.isRefreshing,
                 refreshTrigger = if (refresh && updateRefreshingState) System.currentTimeMillis() else _uiState.value.refreshTrigger
             )
@@ -436,34 +437,39 @@ class MemosViewModel(
                 
                 val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
                 
-                val unknownCreators = newMemos
-                    .mapNotNull { it.creator }
-                    .filter { it !in _uiState.value.users }
-                    .distinct()
-                
-                unknownCreators.forEach { creatorName ->
-                    try {
-                        val userId = creatorName.removePrefix("users/")
-                        val user = api.getUser(userId)
-                        val processedUser = processUser(user)
-                        _uiState.value = _uiState.value.copy(
-                            users = _uiState.value.users + (creatorName to processedUser)
-                        )
-                    } catch (e: Exception) {
-                        Log.e("MemosViewModel", "Error fetching user $creatorName", e)
-                    }
-                }
-
+                // Update the memos immediately so the list displays even if user fetching fails or is slow
                 _uiState.value = _uiState.value.copy(
                     exploreMemos = if (refresh) newMemos else _uiState.value.exploreMemos + newMemos,
                     exploreNextPageToken = newNextPageToken,
                     isExploring = false,
                     isRefreshing = if (refresh && updateRefreshingState) false else _uiState.value.isRefreshing
                 )
+
+                // Background fetch for user details
+                val unknownCreators = newMemos
+                    .mapNotNull { it.creator }
+                    .filter { it !in _uiState.value.users }
+                    .distinct()
+                
+                launch {
+                    unknownCreators.forEach { creatorName ->
+                        try {
+                            val userId = creatorName.removePrefix("users/")
+                            val user = api.getUser(userId)
+                            val processedUser = processUser(user)
+                            _uiState.value = _uiState.value.copy(
+                                users = _uiState.value.users + (creatorName to processedUser)
+                            )
+                        } catch (e: Exception) {
+                            Log.e("MemosViewModel", "Error fetching user $creatorName", e)
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error fetching explore memos", e)
                 _uiState.value = _uiState.value.copy(
                     isExploring = false,
+                    error = e.localizedMessage,
                     isRefreshing = if (refresh && updateRefreshingState) false else _uiState.value.isRefreshing
                 )
             }
@@ -493,16 +499,18 @@ class MemosViewModel(
                         .filter { it !in _uiState.value.users }
                         .distinct()
                     
-                    unknownCreators.forEach { creatorName ->
-                        try {
-                            val userId = creatorName.removePrefix("users/")
-                            val user = api.getUser(userId)
-                            val processedUser = processUser(user)
-                            _uiState.value = _uiState.value.copy(
-                                users = _uiState.value.users + (creatorName to processedUser)
-                            )
-                        } catch (e: Exception) {
-                            Log.e("MemosViewModel", "Error fetching user $creatorName for search", e)
+                    launch {
+                        unknownCreators.forEach { creatorName ->
+                            try {
+                                val userId = creatorName.removePrefix("users/")
+                                val user = api.getUser(userId)
+                                val processedUser = processUser(user)
+                                _uiState.value = _uiState.value.copy(
+                                    users = _uiState.value.users + (creatorName to processedUser)
+                                )
+                            } catch (e: Exception) {
+                                Log.e("MemosViewModel", "Error fetching user $creatorName for search", e)
+                            }
                         }
                     }
                 }

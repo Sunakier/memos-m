@@ -3,143 +3,143 @@ package org.example.memosm.model
 import com.google.gson.annotations.SerializedName
 
 data class ListMemosResponse(
-    val memos: List<Memo>?,
-    val nextPageToken: String?
+    @SerializedName("memos") val memos: List<Memo>?,
+    @SerializedName("nextPageToken") val nextPageToken: String?
 )
 
 data class ListAttachmentsResponse(
-    val attachments: List<Attachment>?,
-    val nextPageToken: String?,
-    val totalSize: Int?
+    @SerializedName("attachments") val attachments: List<Attachment>?,
+    @SerializedName("nextPageToken") val nextPageToken: String?,
+    @SerializedName("totalSize") val totalSize: Int?
 )
 
 data class Memo(
-    val name: String? = null,
-    val state: String? = null,
-    val creator: String? = null,
-    val createTime: String? = null,
-    val updateTime: String? = null,
-    val displayTime: String? = null,
-    val content: String,
-    val visibility: String,
-    val tags: List<String>? = null,
-    val pinned: Boolean? = null,
-    val attachments: List<Attachment>? = null,
-    val relations: List<MemoRelation>? = null,
-    val reactions: List<Reaction>? = null,
-    val property: MemoProperty? = null,
-    val parent: String? = null,
-    val snippet: String? = null,
-    val location: Location? = null
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("state") val state: String? = null,
+    @SerializedName("creator") val creator: String? = null,
+    @SerializedName("createTime") val createTime: String? = null,
+    @SerializedName("updateTime") val updateTime: String? = null,
+    @SerializedName("displayTime") val displayTime: String? = null,
+    @SerializedName("content") val content: String,
+    @SerializedName("visibility") val visibility: String,
+    @SerializedName("tags") val tags: List<String>? = null,
+    @SerializedName("pinned") val pinned: Boolean? = null,
+    @SerializedName("attachments") val attachments: List<Attachment>? = null,
+    @SerializedName("relations") val relations: List<MemoRelation>? = null,
+    @SerializedName("reactions") val reactions: List<Reaction>? = null,
+    @SerializedName("property") val property: MemoProperty? = null,
+    @SerializedName("parent") val parent: String? = null,
+    @SerializedName("snippet") val snippet: String? = null,
+    @SerializedName("location") val location: Location? = null
 )
 
 data class Attachment(
-    val name: String? = null,
-    val createTime: String? = null,
-    val filename: String,
-    val content: String? = null,
-    val externalLink: String? = null,
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("createTime") val createTime: String? = null,
+    @SerializedName("filename") val filename: String,
+    @SerializedName("content") val content: String? = null,
+    @SerializedName("externalLink") val externalLink: String? = null,
     @SerializedName("type") val type: String,
     @SerializedName("mimeType") val mimeType: String? = null,
-    val size: String? = null,
-    val memo: String? = null
+    @SerializedName("size") val size: String? = null,
+    @SerializedName("memo") val memo: String? = null
 ) {
     val displayType: String
         get() = mimeType ?: type
 }
 
 data class MemoRelation(
-    val memo: MemoSnippet,
-    val relatedMemo: MemoSnippet,
-    val type: String
+    @SerializedName("memo") val memo: MemoSnippet,
+    @SerializedName("relatedMemo") val relatedMemo: MemoSnippet,
+    @SerializedName("type") val type: String
 )
 
 data class MemoSnippet(
-    val name: String,
-    val snippet: String? = null
+    @SerializedName("name") val name: String,
+    @SerializedName("snippet") val snippet: String? = null
 )
 
 data class Reaction(
-    val name: String? = null,
-    val creator: String? = null,
-    val contentId: String,
-    val reactionType: String,
-    val createTime: String? = null
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("creator") val creator: String? = null,
+    @SerializedName("contentId") val contentId: String,
+    @SerializedName("reactionType") val reactionType: String,
+    @SerializedName("createTime") val createTime: String? = null
 )
 
 data class MemoProperty(
-    val hasLink: Boolean? = null,
-    val hasTaskList: Boolean? = null,
-    val hasCode: Boolean? = null,
-    val hasIncompleteTasks: Boolean? = null
+    @SerializedName("hasLink") val hasLink: Boolean? = null,
+    @SerializedName("hasTaskList") val hasTaskList: Boolean? = null,
+    @SerializedName("hasCode") val hasCode: Boolean? = null,
+    @SerializedName("hasIncompleteTasks") val hasIncompleteTasks: Boolean? = null
 )
 
 data class Location(
-    val placeholder: String? = null,
-    val latitude: Double? = null,
-    val longitude: Double? = null
+    @SerializedName("placeholder") val placeholder: String? = null,
+    @SerializedName("latitude") val latitude: Double? = null,
+    @SerializedName("longitude") val longitude: Double? = null
 )
 
 // --- Activity Models ---
 
 data class ListActivitiesResponse(
-    val activities: List<Activity>?,
-    val nextPageToken: String?
+    @SerializedName("activities") val activities: List<Activity>?,
+    @SerializedName("nextPageToken") val nextPageToken: String?
 )
 
 data class Activity(
-    val name: String? = null,
-    val creator: String? = null,
-    val type: String? = null,
-    val level: String? = null,
-    val createTime: String? = null,
-    val payload: ActivityPayload? = null
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("creator") val creator: String? = null,
+    @SerializedName("type") val type: String? = null,
+    @SerializedName("level") val level: String? = null,
+    @SerializedName("createTime") val createTime: String? = null,
+    @SerializedName("payload") val payload: ActivityPayload? = null
 )
 
 data class ActivityPayload(
-    val memoComment: ActivityMemoCommentPayload? = null
+    @SerializedName("memoComment") val memoComment: ActivityMemoCommentPayload? = null
 )
 
 data class ActivityMemoCommentPayload(
-    val memo: String? = null,
-    val relatedMemo: String? = null
+    @SerializedName("memo") val memo: String? = null,
+    @SerializedName("relatedMemo") val relatedMemo: String? = null
 )
 
 // --- Additional Memo Service Models ---
 
 data class ListMemoAttachmentsResponse(
-    val attachments: List<Attachment>?,
-    val nextPageToken: String?
+    @SerializedName("attachments") val attachments: List<Attachment>?,
+    @SerializedName("nextPageToken") val nextPageToken: String?
 )
 
 data class SetMemoAttachmentsRequest(
-    val name: String,
-    val attachments: List<Attachment>
+    @SerializedName("name") val name: String,
+    @SerializedName("attachments") val attachments: List<Attachment>
 )
 
 data class ListMemoCommentsResponse(
-    val memos: List<Memo>?,
-    val nextPageToken: String?,
-    val totalSize: Int?
+    @SerializedName("memos") val memos: List<Memo>?,
+    @SerializedName("nextPageToken") val nextPageToken: String?,
+    @SerializedName("totalSize") val totalSize: Int?
 )
 
 data class ListMemoReactionsResponse(
-    val reactions: List<Reaction>?,
-    val nextPageToken: String?,
-    val totalSize: Int?
+    @SerializedName("reactions") val reactions: List<Reaction>?,
+    @SerializedName("nextPageToken") val nextPageToken: String?,
+    @SerializedName("totalSize") val totalSize: Int?
 )
 
 data class UpsertMemoReactionRequest(
-    val name: String,
-    val reaction: Reaction
+    @SerializedName("name") val name: String,
+    @SerializedName("reaction") val reaction: Reaction
 )
 
 data class ListMemoRelationsResponse(
-    val relations: List<MemoRelation>?,
-    val nextPageToken: String?
+    @SerializedName("relations") val relations: List<MemoRelation>?,
+    @SerializedName("nextPageToken") val nextPageToken: String?
 )
 
 data class SetMemoRelationsRequest(
-    val name: String,
-    val relations: List<MemoRelation>
+    @SerializedName("name") val name: String,
+    @SerializedName("relations") val relations: List<MemoRelation>
 )

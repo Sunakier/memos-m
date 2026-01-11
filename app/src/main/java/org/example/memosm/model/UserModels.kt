@@ -3,234 +3,234 @@ package org.example.memosm.model
 import com.google.gson.annotations.SerializedName
 
 data class UserResponse(
-    val user: User?
+    @SerializedName("user") val user: User?
 )
 
 data class User(
-    val name: String? = null,
-    val role: String? = null,
-    val username: String? = null,
-    val email: String? = null,
-    val displayName: String? = null,
-    val avatarUrl: String? = null,
-    val description: String? = null,
-    val password: String? = null,
-    val state: String? = null,
-    val createTime: String? = null,
-    val updateTime: String? = null
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("role") val role: String? = null,
+    @SerializedName("username") val username: String? = null,
+    @SerializedName("email") val email: String? = null,
+    @SerializedName("displayName") val displayName: String? = null,
+    @SerializedName("avatarUrl") val avatarUrl: String? = null,
+    @SerializedName("description") val description: String? = null,
+    @SerializedName("password") val password: String? = null,
+    @SerializedName("state") val state: String? = null,
+    @SerializedName("createTime") val createTime: String? = null,
+    @SerializedName("updateTime") val updateTime: String? = null
 )
 
 data class UserStats(
-    val name: String? = null,
-    val memoDisplayTimestamps: List<String>? = null,
-    val memoTypeStats: MemoTypeStats? = null,
-    val tagCount: Map<String, Int>? = null,
-    val pinnedMemos: List<String>? = null,
-    val totalMemoCount: Int? = null
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("memoDisplayTimestamps") val memoDisplayTimestamps: List<String>? = null,
+    @SerializedName("memoTypeStats") val memoTypeStats: MemoTypeStats? = null,
+    @SerializedName("tagCount") val tagCount: Map<String, Int>? = null,
+    @SerializedName("pinnedMemos") val pinnedMemos: List<String>? = null,
+    @SerializedName("totalMemoCount") val totalMemoCount: Int? = null
 )
 
 data class MemoTypeStats(
-    val linkCount: Int? = null,
-    val codeCount: Int? = null,
-    val todoCount: Int? = null,
-    val undoCount: Int? = null
+    @SerializedName("linkCount") val linkCount: Int? = null,
+    @SerializedName("codeCount") val codeCount: Int? = null,
+    @SerializedName("todoCount") val todoCount: Int? = null,
+    @SerializedName("undoCount") val undoCount: Int? = null
 )
 
 data class ShortcutResponse(
-    val shortcuts: List<Shortcut>? = null
+    @SerializedName("shortcuts") val shortcuts: List<Shortcut>? = null
 )
 
 data class Shortcut(
-    val name: String? = null,
-    val title: String? = null,
-    val filter: String? = null
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("title") val title: String? = null,
+    @SerializedName("filter") val filter: String? = null
 )
 
 data class InstanceProfile(
-    val owner: String? = null,
-    val version: String? = null,
-    val mode: String? = null,
-    val instanceUrl: String? = null
+    @SerializedName("owner") val owner: String? = null,
+    @SerializedName("version") val version: String? = null,
+    @SerializedName("mode") val mode: String? = null,
+    @SerializedName("instanceUrl") val instanceUrl: String? = null
 )
 
 // --- Auth Models ---
 
 data class RefreshTokenRequest(
-    val dummy: String? = null // Usually empty
+    @SerializedName("dummy") val dummy: String? = null // Usually empty
 )
 
 data class RefreshTokenResponse(
-    val accessToken: String,
-    val expiresAt: String
+    @SerializedName("accessToken") val accessToken: String,
+    @SerializedName("expiresAt") val expiresAt: String
 )
 
 data class SignInRequest(
-    val passwordCredentials: PasswordCredentials? = null,
-    val ssoCredentials: SSOCredentials? = null
+    @SerializedName("passwordCredentials") val passwordCredentials: PasswordCredentials? = null,
+    @SerializedName("ssoCredentials") val ssoCredentials: SSOCredentials? = null
 )
 
 data class PasswordCredentials(
-    val username: String,
-    val password: String
+    @SerializedName("username") val username: String,
+    @SerializedName("password") val password: String
 )
 
 data class SSOCredentials(
-    val idpId: Int,
-    val code: String,
-    val redirectUri: String,
-    val codeVerifier: String? = null
+    @SerializedName("idpId") val idpId: Int,
+    @SerializedName("code") val code: String,
+    @SerializedName("redirectUri") val redirectUri: String,
+    @SerializedName("codeVerifier") val codeVerifier: String? = null
 )
 
 data class SignInResponse(
-    val user: User,
-    val accessToken: String,
-    val accessTokenExpiresAt: String
+    @SerializedName("user") val user: User,
+    @SerializedName("accessToken") val accessToken: String,
+    @SerializedName("accessTokenExpiresAt") val accessTokenExpiresAt: String
 )
 
 data class GetCurrentUserResponse(
-    val user: User
+    @SerializedName("user") val user: User
 )
 
 // --- Identity Provider Models ---
 
 data class ListIdentityProvidersResponse(
-    val identityProviders: List<IdentityProvider>?
+    @SerializedName("identityProviders") val identityProviders: List<IdentityProvider>?
 )
 
 data class IdentityProvider(
-    val name: String? = null,
-    val type: String,
-    val title: String,
-    val identifierFilter: String? = null,
-    val config: IdentityProviderConfig
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("type") val type: String,
+    @SerializedName("title") val title: String,
+    @SerializedName("identifierFilter") val identifierFilter: String? = null,
+    @SerializedName("config") val config: IdentityProviderConfig
 )
 
 data class IdentityProviderConfig(
-    val oauth2Config: OAuth2Config? = null
+    @SerializedName("oauth2Config") val oauth2Config: OAuth2Config? = null
 )
 
 data class OAuth2Config(
-    val clientId: String,
-    val clientSecret: String,
-    val authUrl: String,
-    val tokenUrl: String,
-    val userInfoUrl: String,
-    val scopes: List<String>,
-    val fieldMapping: FieldMapping
+    @SerializedName("clientId") val clientId: String,
+    @SerializedName("clientSecret") val clientSecret: String,
+    @SerializedName("authUrl") val authUrl: String,
+    @SerializedName("tokenUrl") val tokenUrl: String,
+    @SerializedName("userInfoUrl") val userInfoUrl: String,
+    @SerializedName("scopes") val scopes: List<String>,
+    @SerializedName("fieldMapping") val fieldMapping: FieldMapping
 )
 
 data class FieldMapping(
-    val identifier: String,
-    val displayName: String,
-    val email: String,
-    val avatarUrl: String
+    @SerializedName("identifier") val identifier: String,
+    @SerializedName("displayName") val displayName: String,
+    @SerializedName("email") val email: String,
+    @SerializedName("avatarUrl") val avatarUrl: String
 )
 
 // --- Instance Models ---
 
 data class InstanceSetting(
-    val name: String? = null,
-    val generalSetting: GeneralSetting? = null,
-    val storageSetting: StorageSetting? = null,
-    val memoRelatedSetting: MemoRelatedSetting? = null
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("generalSetting") val generalSetting: GeneralSetting? = null,
+    @SerializedName("storageSetting") val storageSetting: StorageSetting? = null,
+    @SerializedName("memoRelatedSetting") val memoRelatedSetting: MemoRelatedSetting? = null
 )
 
 data class GeneralSetting(
-    val disallowUserRegistration: Boolean? = null,
-    val disallowPasswordAuth: Boolean? = null,
-    val additionalScript: String? = null,
-    val additionalStyle: String? = null,
-    val customProfile: CustomProfile? = null,
-    val weekStartDayOffset: Int? = null,
-    val disallowChangeUsername: Boolean? = null,
-    val disallowChangeNickname: Boolean? = null
+    @SerializedName("disallowUserRegistration") val disallowUserRegistration: Boolean? = null,
+    @SerializedName("disallowPasswordAuth") val disallowPasswordAuth: Boolean? = null,
+    @SerializedName("additionalScript") val additionalScript: String? = null,
+    @SerializedName("additionalStyle") val additionalStyle: String? = null,
+    @SerializedName("customProfile") val customProfile: CustomProfile? = null,
+    @SerializedName("weekStartDayOffset") val weekStartDayOffset: Int? = null,
+    @SerializedName("disallowChangeUsername") val disallowChangeUsername: Boolean? = null,
+    @SerializedName("disallowChangeNickname") val disallowChangeNickname: Boolean? = null
 )
 
 data class CustomProfile(
-    val title: String? = null,
-    val description: String? = null,
-    val logoUrl: String? = null
+    @SerializedName("title") val title: String? = null,
+    @SerializedName("description") val description: String? = null,
+    @SerializedName("logoUrl") val logoUrl: String? = null
 )
 
 data class MemoRelatedSetting(
-    val disallowPublicVisibility: Boolean? = null,
-    val displayWithUpdateTime: Boolean? = null,
-    val contentLengthLimit: Int? = null,
-    val enableDoubleClickEdit: Boolean? = null,
-    val reactions: List<String>? = null
+    @SerializedName("disallowPublicVisibility") val disallowPublicVisibility: Boolean? = null,
+    @SerializedName("displayWithUpdateTime") val displayWithUpdateTime: Boolean? = null,
+    @SerializedName("contentLengthLimit") val contentLengthLimit: Int? = null,
+    @SerializedName("enableDoubleClickEdit") val enableDoubleClickEdit: Boolean? = null,
+    @SerializedName("reactions") val reactions: List<String>? = null
 )
 
 data class StorageSetting(
-    val storageType: String? = null,
-    val filepathTemplate: String? = null,
-    val uploadSizeLimitMb: String? = null,
-    val s3Config: S3Config? = null
+    @SerializedName("storageType") val storageType: String? = null,
+    @SerializedName("filepathTemplate") val filepathTemplate: String? = null,
+    @SerializedName("uploadSizeLimitMb") val uploadSizeLimitMb: String? = null,
+    @SerializedName("s3Config") val s3Config: S3Config? = null
 )
 
 data class S3Config(
-    val accessKeyId: String,
-    val accessKeySecret: String,
-    val endpoint: String,
-    val region: String,
-    val bucket: String,
-    val usePathStyle: Boolean
+    @SerializedName("accessKeyId") val accessKeyId: String,
+    @SerializedName("accessKeySecret") val accessKeySecret: String,
+    @SerializedName("endpoint") val endpoint: String,
+    @SerializedName("region") val region: String,
+    @SerializedName("bucket") val bucket: String,
+    @SerializedName("usePathStyle") val usePathStyle: Boolean
 )
 
 // --- User Expansion Models ---
 
 data class ListUsersResponse(
-    val users: List<User>?,
-    val nextPageToken: String? = null,
-    val totalSize: Int? = null
+    @SerializedName("users") val users: List<User>?,
+    @SerializedName("nextPageToken") val nextPageToken: String? = null,
+    @SerializedName("totalSize") val totalSize: Int? = null
 )
 
 data class ListUserNotificationsResponse(
-    val notifications: List<UserNotification>?,
-    val nextPageToken: String?
+    @SerializedName("notifications") val notifications: List<UserNotification>?,
+    @SerializedName("nextPageToken") val nextPageToken: String?
 )
 
 data class UserNotification(
-    val name: String? = null,
-    val sender: String? = null,
-    val status: String? = null,
-    val createTime: String? = null,
-    val type: String? = null,
-    val activityId: Int? = null
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("sender") val sender: String? = null,
+    @SerializedName("status") val status: String? = null,
+    @SerializedName("createTime") val createTime: String? = null,
+    @SerializedName("type") val type: String? = null,
+    @SerializedName("activityId") val activityId: Int? = null
 )
 
 data class ListPersonalAccessTokensResponse(
-    val personalAccessTokens: List<PersonalAccessToken>?,
-    val nextPageToken: String?,
-    val totalSize: Int?
+    @SerializedName("personalAccessTokens") val personalAccessTokens: List<PersonalAccessToken>?,
+    @SerializedName("nextPageToken") val nextPageToken: String?,
+    @SerializedName("totalSize") val totalSize: Int?
 )
 
 data class PersonalAccessToken(
-    val name: String? = null,
-    val description: String? = null,
-    val createdAt: String? = null,
-    val expiresAt: String? = null,
-    val lastUsedAt: String? = null
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("description") val description: String? = null,
+    @SerializedName("createdAt") val createdAt: String? = null,
+    @SerializedName("expiresAt") val expiresAt: String? = null,
+    @SerializedName("lastUsedAt") val lastUsedAt: String? = null
 )
 
 data class CreatePersonalAccessTokenRequest(
-    val parent: String,
-    val description: String? = null,
-    val expiresInDays: Int? = null
+    @SerializedName("parent") val parent: String,
+    @SerializedName("description") val description: String? = null,
+    @SerializedName("expiresInDays") val expiresInDays: Int? = null
 )
 
 data class CreatePersonalAccessTokenResponse(
-    val personalAccessToken: PersonalAccessToken,
-    val token: String
+    @SerializedName("personalAccessToken") val personalAccessToken: PersonalAccessToken,
+    @SerializedName("token") val token: String
 )
 
 data class ListUserSettingsResponse(
-    val settings: List<UserSetting>?,
-    val nextPageToken: String?,
-    val totalSize: Int?
+    @SerializedName("settings") val settings: List<UserSetting>?,
+    @SerializedName("nextPageToken") val nextPageToken: String?,
+    @SerializedName("totalSize") val totalSize: Int?
 )
 
 data class UserSetting(
-    val name: String? = null,
+    @SerializedName("name") val name: String? = null,
     @SerializedName("general_setting", alternate = ["generalSetting"])
     val generalSetting: UserGeneralSetting? = null,
     @SerializedName("webhooks_setting", alternate = ["webhooksSetting"])
@@ -238,28 +238,28 @@ data class UserSetting(
 )
 
 data class UserGeneralSetting(
-    val locale: String? = null,
+    @SerializedName("locale") val locale: String? = null,
     @SerializedName("memo_visibility", alternate = ["memoVisibility"])
     val memoVisibility: String? = null,
-    val theme: String? = null
+    @SerializedName("theme") val theme: String? = null
 )
 
 data class UserWebhooksSetting(
-    val webhooks: List<UserWebhook>? = null
+    @SerializedName("webhooks") val webhooks: List<UserWebhook>? = null
 )
 
 data class ListUserWebhooksResponse(
-    val webhooks: List<UserWebhook>?
+    @SerializedName("webhooks") val webhooks: List<UserWebhook>?
 )
 
 data class UserWebhook(
-    val name: String? = null,
-    val url: String,
-    val displayName: String? = null,
-    val createTime: String? = null,
-    val updateTime: String? = null
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("url") val url: String,
+    @SerializedName("displayName") val displayName: String? = null,
+    @SerializedName("createTime") val createTime: String? = null,
+    @SerializedName("updateTime") val updateTime: String? = null
 )
 
 data class ListAllUserStatsResponse(
-    val stats: List<UserStats>?
+    @SerializedName("stats") val stats: List<UserStats>?
 )
