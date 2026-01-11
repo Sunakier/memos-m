@@ -645,6 +645,7 @@ fun AttachmentDisplay(
     }
 }
 
+@Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun VideoPlayer(
