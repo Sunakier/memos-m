@@ -14,7 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
 import com.mikepenz.markdown.compose.LocalMarkdownColors
@@ -64,6 +66,13 @@ fun MemoMarkdown(
                 CustomMarkdownTable(
                     content = model.content,
                     node = model.node
+                )
+            },
+            horizontalRule = {
+                MarkdownDivider(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp)
                 )
             },
             codeBlock = highlightedCodeBlock,
@@ -245,4 +254,30 @@ fun CustomMarkdownTable(
             }
         }
     }
+}
+
+@Composable
+fun MarkdownDivider(
+    modifier: Modifier = Modifier,
+    color: Color = LocalMarkdownColors.current.dividerColor,
+    thickness: Dp = LocalMarkdownDimens.current.dividerThickness,
+) {
+    HorizontalDivider(
+        modifier = modifier,
+        thickness = thickness,
+        color = color
+    )
+}
+
+@Composable
+fun VerticalMarkdownDivider(
+    modifier: Modifier = Modifier,
+    color: Color = LocalMarkdownColors.current.dividerColor,
+    thickness: Dp = LocalMarkdownDimens.current.dividerThickness,
+) {
+    VerticalDivider(
+        modifier = modifier,
+        thickness = thickness,
+        color = color
+    )
 }
