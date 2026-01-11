@@ -351,7 +351,7 @@ fun MemoItem(
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 12.dp, end = 4.dp, bottom = 8.dp)
+                            .padding(start = 12.dp, end = 16.dp, bottom = 8.dp)
                     )
                 }
 
