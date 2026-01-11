@@ -61,27 +61,27 @@ fun MemoComposerDialog(
 
             MemoComposer(
                 onPublish = { content, visibility, attachments, location ->
-                when {
-                    initialMemo != null -> {
-                        viewModel.updateMemo(
-                            initialMemo, content, visibility, attachments, location
-                        ) {
+                    when {
+                        initialMemo != null -> {
+                            viewModel.updateMemo(
+                                initialMemo, content, visibility, attachments, location
+                            ) {
+                                onDismiss()
+                            }
+                        }
+
+                        parentMemo != null -> {
+                            viewModel.createComment(parentMemo, content)
                             onDismiss()
                         }
-                    }
 
-                    parentMemo != null -> {
-                        viewModel.createComment(parentMemo, content)
-                        onDismiss()
-                    }
-
-                    else -> {
-                        viewModel.createMemo(content, visibility, attachments, location) {
-                            onDismiss()
+                        else -> {
+                            viewModel.createMemo(content, visibility, attachments, location) {
+                                onDismiss()
+                            }
                         }
                     }
-                }
-            },
+                },
                 onUploadFile = { uri, context ->
                     viewModel.uploadAttachment(uri, context)
                 },
@@ -105,7 +105,10 @@ fun MemoEditDialog(
     memo: Memo, onDismiss: () -> Unit, viewModel: MemosViewModel
 ) {
     MemoComposerDialog(
-        onDismiss = onDismiss, viewModel = viewModel, title = stringResource(R.string.memo_dialog_edit_title), initialMemo = memo
+        onDismiss = onDismiss,
+        viewModel = viewModel,
+        title = stringResource(R.string.memo_dialog_edit_title),
+        initialMemo = memo
     )
 }
 

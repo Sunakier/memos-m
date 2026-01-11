@@ -133,8 +133,7 @@ fun MemoDetailPane(
                                     memo.location
                                 )
                             } else null,
-                            isDetailView = true
-                        )
+                            isDetailView = true)
                     }
 
                     // Comments section header
@@ -225,8 +224,7 @@ fun MemoDetailPane(
                                     comment.location
                                 )
                             } else null,
-                            isDetailView = true
-                        )
+                            isDetailView = true)
                     }
                 }
             }

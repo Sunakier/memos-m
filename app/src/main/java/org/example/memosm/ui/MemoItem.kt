@@ -543,10 +543,10 @@ fun AttachmentDisplay(
         val context = LocalContext.current
         val imageRequest = remember(attachment.externalLink, token) {
             ImageRequest.Builder(context).data(attachment.externalLink).httpHeaders(
-                    NetworkHeaders.Builder().set(
-                        "Authorization", "Bearer $token"
-                    ).build()
-                ).crossfade(true).build()
+                NetworkHeaders.Builder().set(
+                    "Authorization", "Bearer $token"
+                ).build()
+            ).crossfade(true).build()
         }
 
         AsyncImage(

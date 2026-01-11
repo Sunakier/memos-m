@@ -130,19 +130,16 @@ fun MemoInput(
                 ) {
                     LazyColumn(modifier = Modifier.fillMaxWidth()) {
                         items(filteredTags) { tag ->
-                            DropdownMenuItem(
-                                text = { Text(text = "#$tag") },
-                                onClick = {
-                                    contentState.edit {
-                                        val replacement = "#$tag "
-                                        replace(
-                                            tagStartIndex, contentState.selection.start, replacement
-                                        )
-                                        selection = TextRange(tagStartIndex + replacement.length)
-                                    }
-                                    showTagPopup = false
+                            DropdownMenuItem(text = { Text(text = "#$tag") }, onClick = {
+                                contentState.edit {
+                                    val replacement = "#$tag "
+                                    replace(
+                                        tagStartIndex, contentState.selection.start, replacement
+                                    )
+                                    selection = TextRange(tagStartIndex + replacement.length)
                                 }
-                            )
+                                showTagPopup = false
+                            })
                         }
                     }
                 }

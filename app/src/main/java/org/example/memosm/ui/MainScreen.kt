@@ -30,10 +30,9 @@ import org.example.memosm.viewmodel.MemosViewModel
 enum class MainDestination(
     val labelRes: Int
 ) {
-    MEMOS(R.string.nav_memos),
-    EXPLORE(R.string.nav_explore),
-    ATTACHMENTS(R.string.nav_attachments),
-    PROFILE(R.string.nav_profile)
+    MEMOS(R.string.nav_memos), EXPLORE(R.string.nav_explore), ATTACHMENTS(R.string.nav_attachments), PROFILE(
+        R.string.nav_profile
+    )
 }
 
 @Composable
@@ -50,7 +49,7 @@ fun MainScreen(
         viewModel(factory = MemosViewModel.provideFactory(baseUrl, token, dataStoreManager))
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
-    
+
     // State holder to preserve UI state (scroll position, search state, navigator state) across tab switches
     val saveableStateHolder = rememberSaveableStateHolder()
 
@@ -124,12 +123,9 @@ fun MainScreen(
     ) {
         // AnimatedContent handles the transition between screens
         AnimatedContent(
-            targetState = currentDestination,
-            transitionSpec = {
+            targetState = currentDestination, transitionSpec = {
                 fadeIn(animationSpec = tween(220)) togetherWith fadeOut(animationSpec = tween(220))
-            },
-            label = "MainScreenDestinationTransition",
-            modifier = Modifier.fillMaxSize()
+            }, label = "MainScreenDestinationTransition", modifier = Modifier.fillMaxSize()
         ) { targetDestination ->
             // SaveableStateProvider ensures that all rememberSaveable states (like scroll position)
             // are preserved and restored when switching back to this tab.
