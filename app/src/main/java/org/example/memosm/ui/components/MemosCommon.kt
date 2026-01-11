@@ -125,6 +125,16 @@ fun MemosScaffold(
         navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
     val isDualPane = isListVisible && isDetailVisible
 
+    LaunchedEffect(isDetailVisible, isDualPane) {
+        if (isDetailVisible && !isDualPane) {
+            // Hide navbar when viewing detail on single-pane (mobile)
+            onToggleNavBar(false)
+        } else {
+            // Show navbar when returning to list or when in dual-pane (tablet/desktop)
+            onToggleNavBar(true)
+        }
+    }
+
     var isSearchExpanded by remember { mutableStateOf(false) }
     val showSearchBar by remember {
         derivedStateOf { !isScrollingDown || listState.firstVisibleItemIndex == 0 }
