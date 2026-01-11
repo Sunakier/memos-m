@@ -44,8 +44,8 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE }}" | base64 --decode > app/release.keystore
 
-      - name: Build Release APK
-        run: ./gradlew assembleRelease --build-cache --parallel --configuration-cache
+      - name: Build Canary APK
+        run: ./gradlew assembleCanary --build-cache --parallel --configuration-cache
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
@@ -54,7 +54,7 @@ jobs:
 
       - name: Prepare APK for Upload
         run: |
-          APK_FILE=$(find app/build/outputs/apk/release -name "*.apk" ! -name "*-unsigned.apk" | head -n 1)
+          APK_FILE=$(find app/build/outputs/apk/canary -name "*.apk" ! -name "*-unsigned.apk" | head -n 1)
           if [ -z "$APK_FILE" ]; then echo "No signed APK found!"; exit 1; fi
           cp "$APK_FILE" "memos-latest.apk"
           echo "APK_PATH=memos-latest.apk" >> $GITHUB_ENV
@@ -76,11 +76,11 @@ jobs:
           tag_name: latest
           name: "Latest Build"
           body: |
-            **Auto Build – Every Commit**
+            **Auto Build – Every Commit (Canary)**
             Commit: ${{ github.sha }}
             Date: ${{ steps.timestamp.outputs.date }}
 
-            This release is automatically updated on every push to main.
+            This release is automatically updated on every push to main with the Canary build.
           files: ${{ env.APK_PATH }}
           prerelease: true
           make_latest: true

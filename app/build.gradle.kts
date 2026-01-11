@@ -37,6 +37,13 @@ android {
             versionNameSuffix = "-debug"
             manifestPlaceholders["appLabel"] = "MemosM (Debug)"
         }
+        create("canary") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".canary"
+            versionNameSuffix = "-canary"
+            manifestPlaceholders["appLabel"] = "MemosM"
+            signingConfig = signingConfigs.getByName("release")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
