@@ -31,7 +31,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.UiComposable
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
@@ -44,6 +43,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -62,6 +62,8 @@ import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
+import com.mikepenz.markdown.compose.LocalMarkdownComponents
+import com.mikepenz.markdown.compose.MarkdownElement
 import com.mikepenz.markdown.compose.components.MarkdownComponentModel
 import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.m3.Markdown
@@ -74,6 +76,8 @@ import org.intellij.markdown.ast.getTextInNode
 import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User
+import org.intellij.markdown.MarkdownElementTypes
+import org.intellij.markdown.ast.ASTNode
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -233,9 +237,7 @@ fun MemoItem(
                                             context.startActivity(intent)
                                         } catch (e: Exception) {
                                             android.util.Log.e(
-                                                "MemoItem",
-                                                "Failed to open web URL: $webUrl",
-                                                e
+                                                "MemoItem", "Failed to open web URL: $webUrl", e
                                             )
                                         }
                                     },
@@ -299,45 +301,44 @@ fun MemoItem(
                         .fillMaxWidth()
                         .then(
                             if (maxHeight != Dp.Unspecified) {
-                                Modifier
-                                    .heightIn(max = maxHeight)
-                                    .graphicsLayer {
-                                        compositingStrategy = CompositingStrategy.Offscreen
+                            Modifier.heightIn(max = maxHeight).graphicsLayer {
+                                    compositingStrategy = CompositingStrategy.Offscreen
+                                }.drawWithContent {
+                                    drawContent()
+                                    if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
+                                        drawRect(
+                                            brush = Brush.verticalGradient(
+                                                0.7f to Color.Black, 1.0f to Color.Transparent
+                                            ), blendMode = BlendMode.DstIn
+                                        )
                                     }
-                                    .drawWithContent {
-                                        drawContent()
-                                        if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
-                                            drawRect(
-                                                brush = Brush.verticalGradient(
-                                                    0.7f to Color.Black, 1.0f to Color.Transparent
-                                                ), blendMode = BlendMode.DstIn
-                                            )
-                                        }
-                                    }
-                            } else {
-                                Modifier
-                            })) {
+                                }
+                        } else {
+                            Modifier
+                        })) {
                     Markdown(
                         markdownState = markdownState,
                         imageTransformer = Coil2ImageTransformerImpl,
                         annotator = markdownAnnotator(
                             config = markdownAnnotatorConfig(eolAsNewLine = true)
                         ),
-                        components = markdownComponents(
-                            checkbox = { model ->
-                                ClickableCheckbox(
-                                    model = model,
-                                    content = memo.content,
-                                    onToggle = if (onContentUpdate != null) { newContent ->
-                                        onContentUpdate(newContent)
-                                    } else null
-                                )
-                            }
-                        ),
+                        components = markdownComponents(checkbox = { model ->
+                            ClickableCheckbox(
+                                model = model,
+                                content = memo.content,
+                                onToggle = if (onContentUpdate != null) { newContent ->
+                                    onContentUpdate(newContent)
+                                } else null)
+                        }, blockQuote = { model ->
+                            CustomMarkdownBlockQuote(
+                                content = model.content,
+                                node = model.node,
+                                style = model.typography.quote
+                            )
+                        }),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 12.dp, bottom = 4.dp)
-                    )
+                            .padding(start = 12.dp, bottom = 4.dp))
                 }
 
                 memo.location?.let { loc ->
@@ -424,12 +425,10 @@ fun MemoItem(
                                                 0.05f to Color.Black,
                                                 0.95f to Color.Black,
                                                 1f to rightFade
-                                            ),
-                                            blendMode = BlendMode.DstIn
+                                            ), blendMode = BlendMode.DstIn
                                         )
                                     }
-                                }
-                        ) {
+                                }) {
                             items(
                                 attachments,
                                 key = { it.externalLink ?: it.filename }) { attachment ->
@@ -509,9 +508,7 @@ fun MemoItem(
 
 @Composable
 fun AttachmentDisplay(
-    attachment: org.example.memosm.model.Attachment,
-    token: String,
-    isDetailView: Boolean
+    attachment: org.example.memosm.model.Attachment, token: String, isDetailView: Boolean
 ) {
     val isImage = remember(attachment.displayType) {
         attachment.displayType.startsWith(
@@ -535,8 +532,7 @@ fun AttachmentDisplay(
         val context = LocalContext.current
         val imageRequest = remember(attachment.externalLink, token) {
             ImageRequest.Builder(context).data(attachment.externalLink)
-                .addHeader("Authorization", "Bearer $token").crossfade(true)
-                .build()
+                .addHeader("Authorization", "Bearer $token").crossfade(true).build()
         }
 
         AsyncImage(
@@ -545,38 +541,33 @@ fun AttachmentDisplay(
             modifier = Modifier
                 .then(
                     if (isDetailView) Modifier.fillMaxWidth() else Modifier.size(
-                        width = 240.dp,
-                        height = 160.dp
+                        width = 240.dp, height = 160.dp
                     )
                 )
                 .clip(RoundedCornerShape(8.dp))
                 .then(
                     if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
-                        Modifier.clickable {
-                            try {
-                                val intent = Intent(
-                                    Intent.ACTION_VIEW,
-                                    attachment.externalLink.toUri()
-                                )
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                android.util.Log.w(
-                                    "MemoItem",
-                                    "Failed to open attachment URL: ${attachment.externalLink}",
-                                    e
-                                )
-                            }
+                    Modifier.clickable {
+                        try {
+                            val intent = Intent(
+                                Intent.ACTION_VIEW, attachment.externalLink.toUri()
+                            )
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            android.util.Log.w(
+                                "MemoItem",
+                                "Failed to open attachment URL: ${attachment.externalLink}",
+                                e
+                            )
                         }
-                    } else Modifier),
+                    }
+                } else Modifier),
             contentScale = if (isDetailView) ContentScale.FillWidth else ContentScale.Crop)
     } else if (isVideo && !attachment.externalLink.isNullOrBlank()) {
         VideoPlayer(
-            url = attachment.externalLink,
-            token = token,
-            modifier = Modifier
+            url = attachment.externalLink, token = token, modifier = Modifier
                 .then(
-                    if (isDetailView) Modifier
-                        .fillMaxWidth()
+                    if (isDetailView) Modifier.fillMaxWidth()
                         .aspectRatio(16 / 9f) else Modifier.size(width = 280.dp, height = 180.dp)
                 )
                 .clip(RoundedCornerShape(8.dp))
@@ -598,29 +589,27 @@ fun AttachmentDisplay(
             modifier = Modifier
                 .then(
                     if (isDetailView) Modifier.fillMaxWidth() else Modifier.size(
-                        width = 200.dp,
-                        height = 100.dp
+                        width = 200.dp, height = 100.dp
                     )
                 )
                 .clip(RoundedCornerShape(8.dp))
                 .then(
                     if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
-                        Modifier.clickable {
-                            try {
-                                val intent = Intent(
-                                    Intent.ACTION_VIEW,
-                                    attachment.externalLink.toUri()
-                                )
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                android.util.Log.w(
-                                    "MemoItem",
-                                    "Failed to open attachment URL: ${attachment.externalLink}",
-                                    e
-                                )
-                            }
+                    Modifier.clickable {
+                        try {
+                            val intent = Intent(
+                                Intent.ACTION_VIEW, attachment.externalLink.toUri()
+                            )
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            android.util.Log.w(
+                                "MemoItem",
+                                "Failed to open attachment URL: ${attachment.externalLink}",
+                                e
+                            )
                         }
-                    } else Modifier),
+                    }
+                } else Modifier),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
             Column(
                 modifier = Modifier
@@ -690,24 +679,21 @@ fun VideoPlayer(
     ) {
         AndroidView(
             factory = { ctx ->
-                PlayerView(ctx).apply {
-                    player = exoPlayer
-                    useController = true
-                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    setFullscreenButtonClickListener {
-                        isFullscreen = true
-                    }
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
+            PlayerView(ctx).apply {
+                player = exoPlayer
+                useController = true
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                setFullscreenButtonClickListener {
+                    isFullscreen = true
                 }
-            },
-            update = { view ->
-                view.player = if (isFullscreen) null else exoPlayer
-            },
-            modifier = Modifier
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+        }, update = { view ->
+            view.player = if (isFullscreen) null else exoPlayer
+        }, modifier = Modifier
                 .fillMaxSize()
                 .alpha(if (isReady) 1f else 0f)
         )
@@ -719,8 +705,7 @@ fun VideoPlayer(
 
     if (isFullscreen) {
         Dialog(
-            onDismissRequest = { isFullscreen = false },
-            properties = DialogProperties(
+            onDismissRequest = { isFullscreen = false }, properties = DialogProperties(
                 usePlatformDefaultWidth = false,
                 dismissOnBackPress = true,
                 dismissOnClickOutside = false
@@ -755,8 +740,7 @@ fun VideoPlayer(
                                 ViewGroup.LayoutParams.MATCH_PARENT
                             )
                         }
-                    },
-                    modifier = Modifier.fillMaxSize()
+                    }, modifier = Modifier.fillMaxSize()
                 )
             }
         }
@@ -955,9 +939,7 @@ fun ReactionPickerDialog(
  */
 @Composable
 private fun ClickableCheckbox(
-    model: MarkdownComponentModel,
-    content: String,
-    onToggle: ((String) -> Unit)?
+    model: MarkdownComponentModel, content: String, onToggle: ((String) -> Unit)?
 ) {
     val nodeText = model.node.getTextInNode(content)
     val isChecked = nodeText.contains("[x]") || nodeText.contains("[X]")
@@ -965,34 +947,28 @@ private fun ClickableCheckbox(
     val isClickable = onToggle != null
 
     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-        Checkbox(
-            checked = isChecked,
-            onCheckedChange = if (isClickable) { _ ->
-                // Find the checkbox pattern in the content and toggle it
-                val startOffset = model.node.startOffset
-                val endOffset = model.node.endOffset
+        Checkbox(checked = isChecked, onCheckedChange = if (isClickable) { _ ->
+            // Find the checkbox pattern in the content and toggle it
+            val startOffset = model.node.startOffset
+            val endOffset = model.node.endOffset
 
-                // Get the text of this specific checkbox node
-                val checkboxText = content.substring(startOffset, endOffset)
+            // Get the text of this specific checkbox node
+            val checkboxText = content.substring(startOffset, endOffset)
 
-                // Toggle the checkbox state
-                val newCheckboxText = if (isChecked) {
-                    checkboxText.replace("[x]", "[ ]", ignoreCase = true)
-                } else {
-                    checkboxText.replace("[ ]", "[x]")
-                }
+            // Toggle the checkbox state
+            val newCheckboxText = if (isChecked) {
+                checkboxText.replace("[x]", "[ ]", ignoreCase = true)
+            } else {
+                checkboxText.replace("[ ]", "[x]")
+            }
 
-                // Create the new content with the toggled checkbox
-                val newContent = content.take(startOffset) +
-                        newCheckboxText +
-                        content.substring(endOffset)
-                onToggle(newContent)
-            } else null,
-            modifier = Modifier
-                .padding(end = 4.dp)
-                .size(20.dp),
-            enabled = isClickable
-        )
+            // Create the new content with the toggled checkbox
+            val newContent =
+                content.take(startOffset) + newCheckboxText + content.substring(endOffset)
+            onToggle(newContent)
+        } else null, modifier = Modifier
+            .padding(end = 4.dp)
+            .size(20.dp), enabled = isClickable)
     }
 }
 
@@ -1002,5 +978,62 @@ fun getVisibilityIcon(visibility: String): ImageVector {
         "PROTECTED" -> Icons.Default.Group
         "PRIVATE" -> Icons.Default.Lock
         else -> Icons.Default.Lock
+    }
+}
+
+
+@Composable
+fun CustomMarkdownBlockQuote(
+    content: String, node: ASTNode, style: TextStyle
+) {
+    Row(
+        modifier = Modifier
+            .padding(vertical = 6.dp)
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+    ) {
+
+        // Vertical bar
+        Box(
+            modifier = Modifier
+                .width(4.dp)
+                .fillMaxHeight()
+                .background(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    shape = RoundedCornerShape(2.dp)
+                )
+        )
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+
+            val components = LocalMarkdownComponents.current
+
+            node.children.forEach { child ->
+
+                when (child.type) {
+
+                    // ✅ Recurse for nested blockquotes
+                    MarkdownElementTypes.BLOCK_QUOTE -> {
+                        CustomMarkdownBlockQuote(
+                            content = content, node = child, style = style
+                        )
+                    }
+
+                    // Normal markdown content
+                    else -> {
+                        MarkdownElement(
+                            node = child,
+                            components = components,
+                            content = content,
+                            includeSpacer = false
+                        )
+                    }
+                }
+            }
+        }
     }
 }
