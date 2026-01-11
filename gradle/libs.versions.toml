@@ -15,7 +15,7 @@ protobufPlugin = "0.9.6"
 composeAdaptive = "1.2.0"
 lifecycleViewmodelCompose = "2.10.0"
 datastore = "1.2.0"
-coil = "2.7.0"
+coil = "3.3.0"
 playServicesLocation = "21.3.0"
 multiplatformMarkdownRenderer = "0.39.0"
 media3 = "1.9.0"
@@ -43,7 +43,8 @@ androidx-compose-material3-navigation-suite = { group = "androidx.compose.materi
 androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
-coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 retrofit-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
 retrofit-protobuf = { group = "com.squareup.retrofit2", name = "converter-protobuf", version.ref = "retrofit" }
@@ -52,7 +53,7 @@ protobuf-kotlin-lite = { group = "com.google.protobuf", name = "protobuf-kotlin-
 google-play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 multiplatform-markdown-renderer-android = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-android", version.ref = "multiplatformMarkdownRenderer" }
 multiplatform-markdown-renderer-m3 = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-m3", version.ref = "multiplatformMarkdownRenderer" }
-multiplatform-markdown-renderer-coil2 = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-coil2", version.ref = "multiplatformMarkdownRenderer" }
+multiplatform-markdown-renderer-coil3 = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-coil3", version.ref = "multiplatformMarkdownRenderer" }
 multiplatform-markdown-renderer-code = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-code", version.ref = "multiplatformMarkdownRenderer" }
 
 media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }

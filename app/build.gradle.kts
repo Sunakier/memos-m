@@ -106,6 +106,7 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
 
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
@@ -118,7 +119,7 @@ dependencies {
 
     implementation(libs.multiplatform.markdown.renderer.android)
     implementation(libs.multiplatform.markdown.renderer.m3)
-    implementation(libs.multiplatform.markdown.renderer.coil2)
+    implementation(libs.multiplatform.markdown.renderer.coil3)
     implementation(libs.multiplatform.markdown.renderer.code)
 
     implementation(libs.media3.exoplayer)

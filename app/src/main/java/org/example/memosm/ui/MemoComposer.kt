@@ -49,14 +49,17 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import android.provider.OpenableColumns
 import android.util.Base64
 import androidx.compose.ui.platform.LocalResources
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -243,9 +246,7 @@ fun MemoComposer(
         } catch (e: Exception) {
             Log.e("MemoComposer", "Error stopping recording", e)
             Toast.makeText(
-                context,
-                recordErrorText,
-                Toast.LENGTH_SHORT
+                context, recordErrorText, Toast.LENGTH_SHORT
             ).show()
         }
     }
@@ -442,8 +443,10 @@ fun MemoComposer(
                             }
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current).data(model)
-                                    .addHeader("Authorization", "Bearer $token").crossfade(true)
-                                    .build(),
+                                    .httpHeaders(
+                                        NetworkHeaders.Builder()
+                                            .set("Authorization", "Bearer $token").build()
+                                    ).build(),
                                 contentDescription = null,
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -564,118 +567,108 @@ fun MemoComposer(
 
                         DropdownMenu(
                             expanded = showActionOverflowMenu,
-                            onDismissRequest = { showActionOverflowMenu = false }
-                        ) {
+                            onDismissRequest = { showActionOverflowMenu = false }) {
                             DropdownMenuItem(
                                 text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.AttachFile,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Text(stringResource(R.string.memo_composer_attach_file))
-                                    }
-                                },
-                                onClick = {
-                                    showActionOverflowMenu = false
-                                    pickerLauncher.launch("*/*")
-                                },
-                                enabled = !isPosting
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.AttachFile,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(stringResource(R.string.memo_composer_attach_file))
+                                }
+                            }, onClick = {
+                                showActionOverflowMenu = false
+                                pickerLauncher.launch("*/*")
+                            }, enabled = !isPosting
                             )
                             DropdownMenuItem(
                                 text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Image,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Text(stringResource(R.string.memo_composer_add_image))
-                                    }
-                                },
-                                onClick = {
-                                    showActionOverflowMenu = false
-                                    pickerLauncher.launch("image/*")
-                                },
-                                enabled = !isPosting
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Image,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(stringResource(R.string.memo_composer_add_image))
+                                }
+                            }, onClick = {
+                                showActionOverflowMenu = false
+                                pickerLauncher.launch("image/*")
+                            }, enabled = !isPosting
                             )
                             DropdownMenuItem(
                                 text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = if (isRecording) Icons.Default.Mic else Icons.Outlined.MicNone,
-                                            contentDescription = null,
-                                            tint = if (isRecording) MaterialTheme.colorScheme.error else LocalContentColor.current,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Text(
-                                            if (isRecording) "Stop Recording" else "Record Audio"
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    showActionOverflowMenu = false
-                                    if (isRecording) {
-                                        stopRecording()
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = if (isRecording) Icons.Default.Mic else Icons.Outlined.MicNone,
+                                        contentDescription = null,
+                                        tint = if (isRecording) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        if (isRecording) "Stop Recording" else "Record Audio"
+                                    )
+                                }
+                            }, onClick = {
+                                showActionOverflowMenu = false
+                                if (isRecording) {
+                                    stopRecording()
+                                } else {
+                                    val permission = Manifest.permission.RECORD_AUDIO
+                                    if (ContextCompat.checkSelfPermission(
+                                            context, permission
+                                        ) == PackageManager.PERMISSION_GRANTED
+                                    ) {
+                                        startRecording()
                                     } else {
-                                        val permission = Manifest.permission.RECORD_AUDIO
-                                        if (ContextCompat.checkSelfPermission(
-                                                context, permission
-                                            ) == PackageManager.PERMISSION_GRANTED
-                                        ) {
-                                            startRecording()
-                                        } else {
-                                            audioPermissionLauncher.launch(permission)
-                                        }
+                                        audioPermissionLauncher.launch(permission)
                                     }
-                                },
-                                enabled = !isPosting
+                                }
+                            }, enabled = !isPosting
                             )
                             DropdownMenuItem(
                                 text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        if (isFetchingLocation) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(20.dp),
-                                                strokeWidth = 2.dp
-                                            )
-                                        } else {
-                                            Icon(
-                                                imageVector = if (location != null) Icons.Default.Place else Icons.Outlined.Place,
-                                                contentDescription = null,
-                                                tint = if (location != null) MaterialTheme.colorScheme.primary else LocalContentColor.current,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Text(stringResource(R.string.memo_composer_add_location))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (isFetchingLocation) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp), strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = if (location != null) Icons.Default.Place else Icons.Outlined.Place,
+                                            contentDescription = null,
+                                            tint = if (location != null) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                                            modifier = Modifier.size(20.dp)
+                                        )
                                     }
-                                },
-                                onClick = {
-                                    showActionOverflowMenu = false
-                                    val hasCoarse = ContextCompat.checkSelfPermission(
-                                        context, Manifest.permission.ACCESS_COARSE_LOCATION
-                                    ) == PackageManager.PERMISSION_GRANTED
-                                    val hasFine = ContextCompat.checkSelfPermission(
-                                        context, Manifest.permission.ACCESS_FINE_LOCATION
-                                    ) == PackageManager.PERMISSION_GRANTED
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(stringResource(R.string.memo_composer_add_location))
+                                }
+                            }, onClick = {
+                                showActionOverflowMenu = false
+                                val hasCoarse = ContextCompat.checkSelfPermission(
+                                    context, Manifest.permission.ACCESS_COARSE_LOCATION
+                                ) == PackageManager.PERMISSION_GRANTED
+                                val hasFine = ContextCompat.checkSelfPermission(
+                                    context, Manifest.permission.ACCESS_FINE_LOCATION
+                                ) == PackageManager.PERMISSION_GRANTED
 
-                                    if (hasCoarse || hasFine) {
-                                        fetchLocation()
-                                    } else {
-                                        locationPermissionLauncher.launch(
-                                            arrayOf(
-                                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                                Manifest.permission.ACCESS_COARSE_LOCATION
-                                            )
+                                if (hasCoarse || hasFine) {
+                                    fetchLocation()
+                                } else {
+                                    locationPermissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.ACCESS_FINE_LOCATION,
+                                            Manifest.permission.ACCESS_COARSE_LOCATION
                                         )
-                                    }
-                                },
-                                enabled = !isPosting && !isFetchingLocation
+                                    )
+                                }
+                            }, enabled = !isPosting && !isFetchingLocation
                             )
                         }
                     }

@@ -59,9 +59,12 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
+import coil3.compose.AsyncImage
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
 import com.mikepenz.markdown.compose.LocalMarkdownComponents
 import com.mikepenz.markdown.compose.MarkdownElement
 import com.mikepenz.markdown.compose.components.MarkdownComponentModel
@@ -320,7 +323,7 @@ fun MemoItem(
                         })) {
                     Markdown(
                         markdownState = markdownState,
-                        imageTransformer = Coil2ImageTransformerImpl,
+                        imageTransformer = Coil3ImageTransformerImpl,
                         annotator = markdownAnnotator(
                             config = markdownAnnotatorConfig(eolAsNewLine = true)
                         ),
@@ -539,8 +542,11 @@ fun AttachmentDisplay(
     if (isImage) {
         val context = LocalContext.current
         val imageRequest = remember(attachment.externalLink, token) {
-            ImageRequest.Builder(context).data(attachment.externalLink)
-                .addHeader("Authorization", "Bearer $token").crossfade(true).build()
+            ImageRequest.Builder(context).data(attachment.externalLink).httpHeaders(
+                    NetworkHeaders.Builder().set(
+                        "Authorization", "Bearer $token"
+                    ).build()
+                ).crossfade(true).build()
         }
 
         AsyncImage(
