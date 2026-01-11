@@ -300,27 +300,30 @@ fun MemoItem(
             }
             Spacer(modifier = Modifier.height(if (user != null) 10.dp else 2.dp))
 
-            Column(modifier = Modifier.padding(start = 0.dp, end = 8.dp)) {
+            Column(modifier = Modifier.padding(start = 0.dp, end = 0.dp)) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .then(
                             if (maxHeight != Dp.Unspecified) {
-                            Modifier.heightIn(max = maxHeight).graphicsLayer {
-                                    compositingStrategy = CompositingStrategy.Offscreen
-                                }.drawWithContent {
-                                    drawContent()
-                                    if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
-                                        drawRect(
-                                            brush = Brush.verticalGradient(
-                                                0.7f to Color.Black, 1.0f to Color.Transparent
-                                            ), blendMode = BlendMode.DstIn
-                                        )
+                                Modifier
+                                    .heightIn(max = maxHeight)
+                                    .graphicsLayer {
+                                        compositingStrategy = CompositingStrategy.Offscreen
                                     }
-                                }
-                        } else {
-                            Modifier
-                        })) {
+                                    .drawWithContent {
+                                        drawContent()
+                                        if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
+                                            drawRect(
+                                                brush = Brush.verticalGradient(
+                                                    0.7f to Color.Black, 1.0f to Color.Transparent
+                                                ), blendMode = BlendMode.DstIn
+                                            )
+                                        }
+                                    }
+                            } else {
+                                Modifier
+                            })) {
                     Markdown(
                         markdownState = markdownState,
                         imageTransformer = Coil3ImageTransformerImpl,
@@ -348,7 +351,7 @@ fun MemoItem(
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 12.dp, bottom = 4.dp)
+                            .padding(start = 12.dp, end = 4.dp, bottom = 8.dp)
                     )
                 }
 
@@ -561,27 +564,28 @@ fun AttachmentDisplay(
                 .clip(RoundedCornerShape(8.dp))
                 .then(
                     if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
-                    Modifier.clickable {
-                        try {
-                            val intent = Intent(
-                                Intent.ACTION_VIEW, attachment.externalLink.toUri()
-                            )
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            android.util.Log.w(
-                                "MemoItem",
-                                "Failed to open attachment URL: ${attachment.externalLink}",
-                                e
-                            )
+                        Modifier.clickable {
+                            try {
+                                val intent = Intent(
+                                    Intent.ACTION_VIEW, attachment.externalLink.toUri()
+                                )
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                android.util.Log.w(
+                                    "MemoItem",
+                                    "Failed to open attachment URL: ${attachment.externalLink}",
+                                    e
+                                )
+                            }
                         }
-                    }
-                } else Modifier),
+                    } else Modifier),
             contentScale = if (isDetailView) ContentScale.FillWidth else ContentScale.Crop)
     } else if (isVideo && !attachment.externalLink.isNullOrBlank()) {
         VideoPlayer(
             url = attachment.externalLink, token = token, modifier = Modifier
                 .then(
-                    if (isDetailView) Modifier.fillMaxWidth()
+                    if (isDetailView) Modifier
+                        .fillMaxWidth()
                         .aspectRatio(16 / 9f) else Modifier.size(width = 280.dp, height = 180.dp)
                 )
                 .clip(RoundedCornerShape(8.dp))
@@ -609,21 +613,21 @@ fun AttachmentDisplay(
                 .clip(RoundedCornerShape(8.dp))
                 .then(
                     if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
-                    Modifier.clickable {
-                        try {
-                            val intent = Intent(
-                                Intent.ACTION_VIEW, attachment.externalLink.toUri()
-                            )
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            android.util.Log.w(
-                                "MemoItem",
-                                "Failed to open attachment URL: ${attachment.externalLink}",
-                                e
-                            )
+                        Modifier.clickable {
+                            try {
+                                val intent = Intent(
+                                    Intent.ACTION_VIEW, attachment.externalLink.toUri()
+                                )
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                android.util.Log.w(
+                                    "MemoItem",
+                                    "Failed to open attachment URL: ${attachment.externalLink}",
+                                    e
+                                )
+                            }
                         }
-                    }
-                } else Modifier),
+                    } else Modifier),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
             Column(
                 modifier = Modifier
@@ -693,21 +697,21 @@ fun VideoPlayer(
     ) {
         AndroidView(
             factory = { ctx ->
-            PlayerView(ctx).apply {
-                player = exoPlayer
-                useController = true
-                setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-                setFullscreenButtonClickListener {
-                    isFullscreen = true
+                PlayerView(ctx).apply {
+                    player = exoPlayer
+                    useController = true
+                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    setFullscreenButtonClickListener {
+                        isFullscreen = true
+                    }
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+                    )
                 }
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
-                )
-            }
-        }, update = { view ->
-            view.player = if (isFullscreen) null else exoPlayer
-        }, modifier = Modifier
+            }, update = { view ->
+                view.player = if (isFullscreen) null else exoPlayer
+            }, modifier = Modifier
                 .fillMaxSize()
                 .alpha(if (isReady) 1f else 0f)
         )
