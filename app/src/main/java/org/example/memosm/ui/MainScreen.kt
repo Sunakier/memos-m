@@ -171,7 +171,8 @@ fun MainScreen(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     contentColor = contentColorFor(MaterialTheme.colorScheme.surfaceContainer)
                 ) {
-                    MainDestination.entries.filter { it != MainDestination.PROFILE }.forEach { destination ->
+                    Spacer(Modifier.weight(1f))
+                    MainDestination.entries.forEach { destination ->
                         NavigationRailItem(
                             selected = currentDestination == destination,
                             onClick = { handleDestinationClick(destination) },
@@ -185,19 +186,6 @@ fun MainScreen(
                         )
                     }
                     Spacer(Modifier.weight(1f))
-                    MainDestination.entries.filter { it == MainDestination.PROFILE }.forEach { destination ->
-                        NavigationRailItem(
-                            selected = currentDestination == destination,
-                            onClick = { handleDestinationClick(destination) },
-                            icon = {
-                                NavigationIcon(
-                                    destination,
-                                    currentDestination == destination
-                                )
-                            },
-                            label = { Text(stringResource(destination.labelRes)) }
-                        )
-                    }
                 }
             }
 
