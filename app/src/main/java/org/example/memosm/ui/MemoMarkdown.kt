@@ -188,21 +188,20 @@ fun CustomMarkdownTable(
 
     val columnCount = headerCells.size
     if (columnCount == 0) return
-
     val markdownComponents = LocalMarkdownComponents.current
-    val tableCornerSize = LocalMarkdownDimens.current.tableCornerSize
     val tableCellPadding = LocalMarkdownDimens.current.tableCellPadding
-    val backgroundColor = LocalMarkdownColors.current.tableBackground
     val headerBackground = MaterialTheme.colorScheme.primaryContainer
+
+    // Define the spacing between inline elements within a cell
+    val inlineSpacing = 4.dp
 
     Box(
         modifier = Modifier
             .padding(vertical = 8.dp)
-            .clip(RoundedCornerShape(tableCornerSize))
-            .background(backgroundColor)
+            .clip(RoundedCornerShape(LocalMarkdownDimens.current.tableCornerSize))
+            .background(LocalMarkdownColors.current.tableBackground)
             .horizontalScroll(rememberScrollState())
     ) {
-
         SubcomposeLayout { constraints ->
             val columnWidths = IntArray(columnCount) { 0 }
             val allRows = listOf(headerCells) + rowCells
@@ -211,9 +210,8 @@ fun CustomMarkdownTable(
             allRows.forEach { row ->
                 row.forEachIndexed { index, cellNode ->
                     val placeable = subcompose("measure_${row.hashCode()}_$index") {
-                        // FIX: Wrap in FlowRow to get the TRUE natural width
-                        // of all text segments combined
-                        FlowRow {
+                        // ADDED: spacedBy ensures that split nodes don't touch
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(inlineSpacing)) {
                             cellNode.children.forEach { child ->
                                 MarkdownElement(child, markdownComponents, content, false)
                             }
@@ -236,7 +234,7 @@ fun CustomMarkdownTable(
                             modifier = Modifier
                                 .width(with(LocalDensity.current) { tableWidth.toDp() })
                                 .background(if (isHeader) headerBackground else Color.Transparent)
-                                .height(IntrinsicSize.Min) // Critical for vertical alignment
+                                .height(IntrinsicSize.Min)
                         ) {
                             row.forEachIndexed { columnIndex, cellNode ->
                                 Box(
@@ -245,15 +243,13 @@ fun CustomMarkdownTable(
                                         .padding(tableCellPadding)
                                         .fillMaxHeight()
                                 ) {
-                                    // FIX: Use the same FlowRow logic here
-                                    FlowRow {
-                                        cellNode.children.forEach { child ->
-                                            MarkdownElement(
-                                                child,
-                                                markdownComponents,
-                                                content,
-                                                false
-                                            )
+                                    // ADDED: horizontalArrangement and verticalAlignment
+                                    FlowRow(
+                                        horizontalArrangement = Arrangement.spacedBy(inlineSpacing),
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        cellNode?.children?.forEach { child ->
+                                            MarkdownElement(child, markdownComponents, content, false)
                                         }
                                     }
                                 }
