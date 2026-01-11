@@ -3,6 +3,7 @@ package org.example.memosm.ui
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -71,21 +72,28 @@ fun MainScreen(
     val isMobile = layoutType == NavigationSuiteType.NavigationBar
 
     @Composable
-    fun NavigationIcon(destination: MainDestination, isSelected: Boolean) {
+    fun NavigationIcon(
+        destination: MainDestination,
+        isSelected: Boolean,
+        modifier: Modifier = Modifier.size(24.dp)
+    ) {
         when (destination) {
             MainDestination.MEMOS -> Icon(
                 if (isSelected) Icons.AutoMirrored.Filled.LibraryBooks else Icons.AutoMirrored.Outlined.LibraryBooks,
-                contentDescription = null
+                contentDescription = null,
+                modifier = modifier
             )
 
             MainDestination.EXPLORE -> Icon(
                 if (isSelected) Icons.Default.Public else Icons.Outlined.Public,
-                contentDescription = null
+                contentDescription = null,
+                modifier = modifier
             )
 
             MainDestination.ATTACHMENTS -> Icon(
                 if (isSelected) Icons.Default.Attachment else Icons.Outlined.Attachment,
-                contentDescription = null
+                contentDescription = null,
+                modifier = modifier
             )
 
             MainDestination.PROFILE -> {
@@ -94,8 +102,7 @@ fun MainScreen(
                     AsyncImage(
                         model = avatarUrl,
                         contentDescription = null,
-                        modifier = Modifier
-                            .size(24.dp)
+                        modifier = modifier
                             .clip(CircleShape)
                             .then(
                                 if (isSelected) Modifier.border(
@@ -105,10 +112,13 @@ fun MainScreen(
                         contentScale = ContentScale.Crop
                     )
                 } else {
-                    Icon(
-                        if (isSelected) Icons.Default.Person else Icons.Outlined.Person,
-                        contentDescription = null
-                    )
+                    Box(modifier, contentAlignment = Alignment.Center) {
+                        Icon(
+                            if (isSelected) Icons.Default.Person else Icons.Outlined.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
                 }
             }
         }
@@ -141,21 +151,41 @@ fun MainScreen(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         contentColor = contentColorFor(MaterialTheme.colorScheme.surfaceContainer)
                     ) {
+                        Spacer(Modifier.height(12.dp))
+                        // Top items
+                        MainDestination.entries.filter { it != MainDestination.PROFILE }
+                            .forEach { destination ->
+                                NavigationRailItem(
+                                    selected = currentDestination == destination,
+                                    onClick = { handleDestinationClick(destination) },
+                                    icon = {
+                                        NavigationIcon(
+                                            destination,
+                                            currentDestination == destination
+                                        )
+                                    },
+                                    label = { Text(stringResource(destination.labelRes)) }
+                                )
+                            }
+
                         Spacer(Modifier.weight(1f))
-                        MainDestination.entries.forEach { destination ->
-                            NavigationRailItem(
-                                selected = currentDestination == destination,
-                                onClick = { handleDestinationClick(destination) },
-                                icon = {
-                                    NavigationIcon(
-                                        destination,
-                                        currentDestination == destination
-                                    )
-                                },
-                                label = { Text(stringResource(destination.labelRes)) }
+
+                        // Bottom profile item
+                        val profile = MainDestination.PROFILE
+                        Box(
+                            modifier = Modifier
+                                .padding(bottom = 16.dp)
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .clickable { handleDestinationClick(profile) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            NavigationIcon(
+                                profile,
+                                currentDestination == profile,
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
-                        Spacer(Modifier.weight(1f))
                     }
                 }
 
