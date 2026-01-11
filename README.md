@@ -1,4 +1,4 @@
-# Memos M
+# MemosM
 
 ![App icon](app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp)
 
