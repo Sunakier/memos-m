@@ -44,22 +44,20 @@ fun ExploreScreen(viewModel: MemosViewModel) {
                 userProvider = { memo -> uiState.users[memo.creator] }
             )
         },
-        searchBar = { onMemoClick, showSearchBar, isSearchExpanded, onSearchExpandedChange, isDualPane, isDetailVisible ->
-            Box(modifier = Modifier.fillMaxSize()) {
-                AnimatedVisibility(
-                    visible = showSearchBar && (!isSearchExpanded || isDualPane || !isDetailVisible),
-                    enter = slideInVertically { -it } + fadeIn(),
-                    exit = slideOutVertically { -it } + fadeOut(),
-                    modifier = Modifier.align(Alignment.TopCenter)
-                ) {
-                    MemoSearchBar(
-                        viewModel = viewModel,
-                        isExplore = true,
-                        onMemoClick = onMemoClick,
-                        onExpandedChange = onSearchExpandedChange,
-                        placeholder = stringResource(R.string.memo_search_explore_placeholder)
-                    )
-                }
+        overlay = { onMemoClick, showSearchBar, isSearchExpanded, onSearchExpandedChange, isDualPane, isDetailVisible ->
+            AnimatedVisibility(
+                visible = showSearchBar && (!isSearchExpanded || isDualPane || !isDetailVisible),
+                enter = slideInVertically { -it } + fadeIn(),
+                exit = slideOutVertically { -it } + fadeOut(),
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
+                MemoSearchBar(
+                    viewModel = viewModel,
+                    isExplore = true,
+                    onMemoClick = onMemoClick,
+                    onExpandedChange = onSearchExpandedChange,
+                    placeholder = stringResource(R.string.memo_search_explore_placeholder)
+                )
             }
         }
     )
