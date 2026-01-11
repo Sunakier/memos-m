@@ -43,7 +43,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -64,25 +63,14 @@ import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import coil3.request.crossfade
-import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
-import com.mikepenz.markdown.compose.LocalMarkdownComponents
-import com.mikepenz.markdown.compose.MarkdownElement
-import com.mikepenz.markdown.compose.components.MarkdownComponentModel
-import com.mikepenz.markdown.compose.components.markdownComponents
-import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
-import com.mikepenz.markdown.compose.elements.highlightedCodeFence
-import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.model.markdownAnnotator
 import com.mikepenz.markdown.model.markdownAnnotatorConfig
 import com.mikepenz.markdown.model.rememberMarkdownState
 import kotlinx.coroutines.delay
 import okhttp3.OkHttpClient
-import org.intellij.markdown.ast.getTextInNode
 import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User
-import org.intellij.markdown.MarkdownElementTypes
-import org.intellij.markdown.ast.ASTNode
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -324,31 +312,10 @@ fun MemoItem(
                             } else {
                                 Modifier
                             })) {
-                    Markdown(
+                    MemoMarkdown(
+                        content = memo.content,
                         markdownState = markdownState,
-                        imageTransformer = Coil3ImageTransformerImpl,
-                        annotator = markdownAnnotator(
-                            config = markdownAnnotatorConfig(eolAsNewLine = true)
-                        ),
-                        components = markdownComponents(
-                            checkbox = { model ->
-                                ClickableCheckbox(
-                                    model = model,
-                                    content = memo.content,
-                                    onToggle = if (onContentUpdate != null) { newContent ->
-                                        onContentUpdate(newContent)
-                                    } else null)
-                            },
-                            blockQuote = { model ->
-                                CustomMarkdownBlockQuote(
-                                    content = model.content,
-                                    node = model.node,
-                                    style = model.typography.quote
-                                )
-                            },
-                            codeBlock = highlightedCodeBlock,
-                            codeFence = highlightedCodeFence,
-                        ),
+                        onContentUpdate = onContentUpdate,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 12.dp, end = 16.dp, bottom = 8.dp)
@@ -951,107 +918,11 @@ fun ReactionPickerDialog(
     }
 }
 
-/**
- * A clickable checkbox component for markdown task lists.
- * When clicked, it toggles the checkbox state in the content and calls onToggle with the updated content.
- */
-@Composable
-private fun ClickableCheckbox(
-    model: MarkdownComponentModel, content: String, onToggle: ((String) -> Unit)?
-) {
-    val nodeText = model.node.getTextInNode(content)
-    val isChecked = nodeText.contains("[x]") || nodeText.contains("[X]")
-
-    val isClickable = onToggle != null
-
-    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-        Checkbox(checked = isChecked, onCheckedChange = if (isClickable) { _ ->
-            // Find the checkbox pattern in the content and toggle it
-            val startOffset = model.node.startOffset
-            val endOffset = model.node.endOffset
-
-            // Get the text of this specific checkbox node
-            val checkboxText = content.substring(startOffset, endOffset)
-
-            // Toggle the checkbox state
-            val newCheckboxText = if (isChecked) {
-                checkboxText.replace("[x]", "[ ]", ignoreCase = true)
-            } else {
-                checkboxText.replace("[ ]", "[x]")
-            }
-
-            // Create the new content with the toggled checkbox
-            val newContent =
-                content.take(startOffset) + newCheckboxText + content.substring(endOffset)
-            onToggle(newContent)
-        } else null, modifier = Modifier
-            .padding(end = 4.dp)
-            .size(20.dp), enabled = isClickable)
-    }
-}
-
 fun getVisibilityIcon(visibility: String): ImageVector {
     return when (visibility.uppercase()) {
         "PUBLIC" -> Icons.Default.Public
         "PROTECTED" -> Icons.Default.Group
         "PRIVATE" -> Icons.Default.Lock
         else -> Icons.Default.Lock
-    }
-}
-
-
-@Composable
-fun CustomMarkdownBlockQuote(
-    content: String, node: ASTNode, style: TextStyle
-) {
-    Row(
-        modifier = Modifier
-            .padding(vertical = 6.dp)
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-    ) {
-
-        // Vertical bar
-        Box(
-            modifier = Modifier
-                .width(4.dp)
-                .fillMaxHeight()
-                .background(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    shape = RoundedCornerShape(2.dp)
-                )
-        )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-
-            val components = LocalMarkdownComponents.current
-
-            node.children.forEach { child ->
-
-                when (child.type) {
-
-                    // ✅ Recurse for nested blockquotes
-                    MarkdownElementTypes.BLOCK_QUOTE -> {
-                        CustomMarkdownBlockQuote(
-                            content = content, node = child, style = style
-                        )
-                    }
-
-                    // Normal markdown content
-                    else -> {
-                        MarkdownElement(
-                            node = child,
-                            components = components,
-                            content = content,
-                            includeSpacer = false
-                        )
-                    }
-                }
-            }
-        }
     }
 }
