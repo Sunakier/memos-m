@@ -1,11 +1,8 @@
 package org.example.memosm.ui
 
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -14,6 +11,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.TextStyle
@@ -197,19 +195,24 @@ fun CustomMarkdownTable(
     val tableCornerSize = LocalMarkdownDimens.current.tableCornerSize
     val tableCellPadding = LocalMarkdownDimens.current.tableCellPadding
     val backgroundColor = LocalMarkdownColors.current.tableBackground
-    val headerBackground = MaterialTheme.colorScheme.surfaceVariant
+
+    // 1. Higher contrast header background
+    val headerBackground = MaterialTheme.colorScheme.secondaryContainer
 
     val horizontalScrollState = rememberScrollState()
-    val columnWidths = remember { mutableStateMapOf<Int, Int>() }
+    val columnWidths = remember(node) { mutableStateMapOf<Int, Int>() }
 
     Box(
         modifier = Modifier
-            .background(backgroundColor, RoundedCornerShape(tableCornerSize))
+            .padding(vertical = 8.dp)
+            // 2. Clip the container and set background to avoid gaps
+            .clip(RoundedCornerShape(tableCornerSize))
+            .background(backgroundColor)
             .horizontalScroll(horizontalScrollState)
-            .padding(4.dp)
     ) {
         Column {
-            Row {
+            // Header Row
+            Row(modifier = Modifier.height(IntrinsicSize.Min)) {
                 (0 until columnCount).forEach { columnIndex ->
                     val cellNode = headerCells.getOrNull(columnIndex)
 
@@ -221,6 +224,7 @@ fun CustomMarkdownTable(
                             modifier = widthModifier
                                 .background(headerBackground)
                                 .padding(tableCellPadding)
+                                .fillMaxHeight() // Fill full row height
                         ) {
                             if (cellNode != null) {
                                 MarkdownElement(
@@ -236,7 +240,7 @@ fun CustomMarkdownTable(
             }
             // ---------- BODY ----------
             rowCells.forEach { row ->
-                Row {
+                Row(modifier = Modifier.height(IntrinsicSize.Min)) {
                     (0 until columnCount).forEach { columnIndex ->
                         val cellNode = row.getOrNull(columnIndex)
 
@@ -247,6 +251,7 @@ fun CustomMarkdownTable(
                             Box(
                                 modifier = widthModifier
                                     .padding(tableCellPadding)
+                                    .fillMaxHeight()
                             ) {
                                 if (cellNode != null) {
                                     MarkdownElement(
@@ -281,7 +286,11 @@ private fun TableCell(
             columnWidths[columnIndex] = maxWidth
         }
 
-        layout(width = maxWidth, height = placeable.height) {
+        // 3. Ensure the height matches the row height by using constraints.minHeight
+        // provided by Row(Modifier.height(IntrinsicSize.Min))
+        val height = constraints.minHeight.coerceAtLeast(placeable.height)
+
+        layout(width = maxWidth, height = height) {
             placeable.placeRelative(0, 0)
         }
     }
