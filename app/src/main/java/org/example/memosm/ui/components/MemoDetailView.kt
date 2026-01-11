@@ -54,46 +54,46 @@ fun MemoDetailView(
     ) {
         Scaffold(
             topBar = {
-            TopAppBar(
-                title = {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Text(
-                        stringResource(R.string.memo_detail_title),
-                        modifier = Modifier.widthIn(max = 600.dp)
-                    )
-                }
-            },
-                navigationIcon = {
-                    if (showBackButton) {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.memo_detail_back)
+                TopAppBar(
+                    title = {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            Text(
+                                stringResource(R.string.memo_detail_title),
+                                modifier = Modifier.widthIn(max = 600.dp)
                             )
                         }
+                    },
+                    navigationIcon = {
+                        if (showBackButton) {
+                            IconButton(onClick = onBack) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = stringResource(R.string.memo_detail_back)
+                                )
+                            }
+                        }
+                    },
+                    // Set to empty because parent Scaffolds are already handling system bar insets
+                    windowInsets = WindowInsets(0, 0, 0, 0),
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            }, floatingActionButton = {
+                if (uiState.user != null) {
+                    FloatingActionButton(
+                        onClick = { showCommentDialog = true },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = stringResource(R.string.memo_detail_add_comment)
+                        )
                     }
-                },
-                // Set to empty because parent Scaffolds are already handling system bar insets
-                windowInsets = WindowInsets(0, 0, 0, 0),
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
-        }, floatingActionButton = {
-            if (uiState.user != null) {
-                FloatingActionButton(
-                    onClick = { showCommentDialog = true },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = stringResource(R.string.memo_detail_add_comment)
-                    )
                 }
-            }
-        }, containerColor = Color.Transparent, modifier = Modifier.fillMaxSize()
+            }, containerColor = Color.Transparent, modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
             Box(
                 modifier = Modifier
