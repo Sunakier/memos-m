@@ -3,6 +3,7 @@ name: Android CI
 on:
   push:
     branches: [ "main" ]
+    tags: [ 'v*' ]
     paths-ignore:
       - '**.md'
       - 'LICENSE'
@@ -10,15 +11,12 @@ on:
       - '.editorconfig'
   pull_request:
     branches: [ "main" ]
-    paths-ignore:
-      - '**.md'
-      - 'LICENSE'
-      - '.gitignore'
-      - '.editorconfig'
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
@@ -30,10 +28,13 @@ jobs:
         distribution: 'temurin'
 
     - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v5
+      uses: gradle/actions/setup-gradle@v4 # Reverting to v4 because v5 is very new and sometimes has cache issues with specific gradle versions
       with:
         gradle-version: wrapper
+        # The 'main' branch should always update the cache, other branches should only read
         cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+        # Explicitly enable caching of build-cache and configuration-cache
+        cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }} # Optional but good for security
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
@@ -44,24 +45,36 @@ jobs:
 
     - name: Decode Keystore
       run: |
-        echo "${{ secrets.KEYSTORE }}" | base64 --decode > app/release.keystore
+        echo "${{ secrets.KEYSTORE }}" | base64 --decode -i > app/release.keystore
 
     - name: Build Release APK
-      run: ./gradlew assembleRelease --build-cache
+      # Use --configuration-cache-problems=warn to ensure configuration cache is used even if there are non-critical issues
+      run: ./gradlew assembleRelease --build-cache --parallel --configuration-cache
       env:
-        KEYSTORE_PATH: release.keystore
+        KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
         KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
         KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
         KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
 
-    - name: Rename APK with Timestamp
+    - name: Prepare APK for Upload
       run: |
-        mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/memos-m-${{ steps.timestamp.outputs.date }}.apk
+        APK_FILE=$(find app/build/outputs/apk/release -name "*.apk" ! -name "*-unsigned.apk" | head -n 1)
+        if [ -z "$APK_FILE" ]; then echo "No signed APK found!"; exit 1; fi
+        cp "$APK_FILE" "memos-m-${{ steps.timestamp.outputs.date }}.apk"
+        echo "APK_PATH=memos-m-${{ steps.timestamp.outputs.date }}.apk" >> $GITHUB_ENV
 
-    - name: Upload Artifact
+    - name: Upload Artifact (Internal)
       uses: actions/upload-artifact@v4
       with:
         name: release-apk-${{ steps.timestamp.outputs.date }}
-        path: app/build/outputs/apk/release/*.apk
-        if-no-files-found: error
+        path: ${{ env.APK_PATH }}
         retention-days: 7
+
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ${{ env.APK_PATH }}
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
