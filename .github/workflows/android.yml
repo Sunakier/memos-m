@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up JDK
-        uses: actions/setup-java@V5
+        uses: actions/setup-java@v5
         with:
           java-version: "21"
           distribution: "temurin"
