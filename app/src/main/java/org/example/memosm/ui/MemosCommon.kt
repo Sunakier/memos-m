@@ -43,7 +43,7 @@ fun MemosScaffold(
     viewModel: MemosViewModel,
     memos: List<Memo>,
     listState: LazyListState,
-    listPane: @Composable (onMemoClick: (Memo) -> Unit) -> Unit,
+    listPane: @Composable BoxScope.(onMemoClick: (Memo) -> Unit) -> Unit,
     topBar: @Composable (isDetailVisible: Boolean, isDualPane: Boolean) -> Unit = { _, _ -> },
     overlay: @Composable BoxScope.(onMemoClick: (Memo) -> Unit, showSearchBar: Boolean, isSearchExpanded: Boolean, onSearchExpandedChange: (Boolean) -> Unit, isDualPane: Boolean, isDetailVisible: Boolean) -> Unit = { _, _, _, _, _, _ -> }
 ) {

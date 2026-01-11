@@ -48,7 +48,7 @@ fun MemosListScreen(viewModel: MemosViewModel) {
                 onMemoClick = onMemoClick
             )
         },
-        searchBar = { onMemoClick, showSearchBar, isSearchExpanded, onSearchExpandedChange, isDualPane, isDetailVisible ->
+        overlay = { onMemoClick, showSearchBar, isSearchExpanded, onSearchExpandedChange, isDualPane, isDetailVisible ->
             AnimatedVisibility(
                 visible = showSearchBar && (!isSearchExpanded || isDualPane || !isDetailVisible),
                 enter = slideInVertically { -it } + fadeIn(),
