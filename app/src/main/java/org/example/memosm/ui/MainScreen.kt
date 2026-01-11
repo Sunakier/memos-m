@@ -138,7 +138,7 @@ fun MainScreen(
                 when (targetDestination) {
                     MainDestination.MEMOS -> {
                         isNavBarVisible = true
-                        MemosListScreen(viewModel)
+                        MemosScreen(viewModel)
                     }
                     MainDestination.EXPLORE -> {
                         isNavBarVisible = true

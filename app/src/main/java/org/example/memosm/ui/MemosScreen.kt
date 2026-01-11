@@ -24,7 +24,7 @@ import org.example.memosm.R
 import org.example.memosm.viewmodel.MemosViewModel
 
 @Composable
-fun MemosListScreen(viewModel: MemosViewModel) {
+fun MemosScreen(viewModel: MemosViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
 
