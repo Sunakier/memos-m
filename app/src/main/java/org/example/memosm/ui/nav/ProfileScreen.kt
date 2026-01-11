@@ -3,6 +3,7 @@ package org.example.memosm.ui.nav
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
@@ -153,6 +155,7 @@ private fun ProfileListPane(
     val webhooks = uiState.webhooks
     val instance = uiState.instanceProfile
     val userSettings = uiState.userSettings
+    val accounts = uiState.accounts
 
     Box(
         modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter
@@ -174,6 +177,15 @@ private fun ProfileListPane(
             if (user != null) {
                 item {
                     ProfileHeader(user)
+                }
+
+                item {
+                    AccountsCard(
+                        accounts = accounts,
+                        onSwitchAccount = { viewModel.switchAccount(it) },
+                        onRemoveAccount = { viewModel.removeAccount(it) },
+                        onAddAccount = onLogout // Logging out allows adding a new one in this simple implementation
+                    )
                 }
 
                 item {
@@ -304,6 +316,86 @@ fun ProfileHeader(user: User) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = user.description, style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AccountsCard(
+    accounts: List<Account>,
+    onSwitchAccount: (Account) -> Unit,
+    onRemoveAccount: (Account) -> Unit,
+    onAddAccount: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(vertical = 16.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Accounts",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(onClick = onAddAccount) {
+                    Icon(Icons.Outlined.Add, contentDescription = "Add Account")
+                }
+            }
+
+            accounts.forEach { account ->
+                ListItem(
+                    modifier = Modifier.clickable { if (!account.isActive) onSwitchAccount(account) },
+                    headlineContent = {
+                        Text(
+                            account.displayName ?: account.name ?: "Unknown User",
+                            fontWeight = if (account.isActive) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
+                    supportingContent = {
+                        Text(
+                            account.hostUrl,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    leadingContent = {
+                        AsyncImage(
+                            model = account.avatarUrl,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentScale = ContentScale.Crop
+                        )
+                    },
+                    trailingContent = {
+                        if (account.isActive) {
+                            Icon(
+                                Icons.Outlined.Check,
+                                contentDescription = "Active",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            IconButton(onClick = { onRemoveAccount(account) }) {
+                                Icon(
+                                    Icons.Outlined.Delete,
+                                    contentDescription = "Remove Account",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    },
+                    colors = ListItemDefaults.colors(
+                        containerColor = if (account.isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent
+                    )
                 )
             }
         }

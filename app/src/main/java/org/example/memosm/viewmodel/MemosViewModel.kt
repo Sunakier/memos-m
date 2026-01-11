@@ -62,24 +62,35 @@ data class MemosUiState(
     val isDraftLoaded: Boolean = false,
     val composerResetToken: Int = 0,
     // Filter state
-    val selectedTags: Set<String> = emptySet()
+    val selectedTags: Set<String> = emptySet(),
+    // Multi-account state
+    val accounts: List<Account> = emptyList()
 )
 
 class MemosViewModel(
-    private val baseUrl: String, 
-    private val token: String,
+    private var baseUrl: String, 
+    private var token: String,
     private val dataStoreManager: DataStoreManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MemosUiState(token = token))
     val uiState: StateFlow<MemosUiState> = _uiState.asStateFlow()
 
-    private val sanitizedBaseUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+    private var sanitizedBaseUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
     private val gson = Gson()
     private var draftSaveJob: Job? = null
     private val DEFAULT_PAGE_SIZE = 20
 
-    private val api: MemosApi by lazy {
+    private var _api: MemosApi? = null
+    private val api: MemosApi 
+        get() {
+            if (_api == null) {
+                _api = createApi(sanitizedBaseUrl, token)
+            }
+            return _api!!
+        }
+
+    private fun createApi(baseUrl: String, token: String): MemosApi {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
@@ -91,7 +102,7 @@ class MemosViewModel(
             chain.proceed(request)
         }.build()
 
-        Retrofit.Builder().baseUrl(sanitizedBaseUrl).client(client)
+        return Retrofit.Builder().baseUrl(baseUrl).client(client)
             .addConverterFactory(GsonConverterFactory.create()).build().create(MemosApi::class.java)
     }
 
@@ -100,6 +111,16 @@ class MemosViewModel(
             dataStoreManager.attachmentCellWidth.collectLatest { width ->
                 if (width != null) {
                     _uiState.value = _uiState.value.copy(attachmentCellWidth = width)
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            dataStoreManager.accounts.collectLatest { accounts ->
+                _uiState.value = _uiState.value.copy(accounts = accounts)
+                // If the current account is not in the list (e.g. first login), add it
+                if (accounts.none { it.hostUrl == baseUrl && it.accessToken == token }) {
+                    updateCurrentAccountInList()
                 }
             }
         }
@@ -123,6 +144,75 @@ class MemosViewModel(
         }
         
         refreshAll()
+    }
+
+    private fun updateCurrentAccountInList() {
+        viewModelScope.launch {
+            val user = _uiState.value.user
+            val currentAccounts = dataStoreManager.accounts.first().toMutableList()
+            val existingIndex = currentAccounts.indexOfFirst { it.hostUrl == baseUrl && it.accessToken == token }
+            
+            val newAccount = Account(
+                hostUrl = baseUrl,
+                accessToken = token,
+                name = user?.username,
+                displayName = user?.displayName,
+                avatarUrl = user?.avatarUrl,
+                isActive = true
+            )
+
+            if (existingIndex != -1) {
+                currentAccounts[existingIndex] = newAccount
+            } else {
+                currentAccounts.add(newAccount)
+            }
+            
+            // Mark others as inactive
+            val finalAccounts = currentAccounts.map { 
+                it.copy(isActive = it.hostUrl == baseUrl && it.accessToken == token)
+            }
+            
+            dataStoreManager.saveAccounts(finalAccounts)
+        }
+    }
+
+    fun switchAccount(account: Account) {
+        viewModelScope.launch {
+            baseUrl = account.hostUrl
+            token = account.accessToken
+            sanitizedBaseUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+            _api = null // Force recreation of API
+            
+            dataStoreManager.saveCredentials(baseUrl, token)
+            
+            // Clear current UI state for the new account
+            _uiState.value = MemosUiState(
+                token = token,
+                accounts = _uiState.value.accounts.map { 
+                    it.copy(isActive = it.hostUrl == baseUrl && it.accessToken == token)
+                },
+                attachmentCellWidth = _uiState.value.attachmentCellWidth
+            )
+            
+            refreshAll()
+        }
+    }
+
+    fun removeAccount(account: Account) {
+        viewModelScope.launch {
+            val currentAccounts = _uiState.value.accounts.filter { 
+                !(it.hostUrl == account.hostUrl && it.accessToken == account.accessToken)
+            }
+            dataStoreManager.saveAccounts(currentAccounts)
+            
+            if (account.hostUrl == baseUrl && account.accessToken == token) {
+                if (currentAccounts.isNotEmpty()) {
+                    switchAccount(currentAccounts.first())
+                } else {
+                    dataStoreManager.clearCredentials()
+                }
+            }
+        }
     }
 
     fun refreshAll() {
@@ -173,6 +263,10 @@ class MemosViewModel(
                 } else {
                     fallbackFetchUser()
                 }
+                
+                // After fetching user, update account info in list
+                updateCurrentAccountInList()
+                
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error during refreshAll", e)
                 _uiState.value = _uiState.value.copy(error = e.localizedMessage)

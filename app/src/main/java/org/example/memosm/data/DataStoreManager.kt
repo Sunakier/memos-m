@@ -7,18 +7,24 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.example.memosm.model.Account
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 class DataStoreManager(private val context: Context) {
+
+    private val gson = Gson()
 
     companion object {
         val HOST_URL = stringPreferencesKey("host_url")
         val ACCESS_TOKEN = stringPreferencesKey("access_token")
         val ATTACHMENT_CELL_WIDTH = floatPreferencesKey("attachment_cell_width")
         val MEMO_DRAFT_JSON = stringPreferencesKey("memo_draft_json")
+        val ACCOUNTS_JSON = stringPreferencesKey("accounts_json")
     }
 
     val hostUrl: Flow<String?> = context.dataStore.data.map { preferences ->
@@ -27,6 +33,16 @@ class DataStoreManager(private val context: Context) {
 
     val accessToken: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[ACCESS_TOKEN]
+    }
+
+    val accounts: Flow<List<Account>> = context.dataStore.data.map { preferences ->
+        val json = preferences[ACCOUNTS_JSON]
+        if (json.isNullOrEmpty()) {
+            emptyList()
+        } else {
+            val type = object : TypeToken<List<Account>>() {}.type
+            gson.fromJson(json, type)
+        }
     }
 
     val attachmentCellWidth: Flow<Float?> = context.dataStore.data.map { preferences ->
@@ -41,6 +57,12 @@ class DataStoreManager(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[HOST_URL] = url
             preferences[ACCESS_TOKEN] = token
+        }
+    }
+
+    suspend fun saveAccounts(accounts: List<Account>) {
+        context.dataStore.edit { preferences ->
+            preferences[ACCOUNTS_JSON] = gson.toJson(accounts)
         }
     }
 
@@ -66,6 +88,12 @@ class DataStoreManager(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences.remove(HOST_URL)
             preferences.remove(ACCESS_TOKEN)
+        }
+    }
+
+    suspend fun clearAll() {
+        context.dataStore.edit { preferences ->
+            preferences.clear()
         }
     }
 }
