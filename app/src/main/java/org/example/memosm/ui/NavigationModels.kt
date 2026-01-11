@@ -5,3 +5,9 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class MemoKey(val id: String, val fromSearch: Boolean = false) : Parcelable
+
+@Parcelize
+sealed class ProfileDetailKey : Parcelable {
+    @Parcelize
+    object Archived : ProfileDetailKey()
+}
