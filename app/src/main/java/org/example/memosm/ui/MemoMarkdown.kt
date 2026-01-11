@@ -32,6 +32,7 @@ import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
 import com.mikepenz.markdown.compose.elements.highlightedCodeFence
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.model.MarkdownState
+import com.mikepenz.markdown.model.markdownAnimations
 import com.mikepenz.markdown.model.markdownAnnotator
 import com.mikepenz.markdown.model.markdownAnnotatorConfig
 import org.intellij.markdown.MarkdownElementTypes
@@ -51,6 +52,12 @@ fun MemoMarkdown(
     Markdown(
         markdownState = markdownState,
         imageTransformer = Coil3ImageTransformerImpl,
+        animations = markdownAnimations(
+            animateTextSize = {
+                this
+                /** No animation */
+            }
+        ),
         annotator = markdownAnnotator(
             config = markdownAnnotatorConfig(eolAsNewLine = true)
         ),
