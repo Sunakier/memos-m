@@ -92,25 +92,12 @@ fun MemosScaffold(
         }
     }
 
-    val isDetailVisible =
-        navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
-    val isListVisible =
-        navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
-    val isDualPane = isListVisible && isDetailVisible
-
-    // Hide nav bar if detail is visible and list is not (mobile detail view)
-    LaunchedEffect(isDetailVisible, isListVisible, isDualPane) {
-        if (!isDualPane) {
-            onToggleNavBar(!isDetailVisible)
-        }
-    }
-
     // Scroll direction tracking for search bar visibility
     var isScrollingDown by remember { mutableStateOf(false) }
     var previousIndex by remember { mutableIntStateOf(0) }
     var previousScrollOffset by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(listState, isDetailVisible, isDualPane) {
+    LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (currentIndex, currentOffset) ->
             val wasScrollingDown = isScrollingDown
             if (currentIndex > previousIndex) {
@@ -123,8 +110,7 @@ fun MemosScaffold(
                 isScrollingDown = false
             }
 
-            // Only toggle nav bar on scroll if we're in list view on mobile
-            if (wasScrollingDown != isScrollingDown && !isDetailVisible && !isDualPane) {
+            if (wasScrollingDown != isScrollingDown) {
                 onToggleNavBar(!isScrollingDown)
             }
 
@@ -132,6 +118,12 @@ fun MemosScaffold(
             previousScrollOffset = currentOffset
         }
     }
+
+    val isDetailVisible =
+        navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
+    val isListVisible =
+        navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
+    val isDualPane = isListVisible && isDetailVisible
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     val showSearchBar by remember {
@@ -257,7 +249,7 @@ fun GenericMemosListPane(
     userProvider: (Memo) -> User? = { null },
     header: (LazyListScope.() -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(
-        start = 16.dp, top = 88.dp, end = 16.dp, bottom = 16.dp
+        start = 16.dp, top = 88.dp, end = 16.dp, bottom = 80.dp
     )
 ) {
     val uiState by viewModel.uiState.collectAsState()
