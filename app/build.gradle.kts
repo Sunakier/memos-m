@@ -24,10 +24,12 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file(System.getenv("KEYSTORE_PATH") ?: "release.keystore")
-            storePassword = System.getenv("KEYSTORE_PASSWORD")
-            keyAlias = System.getenv("KEY_ALIAS") ?: "key0"
-            keyPassword = System.getenv("KEY_PASSWORD")
+            val keystorePath = providers.environmentVariable("KEYSTORE_PATH")
+            storeFile = keystorePath.map { file(it) }.orNull
+
+            storePassword = providers.environmentVariable("KEYSTORE_PASSWORD").orNull
+            keyAlias = providers.environmentVariable("KEY_ALIAS").orElse("key0").orNull
+            keyPassword = providers.environmentVariable("KEY_PASSWORD").orNull
         }
     }
 
@@ -38,7 +40,11 @@ android {
             manifestPlaceholders["appLabel"] = "MemosM (Debug)"
         }
         create("canary") {
-            initWith(getByName("release"))
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             applicationIdSuffix = ".canary"
             versionNameSuffix = "-canary"
             manifestPlaceholders["appLabel"] = "MemosM"
@@ -63,10 +69,10 @@ android {
     }
 
     sourceSets {
-        getByName("main") {
+        named("main") {
             java.srcDirs("src/main/proto")
         }
-        getByName("canary") {
+        named("canary") {
             res.srcDirs("src/canary/res")
         }
     }
@@ -84,14 +90,10 @@ protobuf {
         artifact = "com.google.protobuf:protoc:4.28.2"
     }
     generateProtoTasks {
-        all().forEach { task ->
-            task.builtins {
-                create("java") {
-                    option("lite")
-                }
-                create("kotlin") {
-                    option("lite")
-                }
+        all().configureEach {
+            builtins {
+                create("java") { option("lite") }
+                create("kotlin") { option("lite") }
             }
         }
     }
