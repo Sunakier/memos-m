@@ -174,18 +174,19 @@ private fun ProfileListPane(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Always show accounts at the top
+            item {
+                AccountsCard(
+                    accounts = accounts,
+                    onSwitchAccount = { viewModel.switchAccount(it) },
+                    onRemoveAccount = { viewModel.removeAccount(it) },
+                    onAddAccount = onLogout
+                )
+            }
+
             if (user != null) {
                 item {
                     ProfileHeader(user)
-                }
-
-                item {
-                    AccountsCard(
-                        accounts = accounts,
-                        onSwitchAccount = { viewModel.switchAccount(it) },
-                        onRemoveAccount = { viewModel.removeAccount(it) },
-                        onAddAccount = onLogout // Logging out allows adding a new one in this simple implementation
-                    )
                 }
 
                 item {
@@ -257,7 +258,10 @@ private fun ProfileListPane(
             } else if (uiState.isLoading) {
                 item {
                     Box(
-                        modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
                     }
@@ -265,11 +269,14 @@ private fun ProfileListPane(
             } else {
                 item {
                     Column(
-                        modifier = Modifier.fillParentMaxSize(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(stringResource(R.string.profile_user_info_not_available))
+                        Spacer(modifier = Modifier.height(8.dp))
                         Button(onClick = { viewModel.refreshAll() }) {
                             Text(stringResource(R.string.profile_retry))
                         }
