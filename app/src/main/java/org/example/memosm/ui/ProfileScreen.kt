@@ -28,7 +28,7 @@ import org.example.memosm.model.*
 import org.example.memosm.viewmodel.MemosViewModel
 
 @Composable
-fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit) {
+fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit, onShowArchived: () -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
     val user = uiState.user
     val stats = uiState.userStats
@@ -61,6 +61,17 @@ fun ProfileScreen(viewModel: MemosViewModel, onLogout: () -> Unit) {
 
                 item {
                     StatsCard(stats)
+                }
+
+                item {
+                    Card(modifier = Modifier.fillMaxWidth(), onClick = onShowArchived) {
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.profile_archived)) },
+                            leadingContent = { Icon(Icons.Outlined.Archive, contentDescription = null) },
+                            trailingContent = { Icon(Icons.Outlined.ChevronRight, contentDescription = null) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        )
+                    }
                 }
 
                 if (userSettings != null) {

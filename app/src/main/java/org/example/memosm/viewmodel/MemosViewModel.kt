@@ -28,6 +28,7 @@ import java.io.InputStream
 data class MemosUiState(
     val memos: List<Memo> = emptyList(),
     val exploreMemos: List<Memo> = emptyList(),
+    val archivedMemos: List<Memo> = emptyList(),
     val searchMemos: List<Memo> = emptyList(),
     val attachments: List<Attachment> = emptyList(),
     val user: User? = null,
@@ -39,12 +40,14 @@ data class MemosUiState(
     val instanceProfile: InstanceProfile? = null,
     val isLoading: Boolean = false,
     val isExploring: Boolean = false,
+    val isFetchingArchived: Boolean = false,
     val isSearching: Boolean = false,
     val isPosting: Boolean = false,
     val isFetchingAttachments: Boolean = false,
     val error: String? = null,
     val nextPageToken: String? = null,
     val exploreNextPageToken: String? = null,
+    val archivedNextPageToken: String? = null,
     val nextAttachmentsPageToken: String? = null,
     val isRefreshing: Boolean = false,
     val refreshTrigger: Long = 0L, // Used to trigger scroll to top
@@ -473,6 +476,50 @@ class MemosViewModel(
                     isRefreshing = if (refresh && updateRefreshingState) false else _uiState.value.isRefreshing
                 )
             }
+        }
+    }
+
+    fun fetchArchivedMemos(refresh: Boolean = false) {
+        if (_uiState.value.isFetchingArchived && !refresh) return
+        val currentToken = if (refresh) null else _uiState.value.archivedNextPageToken
+        if (!refresh && currentToken == null) return
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isFetchingArchived = true,
+                error = if (refresh) null else _uiState.value.error,
+                isRefreshing = if (refresh) true else _uiState.value.isRefreshing
+            )
+            try {
+                val response = api.listMemos(
+                    pageToken = currentToken,
+                    state = "ARCHIVED",
+                    pageSize = DEFAULT_PAGE_SIZE
+                )
+                val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
+                
+                val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
+                
+                _uiState.value = _uiState.value.copy(
+                    archivedMemos = if (refresh) newMemos else _uiState.value.archivedMemos + newMemos,
+                    archivedNextPageToken = newNextPageToken,
+                    isFetchingArchived = false,
+                    isRefreshing = if (refresh) false else _uiState.value.isRefreshing
+                )
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error fetching archived memos", e)
+                _uiState.value = _uiState.value.copy(
+                    isFetchingArchived = false,
+                    error = e.localizedMessage,
+                    isRefreshing = if (refresh) false else _uiState.value.isRefreshing
+                )
+            }
+        }
+    }
+
+    fun loadMoreArchived() {
+        if (_uiState.value.archivedNextPageToken != null && !_uiState.value.isFetchingArchived) {
+            fetchArchivedMemos()
         }
     }
 

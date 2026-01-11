@@ -134,7 +134,14 @@ fun MainScreen(
                     MainDestination.MEMOS -> MemosListScreen(viewModel)
                     MainDestination.EXPLORE -> ExploreScreen(viewModel)
                     MainDestination.ATTACHMENTS -> AttachmentsScreen(viewModel)
-                    MainDestination.PROFILE -> ProfileScreen(viewModel, onLogout)
+                    MainDestination.PROFILE -> {
+                        var showArchived by rememberSaveable { mutableStateOf(false) }
+                        if (showArchived) {
+                            ArchivedMemosScreen(viewModel, onBack = { showArchived = false })
+                        } else {
+                            ProfileScreen(viewModel, onLogout, onShowArchived = { showArchived = true })
+                        }
+                    }
                 }
             }
         }
