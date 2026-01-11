@@ -1,8 +1,10 @@
 package org.example.memosm.ui.components
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -41,6 +43,27 @@ fun MemoDetailView(
     var showCommentDialog by remember { mutableStateOf(false) }
     var memoToEdit by remember { mutableStateOf<Memo?>(null) }
     var memoToDelete by remember { mutableStateOf<Memo?>(null) }
+
+    val listState = rememberLazyListState()
+    var isFabVisible by remember { mutableStateOf(true) }
+
+    LaunchedEffect(listState) {
+        var previousIndex = listState.firstVisibleItemIndex
+        var previousScrollOffset = listState.firstVisibleItemScrollOffset
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .collect { (index, offset) ->
+                isFabVisible = when {
+                    index == 0 && offset == 0 -> true
+                    index > previousIndex -> false
+                    index < previousIndex -> true
+                    offset > previousScrollOffset + 10 -> false
+                    offset < previousScrollOffset - 10 -> true
+                    else -> isFabVisible
+                }
+                previousIndex = index
+                previousScrollOffset = offset
+            }
+    }
 
     val isOwner = remember(memo.creator, uiState.user?.name) {
         memo.creator == uiState.user?.name
@@ -82,15 +105,21 @@ fun MemoDetailView(
                 )
             }, floatingActionButton = {
                 if (uiState.user != null) {
-                    FloatingActionButton(
-                        onClick = { showCommentDialog = true },
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    AnimatedVisibility(
+                        visible = isFabVisible,
+                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = stringResource(R.string.memo_detail_add_comment)
-                        )
+                        FloatingActionButton(
+                            onClick = { showCommentDialog = true },
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = stringResource(R.string.memo_detail_add_comment)
+                            )
+                        }
                     }
                 }
             }, containerColor = Color.Transparent, modifier = Modifier.fillMaxSize()
@@ -102,6 +131,7 @@ fun MemoDetailView(
                 contentAlignment = Alignment.TopCenter
             ) {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxHeight()
                         .widthIn(max = 800.dp)
