@@ -76,7 +76,8 @@ fun MemoDetailView(
                         }
                     }
                 },
-                windowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
+                // Set to empty because parent Scaffolds are already handling system bar insets
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }, floatingActionButton = {
