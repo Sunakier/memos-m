@@ -249,9 +249,6 @@ fun MemoComposer(
         }
     }
 
-//    val startRecordErrorText = stringResource(R.string.memo_composer_error_start_recording)
-
-
     fun startRecording() {
         try {
             val file = File(context.cacheDir, "record_${System.currentTimeMillis()}.aac")
@@ -335,7 +332,7 @@ fun MemoComposer(
             componentWidth = with(density) { it.width.toDp() }
         }) {
         val showVisibilityLabel = componentWidth > 440.dp || componentWidth == 0.dp
-        val showPublishLabel = componentWidth > 300.dp || componentWidth == 0.dp
+        val showPublishLabel = componentWidth > 350.dp || componentWidth == 0.dp
         val isCompact = componentWidth < 380.dp && componentWidth != 0.dp
 
         val actionIconSize = if (isCompact) 20.dp else 24.dp

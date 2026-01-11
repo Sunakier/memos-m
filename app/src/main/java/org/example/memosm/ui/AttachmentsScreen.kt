@@ -397,6 +397,9 @@ fun AttachmentItem(
                                 modifier = Modifier.size(18.dp)
                             )
                         }
+                        val attachmentErrorOpenLinkText =
+                            stringResource(R.string.attachments_error_open_link)
+
                         if (!attachment.externalLink.isNullOrBlank()) {
                             IconButton(
                                 onClick = {
@@ -415,7 +418,7 @@ fun AttachmentItem(
                                         val errMsg = e.localizedMessage ?: e.javaClass.simpleName
                                         Toast.makeText(
                                             context,
-                                            context.getString(R.string.attachments_error_open_link) + ": $errMsg",
+                                            attachmentErrorOpenLinkText + ": $errMsg",
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
