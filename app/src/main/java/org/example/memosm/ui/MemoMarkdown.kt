@@ -103,7 +103,8 @@ private fun ClickableCheckbox(
                 } else {
                     checkboxText.replace("[ ]", "[x]")
                 }
-                val newContent = content.take(startOffset) + newCheckboxText + content.substring(endOffset)
+                val newContent =
+                    content.take(startOffset) + newCheckboxText + content.substring(endOffset)
                 onToggle(newContent)
             } else null,
             modifier = Modifier
@@ -201,32 +202,32 @@ fun CustomMarkdownTable(
             .background(backgroundColor)
             .horizontalScroll(rememberScrollState())
     ) {
-        SubcomposeLayout { constraints ->
-            // 1. Subcompose and measure all cells to find the max width per column
-            val columnWidths = IntArray(columnCount) { 0 }
 
-            // Create a list of all rows (Header + Body)
+        SubcomposeLayout { constraints ->
+            val columnWidths = IntArray(columnCount) { 0 }
             val allRows = listOf(headerCells) + rowCells
 
-            // Measure phase: Determine the max width for each column
+            // 1. MEASURE PASS
             allRows.forEach { row ->
                 row.forEachIndexed { index, cellNode ->
                     val placeable = subcompose("measure_${row.hashCode()}_$index") {
-                        MarkdownElement(
-                            node = cellNode,
-                            components = markdownComponents,
-                            content = content,
-                            includeSpacer = false
-                        )
-                    }.first().measure(Constraints()) // Measure with infinite constraints to get natural width
+                        // FIX: Wrap in FlowRow to get the TRUE natural width
+                        // of all text segments combined
+                        FlowRow {
+                            cellNode.children.forEach { child ->
+                                MarkdownElement(child, markdownComponents, content, false)
+                            }
+                        }
+                    }.first().measure(Constraints())
 
-                    columnWidths[index] = maxOf(columnWidths[index], placeable.width + (tableCellPadding.roundToPx() * 2))
+                    val totalPadding = tableCellPadding.roundToPx() * 2
+                    columnWidths[index] = maxOf(columnWidths[index], placeable.width + totalPadding)
                 }
             }
 
             val tableWidth = columnWidths.sum()
 
-            // 2. Final composition and placement
+            // 2. COMPOSITION PASS
             val contentPlaceables = subcompose("content") {
                 Column {
                     allRows.forEachIndexed { rowIndex, row ->
@@ -235,20 +236,26 @@ fun CustomMarkdownTable(
                             modifier = Modifier
                                 .width(with(LocalDensity.current) { tableWidth.toDp() })
                                 .background(if (isHeader) headerBackground else Color.Transparent)
-                                .height(IntrinsicSize.Min)
+                                .height(IntrinsicSize.Min) // Critical for vertical alignment
                         ) {
                             row.forEachIndexed { columnIndex, cellNode ->
                                 Box(
                                     modifier = Modifier
                                         .width(with(LocalDensity.current) { columnWidths[columnIndex].toDp() })
                                         .padding(tableCellPadding)
+                                        .fillMaxHeight()
                                 ) {
-                                    MarkdownElement(
-                                        node = cellNode,
-                                        components = markdownComponents,
-                                        content = content,
-                                        includeSpacer = false
-                                    )
+                                    // FIX: Use the same FlowRow logic here
+                                    FlowRow {
+                                        cellNode.children.forEach { child ->
+                                            MarkdownElement(
+                                                child,
+                                                markdownComponents,
+                                                content,
+                                                false
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -256,12 +263,12 @@ fun CustomMarkdownTable(
                 }
             }.map { it.measure(constraints) }
 
-            // 3. Layout the table
             layout(tableWidth, contentPlaceables.first().height) {
                 contentPlaceables.forEach { it.placeRelative(0, 0) }
             }
         }
     }
+
 }
 @Composable
 fun MarkdownDivider(
