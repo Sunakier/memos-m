@@ -62,10 +62,12 @@ android {
         compose = true
     }
 
-    // Add this block to help Android Studio see the proto files
     sourceSets {
         getByName("main") {
             java.srcDirs("src/main/proto")
+        }
+        getByName("canary") {
+            res.srcDirs("src/canary/res")
         }
     }
 }
