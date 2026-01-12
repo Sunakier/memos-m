@@ -25,7 +25,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -47,6 +46,8 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
+import org.example.memosm.ui.components.item.media.FileThumbnail
+import org.example.memosm.ui.components.item.media.FileThumbnailMode
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -313,87 +314,17 @@ fun AttachmentCard(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        val fileIcon = remember(displayType) {
-                            when {
-                                displayType.contains(
-                                    "pdf",
-                                    ignoreCase = true
-                                ) -> Icons.Outlined.PictureAsPdf
-
-                                displayType.contains(
-                                    "text",
-                                    ignoreCase = true
-                                ) || displayType.contains(
-                                    "markdown",
-                                    ignoreCase = true
-                                ) -> Icons.Outlined.Description
-
-                                displayType.contains(
-                                    "zip",
-                                    ignoreCase = true
-                                ) || displayType.contains(
-                                    "archive",
-                                    ignoreCase = true
-                                ) || displayType.contains(
-                                    "tar",
-                                    ignoreCase = true
-                                ) -> Icons.Outlined.FolderZip
-
-                                else -> Icons.AutoMirrored.Outlined.InsertDriveFile
-                            }
-                        }
-
-                        if (isWide) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clickable { showInfoDialog = true }
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = fileIcon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(
-                                    text = filename,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        } else {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clickable { showInfoDialog = true }
-                                    .padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = fileIcon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(32.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                if (!isCompact) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = filename,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                            }
-                        }
+                        FileThumbnail(
+                            displayType = displayType,
+                            filename = filename,
+                            mode = when {
+                                isWide -> FileThumbnailMode.WIDE
+                                isCompact -> FileThumbnailMode.COMPACT
+                                else -> FileThumbnailMode.NORMAL
+                            },
+                            onClick = { showInfoDialog = true },
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
 
                     // Floating menu button for compact view
@@ -698,4 +629,3 @@ fun Context.findActivity(): Activity? {
 
 @Composable
 fun mutableLongPositionOf() = remember { mutableLongStateOf(0L) }
-
