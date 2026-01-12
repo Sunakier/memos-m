@@ -56,11 +56,11 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun AttachmentItem(
+fun AttachmentCard(
     attachment: Attachment,
     token: String,
     modifier: Modifier = Modifier,
-    onRatioAvailable: (Float) -> Unit
+    onRatioAvailable: (Float) -> Unit = {}
 ) {
     val context = LocalContext.current
     var showInfoDialog by remember { mutableStateOf(false) }
@@ -68,16 +68,13 @@ fun AttachmentItem(
 
     val formattedDate = remember(attachment.createTime) {
         try {
-            // "2024-03-20T10:00:00Z"
             val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
             inputFormat.timeZone = TimeZone.getTimeZone("UTC")
             val date = inputFormat.parse(attachment.createTime ?: "")
             val outputFormat = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault())
             date?.let { outputFormat.format(it) } ?: ""
         } catch (e: Exception) {
-            Log.e(
-                "AttachmentItem", "Failed to parse date: ${attachment.createTime}", e
-            )
+            Log.e("AttachmentCard", "Failed to parse date: ${attachment.createTime}", e)
             attachment.createTime ?: ""
         }
     }
@@ -89,180 +86,153 @@ fun AttachmentItem(
 
     val displayType = attachment.displayType
     val isImage = remember(displayType) {
-        displayType.startsWith(
-            "image/", ignoreCase = true
-        ) || displayType.contains("image", ignoreCase = true)
+        displayType.startsWith("image/", ignoreCase = true) || displayType.contains("image", ignoreCase = true)
     }
-
     val isAudio = remember(displayType) {
-        displayType.startsWith(
-            "audio/", ignoreCase = true
-        ) || displayType.contains("audio", ignoreCase = true)
+        displayType.startsWith("audio/", ignoreCase = true) || displayType.contains("audio", ignoreCase = true)
     }
-
     val isVideo = remember(displayType) {
-        displayType.startsWith(
-            "video/", ignoreCase = true
-        ) || displayType.contains("video", ignoreCase = true)
+        displayType.startsWith("video/", ignoreCase = true) || displayType.contains("video", ignoreCase = true)
     }
 
     Card(
         modifier = modifier.clip(RoundedCornerShape(12.dp)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column {
-            BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isImage) {
-                    val externalLink = attachment.externalLink
-                    val headers = NetworkHeaders.Builder().set(
-                        "Authorization", "Bearer $token"
-                    ).build()
-                    val imageRequest = remember(externalLink, token) {
-                        ImageRequest.Builder(context).data(externalLink).httpHeaders(headers)
-                            .diskCachePolicy(CachePolicy.ENABLED)
-                            .memoryCachePolicy(CachePolicy.ENABLED).build()
-                    }
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val isCompact = maxWidth < 160.dp || maxHeight < 140.dp
 
-                    var isLoading by remember { mutableStateOf(true) }
-                    var isError by remember { mutableStateOf(false) }
-
-                    AsyncImage(
-                        model = imageRequest,
-                        contentDescription = attachment.filename,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        onLoading = { isLoading = true; isError = false },
-                        onSuccess = { state ->
-                            isLoading = false
-                            isError = false
-                            val size = state.painter.intrinsicSize
-                            if (size.width > 0 && size.height > 0) {
-                                onRatioAvailable(size.width / size.height)
-                            }
-                        },
-                        onError = { isLoading = false; isError = true })
-
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp), strokeWidth = 2.dp
-                        )
-                    }
-
-                    if (isError) {
-                        Icon(
-                            imageVector = Icons.Outlined.BrokenImage,
-                            contentDescription = stringResource(R.string.attachments_error),
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                } else if (isVideo && !attachment.externalLink.isNullOrBlank()) {
-                    VideoPlayer(
-                        url = attachment.externalLink,
-                        token = token,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else if (isAudio && !attachment.externalLink.isNullOrBlank()) {
-                    val isCompact = maxWidth < 160.dp || maxHeight < 100.dp
-                    AudioPlayer(
-                        url = attachment.externalLink,
-                        filename = attachment.filename,
-                        token = token,
-                        compact = isCompact,
-                        showContainer = false,
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .fillMaxSize()
-                    )
-                } else {
-                    Text(
-                        text = attachment.filename,
-                        style = MaterialTheme.typography.bodyLarge,
-                        maxLines = 3,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-            }
-
-            Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-                Text(
-                    text = attachment.filename,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            Column(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = { showInfoDialog = true }, modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Info,
-                                contentDescription = stringResource(R.string.attachments_info_title),
-                                modifier = Modifier.size(18.dp)
-                            )
+                    if (isImage) {
+                        val externalLink = attachment.externalLink
+                        val headers = NetworkHeaders.Builder().set("Authorization", "Bearer $token").build()
+                        val imageRequest = remember(externalLink, token) {
+                            ImageRequest.Builder(context).data(externalLink).httpHeaders(headers)
+                                .diskCachePolicy(CachePolicy.ENABLED)
+                                .memoryCachePolicy(CachePolicy.ENABLED).build()
                         }
-                        IconButton(
-                            onClick = { showDownloadDialog = true }, modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Download,
-                                contentDescription = stringResource(R.string.attachments_download_button),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        val attachmentErrorOpenLinkText =
-                            stringResource(R.string.attachments_error_open_link)
 
-                        if (!attachment.externalLink.isNullOrBlank()) {
-                            IconButton(
-                                onClick = {
-                                    try {
-                                        val intent = Intent(
-                                            Intent.ACTION_VIEW, attachment.externalLink.toUri()
+                        var isLoading by remember { mutableStateOf(true) }
+                        var isError by remember { mutableStateOf(false) }
+
+                        AsyncImage(
+                            model = imageRequest,
+                            contentDescription = attachment.filename,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            onLoading = { isLoading = true; isError = false },
+                            onSuccess = { state ->
+                                isLoading = false
+                                isError = false
+                                val size = state.painter.intrinsicSize
+                                if (size.width > 0 && size.height > 0) {
+                                    onRatioAvailable(size.width / size.height)
+                                }
+                            },
+                            onError = { isLoading = false; isError = true })
+
+                        if (isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        }
+                        if (isError) {
+                            Icon(
+                                imageVector = Icons.Outlined.BrokenImage,
+                                contentDescription = stringResource(R.string.attachments_error),
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    } else if (isVideo && !attachment.externalLink.isNullOrBlank()) {
+                        VideoPlayer(
+                            url = attachment.externalLink,
+                            token = token,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else if (isAudio && !attachment.externalLink.isNullOrBlank()) {
+                        AudioPlayer(
+                            url = attachment.externalLink,
+                            filename = attachment.filename,
+                            token = token,
+                            compact = isCompact,
+                            showContainer = false,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Text(
+                            text = attachment.filename,
+                            style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 3,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+
+                if (!isCompact) {
+                    Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                        Text(
+                            text = attachment.filename,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = { showInfoDialog = true }, modifier = Modifier.size(32.dp)) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Info,
+                                        contentDescription = stringResource(R.string.attachments_info_title),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                IconButton(onClick = { showDownloadDialog = true }, modifier = Modifier.size(32.dp)) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Download,
+                                        contentDescription = stringResource(R.string.attachments_download_button),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                if (!attachment.externalLink.isNullOrBlank()) {
+                                    val openLinkText = stringResource(R.string.attachments_error_open_link)
+                                    IconButton(
+                                        onClick = {
+                                            try {
+                                                val intent = Intent(Intent.ACTION_VIEW, attachment.externalLink.toUri())
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                Log.e("AttachmentCard", "Failed to open link: ${attachment.externalLink}", e)
+                                                Toast.makeText(context, "$openLinkText: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }, modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Language,
+                                            contentDescription = stringResource(R.string.memo_action_open_web),
+                                            modifier = Modifier.size(18.dp)
                                         )
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        Log.e(
-                                            "AttachmentItem",
-                                            "Failed to open link: ${attachment.externalLink}",
-                                            e
-                                        )
-                                        val errMsg = e.localizedMessage ?: e.javaClass.simpleName
-                                        Toast.makeText(
-                                            context,
-                                            attachmentErrorOpenLinkText + ": $errMsg",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
                                     }
-                                }, modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Language,
-                                    contentDescription = stringResource(R.string.memo_action_open_web),
-                                    modifier = Modifier.size(18.dp)
-                                )
+                                }
                             }
+                            Text(
+                                text = formattedSize,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
-                    Text(
-                        text = formattedSize,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
         }
@@ -277,19 +247,11 @@ fun AttachmentItem(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    AttachmentInfoRow(
-                        stringResource(R.string.attachments_info_filename), attachment.filename
-                    )
-                    AttachmentInfoRow(
-                        stringResource(R.string.attachments_info_type), attachment.displayType
-                    )
+                    AttachmentInfoRow(stringResource(R.string.attachments_info_filename), attachment.filename)
+                    AttachmentInfoRow(stringResource(R.string.attachments_info_type), attachment.displayType)
                     AttachmentInfoRow(stringResource(R.string.attachments_info_size), formattedSize)
-                    AttachmentInfoRow(
-                        stringResource(R.string.attachments_info_created), formattedDate
-                    )
-                    if (attachment.name != null) AttachmentInfoRow(
-                        stringResource(R.string.attachments_info_id), attachment.name
-                    )
+                    AttachmentInfoRow(stringResource(R.string.attachments_info_created), formattedDate)
+                    if (attachment.name != null) AttachmentInfoRow(stringResource(R.string.attachments_info_id), attachment.name)
                 }
             },
             confirmButton = {
@@ -303,13 +265,7 @@ fun AttachmentItem(
         AlertDialog(
             onDismissRequest = { showDownloadDialog = false },
             title = { Text(stringResource(R.string.attachments_download_dialog_title)) },
-            text = {
-                Text(
-                    stringResource(
-                        R.string.attachments_download_dialog_confirm, attachment.filename
-                    )
-                )
-            },
+            text = { Text(stringResource(R.string.attachments_download_dialog_confirm, attachment.filename)) },
             confirmButton = {
                 TextButton(onClick = {
                     downloadAttachmentFile(context, attachment, token)
@@ -329,11 +285,7 @@ fun AttachmentItem(
 @Composable
 fun AttachmentInfoRow(label: String, value: String) {
     Column {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
+        Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
         Text(text = value, style = MaterialTheme.typography.bodyMedium)
     }
 }
@@ -346,12 +298,9 @@ private fun downloadAttachmentFile(context: Context, attachment: Attachment, tok
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, attachment.filename)
             .addRequestHeader("Authorization", "Bearer $token")
-
         val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         manager.enqueue(request)
-        Toast.makeText(
-            context, context.getString(R.string.attachments_download_started), Toast.LENGTH_SHORT
-        ).show()
+        Toast.makeText(context, context.getString(R.string.attachments_download_started), Toast.LENGTH_SHORT).show()
     } catch (e: Exception) {
         val message = context.getString(R.string.attachments_error_download_failed, e.message ?: "")
         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
@@ -361,13 +310,10 @@ private fun downloadAttachmentFile(context: Context, attachment: Attachment, tok
 @Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @OptIn(UnstableApi::class)
 @Composable
-fun VideoPlayer(
-    url: String, token: String, modifier: Modifier = Modifier
-) {
+fun VideoPlayer(url: String, token: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     var isFullscreen by remember { mutableStateOf(false) }
     var isReady by remember { mutableStateOf(false) }
-
     val exoPlayer = remember {
         ExoPlayer.Builder(context).setMediaSourceFactory(
             DefaultMediaSourceFactory(context).setDataSourceFactory(
@@ -376,31 +322,18 @@ fun VideoPlayer(
             )
         ).build()
     }
-
     LaunchedEffect(url) {
         exoPlayer.setMediaItem(MediaItem.fromUri(url))
         exoPlayer.prepare()
-
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_READY) {
-                    isReady = true
-                }
+                if (playbackState == Player.STATE_READY) isReady = true
             }
         }
         exoPlayer.addListener(listener)
     }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            exoPlayer.release()
-        }
-    }
-
-    Box(
-        modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
-        contentAlignment = Alignment.Center
-    ) {
+    DisposableEffect(Unit) { onDispose { exoPlayer.release() } }
+    Box(modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
@@ -408,64 +341,32 @@ fun VideoPlayer(
                     useController = true
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
                     setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    setFullscreenButtonClickListener {
-                        isFullscreen = true
-                    }
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
-                    )
+                    setFullscreenButtonClickListener { isFullscreen = true }
+                    layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                 }
-            }, update = { view ->
-                view.player = if (isFullscreen) null else exoPlayer
-            }, modifier = Modifier
-                .fillMaxSize()
-                .alpha(if (isReady) 1f else 0f)
+            }, update = { view -> view.player = if (isFullscreen) null else exoPlayer },
+            modifier = Modifier.fillMaxSize().alpha(if (isReady) 1f else 0f)
         )
-
-        if (!isReady) {
-            CircularProgressIndicator(modifier = Modifier.size(32.dp))
-        }
+        if (!isReady) CircularProgressIndicator(modifier = Modifier.size(32.dp))
     }
-
     if (isFullscreen) {
-        Dialog(
-            onDismissRequest = { isFullscreen = false }, properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                dismissOnBackPress = true,
-                dismissOnClickOutside = false
-            )
-        ) {
+        Dialog(onDismissRequest = { isFullscreen = false }, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = true, dismissOnClickOutside = false)) {
             val activity = context.findActivity()
             DisposableEffect(Unit) {
-                val originalOrientation =
-                    activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                val originalOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                 activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                onDispose {
-                    activity?.requestedOrientation = originalOrientation
-                }
+                onDispose { activity?.requestedOrientation = originalOrientation }
             }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-            ) {
-                AndroidView(
-                    factory = { ctx ->
-                        PlayerView(ctx).apply {
-                            player = exoPlayer
-                            useController = true
-                            setBackgroundColor(android.graphics.Color.BLACK)
-                            setFullscreenButtonClickListener {
-                                isFullscreen = false
-                            }
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            )
-                        }
-                    }, modifier = Modifier.fillMaxSize()
-                )
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+                AndroidView(factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        player = exoPlayer
+                        useController = true
+                        setBackgroundColor(android.graphics.Color.BLACK)
+                        setFullscreenButtonClickListener { isFullscreen = false }
+                        layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                    }
+                }, modifier = Modifier.fillMaxSize())
             }
         }
     }
@@ -499,18 +400,15 @@ fun AudioPlayer(
             )
         ).build()
     }
-
     var isPlaying by remember { mutableStateOf(false) }
     var progress by remember { mutableFloatStateOf(0f) }
     var duration by remember { mutableLongStateOf(0L) }
     var currentPosition by remember { mutableLongStateOf(0L) }
     var isPrepared by remember { mutableStateOf(false) }
-
     DisposableEffect(url) {
         val mediaItem = MediaItem.fromUri(url)
         exoPlayer.setMediaItem(mediaItem)
         exoPlayer.prepare()
-
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) {
@@ -522,20 +420,11 @@ fun AudioPlayer(
                     currentPosition = 0
                 }
             }
-
-            override fun onIsPlayingChanged(playing: Boolean) {
-                isPlaying = playing
-            }
+            override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
         }
-
         exoPlayer.addListener(listener)
-
-        onDispose {
-            exoPlayer.removeListener(listener)
-            exoPlayer.release()
-        }
+        onDispose { exoPlayer.removeListener(listener); exoPlayer.release() }
     }
-
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
             currentPosition = exoPlayer.currentPosition
@@ -543,107 +432,43 @@ fun AudioPlayer(
             delay(500)
         }
     }
-
     val content = @Composable {
         if (compact) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 IconButton(
-                    onClick = {
-                        if (isPrepared) {
-                            if (isPlaying) exoPlayer.pause() else exoPlayer.play()
-                        }
-                    },
+                    onClick = { if (isPrepared) { if (isPlaying) exoPlayer.pause() else exoPlayer.play() } },
                     enabled = isPrepared,
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
-                        contentDescription = if (isPlaying) stringResource(R.string.memo_action_pause) else stringResource(
-                            R.string.memo_action_play
-                        ),
+                        contentDescription = if (isPlaying) stringResource(R.string.memo_action_pause) else stringResource(R.string.memo_action_play),
                         modifier = Modifier.size(32.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
         } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = filename,
-                    style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    IconButton(
-                        onClick = {
-                            if (isPrepared) {
-                                if (isPlaying) {
-                                    exoPlayer.pause()
-                                } else {
-                                    exoPlayer.play()
-                                }
-                            }
-                        }, enabled = isPrepared
-                    ) {
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
-                            contentDescription = if (isPlaying) stringResource(R.string.memo_action_pause) else stringResource(
-                                R.string.memo_action_play
-                            )
-                        )
+            Column(modifier = Modifier.fillMaxSize().padding(8.dp), verticalArrangement = Arrangement.Center) {
+                Text(text = filename, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    IconButton(onClick = { if (isPrepared) { if (isPlaying) exoPlayer.pause() else exoPlayer.play() } }, enabled = isPrepared) {
+                        Icon(imageVector = if (isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow, contentDescription = null)
                     }
-
                     Column(modifier = Modifier.weight(1f)) {
-                        Slider(
-                            value = progress, onValueChange = {
-                                if (isPrepared) {
-                                    progress = it
-                                    exoPlayer.seekTo((it * duration).toLong())
-                                }
-                            }, modifier = Modifier.height(24.dp)
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = formatTime(currentPosition),
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                            Text(
-                                text = formatTime(duration),
-                                style = MaterialTheme.typography.labelSmall
-                            )
+                        Slider(value = progress, onValueChange = { if (isPrepared) { progress = it; exoPlayer.seekTo((it * duration).toLong()) } }, modifier = Modifier.height(24.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(text = formatTime(currentPosition), style = MaterialTheme.typography.labelSmall)
+                            Text(text = formatTime(duration), style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
             }
         }
     }
-
     if (showContainer) {
-        Card(
-            modifier = modifier.then(if (!compact) Modifier.height(100.dp) else Modifier),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            content()
-        }
-    } else {
-        Box(modifier = modifier) {
-            content()
-        }
-    }
+        Card(modifier = modifier.then(if (!compact) Modifier.height(100.dp) else Modifier), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(8.dp)) { content() }
+    } else { Box(modifier = modifier) { content() } }
 }
 
 private fun formatTime(ms: Long): String {

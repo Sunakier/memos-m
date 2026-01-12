@@ -16,7 +16,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
-import org.example.memosm.ui.components.item.AttachmentItem
+import org.example.memosm.ui.components.item.AttachmentCard
 import org.example.memosm.viewmodel.MemosViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -174,7 +174,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
                             else -> 1.0f
                         }
 
-                        AttachmentItem(
+                        AttachmentCard(
                             attachment = attachment,
                             token = uiState.token,
                             modifier = Modifier
