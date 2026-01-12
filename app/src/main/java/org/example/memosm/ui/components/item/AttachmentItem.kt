@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -244,7 +245,7 @@ fun AttachmentCard(
                                 displayType.contains("pdf", ignoreCase = true) -> Icons.Outlined.PictureAsPdf
                                 displayType.contains("text", ignoreCase = true) || displayType.contains("markdown", ignoreCase = true) -> Icons.Outlined.Description
                                 displayType.contains("zip", ignoreCase = true) || displayType.contains("archive", ignoreCase = true) || displayType.contains("tar", ignoreCase = true) -> Icons.Outlined.FolderZip
-                                else -> Icons.Outlined.InsertDriveFile
+                                else -> Icons.AutoMirrored.Outlined.InsertDriveFile
                             }
                         }
 
