@@ -9,13 +9,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AddReaction
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.MoreVert
@@ -72,6 +76,7 @@ fun MemoItem(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showReactionPicker by remember { mutableStateOf(false) }
+    var showRawTextDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     val unknownTime = stringResource(R.string.memo_unknown_time)
@@ -216,6 +221,16 @@ fun MemoItem(
                                         Icon(Icons.Outlined.Language, contentDescription = null)
                                     })
                             }
+
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.memo_action_show_raw)) },
+                                onClick = {
+                                    showMenu = false
+                                    showRawTextDialog = true
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Outlined.Description, contentDescription = null)
+                                })
 
 
                             if (onUpsertReaction != null) {
@@ -462,6 +477,28 @@ fun MemoItem(
                 onUpsertReaction?.invoke(emoji)
                 showReactionPicker = false
             })
+    }
+
+    if (showRawTextDialog) {
+        AlertDialog(
+            onDismissRequest = { showRawTextDialog = false },
+            title = { Text(stringResource(R.string.memo_dialog_raw_title)) },
+            text = {
+                SelectionContainer {
+                    Text(
+                        text = memo.content,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showRawTextDialog = false }) {
+                    Text(stringResource(R.string.common_close))
+                }
+            }
+        )
     }
 }
 

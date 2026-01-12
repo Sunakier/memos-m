@@ -44,6 +44,7 @@
     <string name="memo_action_delete">削除</string>
     <string name="memo_action_more">メニュー</string>
     <string name="memo_action_open_web">Webで開く</string>
+    <string name="memo_action_show_raw">原文を表示</string>
     <string name="memo_publish">ポストする</string>
     <string name="memo_list_end">最後まで読み込みました</string>
     <string name="memo_unknown_user">不明</string>
@@ -87,6 +88,7 @@
     <string name="memo_dialog_edit_title">メモを編集</string>
     <string name="memo_dialog_delete_title">メモを削除</string>
     <string name="memo_dialog_delete_confirm">このメモを削除してもよろしいですか？この操作は取り消せません。</string>
+    <string name="memo_dialog_raw_title">原文</string>
 
     <string name="memo_detail_title">メモの詳細</string>
     <string name="memo_detail_comments">返信 (%1$d)</string>

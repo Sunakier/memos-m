@@ -44,6 +44,7 @@
     <string name="memo_action_delete">Löschen</string>
     <string name="memo_action_more">Mehr</string>
     <string name="memo_action_open_web">Im Web öffnen</string>
+    <string name="memo_action_show_raw">Rohtext anzeigen</string>
     <string name="memo_publish">Veröffentlichen</string>
     <string name="memo_list_end">Du hast das Ende erreicht</string>
     <string name="memo_unknown_user">Unbekannt</string>
@@ -87,6 +88,7 @@
     <string name="memo_dialog_edit_title">Memo bearbeiten</string>
     <string name="memo_dialog_delete_title">Memo löschen</string>
     <string name="memo_dialog_delete_confirm">Bist du sicher, dass du dieses Memo löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.</string>
+    <string name="memo_dialog_raw_title">Rohtext</string>
 
     <string name="memo_detail_title">Memo-Details</string>
     <string name="memo_detail_comments">Kommentare (%1$d)</string>
