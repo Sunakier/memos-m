@@ -76,7 +76,6 @@ While other clients like [MoeMemos](https://github.com/mudkipme/MoeMemosAndroid)
 * **Native Android Focus:** MemosM is built specifically for Android rather than being a cross-platform port. This ensures better performance and robust tablet support.
 * **Efficiency:** Optimized syncing prevents high data usage and ensures a faster, more responsive experience compared to clients that re-sync entire histories.
 * **Modern Feature Set:** By focusing on recent Memos versions, we avoid the limitations of backward compatibility and can implement modern features like advanced Markdown and Reactions.
-* **Launcher Integration:** Designed to work seamlessly with Android launcher searches and native multitasking workflows.
 
 ## Status
 
