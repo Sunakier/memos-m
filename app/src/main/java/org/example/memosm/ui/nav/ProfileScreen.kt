@@ -671,7 +671,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                             singleLine = true,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true),
+                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, enabled = true),
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
                         )
