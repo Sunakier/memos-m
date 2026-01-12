@@ -975,44 +975,55 @@ fun PlayPauseButton(
     iconSize: androidx.compose.ui.unit.Dp = 32.dp,
     tint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary
 ) {
-    val transition = updateTransition(targetState = isPlaying, label = "PlayPause")
-    
-    val rotation by transition.animateFloat(
-        transitionSpec = {
-            spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioMediumBouncy)
-        },
-        label = "Rotation"
-    ) { playing ->
-        if (playing) 90f else 0f
-    }
+    val rotation = remember { Animatable(0f) }
+    val scale = remember { Animatable(1f) }
+    var isInitial by remember { mutableStateOf(true) }
 
-    val scale by transition.animateFloat(
-        transitionSpec = { spring(stiffness = Spring.StiffnessLow) },
-        label = "Scale"
-    ) { playing ->
-        if (playing) 1.15f else 1f
+    LaunchedEffect(isPlaying) {
+        if (isInitial) {
+            isInitial = false
+            if (isPlaying) rotation.snapTo(180f)
+            return@LaunchedEffect
+        }
+        
+        launch {
+            rotation.animateTo(
+                targetValue = rotation.targetValue + 180f,
+                animationSpec = spring(
+                    stiffness = Spring.StiffnessLow,
+                    dampingRatio = Spring.DampingRatioMediumBouncy
+                )
+            )
+        }
+        
+        launch {
+            scale.animateTo(
+                targetValue = if (isPlaying) 1.2f else 1f,
+                animationSpec = spring(stiffness = Spring.StiffnessLow)
+            )
+        }
     }
 
     IconButton(onClick = onToggle, enabled = isPrepared, modifier = modifier) {
         Box(
             modifier = Modifier.graphicsLayer {
-                rotationZ = rotation
-                scaleX = scale
-                scaleY = scale
+                rotationZ = rotation.value
+                scaleX = scale.value
+                scaleY = scale.value
             },
             contentAlignment = Alignment.Center
         ) {
-            transition.AnimatedContent(
+            AnimatedContent(
+                targetState = isPlaying,
                 transitionSpec = {
-                    fadeIn(tween(200)) togetherWith fadeOut(tween(200))
-                }
+                    fadeIn(tween(300)) togetherWith fadeOut(tween(300))
+                },
+                label = "IconSwap"
             ) { playing ->
                 Icon(
                     imageVector = if (playing) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
                     contentDescription = null,
-                    modifier = Modifier.size(iconSize).graphicsLayer {
-                        if (playing) rotationZ = -90f
-                    },
+                    modifier = Modifier.size(iconSize),
                     tint = tint
                 )
             }
