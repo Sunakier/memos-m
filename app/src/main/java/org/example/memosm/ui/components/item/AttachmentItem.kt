@@ -88,9 +88,9 @@ enum class AttachmentCompactMode {
 
 @Composable
 fun AttachmentCard(
+    modifier: Modifier = Modifier,
     attachment: Attachment?,
     token: String,
-    modifier: Modifier = Modifier,
     uri: Uri = Uri.EMPTY,
     showInfo: Boolean = true,
     showActions: Boolean = true,
