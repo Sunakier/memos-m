@@ -45,7 +45,7 @@ import org.example.memosm.ui.components.item.findActivity
 @Composable
 fun VideoPlayer(
     url: String,
-    token: String,
+    token: String?,
     modifier: Modifier = Modifier,
     onRatioAvailable: (Float) -> Unit = {}
 ) {
@@ -56,8 +56,11 @@ fun VideoPlayer(
     val exoPlayer = remember(url, token) {
         val dataSourceFactory = DefaultDataSource.Factory(
             context,
-            OkHttpDataSource.Factory(OkHttpClient.Builder().build())
-                .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
+//            OkHttpDataSource.Factory(OkHttpClient.Builder().build())
+//                .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
+            if (token != null) OkHttpDataSource.Factory(
+                OkHttpClient.Builder().build()
+            ) else DefaultDataSource.Factory(context)
         )
         ExoPlayer.Builder(context).setMediaSourceFactory(
             DefaultMediaSourceFactory(dataSourceFactory)
@@ -98,21 +101,19 @@ fun VideoPlayer(
     ) {
         AndroidView(
             factory = { ctx ->
-                PlayerView(ctx).apply {
-                    player = exoPlayer
-                    useController = true
-                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    setFullscreenButtonClickListener { isFullscreen = true }
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                }
-            }, update = { view ->
-                view.player = if (isFullscreen) null else exoPlayer
-            },
-            modifier = Modifier
+            PlayerView(ctx).apply {
+                player = exoPlayer
+                useController = true
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                setFullscreenButtonClickListener { isFullscreen = true }
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+        }, update = { view ->
+            view.player = if (isFullscreen) null else exoPlayer
+        }, modifier = Modifier
                 .fillMaxSize()
                 .alpha(if (isReady) 1f else 0f)
         )
@@ -121,8 +122,7 @@ fun VideoPlayer(
 
     if (isFullscreen) {
         Dialog(
-            onDismissRequest = { isFullscreen = false },
-            properties = DialogProperties(
+            onDismissRequest = { isFullscreen = false }, properties = DialogProperties(
                 usePlatformDefaultWidth = false,
                 dismissOnBackPress = true,
                 dismissOnClickOutside = false,
@@ -158,8 +158,7 @@ fun VideoPlayer(
                         setBackgroundColor(android.graphics.Color.BLACK)
                         setFullscreenButtonClickListener { isFullscreen = false }
                         layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
                         )
                     }
                 }, modifier = Modifier.fillMaxSize())

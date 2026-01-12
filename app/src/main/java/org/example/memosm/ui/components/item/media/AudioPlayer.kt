@@ -60,9 +60,7 @@ import org.example.memosm.ui.components.item.mutableLongPositionOf
 import java.util.Locale
 
 enum class AudioPlayerMode {
-    WIDE,
-    NORMAL,
-    COMPACT
+    WIDE, NORMAL, COMPACT
 }
 
 @OptIn(UnstableApi::class)
@@ -70,7 +68,7 @@ enum class AudioPlayerMode {
 fun AudioPlayer(
     url: String,
     filename: String,
-    token: String,
+    token: String?,
     modifier: Modifier = Modifier,
     mode: AudioPlayerMode = AudioPlayerMode.NORMAL,
     showContainer: Boolean = true,
@@ -80,8 +78,11 @@ fun AudioPlayer(
     val exoPlayer = remember {
         val dataSourceFactory = DefaultDataSource.Factory(
             context,
-            OkHttpDataSource.Factory(OkHttpClient.Builder().build())
-                .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
+//            OkHttpDataSource.Factory(OkHttpClient.Builder().build())
+//                .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
+            if (token != null) OkHttpDataSource.Factory(
+                OkHttpClient.Builder().build()
+            ) else DefaultDataSource.Factory(context)
         )
         ExoPlayer.Builder(context).setMediaSourceFactory(
             DefaultMediaSourceFactory(dataSourceFactory)
@@ -152,15 +153,12 @@ fun AudioPlayer(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     PlayPauseButton(
-                        isPlaying = isPlaying,
-                        isPrepared = isPrepared,
-                        onToggle = {
+                        isPlaying = isPlaying, isPrepared = isPrepared, onToggle = {
                             if (isPrepared) {
                                 if (isPlaying) exoPlayer.pause()
                                 else exoPlayer.play()
                             }
-                        }
-                    )
+                        })
                     Column(modifier = Modifier.weight(1f)) {
                         Slider(value = progress, onValueChange = {
                             if (isPrepared) {
@@ -201,15 +199,12 @@ fun AudioPlayer(
                             .fillMaxWidth()
                     ) {
                         PlayPauseButton(
-                            isPlaying = isPlaying,
-                            isPrepared = isPrepared,
-                            onToggle = {
+                            isPlaying = isPlaying, isPrepared = isPrepared, onToggle = {
                                 if (isPrepared) {
                                     if (isPlaying) exoPlayer.pause()
                                     else exoPlayer.play()
                                 }
-                            },
-                            modifier = Modifier.size(48.dp)
+                            }, modifier = Modifier.size(48.dp)
                         )
                     }
 
@@ -263,10 +258,8 @@ fun PlayPauseButton(
 
         launch {
             rotation.animateTo(
-                targetValue = rotation.targetValue + 180f,
-                animationSpec = spring(
-                    stiffness = Spring.StiffnessLow,
-                    dampingRatio = Spring.DampingRatioMediumBouncy
+                targetValue = rotation.targetValue + 180f, animationSpec = spring(
+                    stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioMediumBouncy
                 )
             )
         }
@@ -285,15 +278,12 @@ fun PlayPauseButton(
                 rotationZ = rotation.value
                 scaleX = scale.value
                 scaleY = scale.value
-            },
-            contentAlignment = Alignment.Center
+            }, contentAlignment = Alignment.Center
         ) {
             AnimatedContent(
-                targetState = isPlaying,
-                transitionSpec = {
+                targetState = isPlaying, transitionSpec = {
                     fadeIn(tween(300)) togetherWith fadeOut(tween(300))
-                },
-                label = "IconSwap"
+                }, label = "IconSwap"
             ) { playing ->
                 Icon(
                     imageVector = if (playing) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,

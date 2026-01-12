@@ -31,23 +31,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import coil3.compose.AsyncImage
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
-import coil3.request.CachePolicy
-import coil3.request.ImageRequest
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
 import org.example.memosm.ui.components.item.media.FileThumbnail
 import org.example.memosm.ui.components.item.media.FileThumbnailMode
+import org.example.memosm.ui.components.item.media.MemoImage
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -60,7 +54,7 @@ enum class AttachmentCompactMode {
 fun AttachmentCard(
     modifier: Modifier = Modifier,
     attachment: Attachment?,
-    token: String,
+    token: String?,
     uri: Uri = Uri.EMPTY,
     showInfo: Boolean = true,
     showActions: Boolean = true,
@@ -113,20 +107,17 @@ fun AttachmentCard(
 
     val isImage = remember(displayType) {
         displayType.startsWith("image/", ignoreCase = true) || displayType.contains(
-            "image",
-            ignoreCase = true
+            "image", ignoreCase = true
         )
     }
     val isAudio = remember(displayType) {
         displayType.startsWith("audio/", ignoreCase = true) || displayType.contains(
-            "audio",
-            ignoreCase = true
+            "audio", ignoreCase = true
         )
     }
     val isVideo = remember(displayType) {
         displayType.startsWith("video/", ignoreCase = true) || displayType.contains(
-            "video",
-            ignoreCase = true
+            "video", ignoreCase = true
         )
     }
 
@@ -209,12 +200,11 @@ fun AttachmentCard(
                 showSize
             ) {
                 val w = maxWidth.value
-                val currentIntrinsic =
-                    if (!isImage && !isVideo && isWide) {
-                        // In wide mode, use a fixed height for files/audio to keep the card slim
-                        val fixedContentHeight = 100f
-                        if (w > 0) w / fixedContentHeight else 3.0f
-                    } else intrinsicRatio
+                val currentIntrinsic = if (!isImage && !isVideo && isWide) {
+                    // In wide mode, use a fixed height for files/audio to keep the card slim
+                    val fixedContentHeight = 100f
+                    if (w > 0) w / fixedContentHeight else 3.0f
+                } else intrinsicRatio
 
 
                 val footerHeight =
@@ -237,73 +227,22 @@ fun AttachmentCard(
                     contentAlignment = Alignment.Center
                 ) {
                     if (isImage) {
-                        val model = remember(uri, attachment) {
-                            when {
-                                uri != Uri.EMPTY -> uri
-                                !attachment?.externalLink.isNullOrBlank() -> attachment.externalLink
-                                !attachment?.content.isNullOrBlank() -> {
-                                    try {
-                                        Base64.decode(attachment.content, Base64.NO_WRAP)
-                                    } catch (_: Exception) {
-                                        null
-                                    }
-                                }
-
-                                else -> null
-                            }
-                        }
-
-                        val headers =
-                            NetworkHeaders.Builder().set("Authorization", "Bearer $token").build()
-                        val imageRequest = remember(model, token) {
-                            ImageRequest.Builder(context).data(model).httpHeaders(headers)
-                                .diskCachePolicy(CachePolicy.ENABLED)
-                                .memoryCachePolicy(CachePolicy.ENABLED).build()
-                        }
-
-                        var isLoading by remember { mutableStateOf(true) }
-                        var isError by remember { mutableStateOf(false) }
-
-                        AsyncImage(
-                            model = imageRequest,
-                            contentDescription = filename,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clickable { showFullScreenImage = true },
-                            contentScale = ContentScale.Crop,
-                            onLoading = { isLoading = true; isError = false },
-                            onSuccess = { state ->
-                                isLoading = false
-                                isError = false
-                                val size = state.painter.intrinsicSize
-                                if (size.width > 0 && size.height > 0) {
-                                    intrinsicRatio = size.width / size.height
-                                }
-                            },
-                            onError = { isLoading = false; isError = true })
-
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp
-                            )
-                        }
-                        if (isError) {
-                            Icon(
-                                imageVector = Icons.Outlined.BrokenImage,
-                                contentDescription = stringResource(R.string.attachments_error),
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
+                        MemoImage(
+                            attachment = attachment,
+                            token = token,
+                            uri = uri,
+                            filename = filename,
+                            modifier = Modifier.fillMaxSize(),
+                            onRatioAvailable = { intrinsicRatio = it },
+                            onClick = { showFullScreenImage = true }
+                        )
                     } else if (isVideo && (!attachment?.externalLink.isNullOrBlank() || uri != Uri.EMPTY)) {
                         VideoPlayer(
                             url = if (uri != Uri.EMPTY) uri.toString() else attachment?.externalLink
                                 ?: "",
                             token = token,
                             modifier = Modifier.fillMaxSize(),
-                            onRatioAvailable = { intrinsicRatio = it }
-                        )
+                            onRatioAvailable = { intrinsicRatio = it })
                     } else if (isAudio && !audioUrl.isNullOrBlank()) {
                         AudioPlayer(
                             url = audioUrl,
@@ -350,8 +289,7 @@ fun AttachmentCard(
                                     contentAlignment = Alignment.Center,
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .clickable { showMenu = true }
-                                ) {
+                                        .clickable { showMenu = true }) {
                                     Icon(
                                         Icons.Outlined.MoreVert,
                                         contentDescription = null,
@@ -360,18 +298,15 @@ fun AttachmentCard(
 
                                     DropdownMenu(
                                         expanded = showMenu,
-                                        onDismissRequest = { showMenu = false }
-                                    ) {
+                                        onDismissRequest = { showMenu = false }) {
                                         DropdownMenuItem(
                                             text = { Text(stringResource(R.string.attachments_info_title)) },
                                             onClick = { showMenu = false; showInfoDialog = true },
                                             leadingIcon = {
                                                 Icon(
-                                                    Icons.Outlined.Info,
-                                                    contentDescription = null
+                                                    Icons.Outlined.Info, contentDescription = null
                                                 )
-                                            }
-                                        )
+                                            })
                                         DropdownMenuItem(
                                             text = { Text(stringResource(R.string.attachments_download_button)) },
                                             onClick = {
@@ -382,8 +317,7 @@ fun AttachmentCard(
                                                     Icons.Outlined.Download,
                                                     contentDescription = null
                                                 )
-                                            }
-                                        )
+                                            })
                                         if (attachment?.externalLink != null) {
                                             DropdownMenuItem(
                                                 text = { Text(stringResource(R.string.memo_action_open_web)) },
@@ -408,8 +342,7 @@ fun AttachmentCard(
                                                         Icons.Outlined.Language,
                                                         contentDescription = null
                                                     )
-                                                }
-                                            )
+                                                })
                                         }
                                     }
                                 }
@@ -522,16 +455,13 @@ fun AttachmentCard(
                     AttachmentInfoRow(stringResource(R.string.attachments_info_filename), filename)
                     AttachmentInfoRow(stringResource(R.string.attachments_info_type), displayType)
                     if (attachment?.size != null) AttachmentInfoRow(
-                        stringResource(R.string.attachments_info_size),
-                        formattedSize
+                        stringResource(R.string.attachments_info_size), formattedSize
                     )
                     if (attachment?.createTime != null) AttachmentInfoRow(
-                        stringResource(R.string.attachments_info_created),
-                        formattedDate
+                        stringResource(R.string.attachments_info_created), formattedDate
                     )
                     if (attachment?.name != null) AttachmentInfoRow(
-                        stringResource(R.string.attachments_info_id),
-                        attachment.name
+                        stringResource(R.string.attachments_info_id), attachment.name
                     )
                 }
             },
@@ -583,8 +513,7 @@ fun AttachmentCard(
                 model = model,
                 filename = filename,
                 token = token,
-                onDismiss = { showFullScreenImage = false }
-            )
+                onDismiss = { showFullScreenImage = false })
         }
     }
 }
@@ -601,20 +530,19 @@ fun AttachmentInfoRow(label: String, value: String) {
     }
 }
 
-private fun downloadAttachmentFile(context: Context, attachment: Attachment, token: String) {
+private fun downloadAttachmentFile(context: Context, attachment: Attachment, token: String?) {
     val url = attachment.externalLink ?: return
     try {
-        val request = DownloadManager.Request(url.toUri()).setTitle(attachment.filename)
+        var request = DownloadManager.Request(url.toUri()).setTitle(attachment.filename)
             .setDescription(context.getString(R.string.attachments_download_started))
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, attachment.filename)
-            .addRequestHeader("Authorization", "Bearer $token")
+//            .addRequestHeader("Authorization", "Bearer $token")
+        if (token != null) request = request.addRequestHeader("Authorization", "Bearer $token")
         val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         manager.enqueue(request)
         Toast.makeText(
-            context,
-            context.getString(R.string.attachments_download_started),
-            Toast.LENGTH_SHORT
+            context, context.getString(R.string.attachments_download_started), Toast.LENGTH_SHORT
         ).show()
     } catch (e: Exception) {
         val message = context.getString(R.string.attachments_error_download_failed, e.message ?: "")

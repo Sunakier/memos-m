@@ -108,21 +108,24 @@ fun MarkdownAttachmentImage(content: String, node: ASTNode, token: String) {
     val link = node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_DESTINATION)
         ?.getUnescapedTextInNode(content) ?: return
 
-    Box(
+    AttachmentCard(
+        attachment = Attachment(
+            externalLink = link,
+            filename = link,
+            type = "image",
+            mimeType = "image/auto"
+        ),
+        token = token,
         modifier = Modifier
             .padding(vertical = 8.dp)
             .fillMaxWidth()
-            .aspectRatio(16f / 9f)
-    ) {
-        AttachmentCard(
-            attachment = Attachment(externalLink = link, filename = link, type = "image/auto"),
-            token = token,
-            showInfo = false,
-            showActions = false,
-            showSize = false,
-            showFilename = false
-        )
-    }
+            .aspectRatio(16f / 9f),
+        showInfo = false,
+        showActions = false,
+        showSize = false,
+        showFilename = false,
+        compactMode = AttachmentCompactMode.Never
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -50,7 +50,7 @@ import org.example.memosm.R
 fun FullScreenImageViewer(
     model: Any,
     filename: String,
-    token: String,
+    token: String?,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -157,8 +157,13 @@ fun FullScreenImageViewer(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    val headers =
-                        NetworkHeaders.Builder().set("Authorization", "Bearer $token").build()
+//                    val headers =
+//                        NetworkHeaders.Builder().set("Authorization", "Bearer $token").build()
+                    var headersBuilder = NetworkHeaders.Builder()
+                    if (token != null) headersBuilder =
+                        headersBuilder.set("Authorization", "Bearer $token")
+                    val headers = headersBuilder.build()
+
                     val fullImageRequest = remember(model, token) {
                         ImageRequest.Builder(context)
                             .data(model)
