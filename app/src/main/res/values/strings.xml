@@ -43,6 +43,13 @@
     <string name="profile_instance_url">URL</string>
     <string name="profile_logout">Logout</string>
 
+    <string name="profile_about">About MemosM</string>
+    <string name="profile_about_version">App Version</string>
+    <string name="profile_about_repo">Source Code</string>
+    <string name="profile_about_repo_url" translatable="false">https://github.com/yamada-sexta/memos-m</string>
+    <string name="profile_about_issues">Report an Issue</string>
+    <string name="profile_about_issues_url" translatable="false">https://github.com/yamada-sexta/memos-m/issues</string>
+
     <string name="memo_action_edit">Edit</string>
     <string name="memo_action_delete">Delete</string>
     <string name="memo_action_more">More</string>

@@ -1,4 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.text.SimpleDateFormat
+import java.util.Date
 
 plugins {
     alias(libs.plugins.android.application)
@@ -46,7 +48,10 @@ android {
                 "proguard-rules.pro"
             )
             applicationIdSuffix = ".canary"
-            versionNameSuffix = "-canary"
+            
+            val timestamp = SimpleDateFormat("yyyyMMddHHmm").format(Date())
+            versionNameSuffix = "-canary-$timestamp"
+            
             manifestPlaceholders["appLabel"] = "MemosM"
             signingConfig = signingConfigs.getByName("release")
         }

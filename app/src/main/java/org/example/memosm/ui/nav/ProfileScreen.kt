@@ -1,5 +1,8 @@
 package org.example.memosm.ui.nav
 
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
@@ -25,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,6 +73,14 @@ private val SUPPORTED_LANGUAGES = listOf(
     "vi" to "Tiếng Việt",
     "zh-Hans" to "简体中文",
     "zh-Hant" to "繁體中文"
+)
+
+private val KAOMOJIS = listOf(
+    "(ﾉ´ з `)ノ",
+    "(o^ ^o)",
+    "(⁄ ⁄•⁄ω⁄•⁄ ⁄)",
+    "(⁄ ⁄>⁄ ▽ ⁄<⁄ ⁄)",
+    "(￣▽￣*)ゞ"
 )
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -290,6 +302,10 @@ private fun ProfileListPane(
                     item {
                         InstanceCard(instance)
                     }
+                }
+
+                item {
+                    AboutCard()
                 }
 
                 item {
@@ -879,6 +895,66 @@ fun InstanceCard(instance: InstanceProfile) {
 }
 
 @Composable
+fun AboutCard() {
+    val context = LocalContext.current
+    val packageInfo = remember {
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0)
+        } catch (e: Exception) {
+            null
+        }
+    }
+    val versionName = packageInfo?.versionName ?: "1.0"
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(vertical = 16.dp)) {
+            Text(
+                stringResource(R.string.profile_about),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            InfoRow(
+                stringResource(R.string.profile_about_version),
+                versionName,
+                modifier = Modifier
+                    .clickable {
+                        Toast.makeText(context, KAOMOJIS.random(), Toast.LENGTH_SHORT).show()
+                    }
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            val repoUrl = stringResource(R.string.profile_about_repo_url)
+            val issuesUrl = stringResource(R.string.profile_about_issues_url)
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.profile_about_repo)) },
+                leadingContent = { Icon(Icons.Outlined.Code, contentDescription = null) },
+                trailingContent = { Icon(Icons.Outlined.OpenInNew, contentDescription = null) },
+                modifier = Modifier.clickable {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(repoUrl))
+                    context.startActivity(intent)
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.profile_about_issues)) },
+                leadingContent = { Icon(Icons.Outlined.BugReport, contentDescription = null) },
+                trailingContent = { Icon(Icons.Outlined.OpenInNew, contentDescription = null) },
+                modifier = Modifier.clickable {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(issuesUrl))
+                    context.startActivity(intent)
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+        }
+    }
+}
+
+@Composable
 fun LogoutCard(onLogout: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
@@ -905,9 +981,9 @@ fun LogoutCard(onLogout: () -> Unit) {
 }
 
 @Composable
-fun InfoRow(label: String, value: String) {
+fun InfoRow(label: String, value: String, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
