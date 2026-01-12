@@ -16,6 +16,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
+import org.example.memosm.ui.components.ErrorView
 import org.example.memosm.ui.components.item.AttachmentCard
 import org.example.memosm.ui.components.item.AttachmentCompactMode
 import org.example.memosm.viewmodel.MemosViewModel
@@ -139,8 +140,17 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
             if (uiState.attachments.isEmpty() && uiState.isFetchingAttachments && !uiState.isRefreshing) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (uiState.attachments.isEmpty() && !uiState.isFetchingAttachments) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.attachments_none_found))
+                if (uiState.error != null) {
+                    ErrorView(
+                        title = stringResource(R.string.common_error_failed_to_load_attachments),
+                        message = uiState.error!!,
+                        onRetry = { viewModel.fetchAttachments(loadMore = false) },
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(stringResource(R.string.attachments_none_found))
+                    }
                 }
             } else {
                 LazyVerticalStaggeredGrid(

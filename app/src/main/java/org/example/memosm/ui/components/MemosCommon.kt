@@ -260,7 +260,8 @@ fun GenericMemosListPane(
     header: (LazyListScope.() -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(
         start = 16.dp, top = 88.dp, end = 16.dp, bottom = 80.dp
-    )
+    ),
+    errorTitle: String = stringResource(R.string.common_error_failed_to_load)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
@@ -320,6 +321,7 @@ fun GenericMemosListPane(
             } else if (uiState.error != null && memos.isEmpty()) {
                 item {
                     ErrorView(
+                        title = errorTitle,
                         message = uiState.error!!,
                         onRetry = onRefresh,
                         modifier = Modifier.fillParentMaxHeight(0.7f)

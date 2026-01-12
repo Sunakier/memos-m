@@ -97,7 +97,7 @@
     <string name="memo_detail_comments">Comments (%1$d)</string>
     <string name="memo_detail_no_comments">No comments yet</string>
     <string name="memo_detail_add_comment">Add Comment</string>
-    <string name="memo_detail_comment_placeholder">Write your comment here...</string>
+    <string name="memo_detail_comment_placeholder">Write your comment here…</string>
     <string name="memo_detail_back">Back</string>
     <string name="memo_detail_placeholder">Select a memo to view details</string>
 
@@ -110,10 +110,14 @@
     <string name="common_close">Close</string>
     <string name="common_not_available">N/A</string>
     <string name="common_error_failed_to_load">Unable to load</string>
+    <string name="common_error_failed_to_load_memos">Unable to load memos</string>
+    <string name="common_error_failed_to_load_explore">Unable to load explore</string>
+    <string name="common_error_failed_to_load_profile">Unable to load profile</string>
+    <string name="common_error_failed_to_load_attachments">Unable to load attachments</string>
     <string name="memo_input_add_tag">Add tag</string>
 
-    <string name="memo_search_placeholder">Search memos...</string>
-    <string name="memo_search_explore_placeholder">Search explore...</string>
+    <string name="memo_search_placeholder">Search memos…</string>
+    <string name="memo_search_explore_placeholder">Search explore…</string>
     <string name="memo_search_hint">Enter text to search</string>
     <string name="memo_search_no_results">No results found</string>
     <string name="search_date_start">Start</string>

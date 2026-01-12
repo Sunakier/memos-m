@@ -44,7 +44,8 @@ fun ExploreScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit =
                 onRefresh = { viewModel.fetchExplore(refresh = true) },
                 onMemoClick = onMemoClick,
                 listState = listState,
-                userProvider = { memo -> uiState.users[memo.creator] }
+                userProvider = { memo -> uiState.users[memo.creator] },
+                errorTitle = stringResource(R.string.common_error_failed_to_load_explore)
             )
         },
         overlay = { onMemoClick, showSearchBar, isSearchExpanded, onSearchExpandedChange, isDualPane, isDetailVisible ->

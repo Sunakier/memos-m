@@ -91,6 +91,7 @@ private fun MemosListPane(
         onRefresh = { viewModel.refreshAll() },
         onMemoClick = onMemoClick,
         listState = listState,
+        errorTitle = stringResource(R.string.common_error_failed_to_load_memos),
         header = {
             // Top input card
             item {
