@@ -15,6 +15,7 @@ import android.view.ViewGroup
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.annotation.OptIn
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VectorConverter
@@ -61,6 +62,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -102,6 +104,7 @@ fun AttachmentCard(
     var showDownloadDialog by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showFullScreenImage by remember { mutableStateOf(false) }
+    var isAudioPlaying by remember { mutableStateOf(false) }
 
     val formattedDate = remember(attachment?.createTime) {
         try {
@@ -190,6 +193,11 @@ fun AttachmentCard(
         )
     }
 
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isAudioPlaying) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        label = "AttachmentCardBackground"
+    )
+
     Card(
         modifier = modifier.clip(RoundedCornerShape(12.dp)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -231,7 +239,7 @@ fun AttachmentCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .background(backgroundColor),
                     contentAlignment = Alignment.Center
                 ) {
                     if (isImage) {
@@ -299,6 +307,7 @@ fun AttachmentCard(
                             token = token,
                             compact = isCompact,
                             showContainer = false,
+                            onPlayingStateChanged = { isAudioPlaying = it },
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
@@ -732,11 +741,13 @@ fun VideoPlayer(
     var isReady by remember { mutableStateOf(false) }
     
     val exoPlayer = remember(url, token) {
+        val dataSourceFactory = DefaultDataSource.Factory(
+            context,
+            OkHttpDataSource.Factory(OkHttpClient.Builder().build())
+                .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
+        )
         ExoPlayer.Builder(context).setMediaSourceFactory(
-            DefaultMediaSourceFactory(context).setDataSourceFactory(
-                OkHttpDataSource.Factory(OkHttpClient.Builder().build())
-                    .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
-            )
+            DefaultMediaSourceFactory(dataSourceFactory)
         ).build().apply {
             setMediaItem(MediaItem.fromUri(url))
             prepare()
@@ -844,15 +855,18 @@ fun AudioPlayer(
     token: String,
     modifier: Modifier = Modifier,
     compact: Boolean = false,
-    showContainer: Boolean = true
+    showContainer: Boolean = true,
+    onPlayingStateChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val exoPlayer = remember {
+        val dataSourceFactory = DefaultDataSource.Factory(
+            context,
+            OkHttpDataSource.Factory(OkHttpClient.Builder().build())
+                .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
+        )
         ExoPlayer.Builder(context).setMediaSourceFactory(
-            DefaultMediaSourceFactory(context).setDataSourceFactory(
-                OkHttpDataSource.Factory(OkHttpClient.Builder().build())
-                    .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
-            )
+            DefaultMediaSourceFactory(dataSourceFactory)
         ).build()
     }
     var isPlaying by remember { mutableStateOf(false) }
@@ -874,12 +888,19 @@ fun AudioPlayer(
                     isPlaying = false
                     progress = 0f
                     currentPosition = 0
+                    onPlayingStateChanged(false)
                 }
             }
-            override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
+            override fun onIsPlayingChanged(playing: Boolean) { 
+                isPlaying = playing
+                onPlayingStateChanged(playing)
+            }
         }
         exoPlayer.addListener(listener)
-        onDispose { exoPlayer.removeListener(listener); exoPlayer.release() }
+        onDispose { 
+            exoPlayer.removeListener(listener)
+            exoPlayer.release() 
+        }
     }
     
     LaunchedEffect(isPlaying) {
