@@ -224,10 +224,21 @@ class MemosViewModel(
                 error = null
             )
             try {
-                // Fetch memos first
-                val filter = if (_uiState.value.selectedTags.isNotEmpty()) {
-                    _uiState.value.selectedTags.joinToString(" && ") { "tag in [\"$it\"]" }
-                } else null
+                // Fetch current user details first to ensure we have the creator filter
+                fetchCurrentUser()
+
+                // Fetch memos with creator filter
+                val filters = mutableListOf<String>()
+                _uiState.value.user?.name?.let { creatorName ->
+                    val creatorId = creatorName.removePrefix("users/")
+                    filters.add("creator == '$creatorId'")
+                }
+                
+                if (_uiState.value.selectedTags.isNotEmpty()) {
+                    filters.add(_uiState.value.selectedTags.joinToString(" && ") { "tag in [\"$it\"]" })
+                }
+                
+                val filter = if (filters.isNotEmpty()) filters.joinToString(" && ") else null
                 
                 val memoResponse = api.listMemos(filter = filter, pageSize = DEFAULT_PAGE_SIZE)
                 val newMemos = memoResponse.memos?.map { processMemo(it) } ?: emptyList()
@@ -249,19 +260,6 @@ class MemosViewModel(
                     _uiState.value = _uiState.value.copy(instanceProfile = instance)
                 } catch (e: Exception) {
                     Log.e("MemosViewModel", "Error fetching instance profile", e)
-                }
-
-                // Now get user info
-                val firstMemo = newMemos.firstOrNull()
-                if (firstMemo != null) {
-                    val userId = firstMemo.creator?.removePrefix("users/") ?: ""
-                    if (userId.isNotEmpty()) {
-                        fetchUserDetails(userId)
-                    } else {
-                        fallbackFetchUser()
-                    }
-                } else {
-                    fallbackFetchUser()
                 }
                 
                 // After fetching user, update account info in list
@@ -394,15 +392,31 @@ class MemosViewModel(
         return android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
     }
 
-    private suspend fun fetchUserDetails(userId: String) {
+    private suspend fun fetchCurrentUser() {
         try {
-            val user = api.getUser(userId)
-            val processedUser = processUser(user)
-            _uiState.value = _uiState.value.copy(
-                user = processedUser,
-                users = _uiState.value.users + ((user.name ?: "") to processedUser)
-            )
+            val session = api.getCurrentSession()
+            session.user?.let { updateUserInfo(it) }
+        } catch (e: Exception) {
+            Log.e("MemosViewModel", "Error fetching current session", e)
+            // Fallback to auth/me if sessions/current fails
+            try {
+                val response = api.getCurrentUserAuth()
+                response.user?.let { updateUserInfo(it) }
+            } catch (e2: Exception) {
+                Log.e("MemosViewModel", "Fallback user fetch failed", e2)
+            }
+        }
+    }
 
+    private suspend fun updateUserInfo(user: User) {
+        val processedUser = processUser(user)
+        _uiState.value = _uiState.value.copy(
+            user = processedUser,
+            users = _uiState.value.users + ((user.name ?: "") to processedUser)
+        )
+
+        val userId = user.name?.removePrefix("users/") ?: return
+        try {
             val stats = api.getUserStats(userId)
             val shortcuts = api.getShortcuts(userId)
             val webhooks = try { api.listUserWebhooks(userId).webhooks ?: emptyList() } catch (e: Exception) { emptyList() }
@@ -410,11 +424,9 @@ class MemosViewModel(
             val generalSetting = try {
                 api.getUserSetting(userId, "GENERAL").generalSetting
             } catch (e: Exception) {
-                Log.w("MemosViewModel", "Failed to fetch 'GENERAL' setting, trying 'general'", e)
                 try {
                     api.getUserSetting(userId, "general").generalSetting
                 } catch (e2: Exception) {
-                    Log.e("MemosViewModel", "Failed to fetch general settings", e2)
                     null
                 }
             }
@@ -426,45 +438,7 @@ class MemosViewModel(
                 userSettings = generalSetting
             )
         } catch (e: Exception) {
-            Log.e("MemosViewModel", "Error fetching user details for: $userId", e)
-            fallbackFetchUser()
-        }
-    }
-
-    private suspend fun fallbackFetchUser() {
-        try {
-            val response = api.getCurrentUserAuth()
-            response.user?.let { user ->
-                val processedUser = processUser(user)
-                _uiState.value = _uiState.value.copy(
-                    user = processedUser,
-                    users = _uiState.value.users + ((user.name ?: "") to processedUser)
-                )
-                user.name?.removePrefix("users/")?.let { userId ->
-                    val stats = api.getUserStats(userId)
-                    val shortcuts = api.getShortcuts(userId)
-                    val webhooks = try { api.listUserWebhooks(userId).webhooks ?: emptyList() } catch (e: Exception) { emptyList() }
-                    
-                    val generalSetting = try {
-                        api.getUserSetting(userId, "GENERAL").generalSetting
-                    } catch (e: Exception) {
-                        try {
-                            api.getUserSetting(userId, "general").generalSetting
-                        } catch (e2: Exception) {
-                            null
-                        }
-                    }
-                    
-                    _uiState.value = _uiState.value.copy(
-                        userStats = stats,
-                        shortcuts = shortcuts.shortcuts ?: emptyList(),
-                        webhooks = webhooks,
-                        userSettings = generalSetting
-                    )
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("MemosViewModel", "Fallback user fetch failed", e)
+            Log.e("MemosViewModel", "Error fetching additional user details", e)
         }
     }
 
@@ -490,9 +464,17 @@ class MemosViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val filter = if (_uiState.value.selectedTags.isNotEmpty()) {
-                    _uiState.value.selectedTags.joinToString(" && ") { "tag in [\"$it\"]" }
-                } else null
+                val filters = mutableListOf<String>()
+                _uiState.value.user?.name?.let { creatorName ->
+                    val creatorId = creatorName.removePrefix("users/")
+                    filters.add("creator == '$creatorId'")
+                }
+                
+                if (_uiState.value.selectedTags.isNotEmpty()) {
+                    filters.add(_uiState.value.selectedTags.joinToString(" && ") { "tag in [\"$it\"]" })
+                }
+                
+                val filter = if (filters.isNotEmpty()) filters.joinToString(" && ") else null
                 
                 val response = api.listMemos(pageToken = currentToken, filter = filter, pageSize = DEFAULT_PAGE_SIZE)
                 val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
@@ -585,9 +567,17 @@ class MemosViewModel(
                 isRefreshing = if (refresh) true else _uiState.value.isRefreshing
             )
             try {
+                val filters = mutableListOf<String>()
+                _uiState.value.user?.name?.let { creatorName ->
+                    val creatorId = creatorName.removePrefix("users/")
+                    filters.add("creator == '$creatorId'")
+                }
+                val filter = if (filters.isNotEmpty()) filters.joinToString(" && ") else null
+
                 val response = api.listMemos(
                     pageToken = currentToken,
                     state = "ARCHIVED",
+                    filter = filter,
                     pageSize = DEFAULT_PAGE_SIZE
                 )
                 val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
@@ -621,7 +611,15 @@ class MemosViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSearching = true, searchMemos = emptyList())
             try {
-                val baseFilter = if (isExplore) "visibility in ['PUBLIC', 'PROTECTED']" else null
+                val baseFilter = if (isExplore) {
+                    "visibility in ['PUBLIC', 'PROTECTED']"
+                } else {
+                    _uiState.value.user?.name?.let { creatorName ->
+                        val creatorId = creatorName.removePrefix("users/")
+                        "creator == '$creatorId'"
+                    }
+                }
+                
                 val finalFilter = if (filter != null) {
                     if (baseFilter != null) "$baseFilter && $filter" else filter
                 } else baseFilter

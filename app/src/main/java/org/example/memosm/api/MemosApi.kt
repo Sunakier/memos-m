@@ -52,6 +52,9 @@ interface MemosApi {
     @GET("api/v1/auth/me")
     suspend fun getCurrentUserAuth(): UserResponse
 
+    @GET("api/v1/auth/sessions/current")
+    suspend fun getCurrentSession(): CurrentSessionResponse
+
     @POST("api/v1/auth/refresh")
     suspend fun refreshToken(@Body request: RefreshTokenRequest): RefreshTokenResponse
 

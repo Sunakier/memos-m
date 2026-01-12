@@ -6,6 +6,10 @@ data class UserResponse(
     @SerializedName("user") val user: User?
 )
 
+data class CurrentSessionResponse(
+    @SerializedName("user") val user: User?
+)
+
 data class User(
     @SerializedName("name") val name: String? = null,
     @SerializedName("role") val role: String? = null,

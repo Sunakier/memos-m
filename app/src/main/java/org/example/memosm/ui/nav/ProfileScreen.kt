@@ -198,6 +198,7 @@ private fun ProfileListPane(
                     if (activeAccount != null) {
                         ProfileHeader(
                             User(
+                                name = activeAccount.name?.let { "users/$it" },
                                 username = activeAccount.name ?: "",
                                 displayName = activeAccount.displayName,
                                 avatarUrl = activeAccount.avatarUrl
@@ -349,6 +350,14 @@ fun ProfileHeader(user: User, onClick: () -> Unit) {
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    user.name?.let { name ->
+                        val id = name.removePrefix("users/")
+                        Text(
+                            text = "${stringResource(R.string.profile_user_id)}: $id",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
             if (!user.description.isNullOrBlank()) {

@@ -18,6 +18,7 @@
     <string name="profile_user_info_not_available">User information not available</string>
     <string name="profile_retry">Retry</string>
     <string name="profile_avatar_description">Avatar</string>
+    <string name="profile_user_id">User ID</string>
     <string name="profile_statistics">Statistics</string>
     <string name="profile_stats_memos">Memos</string>
     <string name="profile_stats_tags">Tags</string>
