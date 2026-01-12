@@ -972,14 +972,16 @@ class MemosViewModel(
         }
     }
 
-    fun deleteMemoReaction(memo: Memo, reactionType: String) {
+    fun deleteMemoReaction(memo: Memo, reaction: Reaction) {
         val memoName = memo.name ?: return
-        val memoId = memoName.removePrefix("memos/")
-        
+        val reactionName = reaction.name ?: return
+//        val memoId = memoName.removePrefix("memos/")
+        val reactionId = reactionName.removePrefix("reactions/")
+        // Holy shit the documentation was so ass
         viewModelScope.launch {
             try {
                 // Use the reaction type (emoji) directly as the identifier in the path
-                api.deleteMemoReaction(memoId, reactionType)
+                api.deleteMemoReaction(reactionId)
                 refreshMemo(memoName)
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error deleting reaction", e)

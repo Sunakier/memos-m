@@ -169,9 +169,9 @@ interface MemosApi {
         @Path("memo") memo: String, @Body request: UpsertMemoReactionRequest
     ): Reaction
 
-    @DELETE("api/v1/memos/{memo}/reactions/{reaction}")
+    @DELETE("api/v1/reactions/{reaction}")
     suspend fun deleteMemoReaction(
-        @Path("memo") memo: String, @Path("reaction") reaction: String
+         @Path("reaction") reaction: String
     )
 
     @GET("api/v1/memos/{memo}/relations")

@@ -47,6 +47,7 @@ import coil3.compose.AsyncImage
 import com.mikepenz.markdown.model.rememberMarkdownState
 import org.example.memosm.R
 import org.example.memosm.model.Memo
+import org.example.memosm.model.Reaction
 import org.example.memosm.model.User
 import org.example.memosm.viewmodel.MemosViewModel
 import java.text.SimpleDateFormat
@@ -65,7 +66,7 @@ fun MemoItem(
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
     onUpsertReaction: ((String) -> Unit)? = null,
-    onDeleteReaction: ((String) -> Unit)? = null,
+    onDeleteReaction: ((Reaction) -> Unit)? = null,
     onContentUpdate: ((String) -> Unit)? = null,
     maxHeight: Dp = Dp.Unspecified,
     isDetailView: Boolean = false,
@@ -453,7 +454,7 @@ fun MemoItem(
                                 }, onClick = {
                                     if (myReaction != null) {
                                         // Pass the emoji type or the reaction name to the viewmodel
-                                        onDeleteReaction?.invoke(type)
+                                        onDeleteReaction?.invoke(myReaction)
                                     } else {
                                         onUpsertReaction?.invoke(type)
                                     }
