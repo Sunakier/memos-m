@@ -32,11 +32,11 @@ import org.example.memosm.model.Attachment
 
 @Composable
 fun MemoImage(
+    modifier: Modifier = Modifier,
     attachment: Attachment?,
     token: String?,
     uri: Uri = Uri.EMPTY,
     filename: String,
-    modifier: Modifier = Modifier,
     onRatioAvailable: (Float) -> Unit = {},
     onClick: () -> Unit = {}
 ) {

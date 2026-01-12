@@ -234,8 +234,7 @@ fun AttachmentCard(
                             filename = filename,
                             modifier = Modifier.fillMaxSize(),
                             onRatioAvailable = { intrinsicRatio = it },
-                            onClick = { showFullScreenImage = true }
-                        )
+                            onClick = { showFullScreenImage = true })
                     } else if (isVideo && (!attachment?.externalLink.isNullOrBlank() || uri != Uri.EMPTY)) {
                         VideoPlayer(
                             url = if (uri != Uri.EMPTY) uri.toString() else attachment?.externalLink

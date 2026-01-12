@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Android
-import androidx.compose.material.icons.outlined.AppRegistration
-import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderZip

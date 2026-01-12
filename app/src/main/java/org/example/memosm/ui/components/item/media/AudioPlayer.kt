@@ -78,8 +78,6 @@ fun AudioPlayer(
     val exoPlayer = remember {
         val dataSourceFactory = DefaultDataSource.Factory(
             context,
-//            OkHttpDataSource.Factory(OkHttpClient.Builder().build())
-//                .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
             if (token != null) OkHttpDataSource.Factory(
                 OkHttpClient.Builder().build()
             ) else DefaultDataSource.Factory(context)
