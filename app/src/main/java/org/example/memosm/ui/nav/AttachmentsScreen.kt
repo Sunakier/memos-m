@@ -172,14 +172,23 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
                         // Use a consistent threshold for compact view across screen and card
                         val isCompact = animatedCellWidth < 160.dp
 
-                        val ratio = if (isCompact && aspectRatios[key] == null) {
-                            1.0f // Force square for compact items (except images with known ratio)
+                        val contentRatio = aspectRatios[key] ?: when {
+                            isAudio -> 2.0f
+                            isVideo -> 1.4f
+                            else -> 1.0f
+                        }
+
+                        val ratio = if (isCompact) {
+                            contentRatio // Square is handled inside AttachmentCard if needed, but staggered grid needs the real ratio
                         } else {
-                            aspectRatios[key] ?: when {
-                                isAudio -> 2.0f
-                                isVideo -> 1.4f
-                                else -> 1.0f
-                            }
+                            // When not compact, we add vertical space for the info bar.
+                            // The content area will have 'contentRatio', and the footer has a fixed height.
+                            // Since we can't easily express fixed + ratio in aspectRatio(ratio), 
+                            // we estimate the total ratio. Footer is approx 50-60dp.
+                            // Total height = Width / contentRatio + 56dp
+                            // Total ratio = Width / (Width / contentRatio + 56)
+                            // We use a simplified multiplier for now.
+                            contentRatio * 0.8f 
                         }
 
                         AttachmentCard(

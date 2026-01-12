@@ -40,6 +40,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -172,7 +173,8 @@ fun AttachmentCard(
                         VideoPlayer(
                             url = attachment.externalLink,
                             token = token,
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
+                            onRatioAvailable = onRatioAvailable
                         )
                     } else if (isAudio && !attachment.externalLink.isNullOrBlank()) {
                         AudioPlayer(
@@ -390,10 +392,15 @@ private fun downloadAttachmentFile(context: Context, attachment: Attachment, tok
 @Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @OptIn(UnstableApi::class)
 @Composable
-fun VideoPlayer(url: String, token: String, modifier: Modifier = Modifier) {
+fun VideoPlayer(
+    url: String,
+    token: String,
+    modifier: Modifier = Modifier,
+    onRatioAvailable: (Float) -> Unit = {}
+) {
     val context = LocalContext.current
-    var isFullscreen by mutableStateOf(false)
-    var isReady by mutableStateOf(false)
+    var isFullscreen by remember { mutableStateOf(false) }
+    var isReady by remember { mutableStateOf(false) }
     val exoPlayer = remember {
         ExoPlayer.Builder(context).setMediaSourceFactory(
             DefaultMediaSourceFactory(context).setDataSourceFactory(
@@ -407,7 +414,18 @@ fun VideoPlayer(url: String, token: String, modifier: Modifier = Modifier) {
         exoPlayer.prepare()
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_READY) isReady = true
+                if (playbackState == Player.STATE_READY) {
+                    isReady = true
+                    if (exoPlayer.videoSize.width > 0 && exoPlayer.videoSize.height > 0) {
+                        onRatioAvailable(exoPlayer.videoSize.width.toFloat() / exoPlayer.videoSize.height)
+                    }
+                }
+            }
+
+            override fun onVideoSizeChanged(videoSize: VideoSize) {
+                if (videoSize.width > 0 && videoSize.height > 0) {
+                    onRatioAvailable(videoSize.width.toFloat() / videoSize.height)
+                }
             }
         }
         exoPlayer.addListener(listener)
@@ -480,11 +498,11 @@ fun AudioPlayer(
             )
         ).build()
     }
-    var isPlaying by mutableStateOf(false)
-    var progress by mutableFloatStateOf(0f)
-    var duration by mutableLongStateOf(0L)
-    var currentPosition by mutableLongStateOf(0L)
-    var isPrepared by mutableStateOf(false)
+    var isPlaying by remember { mutableStateOf(false) }
+    var progress by remember { mutableFloatStateOf(0f) }
+    var duration by remember { mutableLongStateOf(0L) }
+    var currentPosition by remember { mutableLongStateOf(0L) }
+    var isPrepared by remember { mutableStateOf(false) }
     DisposableEffect(url) {
         val mediaItem = MediaItem.fromUri(url)
         exoPlayer.setMediaItem(mediaItem)
