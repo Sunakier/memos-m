@@ -13,8 +13,8 @@
 
 ## Screenshots
 
-<img height="400"  alt="image" src="https://github.com/user-attachments/assets/aba051d0-0c6d-4d0a-9bd0-9b7d0389d000" />
-<img height="400"  alt="image" src="https://github.com/user-attachments/assets/c1c3ac79-1d17-402a-b538-1eafe6b624e8" />
+<img height="300"  alt="image" src="https://github.com/user-attachments/assets/aba051d0-0c6d-4d0a-9bd0-9b7d0389d000" />
+<img height="300"  alt="image" src="https://github.com/user-attachments/assets/c1c3ac79-1d17-402a-b538-1eafe6b624e8" />
 
 ## Downloads
 
