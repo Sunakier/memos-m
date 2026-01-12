@@ -132,11 +132,14 @@ fun AttachmentCard(
                     area < 25000f || maxWidth < 160.dp || maxHeight < 140.dp
                 }
             }
+            val isWide = !isCompact && maxWidth > 240.dp // lowered from 300.dp
             val showFooter = showInfo && !isCompact
 
             // Report total ratio to parent
-            LaunchedEffect(intrinsicRatio, maxWidth, isCompact, showInfo) {
+            LaunchedEffect(intrinsicRatio, maxWidth, isCompact, isWide, showInfo) {
                 val w = maxWidth.value
+                val currentIntrinsic = if (!isImage && !isVideo && !isAudio && isWide) 3.0f else intrinsicRatio
+                
                 val totalRatio = if (isAudio && !isCompact) {
                     // Audio wants fixed height content (100dp) + footer (approx 56dp if shown)
                     val h = 100f + (if (showInfo) 56f else 0f)
@@ -144,10 +147,10 @@ fun AttachmentCard(
                 } else if (showInfo && !isCompact) {
                     // Media content ratio + fixed footer height
                     val footerHeight = 56f
-                    if (w > 0) w / (w / intrinsicRatio + footerHeight) else intrinsicRatio
+                    if (w > 0) w / (w / currentIntrinsic + footerHeight) else currentIntrinsic
                 } else {
                     // Compact mode or no info
-                    if (isAudio && !isVideo && !isImage) 1.0f else intrinsicRatio
+                    if (isAudio && !isVideo && !isImage) 1.0f else currentIntrinsic
                 }
                 onRatioAvailable(totalRatio)
             }
@@ -226,26 +229,49 @@ fun AttachmentCard(
                             }
                         }
 
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = fileIcon,
-                                contentDescription = null,
-                                modifier = Modifier.size(if (isCompact) 32.dp else 48.dp),
-                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-                            )
-                            if (!isCompact) {
-                                Spacer(modifier = Modifier.height(8.dp))
+                        if (isWide) {
+                            Row(
+                                modifier = Modifier.padding(16.dp).fillMaxSize(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = fileIcon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(32.dp), // reduced from 48.dp
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
                                 Text(
                                     text = attachment.filename,
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium,
                                     maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    textAlign = TextAlign.Center
+                                    overflow = TextOverflow.Ellipsis
                                 )
+                            }
+                        } else {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = fileIcon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(if (isCompact) 24.dp else 32.dp), // reduced from 32/48.dp
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                )
+                                if (!isCompact) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = attachment.filename,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                             }
                         }
                     }
