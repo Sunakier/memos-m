@@ -416,6 +416,7 @@ fun MemoItem(
                                     attachment = attachment,
                                     token = token,
                                     modifier = Modifier.size(width = 240.dp, height = 160.dp),
+                                    showInfo = false,
                                     compactMode = AttachmentCompactMode.Area
                                 )
                             }
