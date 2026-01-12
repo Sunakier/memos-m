@@ -135,11 +135,16 @@ fun AttachmentCard(
 
             // Report total ratio to parent
             LaunchedEffect(intrinsicRatio, maxWidth, isCompact, showInfo) {
-                val totalRatio = if (showInfo && !isCompact) {
-                    val w = maxWidth.value
-                    // Approximate footer height is 56dp
+                val w = maxWidth.value
+                val totalRatio = if (isAudio && !isCompact) {
+                    // Audio wants fixed height content (approx 100dp) + footer (56dp if shown)
+                    val h = 100f + (if (showInfo) 56f else 0f)
+                    if (w > 0) w / h else 2.0f
+                } else if (showInfo && !isCompact) {
+                    // Images/Videos use their intrinsic ratio, but footer adds height
                     if (w > 0) w / (w / intrinsicRatio + 56f) else intrinsicRatio
                 } else {
+                    // Compact mode or no info: square for audio, intrinsic for others
                     if (isAudio && !isVideo && !isImage) 1.0f else intrinsicRatio
                 }
                 onRatioAvailable(totalRatio)
