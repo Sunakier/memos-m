@@ -76,6 +76,7 @@ fun MemoDetailView(
         tonalElevation = 1.dp
     ) {
         Scaffold(
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             topBar = {
                 TopAppBar(
                     title = {
@@ -132,10 +133,10 @@ fun MemoDetailView(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier
-                        .fillMaxHeight()
+                        .fillMaxSize() // Use fillMaxSize instead of fillMaxHeight
                         .widthIn(max = 800.dp)
                         .padding(horizontal = 16.dp),
-                    contentPadding = PaddingValues(vertical = 16.dp),
+                    contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
