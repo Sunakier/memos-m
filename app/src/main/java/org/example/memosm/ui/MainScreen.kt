@@ -97,29 +97,11 @@ fun MainScreen(
             )
 
             MainDestination.PROFILE -> {
-                val avatarUrl = uiState.user?.avatarUrl
-                if (avatarUrl != null) {
-                    AsyncImage(
-                        model = avatarUrl,
-                        contentDescription = null,
-                        modifier = modifier
-                            .clip(CircleShape)
-                            .then(
-                                if (isSelected) Modifier.border(
-                                    2.dp, MaterialTheme.colorScheme.primary, CircleShape
-                                ) else Modifier
-                            ),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Box(modifier, contentAlignment = Alignment.Center) {
-                        Icon(
-                            if (isSelected) Icons.Default.Person else Icons.Outlined.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                }
+                Icon(
+                    if (isSelected) Icons.Default.Person else Icons.Outlined.Person,
+                    contentDescription = null,
+                    modifier = modifier
+                )
             }
         }
     }
@@ -152,38 +134,21 @@ fun MainScreen(
                         contentColor = contentColorFor(MaterialTheme.colorScheme.surfaceContainer)
                     ) {
                         Spacer(Modifier.height(12.dp))
-                        // Top items
-                        MainDestination.entries.filter { it != MainDestination.PROFILE }
-                            .forEach { destination ->
-                                NavigationRailItem(
-                                    selected = currentDestination == destination,
-                                    onClick = { handleDestinationClick(destination) },
-                                    icon = {
-                                        NavigationIcon(
-                                            destination,
-                                            currentDestination == destination
-                                        )
-                                    },
-                                    label = { Text(stringResource(destination.labelRes)) }
-                                )
+                        // Items
+                        MainDestination.entries.forEach { destination ->
+                            if (destination == MainDestination.PROFILE) {
+                                Spacer(Modifier.weight(1f))
                             }
-
-                        Spacer(Modifier.weight(1f))
-
-                        // Bottom profile item
-                        val profile = MainDestination.PROFILE
-                        Box(
-                            modifier = Modifier
-                                .padding(bottom = 16.dp)
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .clickable { handleDestinationClick(profile) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            NavigationIcon(
-                                profile,
-                                currentDestination == profile,
-                                modifier = Modifier.fillMaxSize()
+                            NavigationRailItem(
+                                selected = currentDestination == destination,
+                                onClick = { handleDestinationClick(destination) },
+                                icon = {
+                                    NavigationIcon(
+                                        destination,
+                                        currentDestination == destination
+                                    )
+                                },
+                                label = { Text(stringResource(destination.labelRes)) }
                             )
                         }
                     }
