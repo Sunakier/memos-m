@@ -42,9 +42,9 @@ import org.intellij.markdown.flavours.gfm.GFMTokenTypes
 
 @Composable
 fun MemoMarkdown(
+    modifier: Modifier = Modifier,
     content: String,
     markdownState: MarkdownState,
-    modifier: Modifier = Modifier,
     onContentUpdate: ((String) -> Unit)? = null,
 ) {
     Markdown(
