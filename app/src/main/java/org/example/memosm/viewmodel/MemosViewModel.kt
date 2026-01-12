@@ -231,7 +231,7 @@ class MemosViewModel(
                 val filters = mutableListOf<String>()
                 _uiState.value.user?.name?.let { creatorName ->
                     val creatorId = creatorName.removePrefix("users/")
-                    filters.add("creator == '$creatorId'")
+                    filters.add("creator_id == $creatorId")
                 }
                 
                 if (_uiState.value.selectedTags.isNotEmpty()) {
@@ -616,7 +616,7 @@ class MemosViewModel(
                 } else {
                     _uiState.value.user?.name?.let { creatorName ->
                         val creatorId = creatorName.removePrefix("users/")
-                        "creator == '$creatorId'"
+                        "creator_id == $creatorId"
                     }
                 }
                 
