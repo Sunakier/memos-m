@@ -30,6 +30,7 @@
     <string name="profile_settings_locale_edit">로케일 편집</string>
     <string name="profile_settings_locale_label">로케일 (예: ko, en)</string>
     <string name="profile_settings_visibility">기본 메모 공개 범위</string>
+    <string name="profile_archived">보관됨</string>
     <string name="profile_shortcuts">단축키</string>
     <string name="profile_shortcuts_none">설정된 단축키가 없습니다</string>
     <string name="profile_webhooks">웹훅</string>
@@ -106,6 +107,11 @@
     <string name="common_cancel">취소</string>
     <string name="common_close">닫기</string>
     <string name="common_not_available">없음</string>
+    <string name="common_error_failed_to_load">로드할 수 없습니다</string>
+    <string name="common_error_failed_to_load_memos">메모를 로드할 수 없습니다</string>
+    <string name="common_error_failed_to_load_explore">둘러보기를 로드할 수 없습니다</string>
+    <string name="common_error_failed_to_load_profile">프로필을 로드할 수 없습니다</string>
+    <string name="common_error_failed_to_load_attachments">첨부 파일을 로드할 수 없습니다</string>
     <string name="memo_input_add_tag">태그 추가</string>
     <string name="memo_search_placeholder">메모 검색...</string>
     <string name="memo_search_explore_placeholder">둘러보기 검색...</string>

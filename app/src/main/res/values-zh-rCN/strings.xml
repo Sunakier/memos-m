@@ -46,6 +46,7 @@
     <string name="memo_action_delete">删除</string>
     <string name="memo_action_more">更多</string>
     <string name="memo_action_open_web">在 Web 上打开</string>
+    <string name="memo_action_show_raw">显示原文</string>
     <string name="memo_publish">发布</string>
     <string name="memo_list_end">到底了</string>
     <string name="memo_unknown_user">未知用户</string>
@@ -89,6 +90,7 @@
     <string name="memo_dialog_edit_title">编辑笔记</string>
     <string name="memo_dialog_delete_title">删除笔记</string>
     <string name="memo_dialog_delete_confirm">确定要删除这条笔记吗？此操作不可撤销。</string>
+    <string name="memo_dialog_raw_title">原文</string>
 
     <string name="memo_detail_title">笔记详情</string>
     <string name="memo_detail_comments">评论 (%1$d)</string>
@@ -106,6 +108,11 @@
     <string name="common_cancel">取消</string>
     <string name="common_close">关闭</string>
     <string name="common_not_available">无</string>
+    <string name="common_error_failed_to_load">无法加载</string>
+    <string name="common_error_failed_to_load_memos">无法加载笔记</string>
+    <string name="common_error_failed_to_load_explore">无法加载探索</string>
+    <string name="common_error_failed_to_load_profile">无法加载个人资料</string>
+    <string name="common_error_failed_to_load_attachments">无法加载附件</string>
     <string name="memo_input_add_tag">添加标签</string>
 
     <string name="memo_search_placeholder">搜索笔记...</string>

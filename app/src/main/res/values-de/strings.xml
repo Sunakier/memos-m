@@ -30,6 +30,7 @@
     <string name="profile_settings_locale_edit">Sprache bearbeiten</string>
     <string name="profile_settings_locale_label">Sprache (z.B. en, de)</string>
     <string name="profile_settings_visibility">Standard-Sichtbarkeit für Memos</string>
+    <string name="profile_archived">Archiviert</string>
     <string name="profile_shortcuts">Kurzbefehle</string>
     <string name="profile_shortcuts_none">Keine Kurzbefehle konfiguriert</string>
     <string name="profile_webhooks">Webhooks</string>
@@ -106,6 +107,11 @@
     <string name="common_cancel">Abbrechen</string>
     <string name="common_close">Schließen</string>
     <string name="common_not_available">N/V</string>
+    <string name="common_error_failed_to_load">Laden fehlgeschlagen</string>
+    <string name="common_error_failed_to_load_memos">Memos konnten nicht geladen werden</string>
+    <string name="common_error_failed_to_load_explore">Entdecken konnte nicht geladen werden</string>
+    <string name="common_error_failed_to_load_profile">Profil konnte nicht geladen werden</string>
+    <string name="common_error_failed_to_load_attachments">Anhänge konnten nicht geladen werden</string>
     <string name="memo_input_add_tag">Tag hinzufügen</string>
     <string name="memo_search_placeholder">Memos durchsuchen...</string>
     <string name="memo_search_explore_placeholder">Entdecken durchsuchen...</string>

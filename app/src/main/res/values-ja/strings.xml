@@ -30,6 +30,7 @@
     <string name="profile_settings_locale_edit">ロケールの編集</string>
     <string name="profile_settings_locale_label">ロケール (例: ja, en)</string>
     <string name="profile_settings_visibility">デフォルトの公開範囲</string>
+    <string name="profile_archived">アーカイブ</string>
     <string name="profile_shortcuts">ショートカット</string>
     <string name="profile_shortcuts_none">ショートカットが設定されていません</string>
     <string name="profile_webhooks">Webhook</string>
@@ -106,6 +107,11 @@
     <string name="common_cancel">キャンセル</string>
     <string name="common_close">閉じる</string>
     <string name="common_not_available">N/A</string>
+    <string name="common_error_failed_to_load">読み込めませんでした</string>
+    <string name="common_error_failed_to_load_memos">メモを読み込めませんでした</string>
+    <string name="common_error_failed_to_load_explore">共有メモを読み込めませんでした</string>
+    <string name="common_error_failed_to_load_profile">プロフィールを読み込めませんでした</string>
+    <string name="common_error_failed_to_load_attachments">添付ファイルを読み込めませんでした</string>
     <string name="memo_input_add_tag">タグを追加...</string>
 
     <string name="memo_search_placeholder">メモを検索...</string>

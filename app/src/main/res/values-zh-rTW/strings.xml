@@ -30,6 +30,7 @@
     <string name="profile_settings_locale_edit">編輯語言</string>
     <string name="profile_settings_locale_label">語言區域 (如 en, zh-Hant)</string>
     <string name="profile_settings_visibility">預設筆記可見性</string>
+    <string name="profile_archived">歸檔</string>
     <string name="profile_shortcuts">捷徑</string>
     <string name="profile_shortcuts_none">暫無捷徑</string>
     <string name="profile_webhooks">Webhooks</string>
@@ -44,6 +45,7 @@
     <string name="memo_action_delete">刪除</string>
     <string name="memo_action_more">更多</string>
     <string name="memo_action_open_web">在網頁上開啟</string>
+    <string name="memo_action_show_raw">顯示原文</string>
     <string name="memo_publish">發佈</string>
     <string name="memo_list_end">到底了</string>
     <string name="memo_unknown_user">未知使用者</string>
@@ -87,6 +89,7 @@
     <string name="memo_dialog_edit_title">編輯筆記</string>
     <string name="memo_dialog_delete_title">刪除筆記</string>
     <string name="memo_dialog_delete_confirm">確定要刪除這條筆記嗎？此操作不可撤銷。</string>
+    <string name="memo_dialog_raw_title">原文</string>
 
     <string name="memo_detail_title">筆記詳情</string>
     <string name="memo_detail_comments">評論 (%1$d)</string>
@@ -104,6 +107,11 @@
     <string name="common_cancel">取消</string>
     <string name="common_close">關閉</string>
     <string name="common_not_available">無</string>
+    <string name="common_error_failed_to_load">無法載入</string>
+    <string name="common_error_failed_to_load_memos">無法載入筆記</string>
+    <string name="common_error_failed_to_load_explore">無法載入探索</string>
+    <string name="common_error_failed_to_load_profile">無法載入個人資料</string>
+    <string name="common_error_failed_to_load_attachments">無法載入附件</string>
     <string name="memo_input_add_tag">新增標籤</string>
 
     <string name="memo_search_placeholder">搜尋筆記...</string>
