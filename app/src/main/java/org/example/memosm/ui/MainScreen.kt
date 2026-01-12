@@ -103,12 +103,13 @@ fun MainScreen(
                         model = avatarUrl,
                         contentDescription = null,
                         modifier = modifier
-                            .clip(CircleShape)
                             .then(
                                 if (isSelected) Modifier.border(
-                                    1.dp, MaterialTheme.colorScheme.primary, CircleShape
+                                    2.dp, MaterialTheme.colorScheme.primary, CircleShape
                                 ) else Modifier
-                            ),
+                            )
+                            .padding(if (isSelected) 1.dp else 0.dp)
+                            .clip(CircleShape),
                         contentScale = ContentScale.Crop
                     )
                 } else {
