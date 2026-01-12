@@ -14,8 +14,10 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.example.memosm.R
 import org.example.memosm.api.MemosApi
+import org.example.memosm.model.PasswordCredentials
+import org.example.memosm.model.SignInRequest
 import retrofit2.Retrofit
-import retrofit2.converter.protobuf.ProtoConverterFactory
+import retrofit2.converter.gson.GsonConverterFactory
 
 enum class LoginMode {
     TOKEN, PASSWORD
@@ -136,26 +138,77 @@ fun LoginScreen(
                                 val baseUrl =
                                     if (normalizedHost.endsWith("/")) normalizedHost else "$normalizedHost/"
 
+                                val logging = HttpLoggingInterceptor { message ->
+                                    Log.d("MemosApi", message)
+                                }.apply {
+                                    level = HttpLoggingInterceptor.Level.BODY
+                                }
+
+                                val client =
+                                    OkHttpClient.Builder().addInterceptor(logging).build()
+
+                                val retrofit =
+                                    Retrofit.Builder().baseUrl(baseUrl).client(client)
+                                        .addConverterFactory(GsonConverterFactory.create())
+                                        .build()
+
+                                val api = retrofit.create(MemosApi::class.java)
+
+                                // Check if instance is valid by fetching instance profile
+                                try {
+                                    api.getInstanceProfile()
+                                } catch (e: Exception) {
+                                    errorMessage = "Invalid Memos instance or host URL"
+                                    isLoading = false
+                                    return@launch
+                                }
+
                                 if (loginMode == LoginMode.TOKEN) {
-                                    // For token login, we just assume it's valid for now and proceed
-                                    onLoginSuccess(baseUrl, token)
-                                } else {
-                                    val logging = HttpLoggingInterceptor { message ->
-                                        Log.d("MemosApi", message)
-                                    }.apply {
-                                        level = HttpLoggingInterceptor.Level.BODY
+                                    if (token.isBlank()) {
+                                        errorMessage = "Token cannot be empty"
+                                        isLoading = false
+                                        return@launch
                                     }
 
-                                    val client =
-                                        OkHttpClient.Builder().addInterceptor(logging).build()
+                                    // Verify token validity by fetching current user
+                                    val authClient = OkHttpClient.Builder()
+                                        .addInterceptor(logging)
+                                        .addInterceptor { chain ->
+                                            val request = chain.request().newBuilder()
+                                                .addHeader("Authorization", "Bearer ${token.trim()}")
+                                                .build()
+                                            chain.proceed(request)
+                                        }.build()
 
-                                    val retrofit =
-                                        Retrofit.Builder().baseUrl(baseUrl).client(client)
-                                            .addConverterFactory(ProtoConverterFactory.create())
-                                            .build()
+                                    val authApi = retrofit.newBuilder().client(authClient).build().create(MemosApi::class.java)
 
-                                    val api = retrofit.create(MemosApi::class.java)
-                                    // Password login implementation removed for now as per previous state
+                                    try {
+                                        authApi.getCurrentUserAuth()
+                                        onLoginSuccess(baseUrl, token.trim())
+                                    } catch (e: Exception) {
+                                        errorMessage = "Invalid token"
+                                    }
+                                } else {
+                                    // Password login
+                                    if (username.isBlank() || password.isBlank()) {
+                                        errorMessage = "Username and password cannot be empty"
+                                        isLoading = false
+                                        return@launch
+                                    }
+
+                                    try {
+                                        val response = api.signIn(
+                                            SignInRequest(
+                                                passwordCredentials = PasswordCredentials(
+                                                    username = username.trim(),
+                                                    password = password
+                                                )
+                                            )
+                                        )
+                                        onLoginSuccess(baseUrl, response.accessToken)
+                                    } catch (e: Exception) {
+                                        errorMessage = "Login failed: ${e.localizedMessage ?: "Check your credentials"}"
+                                    }
                                 }
                             } else {
                                 errorMessage = errorEmptyHost
