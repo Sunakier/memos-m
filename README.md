@@ -51,14 +51,13 @@ Or you can download from [GitHub](https://github.com/yamada-sexta/memos-m/releas
     - [x] Table
     - [ ] Select text
   - Attachment
-    - [x] View attachment
+    - [x] View attachments
+    - [ ] Edit attachments
     - [x] Video playback
     - [x] Audio playback
     - [x] View image
-    - [ ] Edit attachment
   - Reactions
-    - [x] Add reaction
-    - [ ] Remove reaction
+    - [x] Add/Remove reactions
 - Misc
   - [x] Multi language support: English, Japanese, Chinese, Korean, German
 
