@@ -2,7 +2,8 @@ package org.example.memosm.ui.nav
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,6 +36,7 @@ import org.example.memosm.ui.components.ArchivedMemosScreen
 import org.example.memosm.ui.components.composer.getVisibilityLabel
 import org.example.memosm.viewmodel.MemosViewModel
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ProfileScreen(
     viewModel: MemosViewModel,
@@ -51,40 +53,56 @@ fun ProfileScreen(
         onToggleNavBar(!isArchivedVisible)
     }
 
-    AnimatedContent(
-        targetState = isArchivedVisible,
-        transitionSpec = {
-            if (targetState) {
-                (slideInHorizontally(initialOffsetX = { it }) + fadeIn())
-                    .togetherWith(slideOutHorizontally(targetOffsetX = { -it / 2 }) + fadeOut())
+    SharedTransitionLayout {
+        AnimatedContent(
+            targetState = isArchivedVisible,
+            transitionSpec = {
+                if (targetState) {
+                    (fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) +
+                            scaleIn(initialScale = 0.92f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)))
+                        .togetherWith(fadeOut(spring(stiffness = Spring.StiffnessMediumLow)))
+                } else {
+                    fadeIn(spring(stiffness = Spring.StiffnessMediumLow))
+                        .togetherWith(fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) +
+                                scaleOut(targetScale = 0.92f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)))
+                }
+            },
+            label = "ProfileArchiveTransition"
+        ) { showArchived ->
+            if (showArchived) {
+                ArchivedMemosScreen(
+                    viewModel = viewModel,
+                    onBack = { isArchivedVisible = false },
+                    onToggleNavBar = onToggleNavBar,
+                    modifier = Modifier.sharedBounds(
+                        rememberSharedContentState(key = "archived_container"),
+                        animatedVisibilityScope = this@AnimatedContent,
+                        boundsTransform = { _, _ ->
+                            spring(dampingRatio = 0.8f, stiffness = 380f)
+                        }
+                    )
+                )
             } else {
-                (slideInHorizontally(initialOffsetX = { -it / 2 }) + fadeIn())
-                    .togetherWith(slideOutHorizontally(targetOffsetX = { it }) + fadeOut())
+                ProfileListPane(
+                    viewModel = viewModel,
+                    onLogout = onLogout,
+                    onShowArchived = { isArchivedVisible = true },
+                    animatedVisibilityScope = this@AnimatedContent,
+                    sharedTransitionScope = this@SharedTransitionLayout
+                )
             }
-        },
-        label = "ProfileArchiveTransition"
-    ) { showArchived ->
-        if (showArchived) {
-            ArchivedMemosScreen(
-                viewModel = viewModel,
-                onBack = { isArchivedVisible = false },
-                onToggleNavBar = onToggleNavBar
-            )
-        } else {
-            ProfileListPane(
-                viewModel = viewModel,
-                onLogout = onLogout,
-                onShowArchived = { isArchivedVisible = true }
-            )
         }
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun ProfileListPane(
     viewModel: MemosViewModel,
     onLogout: () -> Unit,
-    onShowArchived: () -> Unit
+    onShowArchived: () -> Unit,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    sharedTransitionScope: SharedTransitionScope
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val user = uiState.user
@@ -132,23 +150,36 @@ private fun ProfileListPane(
                 }
 
                 item {
-                    Card(modifier = Modifier.fillMaxWidth(), onClick = onShowArchived) {
-                        ListItem(
-                            headlineContent = { Text(stringResource(R.string.profile_archived)) },
-                            leadingContent = {
-                                Icon(
-                                    Icons.Outlined.Archive,
-                                    contentDescription = null
-                                )
-                            },
-                            trailingContent = {
-                                Icon(
-                                    Icons.Outlined.ChevronRight,
-                                    contentDescription = null
-                                )
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                        )
+                    with(sharedTransitionScope) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .sharedBounds(
+                                    rememberSharedContentState(key = "archived_container"),
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    boundsTransform = { _, _ ->
+                                        spring(dampingRatio = 0.8f, stiffness = 380f)
+                                    }
+                                ),
+                            onClick = onShowArchived
+                        ) {
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.profile_archived)) },
+                                leadingContent = {
+                                    Icon(
+                                        Icons.Outlined.Archive,
+                                        contentDescription = null
+                                    )
+                                },
+                                trailingContent = {
+                                    Icon(
+                                        Icons.Outlined.ChevronRight,
+                                        contentDescription = null
+                                    )
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                            )
+                        }
                     }
                 }
 

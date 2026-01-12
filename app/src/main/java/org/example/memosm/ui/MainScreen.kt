@@ -147,50 +147,44 @@ fun MainScreen(
             Row(Modifier.fillMaxSize()) {
                 // Navigation Rail for tablets/desktops
                 if (!isMobile) {
-                    AnimatedVisibility(
-                        visible = isNavBarVisible,
-                        enter = slideInHorizontally(initialOffsetX = { -it }),
-                        exit = slideOutHorizontally(targetOffsetX = { -it })
+                    NavigationRail(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        contentColor = contentColorFor(MaterialTheme.colorScheme.surfaceContainer)
                     ) {
-                        NavigationRail(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                            contentColor = contentColorFor(MaterialTheme.colorScheme.surfaceContainer)
-                        ) {
-                            Spacer(Modifier.height(12.dp))
-                            // Top items
-                            MainDestination.entries.filter { it != MainDestination.PROFILE }
-                                .forEach { destination ->
-                                    NavigationRailItem(
-                                        selected = currentDestination == destination,
-                                        onClick = { handleDestinationClick(destination) },
-                                        icon = {
-                                            NavigationIcon(
-                                                destination,
-                                                currentDestination == destination
-                                            )
-                                        },
-                                        label = { Text(stringResource(destination.labelRes)) }
-                                    )
-                                }
-
-                            Spacer(Modifier.weight(1f))
-
-                            // Bottom profile item
-                            val profile = MainDestination.PROFILE
-                            Box(
-                                modifier = Modifier
-                                    .padding(bottom = 16.dp)
-                                    .size(48.dp)
-                                    .clip(CircleShape)
-                                    .clickable { handleDestinationClick(profile) },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                NavigationIcon(
-                                    profile,
-                                    currentDestination == profile,
-                                    modifier = Modifier.fillMaxSize()
+                        Spacer(Modifier.height(12.dp))
+                        // Top items
+                        MainDestination.entries.filter { it != MainDestination.PROFILE }
+                            .forEach { destination ->
+                                NavigationRailItem(
+                                    selected = currentDestination == destination,
+                                    onClick = { handleDestinationClick(destination) },
+                                    icon = {
+                                        NavigationIcon(
+                                            destination,
+                                            currentDestination == destination
+                                        )
+                                    },
+                                    label = { Text(stringResource(destination.labelRes)) }
                                 )
                             }
+
+                        Spacer(Modifier.weight(1f))
+
+                        // Bottom profile item
+                        val profile = MainDestination.PROFILE
+                        Box(
+                            modifier = Modifier
+                                .padding(bottom = 16.dp)
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .clickable { handleDestinationClick(profile) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            NavigationIcon(
+                                profile,
+                                currentDestination == profile,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
                     }
                 }
@@ -211,23 +205,23 @@ fun MainScreen(
                             when (targetDestination) {
                                 MainDestination.MEMOS -> MemosScreen(
                                     viewModel = viewModel,
-                                    onToggleNavBar = { isNavBarVisible = it }
+                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
                                 )
 
                                 MainDestination.EXPLORE -> ExploreScreen(
                                     viewModel = viewModel,
-                                    onToggleNavBar = { isNavBarVisible = it }
+                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
                                 )
 
                                 MainDestination.ATTACHMENTS -> AttachmentsScreen(
                                     viewModel = viewModel,
-                                    onToggleNavBar = { isNavBarVisible = it }
+                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
                                 )
 
                                 MainDestination.PROFILE -> ProfileScreen(
                                     viewModel = viewModel,
                                     onLogout = onLogout,
-                                    onToggleNavBar = { isNavBarVisible = it }
+                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
                                 )
                             }
                         }
