@@ -12,6 +12,10 @@ import android.util.Log
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.annotation.OptIn
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -39,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -61,7 +66,9 @@ import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
@@ -497,44 +504,96 @@ fun FullScreenImageViewer(
                 .background(Color.Black),
             contentAlignment = Alignment.Center
         ) {
-            var scale by remember { mutableFloatStateOf(1f) }
-            var offset by remember { mutableStateOf(Offset.Zero) }
+            val scale = remember { Animatable(1f) }
+            val offset = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
+            var imageSize by remember { mutableStateOf(IntSize.Zero) }
+            val coroutineScope = rememberCoroutineScope()
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(1f, 5f)
-                            if (scale > 1f) {
-                                offset += pan
-                            } else {
-                                offset = Offset.Zero
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val viewWidth = constraints.maxWidth.toFloat()
+                val viewHeight = constraints.maxHeight.toFloat()
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(imageSize) {
+                            coroutineScope {
+                                while (true) {
+                                    detectTransformGestures { _, pan, zoom, _ ->
+                                        val newScale = (scale.value * zoom).coerceIn(0.8f, 5f)
+                                        
+                                        if (imageSize.width > 0 && imageSize.height > 0) {
+                                            val imageWidth = imageSize.width.toFloat()
+                                            val imageHeight = imageSize.height.toFloat()
+                                            
+                                            val scaleFactor = minOf(viewWidth / imageWidth, viewHeight / imageHeight)
+                                            val fitWidth = imageWidth * scaleFactor
+                                            val fitHeight = imageHeight * scaleFactor
+                                            
+                                            val scaledWidth = fitWidth * newScale
+                                            val scaledHeight = fitHeight * newScale
+                                            
+                                            val maxX = maxOf(0f, (scaledWidth - viewWidth) / 2f)
+                                            val maxY = maxOf(0f, (scaledHeight - viewHeight) / 2f)
+                                            
+                                            val targetOffset = if (newScale > 1f) {
+                                                (offset.value + pan).let {
+                                                    Offset(it.x.coerceIn(-maxX, maxX), it.y.coerceIn(-maxY, maxY))
+                                                }
+                                            } else {
+                                                Offset.Zero
+                                            }
+                                            
+                                            launch {
+                                                scale.snapTo(newScale)
+                                                offset.snapTo(targetOffset)
+                                            }
+                                        } else {
+                                            launch { scale.snapTo(newScale) }
+                                        }
+                                    }
+                                    
+                                    // Animate back after gesture if needed (e.g. rubber band effect)
+                                    if (scale.value < 1f) {
+                                        launch {
+                                            scale.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow))
+                                        }
+                                        launch {
+                                            offset.animateTo(Offset.Zero, spring(stiffness = Spring.StiffnessMediumLow))
+                                        }
+                                    }
+                                }
                             }
                         }
+                        .graphicsLayer {
+                            scaleX = scale.value
+                            scaleY = scale.value
+                            translationX = offset.value.x
+                            translationY = offset.value.y
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    val headers = NetworkHeaders.Builder().set("Authorization", "Bearer $token").build()
+                    val fullImageRequest = remember(url, token) {
+                        ImageRequest.Builder(context)
+                            .data(url)
+                            .httpHeaders(headers)
+                            .build()
                     }
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                        translationX = offset.x
-                        translationY = offset.y
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                val headers = NetworkHeaders.Builder().set("Authorization", "Bearer $token").build()
-                val fullImageRequest = remember(url, token) {
-                    ImageRequest.Builder(context)
-                        .data(url)
-                        .httpHeaders(headers)
-                        .build()
+                    
+                    AsyncImage(
+                        model = fullImageRequest,
+                        contentDescription = filename,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit,
+                        onSuccess = { state ->
+                            imageSize = IntSize(
+                                state.painter.intrinsicSize.width.toInt(),
+                                state.painter.intrinsicSize.height.toInt()
+                            )
+                        }
+                    )
                 }
-                
-                AsyncImage(
-                    model = fullImageRequest,
-                    contentDescription = filename,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
             }
             
             // UI elements on top
