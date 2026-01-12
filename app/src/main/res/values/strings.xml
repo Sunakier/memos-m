@@ -109,6 +109,7 @@
     <string name="common_cancel">Cancel</string>
     <string name="common_close">Close</string>
     <string name="common_not_available">N/A</string>
+    <string name="common_error_failed_to_load">Unable to load</string>
     <string name="memo_input_add_tag">Add tag</string>
 
     <string name="memo_search_placeholder">Search memos...</string>

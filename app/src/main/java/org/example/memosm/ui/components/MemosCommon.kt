@@ -319,20 +319,11 @@ fun GenericMemosListPane(
                 }
             } else if (uiState.error != null && memos.isEmpty()) {
                 item {
-                    Column(
-                        modifier = Modifier.fillParentMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = uiState.error!!,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                        Button(onClick = onRefresh) {
-                            Text(stringResource(R.string.profile_retry))
-                        }
-                    }
+                    ErrorView(
+                        message = uiState.error!!,
+                        onRetry = onRefresh,
+                        modifier = Modifier.fillParentMaxHeight(0.7f)
+                    )
                 }
             } else {
                 items(memos, key = { it.name ?: it.content.hashCode() }) { memo ->

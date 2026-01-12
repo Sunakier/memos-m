@@ -33,6 +33,7 @@ import coil3.compose.AsyncImage
 import org.example.memosm.R
 import org.example.memosm.model.*
 import org.example.memosm.ui.components.ArchivedMemosScreen
+import org.example.memosm.ui.components.ErrorView
 import org.example.memosm.ui.components.composer.getVisibilityLabel
 import org.example.memosm.viewmodel.MemosViewModel
 
@@ -295,19 +296,11 @@ private fun ProfileListPane(
                 }
             } else {
                 item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(stringResource(R.string.profile_user_info_not_available))
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.refreshAll() }) {
-                            Text(stringResource(R.string.profile_retry))
-                        }
-                    }
+                    ErrorView(
+                        message = uiState.error ?: stringResource(R.string.profile_user_info_not_available),
+                        onRetry = { viewModel.refreshAll() },
+                        modifier = Modifier.fillParentMaxHeight(0.7f)
+                    )
                 }
             }
         }
