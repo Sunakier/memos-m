@@ -3,7 +3,6 @@ package org.example.memosm.ui
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -97,7 +96,7 @@ fun MainScreen(
             )
 
             MainDestination.PROFILE -> {
-                val avatarUrl = uiState.user?.avatarUrl ?: uiState.accounts.find { it.isActive }?.avatarUrl
+                val avatarUrl = uiState.currUser?.avatarUrl ?: uiState.accounts.find { it.isActive }?.avatarUrl
                 if (avatarUrl != null) {
                     AsyncImage(
                         model = avatarUrl,

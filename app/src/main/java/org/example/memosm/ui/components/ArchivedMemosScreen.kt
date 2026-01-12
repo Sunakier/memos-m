@@ -57,7 +57,7 @@ fun ArchivedMemosScreen(
                     onRefresh = { viewModel.fetchArchivedMemos(refresh = true) },
                     onMemoClick = onMemoClick,
                     listState = listState,
-                    userProvider = { uiState.user },
+                    userProvider = { uiState.currUser },
                     contentPadding = PaddingValues(16.dp)
                 )
             }

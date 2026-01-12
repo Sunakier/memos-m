@@ -64,8 +64,8 @@ fun MemoDetailView(
             }
     }
 
-    val isOwner = remember(memo.creator, uiState.user?.name) {
-        memo.creator == uiState.user?.name
+    val isOwner = remember(memo.creator, uiState.currUser?.name) {
+        memo.creator == uiState.currUser?.name
     }
 
     Surface(
@@ -104,7 +104,7 @@ fun MemoDetailView(
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             }, floatingActionButton = {
-                if (uiState.user != null) {
+                if (uiState.currUser != null) {
                     ExtendedFloatingActionButton(
                         onClick = { showCommentDialog = true },
                         expanded = isFabExpanded,
@@ -144,7 +144,7 @@ fun MemoDetailView(
                         MemoItem(
                             memo = memo,
                             user = uiState.users[memo.creator],
-                            currentUser = uiState.user,
+                            currentUser = uiState.currUser,
                             token = token,
                             colors = CardDefaults.cardColors(),
                             onEdit = if (isOwner) {
@@ -229,11 +229,11 @@ fun MemoDetailView(
                     items(
                         comments,
                         key = { "comment_${it.name ?: it.content.hashCode()}" }) { comment ->
-                        val isCommentOwner = comment.creator == uiState.user?.name
+                        val isCommentOwner = comment.creator == uiState.currUser?.name
                         MemoItem(
                             memo = comment,
                             user = uiState.users[comment.creator],
-                            currentUser = uiState.user,
+                            currentUser = uiState.currUser,
                             token = token,
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant

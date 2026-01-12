@@ -45,7 +45,7 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit = {
 
     MemosScaffold(
         viewModel = viewModel,
-        memos = uiState.memos,
+        memos = uiState.userMemos,
         listState = listState,
         onToggleNavBar = onToggleNavBar,
         listPane = { onMemoClick ->
@@ -83,7 +83,7 @@ private fun MemosListPane(
 
     GenericMemosListPane(
         viewModel = viewModel,
-        memos = uiState.memos,
+        memos = uiState.userMemos,
         isLoading = uiState.isLoading,
         isRefreshing = uiState.isRefreshing,
         nextPageToken = uiState.nextPageToken,

@@ -26,12 +26,12 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.io.InputStream
 
 data class MemosUiState(
-    val memos: List<Memo> = emptyList(),
+    val userMemos: List<Memo> = emptyList(),
     val exploreMemos: List<Memo> = emptyList(),
     val archivedMemos: List<Memo> = emptyList(),
     val searchMemos: List<Memo> = emptyList(),
     val attachments: List<Attachment> = emptyList(),
-    val user: User? = null,
+    val currUser: User? = null,
     val users: Map<String, User> = emptyMap(), // Cache for users in explore
     val userStats: UserStats? = null,
     val userSettings: UserGeneralSetting? = null,
@@ -148,7 +148,7 @@ class MemosViewModel(
 
     private fun updateCurrentAccountInList() {
         viewModelScope.launch {
-            val user = _uiState.value.user
+            val user = _uiState.value.currUser
             val currentAccounts = dataStoreManager.accounts.first().toMutableList()
             val existingIndex = currentAccounts.indexOfFirst { it.hostUrl == baseUrl && it.accessToken == token }
             
@@ -229,7 +229,7 @@ class MemosViewModel(
 
                 // Fetch memos with creator filter
                 val filters = mutableListOf<String>()
-                _uiState.value.user?.name?.let { creatorName ->
+                _uiState.value.currUser?.name?.let { creatorName ->
                     val creatorId = creatorName.removePrefix("users/")
                     filters.add("creator_id == $creatorId")
                 }
@@ -244,7 +244,7 @@ class MemosViewModel(
                 val newMemos = memoResponse.memos?.map { processMemo(it) } ?: emptyList()
 
                 _uiState.value = _uiState.value.copy(
-                    memos = newMemos,
+                    userMemos = newMemos,
                     nextPageToken = if (memoResponse.nextPageToken.isNullOrBlank()) null else memoResponse.nextPageToken
                 )
 
@@ -411,7 +411,7 @@ class MemosViewModel(
     private suspend fun updateUserInfo(user: User) {
         val processedUser = processUser(user)
         _uiState.value = _uiState.value.copy(
-            user = processedUser,
+            currUser = processedUser,
             users = _uiState.value.users + ((user.name ?: "") to processedUser)
         )
 
@@ -458,16 +458,15 @@ class MemosViewModel(
         }
 
         if (_uiState.value.isLoading) return
-        val currentToken = _uiState.value.nextPageToken
-        if (currentToken == null) return
+        val currentToken = _uiState.value.nextPageToken ?: return
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val filters = mutableListOf<String>()
-                _uiState.value.user?.name?.let { creatorName ->
+                _uiState.value.currUser?.name?.let { creatorName ->
                     val creatorId = creatorName.removePrefix("users/")
-                    filters.add("creator == '$creatorId'")
+                    filters.add("creator_id == $creatorId")
                 }
                 
                 if (_uiState.value.selectedTags.isNotEmpty()) {
@@ -482,7 +481,7 @@ class MemosViewModel(
                 val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
                 
                 _uiState.value = _uiState.value.copy(
-                    memos = _uiState.value.memos + newMemos,
+                    userMemos = _uiState.value.userMemos + newMemos,
                     nextPageToken = newNextPageToken,
                 )
             } catch (e: Exception) {
@@ -568,9 +567,9 @@ class MemosViewModel(
             )
             try {
                 val filters = mutableListOf<String>()
-                _uiState.value.user?.name?.let { creatorName ->
+                _uiState.value.currUser?.name?.let { creatorName ->
                     val creatorId = creatorName.removePrefix("users/")
-                    filters.add("creator == '$creatorId'")
+                    filters.add("creator_id == $creatorId")
                 }
                 val filter = if (filters.isNotEmpty()) filters.joinToString(" && ") else null
 
@@ -614,7 +613,7 @@ class MemosViewModel(
                 val baseFilter = if (isExplore) {
                     "visibility in ['PUBLIC', 'PROTECTED']"
                 } else {
-                    _uiState.value.user?.name?.let { creatorName ->
+                    _uiState.value.currUser?.name?.let { creatorName ->
                         val creatorId = creatorName.removePrefix("users/")
                         "creator_id == $creatorId"
                     }
@@ -716,7 +715,7 @@ class MemosViewModel(
                     state = "NORMAL"
                 ))
                 _uiState.value = _uiState.value.copy(
-                    memos = listOf(processMemo(memo)) + _uiState.value.memos,
+                    userMemos = listOf(processMemo(memo)) + _uiState.value.userMemos,
                     isPosting = false,
                     draftMemo = null,
                     composerResetToken = _uiState.value.composerResetToken + 1
@@ -808,7 +807,7 @@ class MemosViewModel(
                 val processed = processMemo(updatedMemo)
                 
                 // Update in all lists
-                val updatedMemos = _uiState.value.memos.map {
+                val updatedMemos = _uiState.value.userMemos.map {
                     if (it.name == memoName) processed else it
                 }
                 val updatedExploreMemos = _uiState.value.exploreMemos.map {
@@ -819,7 +818,7 @@ class MemosViewModel(
                 }
                 
                 _uiState.value = _uiState.value.copy(
-                    memos = updatedMemos,
+                    userMemos = updatedMemos,
                     exploreMemos = updatedExploreMemos,
                     selectedMemoComments = updatedComments,
                     selectedMemo = if (_uiState.value.selectedMemo?.name == memoName) processed else _uiState.value.selectedMemo,
@@ -844,12 +843,12 @@ class MemosViewModel(
                 api.deleteMemo(memoId)
                 
                 // Update in all lists
-                val updatedMemos = _uiState.value.memos.filter { it.name != memoName }
+                val updatedMemos = _uiState.value.userMemos.filter { it.name != memoName }
                 val updatedExploreMemos = _uiState.value.exploreMemos.filter { it.name != memoName }
                 val updatedComments = _uiState.value.selectedMemoComments.filter { it.name != memoName }
                 
                 _uiState.value = _uiState.value.copy(
-                    memos = updatedMemos,
+                    userMemos = updatedMemos,
                     exploreMemos = updatedExploreMemos,
                     selectedMemoComments = updatedComments,
                     selectedMemo = if (_uiState.value.selectedMemo?.name == memoName) null else _uiState.value.selectedMemo
@@ -906,7 +905,7 @@ class MemosViewModel(
     }
 
     fun updateUserGeneralSetting(locale: String? = null, memoVisibility: String? = null) {
-        val user = _uiState.value.user ?: return
+        val user = _uiState.value.currUser ?: return
         val userId = user.name?.removePrefix("users/") ?: return
         
         viewModelScope.launch {
@@ -993,7 +992,7 @@ class MemosViewModel(
             val updatedMemo = api.getMemo(memoName.removePrefix("memos/"))
             val processed = processMemo(updatedMemo)
             
-            val updatedMemos = _uiState.value.memos.map {
+            val updatedMemos = _uiState.value.userMemos.map {
                 if (it.name == memoName) processed else it
             }
             val updatedExploreMemos = _uiState.value.exploreMemos.map {
@@ -1004,7 +1003,7 @@ class MemosViewModel(
             }
             
             _uiState.value = _uiState.value.copy(
-                memos = updatedMemos,
+                userMemos = updatedMemos,
                 exploreMemos = updatedExploreMemos,
                 selectedMemoComments = updatedComments,
                 selectedMemo = if (_uiState.value.selectedMemo?.name == memoName) processed else _uiState.value.selectedMemo

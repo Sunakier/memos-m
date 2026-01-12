@@ -146,7 +146,7 @@ private fun ProfileListPane(
     sharedTransitionScope: SharedTransitionScope
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val user = uiState.user
+    val user = uiState.currUser
     val stats = uiState.userStats
     val shortcuts = uiState.shortcuts
     val webhooks = uiState.webhooks

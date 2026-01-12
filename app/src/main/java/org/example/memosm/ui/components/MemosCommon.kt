@@ -332,11 +332,11 @@ fun GenericMemosListPane(
                     Box(
                         modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
                     ) {
-                        val isOwner = memo.creator == uiState.user?.name
+                        val isOwner = memo.creator == uiState.currUser?.name
                         MemoItem(
                             memo = memo,
                             user = userProvider(memo),
-                            currentUser = uiState.user,
+                            currentUser = uiState.currUser,
                             token = uiState.token,
                             colors = if (memo == uiState.selectedMemo) {
                                 CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)

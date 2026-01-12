@@ -518,11 +518,11 @@ private fun SearchResultContent(
         } else {
             items(filteredMemos, key = { it.name ?: it.content.hashCode() }) { memo ->
                 Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
-                    val isOwner = memo.creator == uiState.user?.name
+                    val isOwner = memo.creator == uiState.currUser?.name
                     MemoItem(
                         memo = memo,
                         user = uiState.users[memo.creator],
-                        currentUser = uiState.user,
+                        currentUser = uiState.currUser,
                         token = uiState.token,
                         onClick = {
                             onMemoClick(memo)
