@@ -1,16 +1,9 @@
 package org.example.memosm.ui.components.item
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
-import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.text.format.DateUtils
 import android.util.Log
-import android.view.ViewGroup
-import androidx.annotation.OptIn
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -26,13 +19,10 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Pause
-import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
@@ -48,25 +38,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.okhttp.OkHttpDataSource
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.mikepenz.markdown.model.rememberMarkdownState
-import kotlinx.coroutines.delay
-import okhttp3.OkHttpClient
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Memo
@@ -617,261 +595,6 @@ fun AttachmentDisplay(
             }
         }
     }
-}
-
-@Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
-@OptIn(UnstableApi::class)
-@Composable
-fun VideoPlayer(
-    url: String, token: String, modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    var isFullscreen by remember { mutableStateOf(false) }
-    var isReady by remember { mutableStateOf(false) }
-
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context).setMediaSourceFactory(
-            DefaultMediaSourceFactory(context).setDataSourceFactory(
-                OkHttpDataSource.Factory(OkHttpClient.Builder().build())
-                    .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
-            )
-        ).build()
-    }
-
-    LaunchedEffect(url) {
-        exoPlayer.setMediaItem(MediaItem.fromUri(url))
-        exoPlayer.prepare()
-
-        val listener = object : Player.Listener {
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_READY) {
-                    isReady = true
-                }
-            }
-        }
-        exoPlayer.addListener(listener)
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            exoPlayer.release()
-        }
-    }
-
-    Box(
-        modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
-        contentAlignment = Alignment.Center
-    ) {
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    player = exoPlayer
-                    useController = true
-                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    setFullscreenButtonClickListener {
-                        isFullscreen = true
-                    }
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                }
-            }, update = { view ->
-                view.player = if (isFullscreen) null else exoPlayer
-            }, modifier = Modifier
-                .fillMaxSize()
-                .alpha(if (isReady) 1f else 0f)
-        )
-
-        if (!isReady) {
-            CircularProgressIndicator(modifier = Modifier.size(32.dp))
-        }
-    }
-
-    if (isFullscreen) {
-        Dialog(
-            onDismissRequest = { isFullscreen = false }, properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                dismissOnBackPress = true,
-                dismissOnClickOutside = false
-            )
-        ) {
-            val activity = context.findActivity()
-            DisposableEffect(Unit) {
-                val originalOrientation =
-                    activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                onDispose {
-                    activity?.requestedOrientation = originalOrientation
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-            ) {
-                AndroidView(
-                    factory = { ctx ->
-                        PlayerView(ctx).apply {
-                            player = exoPlayer
-                            useController = true
-                            setBackgroundColor(android.graphics.Color.BLACK)
-                            setFullscreenButtonClickListener {
-                                isFullscreen = false
-                            }
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            )
-                        }
-                    }, modifier = Modifier.fillMaxSize()
-                )
-            }
-        }
-    }
-}
-
-fun Context.findActivity(): Activity? {
-    var context = this
-    while (context is ContextWrapper) {
-        if (context is Activity) return context
-        context = context.baseContext
-    }
-    return null
-}
-
-@OptIn(UnstableApi::class)
-@Composable
-fun AudioPlayer(
-    url: String, filename: String, token: String, modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context).setMediaSourceFactory(
-            DefaultMediaSourceFactory(context).setDataSourceFactory(
-                OkHttpDataSource.Factory(OkHttpClient.Builder().build())
-                    .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
-            )
-        ).build()
-    }
-
-    var isPlaying by remember { mutableStateOf(false) }
-    var progress by remember { mutableFloatStateOf(0f) }
-    var duration by remember { mutableLongStateOf(0L) }
-    var currentPosition by remember { mutableLongStateOf(0L) }
-    var isPrepared by remember { mutableStateOf(false) }
-
-    DisposableEffect(url) {
-        val mediaItem = MediaItem.fromUri(url)
-        exoPlayer.setMediaItem(mediaItem)
-        exoPlayer.prepare()
-
-        val listener = object : Player.Listener {
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_READY) {
-                    isPrepared = true
-                    duration = exoPlayer.duration
-                } else if (playbackState == Player.STATE_ENDED) {
-                    isPlaying = false
-                    progress = 0f
-                    currentPosition = 0
-                }
-            }
-
-            override fun onIsPlayingChanged(playing: Boolean) {
-                isPlaying = playing
-            }
-        }
-
-        exoPlayer.addListener(listener)
-
-        onDispose {
-            exoPlayer.removeListener(listener)
-            exoPlayer.release()
-        }
-    }
-
-    LaunchedEffect(isPlaying) {
-        while (isPlaying) {
-            currentPosition = exoPlayer.currentPosition
-            progress = if (duration > 0) currentPosition.toFloat() / duration else 0f
-            delay(500)
-        }
-    }
-
-    Card(
-        modifier = modifier.height(100.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = filename,
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()
-            ) {
-                IconButton(
-                    onClick = {
-                        if (isPrepared) {
-                            if (isPlaying) {
-                                exoPlayer.pause()
-                            } else {
-                                exoPlayer.play()
-                            }
-                        }
-                    }, enabled = isPrepared
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
-                        contentDescription = if (isPlaying) stringResource(R.string.memo_action_pause) else stringResource(
-                            R.string.memo_action_play
-                        )
-                    )
-                }
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Slider(
-                        value = progress, onValueChange = {
-                            if (isPrepared) {
-                                progress = it
-                                exoPlayer.seekTo((it * duration).toLong())
-                            }
-                        }, modifier = Modifier.height(24.dp)
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = formatTime(currentPosition),
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                        Text(
-                            text = formatTime(duration), style = MaterialTheme.typography.labelSmall
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-private fun formatTime(ms: Long): String {
-    val totalSeconds = ms / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return String.format(Locale.US, "%02d:%02d", minutes, seconds)
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
