@@ -106,11 +106,12 @@ fun AttachmentCard(
         displayType.startsWith("video/", ignoreCase = true) || displayType.contains("video", ignoreCase = true)
     }
 
+    // Default ratios before loading
     var intrinsicRatio by remember {
         mutableFloatStateOf(
             when {
                 isAudio -> 2.0f
-                isVideo -> 1.4f
+                isVideo -> 1.777f // 16:9 as a better default for videos
                 else -> 1.0f
             }
         )
@@ -137,14 +138,15 @@ fun AttachmentCard(
             LaunchedEffect(intrinsicRatio, maxWidth, isCompact, showInfo) {
                 val w = maxWidth.value
                 val totalRatio = if (isAudio && !isCompact) {
-                    // Audio wants fixed height content (approx 100dp) + footer (56dp if shown)
+                    // Audio wants fixed height content (100dp) + footer (approx 56dp if shown)
                     val h = 100f + (if (showInfo) 56f else 0f)
                     if (w > 0) w / h else 2.0f
                 } else if (showInfo && !isCompact) {
-                    // Images/Videos use their intrinsic ratio, but footer adds height
-                    if (w > 0) w / (w / intrinsicRatio + 56f) else intrinsicRatio
+                    // Media content ratio + fixed footer height
+                    val footerHeight = 56f
+                    if (w > 0) w / (w / intrinsicRatio + footerHeight) else intrinsicRatio
                 } else {
-                    // Compact mode or no info: square for audio, intrinsic for others
+                    // Compact mode or no info
                     if (isAudio && !isVideo && !isImage) 1.0f else intrinsicRatio
                 }
                 onRatioAvailable(totalRatio)
@@ -455,6 +457,9 @@ fun VideoPlayer(
     val context = LocalContext.current
     var isFullscreen by remember { mutableStateOf(false) }
     var isReady by remember { mutableStateOf(false) }
+    
+    // We don't want to recreate the player every time ratio changes, 
+    // but we need it to be consistent with the URL/token.
     val exoPlayer = remember {
         ExoPlayer.Builder(context).setMediaSourceFactory(
             DefaultMediaSourceFactory(context).setDataSourceFactory(
@@ -463,6 +468,7 @@ fun VideoPlayer(
             )
         ).build()
     }
+
     LaunchedEffect(url) {
         exoPlayer.setMediaItem(MediaItem.fromUri(url))
         exoPlayer.prepare()
@@ -470,8 +476,9 @@ fun VideoPlayer(
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) {
                     isReady = true
-                    if (exoPlayer.videoSize.width > 0 && exoPlayer.videoSize.height > 0) {
-                        onRatioAvailable(exoPlayer.videoSize.width.toFloat() / exoPlayer.videoSize.height)
+                    val videoSize = exoPlayer.videoSize
+                    if (videoSize.width > 0 && videoSize.height > 0) {
+                        onRatioAvailable(videoSize.width.toFloat() / videoSize.height)
                     }
                 }
             }
@@ -484,7 +491,13 @@ fun VideoPlayer(
         }
         exoPlayer.addListener(listener)
     }
-    DisposableEffect(Unit) { onDispose { exoPlayer.release() } }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+
     Box(modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
         AndroidView(
             factory = { ctx ->
@@ -501,6 +514,7 @@ fun VideoPlayer(
         )
         if (!isReady) CircularProgressIndicator(modifier = Modifier.size(32.dp))
     }
+    
     if (isFullscreen) {
         Dialog(onDismissRequest = { isFullscreen = false }, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = true, dismissOnClickOutside = false)) {
             val activity = context.findActivity()
@@ -557,6 +571,7 @@ fun AudioPlayer(
     var duration by remember { mutableLongStateOf(0L) }
     var currentPosition by remember { mutableLongStateOf(0L) }
     var isPrepared by remember { mutableStateOf(false) }
+    
     DisposableEffect(url) {
         val mediaItem = MediaItem.fromUri(url)
         exoPlayer.setMediaItem(mediaItem)
@@ -577,6 +592,7 @@ fun AudioPlayer(
         exoPlayer.addListener(listener)
         onDispose { exoPlayer.removeListener(listener); exoPlayer.release() }
     }
+    
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
             currentPosition = exoPlayer.currentPosition
@@ -584,6 +600,7 @@ fun AudioPlayer(
             delay(500)
         }
     }
+    
     val content = @Composable {
         if (compact) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
@@ -618,6 +635,7 @@ fun AudioPlayer(
             }
         }
     }
+    
     if (showContainer) {
         Card(modifier = modifier.then(if (!compact) Modifier.height(100.dp) else Modifier), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(8.dp)) { content() }
     } else { Box(modifier = modifier) { content() } }
