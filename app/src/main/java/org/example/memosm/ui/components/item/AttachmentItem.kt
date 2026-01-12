@@ -653,20 +653,20 @@ fun VideoPlayer(
     var isFullscreen by remember { mutableStateOf(false) }
     var isReady by remember { mutableStateOf(false) }
     
-    // We don't want to recreate the player every time ratio changes, 
-    // but we need it to be consistent with the URL/token.
-    val exoPlayer = remember {
+    // Use a key that doesn't change when isFullscreen changes to preserve state
+    val exoPlayer = remember(url, token) {
         ExoPlayer.Builder(context).setMediaSourceFactory(
             DefaultMediaSourceFactory(context).setDataSourceFactory(
                 OkHttpDataSource.Factory(OkHttpClient.Builder().build())
                     .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
             )
-        ).build()
+        ).build().apply {
+            setMediaItem(MediaItem.fromUri(url))
+            prepare()
+        }
     }
 
-    LaunchedEffect(url) {
-        exoPlayer.setMediaItem(MediaItem.fromUri(url))
-        exoPlayer.prepare()
+    DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) {
@@ -685,10 +685,8 @@ fun VideoPlayer(
             }
         }
         exoPlayer.addListener(listener)
-    }
-
-    DisposableEffect(Unit) {
         onDispose {
+            exoPlayer.removeListener(listener)
             exoPlayer.release()
         }
     }
@@ -704,14 +702,26 @@ fun VideoPlayer(
                     setFullscreenButtonClickListener { isFullscreen = true }
                     layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                 }
-            }, update = { view -> view.player = if (isFullscreen) null else exoPlayer },
+            }, update = { view -> 
+                // Don't detach player here if we are going full screen, 
+                // just let the other PlayerView take over or handle it via visibility
+                view.player = if (isFullscreen) null else exoPlayer
+            },
             modifier = Modifier.fillMaxSize().alpha(if (isReady) 1f else 0f)
         )
         if (!isReady) CircularProgressIndicator(modifier = Modifier.size(32.dp))
     }
     
     if (isFullscreen) {
-        Dialog(onDismissRequest = { isFullscreen = false }, properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = true, dismissOnClickOutside = false, decorFitsSystemWindows = false)) {
+        Dialog(
+            onDismissRequest = { isFullscreen = false }, 
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false, 
+                dismissOnBackPress = true, 
+                dismissOnClickOutside = false, 
+                decorFitsSystemWindows = false
+            )
+        ) {
             val window = (LocalView.current.parent as? DialogWindowProvider)?.window
             if (window != null) {
                 SideEffect {
