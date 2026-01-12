@@ -139,13 +139,22 @@ fun AttachmentCard(
     }
 
     val isImage = remember(displayType) {
-        displayType.startsWith("image/", ignoreCase = true) || displayType.contains("image", ignoreCase = true)
+        displayType.startsWith("image/", ignoreCase = true) || displayType.contains(
+            "image",
+            ignoreCase = true
+        )
     }
     val isAudio = remember(displayType) {
-        displayType.startsWith("audio/", ignoreCase = true) || displayType.contains("audio", ignoreCase = true)
+        displayType.startsWith("audio/", ignoreCase = true) || displayType.contains(
+            "audio",
+            ignoreCase = true
+        )
     }
     val isVideo = remember(displayType) {
-        displayType.startsWith("video/", ignoreCase = true) || displayType.contains("video", ignoreCase = true)
+        displayType.startsWith("video/", ignoreCase = true) || displayType.contains(
+            "video",
+            ignoreCase = true
+        )
     }
 
     // Audio handling (temp file for base64 if needed)
@@ -156,7 +165,7 @@ fun AttachmentCard(
             !attachment?.externalLink.isNullOrBlank() -> attachment.externalLink
             !attachment?.content.isNullOrBlank() -> {
                 try {
-                    val bytes = Base64.decode(attachment?.content, Base64.NO_WRAP)
+                    val bytes = Base64.decode(attachment.content, Base64.NO_WRAP)
                     val ext = when {
                         displayType.contains("aac") -> "aac"
                         displayType.contains("mp3") || displayType.contains("mpeg") -> "mp3"
@@ -165,7 +174,8 @@ fun AttachmentCard(
                         displayType.contains("m4a") -> "m4a"
                         else -> "aac"
                     }
-                    val tempFile = File(context.cacheDir, "cached_audio_${filename.hashCode()}.$ext")
+                    val tempFile =
+                        File(context.cacheDir, "cached_audio_${filename.hashCode()}.$ext")
                     if (!tempFile.exists() || tempFile.length() != bytes.size.toLong()) {
                         tempFile.writeBytes(bytes)
                     }
@@ -175,6 +185,7 @@ fun AttachmentCard(
                     null
                 }
             }
+
             else -> null
         }
     }
@@ -215,12 +226,23 @@ fun AttachmentCard(
             val showFooter = showInfo && !isCompact && (showFilename || showActions || showSize)
 
             // Report total ratio to parent
-            LaunchedEffect(intrinsicRatio, maxWidth, isCompact, isWide, showInfo, showFilename, showActions, showSize) {
+            LaunchedEffect(
+                intrinsicRatio,
+                maxWidth,
+                isCompact,
+                isWide,
+                showInfo,
+                showFilename,
+                showActions,
+                showSize
+            ) {
                 val w = maxWidth.value
-                val currentIntrinsic = if (!isImage && !isVideo && !isAudio && isWide) 3.0f else intrinsicRatio
-                
-                val footerHeight = if (showInfo && !isCompact && (showFilename || showActions || showSize)) 56f else 0f
-                
+                val currentIntrinsic =
+                    if (!isImage && !isVideo && !isAudio && isWide) 3.0f else intrinsicRatio
+
+                val footerHeight =
+                    if (showInfo && !isCompact && (showFilename || showActions || showSize)) 56f else 0f
+
                 val totalRatio = if (isAudio && !isCompact) {
                     val h = 100f + footerHeight
                     if (w > 0) w / h else 2.0f
@@ -244,15 +266,21 @@ fun AttachmentCard(
                         val model = remember(uri, attachment) {
                             when {
                                 uri != Uri.EMPTY -> uri
-                                !attachment?.externalLink.isNullOrBlank() -> attachment?.externalLink
+                                !attachment?.externalLink.isNullOrBlank() -> attachment.externalLink
                                 !attachment?.content.isNullOrBlank() -> {
-                                    try { Base64.decode(attachment?.content, Base64.NO_WRAP) } catch (_: Exception) { null }
+                                    try {
+                                        Base64.decode(attachment.content, Base64.NO_WRAP)
+                                    } catch (_: Exception) {
+                                        null
+                                    }
                                 }
+
                                 else -> null
                             }
                         }
 
-                        val headers = NetworkHeaders.Builder().set("Authorization", "Bearer $token").build()
+                        val headers =
+                            NetworkHeaders.Builder().set("Authorization", "Bearer $token").build()
                         val imageRequest = remember(model, token) {
                             ImageRequest.Builder(context).data(model).httpHeaders(headers)
                                 .diskCachePolicy(CachePolicy.ENABLED)
@@ -281,7 +309,10 @@ fun AttachmentCard(
                             onError = { isLoading = false; isError = true })
 
                         if (isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
                         }
                         if (isError) {
                             Icon(
@@ -293,7 +324,8 @@ fun AttachmentCard(
                         }
                     } else if (isVideo && (!attachment?.externalLink.isNullOrBlank() || uri != Uri.EMPTY)) {
                         VideoPlayer(
-                            url = if (uri != Uri.EMPTY) uri.toString() else attachment?.externalLink ?: "",
+                            url = if (uri != Uri.EMPTY) uri.toString() else attachment?.externalLink
+                                ?: "",
                             token = token,
                             modifier = Modifier.fillMaxSize(),
                             onRatioAvailable = { intrinsicRatio = it }
@@ -311,16 +343,39 @@ fun AttachmentCard(
                     } else {
                         val fileIcon = remember(displayType) {
                             when {
-                                displayType.contains("pdf", ignoreCase = true) -> Icons.Outlined.PictureAsPdf
-                                displayType.contains("text", ignoreCase = true) || displayType.contains("markdown", ignoreCase = true) -> Icons.Outlined.Description
-                                displayType.contains("zip", ignoreCase = true) || displayType.contains("archive", ignoreCase = true) || displayType.contains("tar", ignoreCase = true) -> Icons.Outlined.FolderZip
+                                displayType.contains(
+                                    "pdf",
+                                    ignoreCase = true
+                                ) -> Icons.Outlined.PictureAsPdf
+
+                                displayType.contains(
+                                    "text",
+                                    ignoreCase = true
+                                ) || displayType.contains(
+                                    "markdown",
+                                    ignoreCase = true
+                                ) -> Icons.Outlined.Description
+
+                                displayType.contains(
+                                    "zip",
+                                    ignoreCase = true
+                                ) || displayType.contains(
+                                    "archive",
+                                    ignoreCase = true
+                                ) || displayType.contains(
+                                    "tar",
+                                    ignoreCase = true
+                                ) -> Icons.Outlined.FolderZip
+
                                 else -> Icons.AutoMirrored.Outlined.InsertDriveFile
                             }
                         }
 
                         if (isWide) {
                             Row(
-                                modifier = Modifier.padding(16.dp).fillMaxSize(),
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .fillMaxSize(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Center
                             ) {
@@ -398,12 +453,24 @@ fun AttachmentCard(
                                         DropdownMenuItem(
                                             text = { Text(stringResource(R.string.attachments_info_title)) },
                                             onClick = { showMenu = false; showInfoDialog = true },
-                                            leadingIcon = { Icon(Icons.Outlined.Info, contentDescription = null) }
+                                            leadingIcon = {
+                                                Icon(
+                                                    Icons.Outlined.Info,
+                                                    contentDescription = null
+                                                )
+                                            }
                                         )
                                         DropdownMenuItem(
                                             text = { Text(stringResource(R.string.attachments_download_button)) },
-                                            onClick = { showMenu = false; showDownloadDialog = true },
-                                            leadingIcon = { Icon(Icons.Outlined.Download, contentDescription = null) }
+                                            onClick = {
+                                                showMenu = false; showDownloadDialog = true
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    Icons.Outlined.Download,
+                                                    contentDescription = null
+                                                )
+                                            }
                                         )
                                         if (attachment?.externalLink != null) {
                                             DropdownMenuItem(
@@ -411,13 +478,25 @@ fun AttachmentCard(
                                                 onClick = {
                                                     showMenu = false
                                                     try {
-                                                        val intent = Intent(Intent.ACTION_VIEW, attachment.externalLink.toUri())
+                                                        val intent = Intent(
+                                                            Intent.ACTION_VIEW,
+                                                            attachment.externalLink.toUri()
+                                                        )
                                                         context.startActivity(intent)
                                                     } catch (e: Exception) {
-                                                        Log.e("AttachmentCard", "Failed to open link", e)
+                                                        Log.e(
+                                                            "AttachmentCard",
+                                                            "Failed to open link",
+                                                            e
+                                                        )
                                                     }
                                                 },
-                                                leadingIcon = { Icon(Icons.Outlined.Language, contentDescription = null) }
+                                                leadingIcon = {
+                                                    Icon(
+                                                        Icons.Outlined.Language,
+                                                        contentDescription = null
+                                                    )
+                                                }
                                             )
                                         }
                                     }
@@ -428,7 +507,11 @@ fun AttachmentCard(
                 }
 
                 if (showFooter) {
-                    Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).height(48.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .height(48.dp)
+                    ) {
                         if (showFilename) {
                             Text(
                                 text = filename,
@@ -447,14 +530,20 @@ fun AttachmentCard(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (showActions) {
-                                    IconButton(onClick = { showInfoDialog = true }, modifier = Modifier.size(32.dp)) {
+                                    IconButton(
+                                        onClick = { showInfoDialog = true },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
                                         Icon(
                                             imageVector = Icons.Outlined.Info,
                                             contentDescription = stringResource(R.string.attachments_info_title),
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
-                                    IconButton(onClick = { showDownloadDialog = true }, modifier = Modifier.size(32.dp)) {
+                                    IconButton(
+                                        onClick = { showDownloadDialog = true },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
                                         Icon(
                                             imageVector = Icons.Outlined.Download,
                                             contentDescription = stringResource(R.string.attachments_download_button),
@@ -462,15 +551,27 @@ fun AttachmentCard(
                                         )
                                     }
                                     if (attachment?.externalLink != null) {
-                                        val openLinkText = stringResource(R.string.attachments_error_open_link)
+                                        val openLinkText =
+                                            stringResource(R.string.attachments_error_open_link)
                                         IconButton(
                                             onClick = {
                                                 try {
-                                                    val intent = Intent(Intent.ACTION_VIEW, attachment.externalLink.toUri())
+                                                    val intent = Intent(
+                                                        Intent.ACTION_VIEW,
+                                                        attachment.externalLink.toUri()
+                                                    )
                                                     context.startActivity(intent)
                                                 } catch (e: Exception) {
-                                                    Log.e("AttachmentCard", "Failed to open link: ${attachment.externalLink}", e)
-                                                    Toast.makeText(context, "$openLinkText: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                                                    Log.e(
+                                                        "AttachmentCard",
+                                                        "Failed to open link: ${attachment.externalLink}",
+                                                        e
+                                                    )
+                                                    Toast.makeText(
+                                                        context,
+                                                        "$openLinkText: ${e.localizedMessage}",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
                                                 }
                                             }, modifier = Modifier.size(32.dp)
                                         ) {
@@ -508,9 +609,18 @@ fun AttachmentCard(
                 ) {
                     AttachmentInfoRow(stringResource(R.string.attachments_info_filename), filename)
                     AttachmentInfoRow(stringResource(R.string.attachments_info_type), displayType)
-                    if (attachment?.size != null) AttachmentInfoRow(stringResource(R.string.attachments_info_size), formattedSize)
-                    if (attachment?.createTime != null) AttachmentInfoRow(stringResource(R.string.attachments_info_created), formattedDate)
-                    if (attachment?.name != null) AttachmentInfoRow(stringResource(R.string.attachments_info_id), attachment.name)
+                    if (attachment?.size != null) AttachmentInfoRow(
+                        stringResource(R.string.attachments_info_size),
+                        formattedSize
+                    )
+                    if (attachment?.createTime != null) AttachmentInfoRow(
+                        stringResource(R.string.attachments_info_created),
+                        formattedDate
+                    )
+                    if (attachment?.name != null) AttachmentInfoRow(
+                        stringResource(R.string.attachments_info_id),
+                        attachment.name
+                    )
                 }
             },
             confirmButton = {
@@ -544,10 +654,15 @@ fun AttachmentCard(
         val model = remember(uri, attachment) {
             when {
                 uri != Uri.EMPTY -> uri
-                !attachment?.externalLink.isNullOrBlank() -> attachment?.externalLink
+                !attachment?.externalLink.isNullOrBlank() -> attachment.externalLink
                 !attachment?.content.isNullOrBlank() -> {
-                    try { Base64.decode(attachment?.content, Base64.NO_WRAP) } catch (_: Exception) { null }
+                    try {
+                        Base64.decode(attachment.content, Base64.NO_WRAP)
+                    } catch (_: Exception) {
+                        null
+                    }
                 }
+
                 else -> null
             }
         }
@@ -582,7 +697,8 @@ fun FullScreenImageViewer(
             SideEffect {
                 val controller = WindowCompat.getInsetsController(window, window.decorView)
                 controller.hide(WindowInsetsCompat.Type.systemBars())
-                controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                controller.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
         }
 
@@ -609,29 +725,35 @@ fun FullScreenImageViewer(
                                 while (true) {
                                     detectTransformGestures { _, pan, zoom, _ ->
                                         val newScale = (scale.value * zoom).coerceIn(0.8f, 5f)
-                                        
+
                                         if (imageSize.width > 0 && imageSize.height > 0) {
                                             val imageWidth = imageSize.width.toFloat()
                                             val imageHeight = imageSize.height.toFloat()
-                                            
-                                            val scaleFactor = minOf(viewWidth / imageWidth, viewHeight / imageHeight)
+
+                                            val scaleFactor = minOf(
+                                                viewWidth / imageWidth,
+                                                viewHeight / imageHeight
+                                            )
                                             val fitWidth = imageWidth * scaleFactor
                                             val fitHeight = imageHeight * scaleFactor
-                                            
+
                                             val scaledWidth = fitWidth * newScale
                                             val scaledHeight = fitHeight * newScale
-                                            
+
                                             val maxX = maxOf(0f, (scaledWidth - viewWidth) / 2f)
                                             val maxY = maxOf(0f, (scaledHeight - viewHeight) / 2f)
-                                            
+
                                             val targetOffset = if (newScale > 1f) {
                                                 (offset.value + pan).let {
-                                                    Offset(it.x.coerceIn(-maxX, maxX), it.y.coerceIn(-maxY, maxY))
+                                                    Offset(
+                                                        it.x.coerceIn(-maxX, maxX),
+                                                        it.y.coerceIn(-maxY, maxY)
+                                                    )
                                                 }
                                             } else {
                                                 Offset.Zero
                                             }
-                                            
+
                                             launch {
                                                 scale.snapTo(newScale)
                                                 offset.snapTo(targetOffset)
@@ -640,13 +762,19 @@ fun FullScreenImageViewer(
                                             launch { scale.snapTo(newScale) }
                                         }
                                     }
-                                    
+
                                     if (scale.value < 1f) {
                                         launch {
-                                            scale.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow))
+                                            scale.animateTo(
+                                                1f,
+                                                spring(stiffness = Spring.StiffnessMediumLow)
+                                            )
                                         }
                                         launch {
-                                            offset.animateTo(Offset.Zero, spring(stiffness = Spring.StiffnessMediumLow))
+                                            offset.animateTo(
+                                                Offset.Zero,
+                                                spring(stiffness = Spring.StiffnessMediumLow)
+                                            )
                                         }
                                     }
                                 }
@@ -660,14 +788,15 @@ fun FullScreenImageViewer(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    val headers = NetworkHeaders.Builder().set("Authorization", "Bearer $token").build()
+                    val headers =
+                        NetworkHeaders.Builder().set("Authorization", "Bearer $token").build()
                     val fullImageRequest = remember(model, token) {
                         ImageRequest.Builder(context)
                             .data(model)
                             .httpHeaders(headers)
                             .build()
                     }
-                    
+
                     AsyncImage(
                         model = fullImageRequest,
                         contentDescription = filename,
@@ -682,7 +811,7 @@ fun FullScreenImageViewer(
                     )
                 }
             }
-            
+
             IconButton(
                 onClick = onDismiss,
                 modifier = Modifier
@@ -703,7 +832,11 @@ fun FullScreenImageViewer(
 @Composable
 fun AttachmentInfoRow(label: String, value: String) {
     Column {
-        Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
         Text(text = value, style = MaterialTheme.typography.bodyMedium)
     }
 }
@@ -718,7 +851,11 @@ private fun downloadAttachmentFile(context: Context, attachment: Attachment, tok
             .addRequestHeader("Authorization", "Bearer $token")
         val manager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         manager.enqueue(request)
-        Toast.makeText(context, context.getString(R.string.attachments_download_started), Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            context,
+            context.getString(R.string.attachments_download_started),
+            Toast.LENGTH_SHORT
+        ).show()
     } catch (e: Exception) {
         val message = context.getString(R.string.attachments_error_download_failed, e.message ?: "")
         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
@@ -737,7 +874,7 @@ fun VideoPlayer(
     val context = LocalContext.current
     var isFullscreen by remember { mutableStateOf(false) }
     var isReady by remember { mutableStateOf(false) }
-    
+
     val exoPlayer = remember(url, token) {
         val dataSourceFactory = DefaultDataSource.Factory(
             context,
@@ -777,7 +914,10 @@ fun VideoPlayer(
         }
     }
 
-    Box(modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+    Box(
+        modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center
+    ) {
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
@@ -786,23 +926,28 @@ fun VideoPlayer(
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
                     setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
                     setFullscreenButtonClickListener { isFullscreen = true }
-                    layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
                 }
-            }, update = { view -> 
+            }, update = { view ->
                 view.player = if (isFullscreen) null else exoPlayer
             },
-            modifier = Modifier.fillMaxSize().alpha(if (isReady) 1f else 0f)
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(if (isReady) 1f else 0f)
         )
         if (!isReady) CircularProgressIndicator(modifier = Modifier.size(32.dp))
     }
-    
+
     if (isFullscreen) {
         Dialog(
-            onDismissRequest = { isFullscreen = false }, 
+            onDismissRequest = { isFullscreen = false },
             properties = DialogProperties(
-                usePlatformDefaultWidth = false, 
-                dismissOnBackPress = true, 
-                dismissOnClickOutside = false, 
+                usePlatformDefaultWidth = false,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = false,
                 decorFitsSystemWindows = false
             )
         ) {
@@ -811,24 +956,33 @@ fun VideoPlayer(
                 SideEffect {
                     val controller = WindowCompat.getInsetsController(window, window.decorView)
                     controller.hide(WindowInsetsCompat.Type.systemBars())
-                    controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    controller.systemBarsBehavior =
+                        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 }
             }
 
             val activity = context.findActivity()
             DisposableEffect(Unit) {
-                val originalOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                val originalOrientation =
+                    activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                 activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                 onDispose { activity?.requestedOrientation = originalOrientation }
             }
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) {
                 AndroidView(factory = { ctx ->
                     PlayerView(ctx).apply {
                         player = exoPlayer
                         useController = true
                         setBackgroundColor(android.graphics.Color.BLACK)
                         setFullscreenButtonClickListener { isFullscreen = false }
-                        layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
                     }
                 }, modifier = Modifier.fillMaxSize())
             }
@@ -872,7 +1026,7 @@ fun AudioPlayer(
     var duration by remember { mutableLongStateOf(0L) }
     var currentPosition by mutableLongPositionOf()
     var isPrepared by remember { mutableStateOf(false) }
-    
+
     DisposableEffect(url) {
         val mediaItem = MediaItem.fromUri(url)
         exoPlayer.setMediaItem(mediaItem)
@@ -883,25 +1037,28 @@ fun AudioPlayer(
                     isPrepared = true
                     duration = exoPlayer.duration
                 } else if (playbackState == Player.STATE_ENDED) {
-                    isPlaying = false
+                    // Reset local states for UI
                     progress = 0f
                     currentPosition = 0
+                    // STOP auto-replay by pausing first, THEN seeking
+                    exoPlayer.pause()
                     exoPlayer.seekTo(0)
                     onPlayingStateChanged(false)
                 }
             }
-            override fun onIsPlayingChanged(playing: Boolean) { 
+
+            override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
                 onPlayingStateChanged(playing)
             }
         }
         exoPlayer.addListener(listener)
-        onDispose { 
+        onDispose {
             exoPlayer.removeListener(listener)
-            exoPlayer.release() 
+            exoPlayer.release()
         }
     }
-    
+
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
             currentPosition = exoPlayer.currentPosition
@@ -909,7 +1066,7 @@ fun AudioPlayer(
             delay(500)
         }
     }
-    
+
     val content = @Composable {
         if (compact) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
@@ -919,51 +1076,73 @@ fun AudioPlayer(
                     onToggle = {
                         if (isPrepared) {
                             if (isPlaying) exoPlayer.pause()
-                            else {
-                                if (exoPlayer.playbackState == Player.STATE_ENDED) {
-                                    exoPlayer.seekTo(0)
-                                }
-                                exoPlayer.play()
-                            }
+                            else exoPlayer.play()
                         }
                     },
                     modifier = Modifier.size(48.dp)
                 )
             }
         } else {
-            Column(modifier = Modifier.fillMaxSize().padding(8.dp), verticalArrangement = Arrangement.Center) {
-                Text(text = filename, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = filename,
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     PlayPauseButton(
                         isPlaying = isPlaying,
                         isPrepared = isPrepared,
                         onToggle = {
                             if (isPrepared) {
                                 if (isPlaying) exoPlayer.pause()
-                                else {
-                                    if (exoPlayer.playbackState == Player.STATE_ENDED) {
-                                        exoPlayer.seekTo(0)
-                                    }
-                                    exoPlayer.play()
-                                }
+                                else exoPlayer.play()
                             }
                         }
                     )
                     Column(modifier = Modifier.weight(1f)) {
-                        Slider(value = progress, onValueChange = { if (isPrepared) { progress = it; exoPlayer.seekTo((it * duration).toLong()) } }, modifier = Modifier.height(24.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(text = formatTime(currentPosition), style = MaterialTheme.typography.labelSmall)
-                            Text(text = formatTime(duration), style = MaterialTheme.typography.labelSmall)
+                        Slider(value = progress, onValueChange = {
+                            if (isPrepared) {
+                                progress = it; exoPlayer.seekTo((it * duration).toLong())
+                            }
+                        }, modifier = Modifier.height(24.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = formatTime(currentPosition),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                            Text(
+                                text = formatTime(duration),
+                                style = MaterialTheme.typography.labelSmall
+                            )
                         }
                     }
                 }
             }
         }
     }
-    
+
     if (showContainer) {
-        Card(modifier = modifier.then(if (!compact) Modifier.height(100.dp) else Modifier), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(8.dp)) { content() }
-    } else { Box(modifier = modifier) { content() } }
+        Card(
+            modifier = modifier.then(if (!compact) Modifier.height(100.dp) else Modifier),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(8.dp)
+        ) { content() }
+    } else {
+        Box(modifier = modifier) { content() }
+    }
 }
 
 @Composable
@@ -985,7 +1164,7 @@ fun PlayPauseButton(
             if (isPlaying) rotation.snapTo(180f)
             return@LaunchedEffect
         }
-        
+
         launch {
             rotation.animateTo(
                 targetValue = rotation.targetValue + 180f,
@@ -995,7 +1174,7 @@ fun PlayPauseButton(
                 )
             )
         }
-        
+
         launch {
             scale.animateTo(
                 targetValue = if (isPlaying) 1.2f else 1f,
