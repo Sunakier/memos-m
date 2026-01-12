@@ -17,22 +17,18 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -42,32 +38,22 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
-import androidx.core.net.toUri
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.okhttp.OkHttpDataSource
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import android.provider.OpenableColumns
 import android.util.Base64
-import androidx.annotation.OptIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.platform.LocalResources
-import androidx.media3.common.util.UnstableApi
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
+import androidx.core.net.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Location
+import org.example.memosm.ui.components.item.AttachmentCard
+import org.example.memosm.ui.components.item.AttachmentCompactMode
 import java.io.File
 
 @Composable
@@ -362,120 +348,17 @@ fun MemoComposer(
                     else attachment?.name ?: attachment?.filename ?: attachment?.externalLink
                     ?: "unknown"
                 }) { (uri, attachment) ->
-                    val mimeType = remember(uri, attachment) {
-                        if (uri != Uri.EMPTY) {
-                            val crType = context.contentResolver.getType(uri)
-                            if (crType != null) crType
-                            else {
-                                val ext =
-                                    MimeTypeMap.getFileExtensionFromUrl(uri.toString()).lowercase()
-                                MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: ""
-                            }
-                        } else {
-                            attachment?.displayType ?: ""
-                        }
-                    }
-
-                    val isImage = mimeType.startsWith(
-                        "image/", ignoreCase = true
-                    ) || mimeType.contains("image", ignoreCase = true)
-                    val isAudio = mimeType.startsWith(
-                        "audio/", ignoreCase = true
-                    ) || mimeType.contains("audio", ignoreCase = true)
-                    val isVideo = mimeType.startsWith(
-                        "video/", ignoreCase = true
-                    ) || mimeType.contains("video", ignoreCase = true)
-
-                    // For audio: Uri > externalLink > base64 content (written to temp file)
-                    val audioUrl = remember(uri, attachment) {
-                        when {
-                            uri != Uri.EMPTY -> uri.toString()
-                            !attachment?.externalLink.isNullOrBlank() -> attachment.externalLink
-                            isAudio && !attachment?.content.isNullOrBlank() -> {
-                                // Decode base64 and write to temp file for playback
-                                try {
-                                    val bytes = Base64.decode(attachment.content, Base64.NO_WRAP)
-                                    val ext = when {
-                                        mimeType.contains("aac") -> "aac"
-                                        mimeType.contains("mp3") || mimeType.contains("mpeg") -> "mp3"
-                                        mimeType.contains("ogg") -> "ogg"
-                                        mimeType.contains("wav") -> "wav"
-                                        mimeType.contains("m4a") -> "m4a"
-                                        else -> "aac"
-                                    }
-                                    val tempFile = File(
-                                        context.cacheDir,
-                                        "cached_audio_${attachment.filename.hashCode()}.$ext"
-                                    )
-                                    if (!tempFile.exists() || tempFile.length() != bytes.size.toLong()) {
-                                        tempFile.writeBytes(bytes)
-                                    }
-                                    tempFile.toUri().toString()
-                                } catch (e: Exception) {
-                                    Log.e("MemoComposer", "Error creating temp audio file", e)
-                                    null
-                                }
-                            }
-
-                            else -> null
-                        }
-                    }
-
                     val isUploading = uri in uploadingUris
 
                     Box(modifier = Modifier.size(80.dp, 80.dp)) {
-                        if (isImage) {
-                            // Priority: Uri > externalLink > base64 content
-                            val model = remember(uri, attachment) {
-                                when {
-                                    uri != Uri.EMPTY -> uri
-                                    !attachment?.externalLink.isNullOrBlank() -> attachment.externalLink
-                                    !attachment?.content.isNullOrBlank() -> {
-                                        // Decode base64 content to byte array for Coil
-                                        try {
-                                            Base64.decode(attachment.content, Base64.NO_WRAP)
-                                        } catch (_: Exception) {
-                                            null
-                                        }
-                                    }
-
-                                    else -> null
-                                }
-                            }
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current).data(model)
-                                    .httpHeaders(
-                                        NetworkHeaders.Builder()
-                                            .set("Authorization", "Bearer $token").build()
-                                    ).build(),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else if (isAudio && !audioUrl.isNullOrBlank()) {
-                            MiniAudioPlayer(
-                                url = audioUrl, token = token, modifier = Modifier.fillMaxSize()
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                                    .padding(4.dp), contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = when {
-                                        isAudio -> Icons.Outlined.Audiotrack
-                                        isVideo -> Icons.Outlined.Videocam
-                                        else -> Icons.AutoMirrored.Outlined.InsertDriveFile
-                                    }, contentDescription = null
-                                )
-                            }
-                        }
+                        AttachmentCard(
+                            attachment = attachment,
+                            token = token,
+                            uri = uri,
+                            modifier = Modifier.fillMaxSize(),
+                            showInfo = false,
+                            compactMode = AttachmentCompactMode.Always
+                        )
 
                         if (isUploading) {
                             Box(
@@ -921,66 +804,5 @@ fun MemoComposer(
                     Text(stringResource(R.string.common_cancel))
                 }
             })
-    }
-}
-
-@OptIn(UnstableApi::class)
-@Composable
-fun MiniAudioPlayer(url: String, token: String, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val exoPlayer = remember {
-        val dataSourceFactory = DefaultDataSource.Factory(
-            context,
-            OkHttpDataSource.Factory(OkHttpClient.Builder().build())
-                .setDefaultRequestProperties(mapOf("Authorization" to "Bearer $token"))
-        )
-        ExoPlayer.Builder(context)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory)).build()
-    }
-
-    var isPlaying by remember { mutableStateOf(false) }
-
-    LaunchedEffect(url) {
-        exoPlayer.setMediaItem(MediaItem.fromUri(url))
-        exoPlayer.prepare()
-    }
-
-    DisposableEffect(Unit) {
-        val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(playing: Boolean) {
-                isPlaying = playing
-            }
-
-            override fun onPlaybackStateChanged(state: Int) {
-                if (state == Player.STATE_ENDED) {
-                    exoPlayer.seekTo(0)
-                    exoPlayer.pause()
-                }
-            }
-        }
-        exoPlayer.addListener(listener)
-        onDispose {
-            exoPlayer.removeListener(listener)
-            exoPlayer.release()
-        }
-    }
-
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer),
-        contentAlignment = Alignment.Center
-    ) {
-        IconButton(onClick = {
-            if (isPlaying) exoPlayer.pause() else exoPlayer.play()
-        }) {
-            Icon(
-                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = if (isPlaying) stringResource(R.string.memo_action_pause) else stringResource(
-                    R.string.memo_action_play
-                ),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
     }
 }

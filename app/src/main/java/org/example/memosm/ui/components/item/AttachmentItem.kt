@@ -6,10 +6,13 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.net.Uri
 import android.os.Environment
 import android.text.format.Formatter
+import android.util.Base64
 import android.util.Log
 import android.view.ViewGroup
+import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.Animatable
@@ -73,6 +76,7 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -82,9 +86,10 @@ enum class AttachmentCompactMode {
 
 @Composable
 fun AttachmentCard(
-    attachment: Attachment,
+    attachment: Attachment?,
     token: String,
     modifier: Modifier = Modifier,
+    uri: Uri = Uri.EMPTY,
     showInfo: Boolean = true,
     showActions: Boolean = true,
     showSize: Boolean = true,
@@ -98,25 +103,41 @@ fun AttachmentCard(
     var showMenu by remember { mutableStateOf(false) }
     var showFullScreenImage by remember { mutableStateOf(false) }
 
-    val formattedDate = remember(attachment.createTime) {
+    val formattedDate = remember(attachment?.createTime) {
         try {
             val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
             inputFormat.timeZone = TimeZone.getTimeZone("UTC")
-            val date = inputFormat.parse(attachment.createTime ?: "")
+            val date = inputFormat.parse(attachment?.createTime ?: "")
             val outputFormat = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault())
             date?.let { outputFormat.format(it) } ?: ""
         } catch (e: Exception) {
-            Log.e("AttachmentCard", "Failed to parse date: ${attachment.createTime}", e)
-            attachment.createTime ?: ""
+            Log.e("AttachmentCard", "Failed to parse date: ${attachment?.createTime}", e)
+            attachment?.createTime ?: ""
         }
     }
 
-    val formattedSize = remember(attachment.size) {
-        val bytes = attachment.size?.toLongOrNull() ?: return@remember attachment.size ?: ""
+    val formattedSize = remember(attachment?.size) {
+        val bytes = attachment?.size?.toLongOrNull() ?: return@remember attachment?.size ?: ""
         Formatter.formatFileSize(context, bytes)
     }
 
-    val displayType = attachment.displayType
+    val displayType = remember(uri, attachment?.displayType) {
+        if (uri != Uri.EMPTY) {
+            val crType = context.contentResolver.getType(uri)
+            if (crType != null) crType
+            else {
+                val ext = MimeTypeMap.getFileExtensionFromUrl(uri.toString()).lowercase()
+                MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: ""
+            }
+        } else {
+            attachment?.displayType ?: ""
+        }
+    }
+
+    val filename = remember(attachment?.filename, uri) {
+        attachment?.filename ?: uri.lastPathSegment ?: "file"
+    }
+
     val isImage = remember(displayType) {
         displayType.startsWith("image/", ignoreCase = true) || displayType.contains("image", ignoreCase = true)
     }
@@ -125,6 +146,37 @@ fun AttachmentCard(
     }
     val isVideo = remember(displayType) {
         displayType.startsWith("video/", ignoreCase = true) || displayType.contains("video", ignoreCase = true)
+    }
+
+    // Audio handling (temp file for base64 if needed)
+    val audioUrl = remember(uri, attachment, displayType) {
+        if (!isAudio) return@remember null
+        when {
+            uri != Uri.EMPTY -> uri.toString()
+            !attachment?.externalLink.isNullOrBlank() -> attachment.externalLink
+            !attachment?.content.isNullOrBlank() -> {
+                try {
+                    val bytes = Base64.decode(attachment?.content, Base64.NO_WRAP)
+                    val ext = when {
+                        displayType.contains("aac") -> "aac"
+                        displayType.contains("mp3") || displayType.contains("mpeg") -> "mp3"
+                        displayType.contains("ogg") -> "ogg"
+                        displayType.contains("wav") -> "wav"
+                        displayType.contains("m4a") -> "m4a"
+                        else -> "aac"
+                    }
+                    val tempFile = File(context.cacheDir, "cached_audio_${filename.hashCode()}.$ext")
+                    if (!tempFile.exists() || tempFile.length() != bytes.size.toLong()) {
+                        tempFile.writeBytes(bytes)
+                    }
+                    tempFile.toUri().toString()
+                } catch (e: Exception) {
+                    Log.e("AttachmentCard", "Error creating temp audio file", e)
+                    null
+                }
+            }
+            else -> null
+        }
     }
 
     // Default ratios before loading
@@ -183,10 +235,20 @@ fun AttachmentCard(
                     contentAlignment = Alignment.Center
                 ) {
                     if (isImage) {
-                        val externalLink = attachment.externalLink
+                        val model = remember(uri, attachment) {
+                            when {
+                                uri != Uri.EMPTY -> uri
+                                !attachment?.externalLink.isNullOrBlank() -> attachment?.externalLink
+                                !attachment?.content.isNullOrBlank() -> {
+                                    try { Base64.decode(attachment?.content, Base64.NO_WRAP) } catch (_: Exception) { null }
+                                }
+                                else -> null
+                            }
+                        }
+
                         val headers = NetworkHeaders.Builder().set("Authorization", "Bearer $token").build()
-                        val imageRequest = remember(externalLink, token) {
-                            ImageRequest.Builder(context).data(externalLink).httpHeaders(headers)
+                        val imageRequest = remember(model, token) {
+                            ImageRequest.Builder(context).data(model).httpHeaders(headers)
                                 .diskCachePolicy(CachePolicy.ENABLED)
                                 .memoryCachePolicy(CachePolicy.ENABLED).build()
                         }
@@ -196,7 +258,7 @@ fun AttachmentCard(
 
                         AsyncImage(
                             model = imageRequest,
-                            contentDescription = attachment.filename,
+                            contentDescription = filename,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .clickable { showFullScreenImage = true },
@@ -223,17 +285,17 @@ fun AttachmentCard(
                                 modifier = Modifier.size(32.dp)
                             )
                         }
-                    } else if (isVideo && !attachment.externalLink.isNullOrBlank()) {
+                    } else if (isVideo && (!attachment?.externalLink.isNullOrBlank() || uri != Uri.EMPTY)) {
                         VideoPlayer(
-                            url = attachment.externalLink,
+                            url = if (uri != Uri.EMPTY) uri.toString() else attachment?.externalLink ?: "",
                             token = token,
                             modifier = Modifier.fillMaxSize(),
                             onRatioAvailable = { intrinsicRatio = it }
                         )
-                    } else if (isAudio && !attachment.externalLink.isNullOrBlank()) {
+                    } else if (isAudio && !audioUrl.isNullOrBlank()) {
                         AudioPlayer(
-                            url = attachment.externalLink,
-                            filename = attachment.filename,
+                            url = audioUrl,
+                            filename = filename,
                             token = token,
                             compact = isCompact,
                             showContainer = false,
@@ -263,7 +325,7 @@ fun AttachmentCard(
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
-                                    text = attachment.filename,
+                                    text = filename,
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.Medium,
                                     maxLines = 2,
@@ -285,7 +347,7 @@ fun AttachmentCard(
                                 if (!isCompact) {
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = attachment.filename,
+                                        text = filename,
                                         style = MaterialTheme.typography.bodyMedium,
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis,
@@ -336,7 +398,7 @@ fun AttachmentCard(
                                             onClick = { showMenu = false; showDownloadDialog = true },
                                             leadingIcon = { Icon(Icons.Outlined.Download, contentDescription = null) }
                                         )
-                                        if (!attachment.externalLink.isNullOrBlank()) {
+                                        if (attachment?.externalLink != null) {
                                             DropdownMenuItem(
                                                 text = { Text(stringResource(R.string.memo_action_open_web)) },
                                                 onClick = {
@@ -362,7 +424,7 @@ fun AttachmentCard(
                     Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).height(48.dp)) {
                         if (showFilename) {
                             Text(
-                                text = attachment.filename,
+                                text = filename,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
@@ -392,7 +454,7 @@ fun AttachmentCard(
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
-                                    if (!attachment.externalLink.isNullOrBlank()) {
+                                    if (attachment?.externalLink != null) {
                                         val openLinkText = stringResource(R.string.attachments_error_open_link)
                                         IconButton(
                                             onClick = {
@@ -414,7 +476,7 @@ fun AttachmentCard(
                                     }
                                 }
                             }
-                            if (showSize) {
+                            if (showSize && attachment?.size != null) {
                                 Text(
                                     text = formattedSize,
                                     style = MaterialTheme.typography.labelSmall,
@@ -437,11 +499,11 @@ fun AttachmentCard(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    AttachmentInfoRow(stringResource(R.string.attachments_info_filename), attachment.filename)
-                    AttachmentInfoRow(stringResource(R.string.attachments_info_type), attachment.displayType)
-                    AttachmentInfoRow(stringResource(R.string.attachments_info_size), formattedSize)
-                    AttachmentInfoRow(stringResource(R.string.attachments_info_created), formattedDate)
-                    if (attachment.name != null) AttachmentInfoRow(stringResource(R.string.attachments_info_id), attachment.name)
+                    AttachmentInfoRow(stringResource(R.string.attachments_info_filename), filename)
+                    AttachmentInfoRow(stringResource(R.string.attachments_info_type), displayType)
+                    if (attachment?.size != null) AttachmentInfoRow(stringResource(R.string.attachments_info_size), formattedSize)
+                    if (attachment?.createTime != null) AttachmentInfoRow(stringResource(R.string.attachments_info_created), formattedDate)
+                    if (attachment?.name != null) AttachmentInfoRow(stringResource(R.string.attachments_info_id), attachment.name)
                 }
             },
             confirmButton = {
@@ -455,10 +517,10 @@ fun AttachmentCard(
         AlertDialog(
             onDismissRequest = { showDownloadDialog = false },
             title = { Text(stringResource(R.string.attachments_download_dialog_title)) },
-            text = { Text(stringResource(R.string.attachments_download_dialog_confirm, attachment.filename)) },
+            text = { Text(stringResource(R.string.attachments_download_dialog_confirm, filename)) },
             confirmButton = {
                 TextButton(onClick = {
-                    downloadAttachmentFile(context, attachment, token)
+                    if (attachment != null) downloadAttachmentFile(context, attachment, token)
                     showDownloadDialog = false
                 }) {
                     Text(stringResource(R.string.attachments_download_button))
@@ -471,19 +533,31 @@ fun AttachmentCard(
             })
     }
 
-    if (showFullScreenImage && isImage && !attachment.externalLink.isNullOrBlank()) {
-        FullScreenImageViewer(
-            url = attachment.externalLink,
-            filename = attachment.filename,
-            token = token,
-            onDismiss = { showFullScreenImage = false }
-        )
+    if (showFullScreenImage && isImage && (uri != Uri.EMPTY || !attachment?.externalLink.isNullOrBlank() || !attachment?.content.isNullOrBlank())) {
+        val model = remember(uri, attachment) {
+            when {
+                uri != Uri.EMPTY -> uri
+                !attachment?.externalLink.isNullOrBlank() -> attachment?.externalLink
+                !attachment?.content.isNullOrBlank() -> {
+                    try { Base64.decode(attachment?.content, Base64.NO_WRAP) } catch (_: Exception) { null }
+                }
+                else -> null
+            }
+        }
+        if (model != null) {
+            FullScreenImageViewer(
+                model = model,
+                filename = filename,
+                token = token,
+                onDismiss = { showFullScreenImage = false }
+            )
+        }
     }
 }
 
 @Composable
 fun FullScreenImageViewer(
-    url: String,
+    model: Any,
     filename: String,
     token: String,
     onDismiss: () -> Unit
@@ -493,7 +567,7 @@ fun FullScreenImageViewer(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false // Allow drawing under system bars
+            decorFitsSystemWindows = false
         )
     ) {
         val window = (LocalView.current.parent as? DialogWindowProvider)?.window
@@ -560,7 +634,6 @@ fun FullScreenImageViewer(
                                         }
                                     }
                                     
-                                    // Animate back after gesture if needed (e.g. rubber band effect)
                                     if (scale.value < 1f) {
                                         launch {
                                             scale.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow))
@@ -581,9 +654,9 @@ fun FullScreenImageViewer(
                     contentAlignment = Alignment.Center
                 ) {
                     val headers = NetworkHeaders.Builder().set("Authorization", "Bearer $token").build()
-                    val fullImageRequest = remember(url, token) {
+                    val fullImageRequest = remember(model, token) {
                         ImageRequest.Builder(context)
-                            .data(url)
+                            .data(model)
                             .httpHeaders(headers)
                             .build()
                     }
@@ -603,7 +676,6 @@ fun FullScreenImageViewer(
                 }
             }
             
-            // UI elements on top
             IconButton(
                 onClick = onDismiss,
                 modifier = Modifier
@@ -659,7 +731,6 @@ fun VideoPlayer(
     var isFullscreen by remember { mutableStateOf(false) }
     var isReady by remember { mutableStateOf(false) }
     
-    // Use a key that doesn't change when isFullscreen changes to preserve state
     val exoPlayer = remember(url, token) {
         ExoPlayer.Builder(context).setMediaSourceFactory(
             DefaultMediaSourceFactory(context).setDataSourceFactory(
