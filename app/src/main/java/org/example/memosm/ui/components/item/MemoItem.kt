@@ -44,13 +44,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import coil3.compose.AsyncImage
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
-import coil3.request.ImageRequest
-import coil3.request.crossfade
 import com.mikepenz.markdown.model.rememberMarkdownState
 import org.example.memosm.R
-import org.example.memosm.model.Attachment
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User
 import java.text.SimpleDateFormat
@@ -368,7 +363,18 @@ fun MemoItem(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             attachments.forEach { attachment ->
-                                AttachmentDisplay(attachment, token, isDetailView)
+                                var aspectRatio by remember(attachment.name ?: attachment.filename) {
+                                    mutableFloatStateOf(16f / 9f)
+                                }
+                                AttachmentCard(
+                                    attachment = attachment,
+                                    token = token,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(aspectRatio),
+                                    compactMode = AttachmentCompactMode.Never,
+                                    onRatioAvailable = { aspectRatio = it }
+                                )
                             }
                         }
                     } else {
@@ -406,7 +412,12 @@ fun MemoItem(
                             items(
                                 attachments,
                                 key = { it.externalLink ?: it.filename }) { attachment ->
-                                AttachmentDisplay(attachment, token, isDetailView)
+                                AttachmentCard(
+                                    attachment = attachment,
+                                    token = token,
+                                    modifier = Modifier.size(width = 240.dp, height = 160.dp),
+                                    compactMode = AttachmentCompactMode.Area
+                                )
                             }
                         }
                     }
@@ -499,138 +510,6 @@ fun MemoItem(
                 }
             }
         )
-    }
-}
-
-@Composable
-fun AttachmentDisplay(
-    attachment: Attachment, token: String, isDetailView: Boolean
-) {
-    val isImage = remember(attachment.displayType) {
-        attachment.displayType.startsWith(
-            "image/", ignoreCase = true
-        ) || attachment.displayType.contains("image", ignoreCase = true)
-    }
-
-    val isAudio = remember(attachment.displayType) {
-        attachment.displayType.startsWith(
-            "audio/", ignoreCase = true
-        ) || attachment.displayType.contains("audio", ignoreCase = true)
-    }
-
-    val isVideo = remember(attachment.displayType) {
-        attachment.displayType.startsWith(
-            "video/", ignoreCase = true
-        ) || attachment.displayType.contains("video", ignoreCase = true)
-    }
-
-    if (isImage) {
-        val context = LocalContext.current
-        val imageRequest = remember(attachment.externalLink, token) {
-            ImageRequest.Builder(context).data(attachment.externalLink).httpHeaders(
-                NetworkHeaders.Builder().set(
-                    "Authorization", "Bearer $token"
-                ).build()
-            ).crossfade(true).build()
-        }
-
-        AsyncImage(
-            model = imageRequest,
-            contentDescription = attachment.filename,
-            modifier = Modifier
-                .then(
-                    if (isDetailView) Modifier.fillMaxWidth() else Modifier.size(
-                        width = 240.dp, height = 160.dp
-                    )
-                )
-                .clip(RoundedCornerShape(8.dp))
-                .then(
-                    if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
-                        Modifier.clickable {
-                            try {
-                                val intent = Intent(
-                                    Intent.ACTION_VIEW, attachment.externalLink.toUri()
-                                )
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                Log.w(
-                                    "MemoItem",
-                                    "Failed to open attachment URL: ${attachment.externalLink}",
-                                    e
-                                )
-                            }
-                        }
-                    } else Modifier),
-            contentScale = if (isDetailView) ContentScale.FillWidth else ContentScale.Crop)
-    } else if (isVideo && !attachment.externalLink.isNullOrBlank()) {
-        VideoPlayer(
-            url = attachment.externalLink, token = token, modifier = Modifier
-                .then(
-                    if (isDetailView) Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16 / 9f) else Modifier.size(width = 280.dp, height = 180.dp)
-                )
-                .clip(RoundedCornerShape(8.dp))
-        )
-    } else if (isAudio && !attachment.externalLink.isNullOrBlank()) {
-        AudioPlayer(
-            url = attachment.externalLink,
-            filename = attachment.filename,
-            token = token,
-            modifier = Modifier.then(
-                if (isDetailView) Modifier.fillMaxWidth() else Modifier.width(
-                    240.dp
-                )
-            )
-        )
-    } else {
-        val context = LocalContext.current
-        Card(
-            modifier = Modifier
-                .then(
-                    if (isDetailView) Modifier.fillMaxWidth() else Modifier.size(
-                        width = 200.dp, height = 100.dp
-                    )
-                )
-                .clip(RoundedCornerShape(8.dp))
-                .then(
-                    if (isDetailView && !attachment.externalLink.isNullOrBlank()) {
-                        Modifier.clickable {
-                            try {
-                                val intent = Intent(
-                                    Intent.ACTION_VIEW, attachment.externalLink.toUri()
-                                )
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                Log.w(
-                                    "MemoItem",
-                                    "Failed to open attachment URL: ${attachment.externalLink}",
-                                    e
-                                )
-                            }
-                        }
-                    } else Modifier),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = attachment.filename,
-                    style = MaterialTheme.typography.labelMedium,
-                    maxLines = 2,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-                Text(
-                    text = attachment.displayType,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
     }
 }
 
