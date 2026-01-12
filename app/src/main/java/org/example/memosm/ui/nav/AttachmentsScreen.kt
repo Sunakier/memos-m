@@ -169,10 +169,17 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
                             ) || displayType.contains("video", ignoreCase = true)
                         }
 
-                        val ratio = aspectRatios[key] ?: when {
-                            isAudio -> 2.0f
-                            isVideo -> 1.4f // Normal aspect ratio for card including footer
-                            else -> 1.0f
+                        // Use a consistent threshold for compact view across screen and card
+                        val isCompact = animatedCellWidth < 160.dp
+
+                        val ratio = if (isCompact && aspectRatios[key] == null) {
+                            1.0f // Force square for compact items (except images with known ratio)
+                        } else {
+                            aspectRatios[key] ?: when {
+                                isAudio -> 2.0f
+                                isVideo -> 1.4f
+                                else -> 1.0f
+                            }
                         }
 
                         AttachmentCard(
