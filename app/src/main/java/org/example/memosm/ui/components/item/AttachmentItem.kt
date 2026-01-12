@@ -86,6 +86,9 @@ fun AttachmentCard(
     token: String,
     modifier: Modifier = Modifier,
     showInfo: Boolean = true,
+    showActions: Boolean = true,
+    showSize: Boolean = true,
+    showFilename: Boolean = true,
     compactMode: AttachmentCompactMode = AttachmentCompactMode.Area,
     onRatioAvailable: (Float) -> Unit = {}
 ) {
@@ -150,24 +153,22 @@ fun AttachmentCard(
                     area < 25000f || maxWidth < 160.dp || maxHeight < 140.dp
                 }
             }
-            val isWide = !isCompact && maxWidth > 240.dp // lowered from 300.dp
-            val showFooter = showInfo && !isCompact
+            val isWide = !isCompact && maxWidth > 240.dp
+            val showFooter = showInfo && !isCompact && (showFilename || showActions || showSize)
 
             // Report total ratio to parent
-            LaunchedEffect(intrinsicRatio, maxWidth, isCompact, isWide, showInfo) {
+            LaunchedEffect(intrinsicRatio, maxWidth, isCompact, isWide, showInfo, showFilename, showActions, showSize) {
                 val w = maxWidth.value
                 val currentIntrinsic = if (!isImage && !isVideo && !isAudio && isWide) 3.0f else intrinsicRatio
                 
+                val footerHeight = if (showInfo && !isCompact && (showFilename || showActions || showSize)) 56f else 0f
+                
                 val totalRatio = if (isAudio && !isCompact) {
-                    // Audio wants fixed height content (100dp) + footer (approx 56dp if shown)
-                    val h = 100f + (if (showInfo) 56f else 0f)
+                    val h = 100f + footerHeight
                     if (w > 0) w / h else 2.0f
-                } else if (showInfo && !isCompact) {
-                    // Media content ratio + fixed footer height
-                    val footerHeight = 56f
+                } else if (footerHeight > 0f) {
                     if (w > 0) w / (w / currentIntrinsic + footerHeight) else currentIntrinsic
                 } else {
-                    // Compact mode or no info
                     if (isAudio && !isVideo && !isImage) 1.0f else currentIntrinsic
                 }
                 onRatioAvailable(totalRatio)
@@ -239,7 +240,6 @@ fun AttachmentCard(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        // Unsupported media type display
                         val fileIcon = remember(displayType) {
                             when {
                                 displayType.contains("pdf", ignoreCase = true) -> Icons.Outlined.PictureAsPdf
@@ -297,7 +297,7 @@ fun AttachmentCard(
                     }
 
                     // Floating menu button for compact view
-                    if (showInfo && isCompact) {
+                    if (showInfo && showActions && isCompact) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -360,14 +360,16 @@ fun AttachmentCard(
 
                 if (showFooter) {
                     Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).height(48.dp)) {
-                        Text(
-                            text = attachment.filename,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        if (showFilename) {
+                            Text(
+                                text = attachment.filename,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -375,46 +377,50 @@ fun AttachmentCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { showInfoDialog = true }, modifier = Modifier.size(32.dp)) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Info,
-                                        contentDescription = stringResource(R.string.attachments_info_title),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                                IconButton(onClick = { showDownloadDialog = true }, modifier = Modifier.size(32.dp)) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Download,
-                                        contentDescription = stringResource(R.string.attachments_download_button),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                                if (!attachment.externalLink.isNullOrBlank()) {
-                                    val openLinkText = stringResource(R.string.attachments_error_open_link)
-                                    IconButton(
-                                        onClick = {
-                                            try {
-                                                val intent = Intent(Intent.ACTION_VIEW, attachment.externalLink.toUri())
-                                                context.startActivity(intent)
-                                            } catch (e: Exception) {
-                                                Log.e("AttachmentCard", "Failed to open link: ${attachment.externalLink}", e)
-                                                Toast.makeText(context, "$openLinkText: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-                                            }
-                                        }, modifier = Modifier.size(32.dp)
-                                    ) {
+                                if (showActions) {
+                                    IconButton(onClick = { showInfoDialog = true }, modifier = Modifier.size(32.dp)) {
                                         Icon(
-                                            imageVector = Icons.Outlined.Language,
-                                            contentDescription = stringResource(R.string.memo_action_open_web),
+                                            imageVector = Icons.Outlined.Info,
+                                            contentDescription = stringResource(R.string.attachments_info_title),
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
+                                    IconButton(onClick = { showDownloadDialog = true }, modifier = Modifier.size(32.dp)) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Download,
+                                            contentDescription = stringResource(R.string.attachments_download_button),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    if (!attachment.externalLink.isNullOrBlank()) {
+                                        val openLinkText = stringResource(R.string.attachments_error_open_link)
+                                        IconButton(
+                                            onClick = {
+                                                try {
+                                                    val intent = Intent(Intent.ACTION_VIEW, attachment.externalLink.toUri())
+                                                    context.startActivity(intent)
+                                                } catch (e: Exception) {
+                                                    Log.e("AttachmentCard", "Failed to open link: ${attachment.externalLink}", e)
+                                                    Toast.makeText(context, "$openLinkText: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }, modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Language,
+                                                contentDescription = stringResource(R.string.memo_action_open_web),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
-                            Text(
-                                text = formattedSize,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            if (showSize) {
+                                Text(
+                                    text = formattedSize,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
@@ -703,8 +709,6 @@ fun VideoPlayer(
                     layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                 }
             }, update = { view -> 
-                // Don't detach player here if we are going full screen, 
-                // just let the other PlayerView take over or handle it via visibility
                 view.player = if (isFullscreen) null else exoPlayer
             },
             modifier = Modifier.fillMaxSize().alpha(if (isReady) 1f else 0f)
@@ -783,7 +787,7 @@ fun AudioPlayer(
     var isPlaying by remember { mutableStateOf(false) }
     var progress by remember { mutableFloatStateOf(0f) }
     var duration by remember { mutableLongStateOf(0L) }
-    var currentPosition by remember { mutableLongStateOf(0L) }
+    var currentPosition by mutableLongPositionOf()
     var isPrepared by remember { mutableStateOf(false) }
     
     DisposableEffect(url) {
@@ -854,6 +858,9 @@ fun AudioPlayer(
         Card(modifier = modifier.then(if (!compact) Modifier.height(100.dp) else Modifier), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(8.dp)) { content() }
     } else { Box(modifier = modifier) { content() } }
 }
+
+@Composable
+fun mutableLongPositionOf() = remember { mutableLongStateOf(0L) }
 
 private fun formatTime(ms: Long): String {
     val totalSeconds = ms / 1000
