@@ -97,11 +97,27 @@ fun MainScreen(
             )
 
             MainDestination.PROFILE -> {
-                Icon(
-                    if (isSelected) Icons.Default.Person else Icons.Outlined.Person,
-                    contentDescription = null,
-                    modifier = modifier
-                )
+                val avatarUrl = uiState.user?.avatarUrl ?: uiState.accounts.find { it.isActive }?.avatarUrl
+                if (avatarUrl != null) {
+                    AsyncImage(
+                        model = avatarUrl,
+                        contentDescription = null,
+                        modifier = modifier
+                            .clip(CircleShape)
+                            .then(
+                                if (isSelected) Modifier.border(
+                                    1.dp, MaterialTheme.colorScheme.primary, CircleShape
+                                ) else Modifier
+                            ),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        if (isSelected) Icons.Default.Person else Icons.Outlined.Person,
+                        contentDescription = null,
+                        modifier = modifier
+                    )
+                }
             }
         }
     }
