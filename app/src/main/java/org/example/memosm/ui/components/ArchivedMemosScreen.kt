@@ -15,10 +15,10 @@ import org.example.memosm.viewmodel.MemosViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArchivedMemosScreen(
+    modifier: Modifier = Modifier,
     viewModel: MemosViewModel,
     onBack: () -> Unit,
     onToggleNavBar: (Boolean) -> Unit = {},
-    modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
