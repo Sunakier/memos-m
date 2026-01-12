@@ -36,6 +36,40 @@ import org.example.memosm.ui.components.ArchivedMemosScreen
 import org.example.memosm.ui.components.composer.getVisibilityLabel
 import org.example.memosm.viewmodel.MemosViewModel
 
+private val SUPPORTED_LANGUAGES = listOf(
+    "ar" to "العربية",
+    "cs" to "Čeština",
+    "de" to "Deutsch",
+    "en" to "English",
+    "en-GB" to "British English",
+    "es" to "Español",
+    "fa" to "فارسی",
+    "fr" to "Français",
+    "hi" to "हिन्दी",
+    "hr" to "Hrvatski",
+    "hu" to "Magyar",
+    "id" to "Indonesia",
+    "it" to "Italiano",
+    "ja" to "日本語",
+    "ka" to "ქართული (საქართველო)",
+    "ko" to "한국어",
+    "mr" to "मराठी",
+    "nb" to "Norsk bokmål",
+    "nl" to "Nederlands",
+    "pl" to "Polski",
+    "pt-BR" to "Português (Brasil)",
+    "pt" to "Português europeu",
+    "ru" to "Русский",
+    "sl" to "Slovenščina",
+    "sv" to "Svenska",
+    "th" to "ไทย",
+    "tr" to "Türkçe",
+    "uk" to "Українська",
+    "vi" to "Tiếng Việt",
+    "zh-Hans" to "简体中文",
+    "zh-Hant" to "繁體中文"
+)
+
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ProfileScreen(
@@ -59,12 +93,23 @@ fun ProfileScreen(
             transitionSpec = {
                 if (targetState) {
                     (fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) +
-                            scaleIn(initialScale = 0.92f, animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)))
+                            scaleIn(
+                                initialScale = 0.92f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            ))
                         .togetherWith(fadeOut(spring(stiffness = Spring.StiffnessMediumLow)))
                 } else {
                     fadeIn(spring(stiffness = Spring.StiffnessMediumLow))
-                        .togetherWith(fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) +
-                                scaleOut(targetScale = 0.92f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)))
+                        .togetherWith(
+                            fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) +
+                                    scaleOut(
+                                        targetScale = 0.92f,
+                                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                                    )
+                        )
                 }
             },
             label = "ProfileArchiveTransition"
@@ -95,7 +140,7 @@ fun ProfileScreen(
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun ProfileListPane(
     viewModel: MemosViewModel,
@@ -112,6 +157,29 @@ private fun ProfileListPane(
     val instance = uiState.instanceProfile
     val userSettings = uiState.userSettings
     val accounts = uiState.accounts
+
+    var showAccountSwitcher by remember { mutableStateOf(false) }
+
+    if (showAccountSwitcher) {
+        ModalBottomSheet(
+            onDismissRequest = { showAccountSwitcher = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            AccountsList(
+                accounts = accounts,
+                onSwitchAccount = {
+                    viewModel.switchAccount(it)
+                    showAccountSwitcher = false
+                },
+                onRemoveAccount = { viewModel.removeAccount(it) },
+                onAddAccount = {
+                    onLogout()
+                    showAccountSwitcher = false
+                },
+                modifier = Modifier.padding(bottom = 32.dp)
+            )
+        }
+    }
 
     Box(
         modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter
@@ -130,19 +198,9 @@ private fun ProfileListPane(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Always show accounts at the top
-            item {
-                AccountsCard(
-                    accounts = accounts,
-                    onSwitchAccount = { viewModel.switchAccount(it) },
-                    onRemoveAccount = { viewModel.removeAccount(it) },
-                    onAddAccount = onLogout
-                )
-            }
-
             if (user != null) {
                 item {
-                    ProfileHeader(user)
+                    ProfileHeader(user, onClick = { showAccountSwitcher = true })
                 }
 
                 item {
@@ -257,9 +315,11 @@ private fun ProfileListPane(
 }
 
 @Composable
-fun ProfileHeader(user: User) {
+fun ProfileHeader(user: User, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp)
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        onClick = onClick
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
             Row(
@@ -299,81 +359,82 @@ fun ProfileHeader(user: User) {
 }
 
 @Composable
-fun AccountsCard(
+fun AccountsList(
     accounts: List<Account>,
     onSwitchAccount: (Account) -> Unit,
     onRemoveAccount: (Account) -> Unit,
-    onAddAccount: () -> Unit
+    onAddAccount: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(vertical = 16.dp)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Accounts",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                IconButton(onClick = onAddAccount) {
-                    Icon(Icons.Outlined.Add, contentDescription = "Add Account")
-                }
+    Column(modifier = modifier.padding(vertical = 16.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Accounts",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            IconButton(onClick = onAddAccount) {
+                Icon(Icons.Outlined.Add, contentDescription = "Add Account")
             }
+        }
 
-            accounts.forEach { account ->
-                ListItem(
-                    modifier = Modifier.clickable { if (!account.isActive) onSwitchAccount(account) },
-                    headlineContent = {
-                        Text(
-                            account.displayName ?: account.name ?: "Unknown User",
-                            fontWeight = if (account.isActive) FontWeight.Bold else FontWeight.Normal
-                        )
-                    },
-                    supportingContent = {
-                        Text(
-                            account.hostUrl,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    leadingContent = {
-                        AsyncImage(
-                            model = account.avatarUrl,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentScale = ContentScale.Crop
-                        )
-                    },
-                    trailingContent = {
-                        if (account.isActive) {
-                            Icon(
-                                Icons.Outlined.Check,
-                                contentDescription = "Active",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        } else {
-                            IconButton(onClick = { onRemoveAccount(account) }) {
-                                Icon(
-                                    Icons.Outlined.Delete,
-                                    contentDescription = "Remove Account",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                    },
-                    colors = ListItemDefaults.colors(
-                        containerColor = if (account.isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent
+        accounts.forEach { account ->
+            ListItem(
+                modifier = Modifier.clickable { if (!account.isActive) onSwitchAccount(account) },
+                headlineContent = {
+                    Text(
+                        account.displayName ?: account.name ?: "Unknown User",
+                        fontWeight = if (account.isActive) FontWeight.Bold else FontWeight.Normal
                     )
+                },
+                supportingContent = {
+                    Text(
+                        account.hostUrl,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                leadingContent = {
+                    AsyncImage(
+                        model = account.avatarUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentScale = ContentScale.Crop
+                    )
+                },
+                trailingContent = {
+                    if (account.isActive) {
+                        Icon(
+                            Icons.Outlined.Check,
+                            contentDescription = "Active",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        IconButton(onClick = { onRemoveAccount(account) }) {
+                            Icon(
+                                Icons.Outlined.Delete,
+                                contentDescription = "Remove Account",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                },
+                colors = ListItemDefaults.colors(
+                    containerColor = if (account.isActive) MaterialTheme.colorScheme.primaryContainer.copy(
+                        alpha = 0.3f
+                    ) else Color.Transparent
                 )
-            }
+            )
         }
     }
 }
@@ -537,17 +598,75 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
     var showVisibilityMenu by remember { mutableStateOf(false) }
 
     if (showLocaleDialog) {
+        var expanded by remember { mutableStateOf(false) }
+        val initialDisplayName =
+            SUPPORTED_LANGUAGES.find { it.first == tempLocale }?.second ?: tempLocale
+        var textFieldValue by remember { mutableStateOf(initialDisplayName) }
+
+        val filteredOptions = if (textFieldValue.isEmpty()) {
+            SUPPORTED_LANGUAGES
+        } else {
+            SUPPORTED_LANGUAGES.filter {
+                it.second.contains(textFieldValue, ignoreCase = true) ||
+                        it.first.contains(textFieldValue, ignoreCase = true)
+            }
+        }
+
         AlertDialog(
             onDismissRequest = { showLocaleDialog = false },
             title = { Text(stringResource(R.string.profile_settings_locale_edit)) },
             text = {
-                OutlinedTextField(
-                    value = tempLocale,
-                    onValueChange = { tempLocale = it },
-                    label = { Text(stringResource(R.string.profile_settings_locale_label)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = it },
+                    ) {
+                        OutlinedTextField(
+                            value = textFieldValue,
+                            onValueChange = {
+                                textFieldValue = it
+                                expanded = true
+                                val exactMatch = SUPPORTED_LANGUAGES.find { lang ->
+                                    lang.second.equals(
+                                        it,
+                                        ignoreCase = true
+                                    )
+                                }
+                                if (exactMatch != null) {
+                                    tempLocale = exactMatch.first
+                                } else {
+                                    tempLocale = it
+                                }
+                            },
+                            label = { Text(stringResource(R.string.profile_settings_locale_label)) },
+                            singleLine = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true),
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                        )
+
+                        if (filteredOptions.isNotEmpty()) {
+                            ExposedDropdownMenu(
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false }
+                            ) {
+                                filteredOptions.forEach { selectionOption ->
+                                    DropdownMenuItem(
+                                        text = { Text(selectionOption.second) },
+                                        onClick = {
+                                            textFieldValue = selectionOption.second
+                                            tempLocale = selectionOption.first
+                                            expanded = false
+                                        },
+                                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -578,8 +697,11 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
             ListItem(
                 headlineContent = { Text(stringResource(R.string.profile_settings_locale)) },
                 supportingContent = {
+                    val displayName =
+                        SUPPORTED_LANGUAGES.find { it.first == settings.locale }?.second
+                            ?: if (settings.locale.isNullOrBlank()) stringResource(R.string.profile_settings_locale_default) else settings.locale
                     Text(
-                        text = if (settings.locale.isNullOrBlank()) stringResource(R.string.profile_settings_locale_default) else settings.locale,
+                        text = displayName,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
