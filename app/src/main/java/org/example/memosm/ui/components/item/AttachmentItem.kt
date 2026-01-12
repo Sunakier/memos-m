@@ -15,11 +15,8 @@ import android.view.ViewGroup
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.annotation.OptIn
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.VectorConverter
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -195,7 +192,8 @@ fun AttachmentCard(
 
     val backgroundColor by animateColorAsState(
         targetValue = if (isAudioPlaying) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-        label = "AttachmentCardBackground"
+        label = "AttachmentCardBackground",
+        animationSpec = tween(durationMillis = 300)
     )
 
     Card(
@@ -888,6 +886,7 @@ fun AudioPlayer(
                     isPlaying = false
                     progress = 0f
                     currentPosition = 0
+                    exoPlayer.seekTo(0)
                     onPlayingStateChanged(false)
                 }
             }
@@ -914,47 +913,42 @@ fun AudioPlayer(
     val content = @Composable {
         if (compact) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                IconButton(
-                    onClick = { 
-                        if (isPrepared) { 
-                            if (isPlaying) exoPlayer.pause() 
+                PlayPauseButton(
+                    isPlaying = isPlaying,
+                    isPrepared = isPrepared,
+                    onToggle = {
+                        if (isPrepared) {
+                            if (isPlaying) exoPlayer.pause()
                             else {
                                 if (exoPlayer.playbackState == Player.STATE_ENDED) {
                                     exoPlayer.seekTo(0)
                                 }
-                                exoPlayer.play() 
+                                exoPlayer.play()
                             }
-                        } 
+                        }
                     },
-                    enabled = isPrepared,
                     modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
-                        contentDescription = if (isPlaying) stringResource(R.string.memo_action_pause) else stringResource(R.string.memo_action_play),
-                        modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
+                )
             }
         } else {
             Column(modifier = Modifier.fillMaxSize().padding(8.dp), verticalArrangement = Arrangement.Center) {
                 Text(text = filename, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    IconButton(
-                        onClick = { 
-                            if (isPrepared) { 
-                                if (isPlaying) exoPlayer.pause() 
+                    PlayPauseButton(
+                        isPlaying = isPlaying,
+                        isPrepared = isPrepared,
+                        onToggle = {
+                            if (isPrepared) {
+                                if (isPlaying) exoPlayer.pause()
                                 else {
                                     if (exoPlayer.playbackState == Player.STATE_ENDED) {
                                         exoPlayer.seekTo(0)
                                     }
-                                    exoPlayer.play() 
+                                    exoPlayer.play()
                                 }
-                            } 
-                        }, enabled = isPrepared) {
-                        Icon(imageVector = if (isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow, contentDescription = null)
-                    }
+                            }
+                        }
+                    )
                     Column(modifier = Modifier.weight(1f)) {
                         Slider(value = progress, onValueChange = { if (isPrepared) { progress = it; exoPlayer.seekTo((it * duration).toLong()) } }, modifier = Modifier.height(24.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -970,6 +964,60 @@ fun AudioPlayer(
     if (showContainer) {
         Card(modifier = modifier.then(if (!compact) Modifier.height(100.dp) else Modifier), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(8.dp)) { content() }
     } else { Box(modifier = modifier) { content() } }
+}
+
+@Composable
+fun PlayPauseButton(
+    isPlaying: Boolean,
+    isPrepared: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+    iconSize: androidx.compose.ui.unit.Dp = 32.dp,
+    tint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary
+) {
+    val transition = updateTransition(targetState = isPlaying, label = "PlayPause")
+    
+    val rotation by transition.animateFloat(
+        transitionSpec = {
+            spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioMediumBouncy)
+        },
+        label = "Rotation"
+    ) { playing ->
+        if (playing) 90f else 0f
+    }
+
+    val scale by transition.animateFloat(
+        transitionSpec = { spring(stiffness = Spring.StiffnessLow) },
+        label = "Scale"
+    ) { playing ->
+        if (playing) 1.15f else 1f
+    }
+
+    IconButton(onClick = onToggle, enabled = isPrepared, modifier = modifier) {
+        Box(
+            modifier = Modifier.graphicsLayer {
+                rotationZ = rotation
+                scaleX = scale
+                scaleY = scale
+            },
+            contentAlignment = Alignment.Center
+        ) {
+            transition.AnimatedContent(
+                transitionSpec = {
+                    fadeIn(tween(200)) togetherWith fadeOut(tween(200))
+                }
+            ) { playing ->
+                Icon(
+                    imageVector = if (playing) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(iconSize).graphicsLayer {
+                        if (playing) rotationZ = -90f
+                    },
+                    tint = tint
+                )
+            }
+        }
+    }
 }
 
 @Composable
