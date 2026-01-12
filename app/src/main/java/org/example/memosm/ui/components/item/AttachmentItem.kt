@@ -374,16 +374,17 @@ fun AttachmentCard(
                         if (isWide) {
                             Row(
                                 modifier = Modifier
-                                    .padding(16.dp)
-                                    .fillMaxSize(),
+                                    .fillMaxSize()
+                                    .clickable { showInfoDialog = true }
+                                    .padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Center
                             ) {
                                 Icon(
                                     imageVector = fileIcon,
                                     contentDescription = null,
-                                    modifier = Modifier.size(32.dp),
-                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                    modifier = Modifier.size(24.dp),
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
@@ -396,15 +397,18 @@ fun AttachmentCard(
                             }
                         } else {
                             Column(
-                                modifier = Modifier.padding(16.dp),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clickable { showInfoDialog = true }
+                                    .padding(16.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
                                 Icon(
                                     imageVector = fileIcon,
                                     contentDescription = null,
-                                    modifier = Modifier.size(if (isCompact) 24.dp else 32.dp),
-                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                    modifier = Modifier.size(32.dp),
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                                 if (!isCompact) {
                                     Spacer(modifier = Modifier.height(8.dp))
