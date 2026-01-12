@@ -199,11 +199,34 @@ private fun ProfileListPane(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (user != null) {
-                item {
+            item {
+                if (user != null) {
                     ProfileHeader(user, onClick = { showAccountSwitcher = true })
+                } else {
+                    val activeAccount = accounts.find { it.isActive }
+                    if (activeAccount != null) {
+                        ProfileHeader(
+                            User(
+                                username = activeAccount.name ?: "",
+                                displayName = activeAccount.displayName,
+                                avatarUrl = activeAccount.avatarUrl
+                            ),
+                            onClick = { showAccountSwitcher = true }
+                        )
+                    } else if (uiState.isLoading) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
                 }
+            }
 
+            if (user != null || accounts.any { it.isActive }) {
                 item {
                     StatsCard(stats)
                 }
@@ -242,13 +265,13 @@ private fun ProfileListPane(
                     }
                 }
 
-                if (userSettings != null) {
-                    item {
-                        SettingsCard(
-                            settings = userSettings, onUpdate = { locale, visibility ->
-                                viewModel.updateUserGeneralSetting(locale, visibility)
-                            })
-                    }
+                item {
+                    SettingsCard(
+                        settings = userSettings ?: UserGeneralSetting(), 
+                        onUpdate = { locale, visibility ->
+                            viewModel.updateUserGeneralSetting(locale, visibility)
+                        }
+                    )
                 }
 
                 item {
@@ -279,22 +302,21 @@ private fun ProfileListPane(
                 item {
                     LogoutCard(onLogout)
                 }
+                
+                if (uiState.error != null) {
+                    item {
+                        ErrorView(
+                            title = stringResource(R.string.common_error_failed_to_load_profile),
+                            message = uiState.error!!,
+                            onRetry = { viewModel.refreshAll() }
+                        )
+                    }
+                }
 
                 item {
                     Spacer(modifier = Modifier.height(64.dp))
                 }
-            } else if (uiState.isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-            } else {
+            } else if (!uiState.isLoading) {
                 item {
                     ErrorView(
                         message = uiState.error ?: stringResource(R.string.profile_user_info_not_available),
@@ -323,7 +345,8 @@ fun ProfileHeader(user: User, onClick: () -> Unit) {
                     contentDescription = stringResource(R.string.profile_avatar_description),
                     modifier = Modifier
                         .size(80.dp)
-                        .clip(CircleShape),
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentScale = ContentScale.Crop
                 )
                 Spacer(modifier = Modifier.width(24.dp))
@@ -335,7 +358,7 @@ fun ProfileHeader(user: User, onClick: () -> Unit) {
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "@${user.username ?: stringResource(R.string.memo_unknown_user)}",
+                        text = if (!user.username.isNullOrBlank()) "@${user.username}" else stringResource(R.string.memo_unknown_user),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

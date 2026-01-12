@@ -22,7 +22,7 @@ fun ErrorView(
     kaomoji: String? = null
 ) {
     val displayKaomoji = remember(kaomoji) {
-        kaomoji ?: listOf("(ﾉД`)", "(ノωヽ)", "Σ(°△°|||)︴").random()
+        kaomoji ?: listOf("(ﾉД`)", "(ノωヽ)", "Σ(°△°|||)", "Σ(°ロ°)!!!").random()
     }
 
     Column(
