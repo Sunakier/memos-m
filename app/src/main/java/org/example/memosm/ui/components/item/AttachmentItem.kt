@@ -60,11 +60,13 @@ fun AttachmentCard(
     attachment: Attachment,
     token: String,
     modifier: Modifier = Modifier,
+    showInfo: Boolean = true,
     onRatioAvailable: (Float) -> Unit = {}
 ) {
     val context = LocalContext.current
     var showInfoDialog by remember { mutableStateOf(false) }
     var showDownloadDialog by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
 
     val formattedDate = remember(attachment.createTime) {
         try {
@@ -100,7 +102,10 @@ fun AttachmentCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val isCompact = maxWidth < 160.dp || maxHeight < 140.dp
+            // Decision for compact view based on area/aspect ratio to be more general
+            val area = maxWidth.value * maxHeight.value
+            val isCompact = area < 25000f || maxWidth < 160.dp || maxHeight < 140.dp
+            val showFooter = showInfo && !isCompact
 
             Column(modifier = Modifier.fillMaxSize()) {
                 Box(
@@ -172,9 +177,18 @@ fun AttachmentCard(
                             modifier = Modifier.padding(16.dp)
                         )
                     }
+
+                    // Floating menu button for compact view
+                    if (showInfo && isCompact) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopEnd) {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(Icons.Outlined.MoreVert, contentDescription = null, tint = Color.White.copy(alpha = 0.8f))
+                            }
+                        }
+                    }
                 }
 
-                if (!isCompact) {
+                if (showFooter) {
                     Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
                         Text(
                             text = attachment.filename,
@@ -233,6 +247,35 @@ fun AttachmentCard(
                             )
                         }
                     }
+                }
+            }
+
+            // Dropdown menu for compact view or when footer is hidden
+            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.attachments_info_title)) },
+                    onClick = { showMenu = false; showInfoDialog = true },
+                    leadingIcon = { Icon(Icons.Outlined.Info, contentDescription = null) }
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.attachments_download_button)) },
+                    onClick = { showMenu = false; showDownloadDialog = true },
+                    leadingIcon = { Icon(Icons.Outlined.Download, contentDescription = null) }
+                )
+                if (!attachment.externalLink.isNullOrBlank()) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.memo_action_open_web)) },
+                        onClick = {
+                            showMenu = false
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, attachment.externalLink.toUri())
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Log.e("AttachmentCard", "Failed to open link", e)
+                            }
+                        },
+                        leadingIcon = { Icon(Icons.Outlined.Language, contentDescription = null) }
+                    )
                 }
             }
         }
