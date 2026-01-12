@@ -15,6 +15,7 @@ import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -102,7 +103,6 @@ fun AttachmentCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            // Decision for compact view based on area/aspect ratio to be more general
             val area = maxWidth.value * maxHeight.value
             val isCompact = area < 25000f || maxWidth < 160.dp || maxHeight < 140.dp
             val showFooter = showInfo && !isCompact
@@ -180,9 +180,61 @@ fun AttachmentCard(
 
                     // Floating menu button for compact view
                     if (showInfo && isCompact) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopEnd) {
-                            IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Outlined.MoreVert, contentDescription = null, tint = Color.White.copy(alpha = 0.8f))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(4.dp),
+                            contentAlignment = Alignment.TopEnd
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    IconButton(
+                                        onClick = { showMenu = true },
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        Icon(
+                                            Icons.Outlined.MoreVert,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = showMenu,
+                                        onDismissRequest = { showMenu = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.attachments_info_title)) },
+                                            onClick = { showMenu = false; showInfoDialog = true },
+                                            leadingIcon = { Icon(Icons.Outlined.Info, contentDescription = null) }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.attachments_download_button)) },
+                                            onClick = { showMenu = false; showDownloadDialog = true },
+                                            leadingIcon = { Icon(Icons.Outlined.Download, contentDescription = null) }
+                                        )
+                                        if (!attachment.externalLink.isNullOrBlank()) {
+                                            DropdownMenuItem(
+                                                text = { Text(stringResource(R.string.memo_action_open_web)) },
+                                                onClick = {
+                                                    showMenu = false
+                                                    try {
+                                                        val intent = Intent(Intent.ACTION_VIEW, attachment.externalLink.toUri())
+                                                        context.startActivity(intent)
+                                                    } catch (e: Exception) {
+                                                        Log.e("AttachmentCard", "Failed to open link", e)
+                                                    }
+                                                },
+                                                leadingIcon = { Icon(Icons.Outlined.Language, contentDescription = null) }
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -247,35 +299,6 @@ fun AttachmentCard(
                             )
                         }
                     }
-                }
-            }
-
-            // Dropdown menu for compact view or when footer is hidden
-            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.attachments_info_title)) },
-                    onClick = { showMenu = false; showInfoDialog = true },
-                    leadingIcon = { Icon(Icons.Outlined.Info, contentDescription = null) }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.attachments_download_button)) },
-                    onClick = { showMenu = false; showDownloadDialog = true },
-                    leadingIcon = { Icon(Icons.Outlined.Download, contentDescription = null) }
-                )
-                if (!attachment.externalLink.isNullOrBlank()) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.memo_action_open_web)) },
-                        onClick = {
-                            showMenu = false
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW, attachment.externalLink.toUri())
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                Log.e("AttachmentCard", "Failed to open link", e)
-                            }
-                        },
-                        leadingIcon = { Icon(Icons.Outlined.Language, contentDescription = null) }
-                    )
                 }
             }
         }
