@@ -22,28 +22,36 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 enum class FileThumbnailMode {
-    WIDE,
-    NORMAL,
-    COMPACT
+    WIDE, NORMAL, COMPACT
 }
 
 enum class FileType {
-    PDF,
-    DOCUMENT,
-    ARCHIVE,
-    APK,
-    GENERIC;
+    PDF, DOCUMENT, ARCHIVE, APK, GENERIC;
 
     companion object {
         fun fromDisplayType(displayType: String): FileType {
             return when {
                 displayType.contains("pdf", ignoreCase = true) -> PDF
-                displayType.contains("text", ignoreCase = true) ||
-                        displayType.contains("markdown", ignoreCase = true) -> DOCUMENT
-                displayType.contains("apk", ignoreCase = true) -> APK
-                displayType.contains("zip", ignoreCase = true) ||
-                        displayType.contains("archive", ignoreCase = true) ||
-                        displayType.contains("tar", ignoreCase = true) -> ARCHIVE
+
+                displayType.contains("text", ignoreCase = true) || displayType.contains(
+                    "markdown",
+                    ignoreCase = true
+                ) -> DOCUMENT
+
+                // Refined APK detection
+                displayType.contains(
+                    "apk",
+                    ignoreCase = true
+                ) || displayType.contains("android.package-archive", ignoreCase = true) -> APK
+
+                displayType.contains("zip", ignoreCase = true) || displayType.contains(
+                    "archive",
+                    ignoreCase = true
+                ) || displayType.contains(
+                    "tar",
+                    ignoreCase = true
+                ) || displayType.contains("compressed", ignoreCase = true) -> ARCHIVE
+
                 else -> GENERIC
             }
         }
@@ -71,14 +79,12 @@ fun FileThumbnail(
 
     when (mode) {
         FileThumbnailMode.WIDE -> {
-            Row(
-                modifier = modifier
-                    .fillMaxSize()
-                    .clickable { onClick() }
-                    .padding(16.dp),
+            Row(modifier = modifier
+                .fillMaxSize()
+                .clickable { onClick() }
+                .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
+                horizontalArrangement = Arrangement.Center) {
                 Icon(
                     imageVector = fileType.icon,
                     contentDescription = null,
@@ -97,14 +103,12 @@ fun FileThumbnail(
         }
 
         else -> {
-            Column(
-                modifier = modifier
-                    .fillMaxSize()
-                    .clickable { onClick() }
-                    .padding(16.dp),
+            Column(modifier = modifier
+                .fillMaxSize()
+                .clickable { onClick() }
+                .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
+                verticalArrangement = Arrangement.Center) {
                 Icon(
                     imageVector = fileType.icon,
                     contentDescription = null,

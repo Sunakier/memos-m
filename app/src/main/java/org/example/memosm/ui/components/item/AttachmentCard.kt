@@ -167,7 +167,6 @@ fun AttachmentCard(
     var intrinsicRatio by remember {
         mutableFloatStateOf(
             when {
-                isAudio -> 1.0f
                 isVideo -> 1.777f // 16:9 as a better default for videos
                 else -> 1.0f
             }
