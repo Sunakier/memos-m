@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
+import androidx.compose.material.icons.outlined.Android
+import androidx.compose.material.icons.outlined.AppRegistration
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderZip
@@ -62,7 +64,7 @@ enum class FileType {
             PDF -> Icons.Outlined.PictureAsPdf
             DOCUMENT -> Icons.Outlined.Description
             ARCHIVE -> Icons.Outlined.FolderZip
-            APK -> Icons.Outlined.Archive
+            APK -> Icons.Outlined.Android
             GENERIC -> Icons.AutoMirrored.Outlined.InsertDriveFile
         }
 }
