@@ -13,6 +13,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -56,12 +57,17 @@ import org.example.memosm.model.Attachment
 import java.text.SimpleDateFormat
 import java.util.*
 
+enum class AttachmentCompactMode {
+    Area, Width, Height, Always, Never
+}
+
 @Composable
 fun AttachmentCard(
     attachment: Attachment,
     token: String,
     modifier: Modifier = Modifier,
     showInfo: Boolean = true,
+    compactMode: AttachmentCompactMode = AttachmentCompactMode.Area,
     onRatioAvailable: (Float) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -103,8 +109,16 @@ fun AttachmentCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val area = maxWidth.value * maxHeight.value
-            val isCompact = area < 25000f || maxWidth < 160.dp || maxHeight < 140.dp
+            val isCompact = when (compactMode) {
+                AttachmentCompactMode.Always -> true
+                AttachmentCompactMode.Never -> false
+                AttachmentCompactMode.Width -> maxWidth < 160.dp
+                AttachmentCompactMode.Height -> maxHeight < 140.dp
+                AttachmentCompactMode.Area -> {
+                    val area = maxWidth.value * maxHeight.value
+                    area < 25000f || maxWidth < 160.dp || maxHeight < 140.dp
+                }
+            }
             val showFooter = showInfo && !isCompact
 
             Column(modifier = Modifier.fillMaxSize()) {
@@ -188,21 +202,21 @@ fun AttachmentCard(
                         ) {
                             Surface(
                                 shape = CircleShape,
-                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
                                 contentColor = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(32.dp)
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    IconButton(
-                                        onClick = { showMenu = true },
-                                        modifier = Modifier.fillMaxSize()
-                                    ) {
-                                        Icon(
-                                            Icons.Outlined.MoreVert,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clickable { showMenu = true }
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.MoreVert,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
 
                                     DropdownMenu(
                                         expanded = showMenu,
@@ -378,8 +392,8 @@ private fun downloadAttachmentFile(context: Context, attachment: Attachment, tok
 @Composable
 fun VideoPlayer(url: String, token: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    var isFullscreen by remember { mutableStateOf(false) }
-    var isReady by remember { mutableStateOf(false) }
+    var isFullscreen by mutableStateOf(false)
+    var isReady by mutableStateOf(false)
     val exoPlayer = remember {
         ExoPlayer.Builder(context).setMediaSourceFactory(
             DefaultMediaSourceFactory(context).setDataSourceFactory(
@@ -466,11 +480,11 @@ fun AudioPlayer(
             )
         ).build()
     }
-    var isPlaying by remember { mutableStateOf(false) }
-    var progress by remember { mutableFloatStateOf(0f) }
-    var duration by remember { mutableLongStateOf(0L) }
-    var currentPosition by remember { mutableLongStateOf(0L) }
-    var isPrepared by remember { mutableStateOf(false) }
+    var isPlaying by mutableStateOf(false)
+    var progress by mutableFloatStateOf(0f)
+    var duration by mutableLongStateOf(0L)
+    var currentPosition by mutableLongStateOf(0L)
+    var isPrepared by mutableStateOf(false)
     DisposableEffect(url) {
         val mediaItem = MediaItem.fromUri(url)
         exoPlayer.setMediaItem(mediaItem)
