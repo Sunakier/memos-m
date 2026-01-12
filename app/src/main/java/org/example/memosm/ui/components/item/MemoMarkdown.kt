@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,6 +35,10 @@ import com.mikepenz.markdown.model.MarkdownState
 import com.mikepenz.markdown.model.markdownAnimations
 import com.mikepenz.markdown.model.markdownAnnotator
 import com.mikepenz.markdown.model.markdownAnnotatorConfig
+import com.mikepenz.markdown.utils.getUnescapedTextInNode
+import org.example.memosm.model.Attachment
+import org.example.memosm.viewmodel.MemosViewModel
+import org.intellij.markdown.IElementType
 import org.intellij.markdown.MarkdownElementTypes
 import org.intellij.markdown.ast.ASTNode
 import org.intellij.markdown.ast.findChildOfType
@@ -45,6 +51,7 @@ fun MemoMarkdown(
     modifier: Modifier = Modifier,
     content: String,
     markdownState: MarkdownState,
+    token: String,
     onContentUpdate: ((String) -> Unit)? = null,
 ) {
     Markdown(
@@ -82,11 +89,40 @@ fun MemoMarkdown(
                         .padding(vertical = 12.dp)
                 )
             },
+            image = { model ->
+                MarkdownAttachmentImage(
+                    content = model.content,
+                    node = model.node,
+                    token = token
+                )
+            },
             codeBlock = highlightedCodeBlock,
             codeFence = highlightedCodeFence,
         ),
         modifier = modifier
     )
+}
+
+@Composable
+fun MarkdownAttachmentImage(content: String, node: ASTNode, token: String) {
+    val link = node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_DESTINATION)
+        ?.getUnescapedTextInNode(content) ?: return
+
+    Box(
+        modifier = Modifier
+            .padding(vertical = 8.dp)
+            .fillMaxWidth()
+            .aspectRatio(16f / 9f)
+    ) {
+        AttachmentCard(
+            attachment = Attachment(externalLink = link, filename = link, type = "image/auto"),
+            token = token,
+            showInfo = false,
+            showActions = false,
+            showSize = false,
+            showFilename = false
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -308,4 +344,12 @@ fun VerticalMarkdownDivider(
     VerticalDivider(
         modifier = modifier, thickness = thickness, color = color
     )
+}
+
+fun ASTNode.findChildOfTypeRecursive(type: IElementType): ASTNode? {
+    findChildOfType(type)?.let { return it }
+    for (child in children) {
+        child.findChildOfTypeRecursive(type)?.let { return it }
+    }
+    return null
 }

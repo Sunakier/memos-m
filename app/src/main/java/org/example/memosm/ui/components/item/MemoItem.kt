@@ -48,6 +48,7 @@ import com.mikepenz.markdown.model.rememberMarkdownState
 import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User
+import org.example.memosm.viewmodel.MemosViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -304,6 +305,7 @@ fun MemoItem(
                         content = memo.content,
                         markdownState = markdownState,
                         onContentUpdate = onContentUpdate,
+                        token = token,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 12.dp, end = 16.dp, bottom = 8.dp)
