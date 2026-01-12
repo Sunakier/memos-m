@@ -1,3 +1,5 @@
+package org.example.memosm.ui.components.item.media
+
 import android.content.pm.ActivityInfo
 import android.view.ViewGroup
 import androidx.annotation.OptIn
@@ -9,6 +11,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +56,13 @@ fun VideoPlayer(
     var isFullscreen by remember { mutableStateOf(false) }
     var isReady by remember { mutableStateOf(false) }
 
+    // Use cached ratio if available
+    LaunchedEffect(url) {
+        MediaCache.getAspectRatio(url)?.let {
+            onRatioAvailable(it)
+        }
+    }
+
     val exoPlayer = remember(url, token) {
         val dataSourceFactory = DefaultDataSource.Factory(
             context,
@@ -75,14 +85,18 @@ fun VideoPlayer(
                     isReady = true
                     val videoSize = exoPlayer.videoSize
                     if (videoSize.width > 0 && videoSize.height > 0) {
-                        onRatioAvailable(videoSize.width.toFloat() / videoSize.height)
+                        val ratio = videoSize.width.toFloat() / videoSize.height
+                        MediaCache.setAspectRatio(url, ratio)
+                        onRatioAvailable(ratio)
                     }
                 }
             }
 
             override fun onVideoSizeChanged(videoSize: VideoSize) {
                 if (videoSize.width > 0 && videoSize.height > 0) {
-                    onRatioAvailable(videoSize.width.toFloat() / videoSize.height)
+                    val ratio = videoSize.width.toFloat() / videoSize.height
+                    MediaCache.setAspectRatio(url, ratio)
+                    onRatioAvailable(ratio)
                 }
             }
         }

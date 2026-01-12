@@ -12,6 +12,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +57,22 @@ fun MemoImage(
         }
     }
 
+    val cacheKey = remember(uri, attachment) {
+        when {
+            uri != Uri.EMPTY -> uri.toString()
+            !attachment?.externalLink.isNullOrBlank() -> attachment.externalLink
+            attachment?.name != null -> attachment.name
+            else -> null
+        }
+    }
+
+    // Use cached ratio if available
+    LaunchedEffect(cacheKey) {
+        MediaCache.getAspectRatio(cacheKey)?.let {
+            onRatioAvailable(it)
+        }
+    }
+
     val headers = remember(token) {
         val builder = NetworkHeaders.Builder()
         if (token != null) builder.set("Authorization", "Bearer $token")
@@ -91,7 +108,9 @@ fun MemoImage(
                 isError = false
                 val size = state.painter.intrinsicSize
                 if (size.width > 0 && size.height > 0) {
-                    onRatioAvailable(size.width / size.height)
+                    val ratio = size.width / size.height
+                    MediaCache.setAspectRatio(cacheKey, ratio)
+                    onRatioAvailable(ratio)
                 }
             },
             onError = { isLoading = false; isError = true }

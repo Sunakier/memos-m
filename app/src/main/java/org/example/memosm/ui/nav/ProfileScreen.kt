@@ -15,9 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
-import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.automirrored.outlined.Shortcut
+import androidx.compose.material.icons.automirrored.outlined.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,7 +38,6 @@ import org.example.memosm.ui.components.ArchivedMemosScreen
 import org.example.memosm.ui.components.ErrorView
 import org.example.memosm.ui.components.composer.getVisibilityLabel
 import org.example.memosm.viewmodel.MemosViewModel
-
 private val SUPPORTED_LANGUAGES = listOf(
     "ar" to "العربية",
     "cs" to "Čeština",
@@ -932,7 +929,7 @@ fun AboutCard() {
             ListItem(
                 headlineContent = { Text(stringResource(R.string.profile_about_repo)) },
                 leadingContent = { Icon(Icons.Outlined.Code, contentDescription = null) },
-                trailingContent = { Icon(Icons.Outlined.OpenInNew, contentDescription = null) },
+                trailingContent = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) },
                 modifier = Modifier.clickable {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(repoUrl))
                     context.startActivity(intent)
@@ -943,7 +940,7 @@ fun AboutCard() {
             ListItem(
                 headlineContent = { Text(stringResource(R.string.profile_about_issues)) },
                 leadingContent = { Icon(Icons.Outlined.BugReport, contentDescription = null) },
-                trailingContent = { Icon(Icons.Outlined.OpenInNew, contentDescription = null) },
+                trailingContent = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) },
                 modifier = Modifier.clickable {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(issuesUrl))
                     context.startActivity(intent)
