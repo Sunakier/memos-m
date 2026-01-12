@@ -1,5 +1,6 @@
 package org.example.memosm.ui.nav
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -15,13 +16,8 @@ import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.automirrored.outlined.Shortcut
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
-import androidx.compose.material3.adaptive.layout.AnimatedPane
-import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
-import androidx.compose.material3.adaptive.layout.PaneAdaptedValue
-import androidx.compose.material3.adaptive.navigation.NavigableListDetailPaneScaffold
-import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,113 +29,55 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import kotlinx.coroutines.launch
 import org.example.memosm.R
 import org.example.memosm.model.*
-import org.example.memosm.ui.ProfileDetailKey
 import org.example.memosm.ui.components.ArchivedMemosScreen
 import org.example.memosm.ui.components.composer.getVisibilityLabel
 import org.example.memosm.viewmodel.MemosViewModel
 
-@OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun ProfileScreen(
     viewModel: MemosViewModel,
     onLogout: () -> Unit,
     onToggleNavBar: (Boolean) -> Unit
 ) {
-    val navigator = rememberListDetailPaneScaffoldNavigator<ProfileDetailKey>()
-    val scope = rememberCoroutineScope()
+    var isArchivedVisible by rememberSaveable { mutableStateOf(false) }
 
-    val isDetailVisible =
-        navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
-    val isListVisible =
-        navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
-
-    // Hide nav bar if detail is visible and list is not (mobile detail view)
-    LaunchedEffect(isDetailVisible, isListVisible) {
-        onToggleNavBar(!(isDetailVisible && !isListVisible))
+    BackHandler(enabled = isArchivedVisible) {
+        isArchivedVisible = false
     }
 
-    NavigableListDetailPaneScaffold(
-        navigator = navigator,
-        listPane = {
-            AnimatedPane {
-                ProfileListPane(
-                    viewModel = viewModel,
-                    onLogout = onLogout,
-                    onShowArchived = {
-                        scope.launch {
-                            navigator.navigateTo(
-                                ListDetailPaneScaffoldRole.Detail,
-                                ProfileDetailKey.Archived
-                            )
-                        }
-                    }
-                )
+    LaunchedEffect(isArchivedVisible) {
+        onToggleNavBar(!isArchivedVisible)
+    }
+
+    AnimatedContent(
+        targetState = isArchivedVisible,
+        transitionSpec = {
+            if (targetState) {
+                (slideInHorizontally(initialOffsetX = { it }) + fadeIn())
+                    .togetherWith(slideOutHorizontally(targetOffsetX = { -it / 2 }) + fadeOut())
+            } else {
+                (slideInHorizontally(initialOffsetX = { -it / 2 }) + fadeIn())
+                    .togetherWith(slideOutHorizontally(targetOffsetX = { it }) + fadeOut())
             }
         },
-        detailPane = {
-            AnimatedPane {
-                val currentKey = navigator.currentDestination?.contentKey
-                AnimatedContent(
-                    targetState = currentKey,
-                    transitionSpec = {
-                        val isDualPane = isDetailVisible && isListVisible
-                        if (isDualPane) {
-                            fadeIn(animationSpec = tween(300)).togetherWith(
-                                fadeOut(
-                                    animationSpec = tween(
-                                        300
-                                    )
-                                )
-                            )
-                        } else {
-                            (slideInVertically(
-                                initialOffsetY = { it },
-                                animationSpec = tween(300)
-                            ) + fadeIn())
-                                .togetherWith(
-                                    slideOutVertically(
-                                        targetOffsetY = { it },
-                                        animationSpec = tween(300)
-                                    ) + fadeOut()
-                                )
-                        }
-                    },
-                    label = "ProfileDetailTransition"
-                ) { key ->
-                    when (key) {
-                        is ProfileDetailKey.Archived -> {
-                            ArchivedMemosScreen(
-                                viewModel = viewModel,
-                                onBack = {
-                                    scope.launch {
-                                        navigator.navigateBack()
-                                    }
-                                }
-                            )
-                        }
-
-                        null -> {
-                            if (isDetailVisible && isListVisible) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "Select an item to view details",
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.outline
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        label = "ProfileArchiveTransition"
+    ) { showArchived ->
+        if (showArchived) {
+            ArchivedMemosScreen(
+                viewModel = viewModel,
+                onBack = { isArchivedVisible = false },
+                onToggleNavBar = onToggleNavBar
+            )
+        } else {
+            ProfileListPane(
+                viewModel = viewModel,
+                onLogout = onLogout,
+                onShowArchived = { isArchivedVisible = true }
+            )
         }
-    )
+    }
 }
 
 @Composable

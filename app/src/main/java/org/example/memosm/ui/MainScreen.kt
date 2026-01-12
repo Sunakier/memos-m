@@ -147,44 +147,50 @@ fun MainScreen(
             Row(Modifier.fillMaxSize()) {
                 // Navigation Rail for tablets/desktops
                 if (!isMobile) {
-                    NavigationRail(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        contentColor = contentColorFor(MaterialTheme.colorScheme.surfaceContainer)
+                    AnimatedVisibility(
+                        visible = isNavBarVisible,
+                        enter = slideInHorizontally(initialOffsetX = { -it }),
+                        exit = slideOutHorizontally(targetOffsetX = { -it })
                     ) {
-                        Spacer(Modifier.height(12.dp))
-                        // Top items
-                        MainDestination.entries.filter { it != MainDestination.PROFILE }
-                            .forEach { destination ->
-                                NavigationRailItem(
-                                    selected = currentDestination == destination,
-                                    onClick = { handleDestinationClick(destination) },
-                                    icon = {
-                                        NavigationIcon(
-                                            destination,
-                                            currentDestination == destination
-                                        )
-                                    },
-                                    label = { Text(stringResource(destination.labelRes)) }
+                        NavigationRail(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            contentColor = contentColorFor(MaterialTheme.colorScheme.surfaceContainer)
+                        ) {
+                            Spacer(Modifier.height(12.dp))
+                            // Top items
+                            MainDestination.entries.filter { it != MainDestination.PROFILE }
+                                .forEach { destination ->
+                                    NavigationRailItem(
+                                        selected = currentDestination == destination,
+                                        onClick = { handleDestinationClick(destination) },
+                                        icon = {
+                                            NavigationIcon(
+                                                destination,
+                                                currentDestination == destination
+                                            )
+                                        },
+                                        label = { Text(stringResource(destination.labelRes)) }
+                                    )
+                                }
+
+                            Spacer(Modifier.weight(1f))
+
+                            // Bottom profile item
+                            val profile = MainDestination.PROFILE
+                            Box(
+                                modifier = Modifier
+                                    .padding(bottom = 16.dp)
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .clickable { handleDestinationClick(profile) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                NavigationIcon(
+                                    profile,
+                                    currentDestination == profile,
+                                    modifier = Modifier.fillMaxSize()
                                 )
                             }
-
-                        Spacer(Modifier.weight(1f))
-
-                        // Bottom profile item
-                        val profile = MainDestination.PROFILE
-                        Box(
-                            modifier = Modifier
-                                .padding(bottom = 16.dp)
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .clickable { handleDestinationClick(profile) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            NavigationIcon(
-                                profile,
-                                currentDestination == profile,
-                                modifier = Modifier.fillMaxSize()
-                            )
                         }
                     }
                 }
@@ -205,23 +211,23 @@ fun MainScreen(
                             when (targetDestination) {
                                 MainDestination.MEMOS -> MemosScreen(
                                     viewModel = viewModel,
-                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
+                                    onToggleNavBar = { isNavBarVisible = it }
                                 )
 
                                 MainDestination.EXPLORE -> ExploreScreen(
                                     viewModel = viewModel,
-                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
+                                    onToggleNavBar = { isNavBarVisible = it }
                                 )
 
                                 MainDestination.ATTACHMENTS -> AttachmentsScreen(
                                     viewModel = viewModel,
-                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
+                                    onToggleNavBar = { isNavBarVisible = it }
                                 )
 
                                 MainDestination.PROFILE -> ProfileScreen(
                                     viewModel = viewModel,
                                     onLogout = onLogout,
-                                    onToggleNavBar = { visible -> if (isMobile) isNavBarVisible = visible }
+                                    onToggleNavBar = { isNavBarVisible = it }
                                 )
                             }
                         }
@@ -229,7 +235,7 @@ fun MainScreen(
                 }
             }
 
-            // Bottom Navigation Bar for mobile (moved outside Row to avoid RowScope ambiguity)
+            // Bottom Navigation Bar for mobile
             if (isMobile) {
                 Box(Modifier.align(Alignment.BottomCenter)) {
                     AnimatedVisibility(

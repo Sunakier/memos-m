@@ -13,7 +13,11 @@ import org.example.memosm.viewmodel.MemosViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ArchivedMemosScreen(viewModel: MemosViewModel, onBack: () -> Unit) {
+fun ArchivedMemosScreen(
+    viewModel: MemosViewModel,
+    onBack: () -> Unit,
+    onToggleNavBar: (Boolean) -> Unit = {}
+) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
 
@@ -26,6 +30,7 @@ fun ArchivedMemosScreen(viewModel: MemosViewModel, onBack: () -> Unit) {
         viewModel = viewModel,
         memos = uiState.archivedMemos,
         listState = listState,
+        onToggleNavBar = onToggleNavBar,
         topBar = { isDetailVisible, isDualPane ->
             if (!isDetailVisible || isDualPane) {
                 TopAppBar(
