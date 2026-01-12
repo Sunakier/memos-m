@@ -915,7 +915,17 @@ fun AudioPlayer(
         if (compact) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 IconButton(
-                    onClick = { if (isPrepared) { if (isPlaying) exoPlayer.pause() else exoPlayer.play() } },
+                    onClick = { 
+                        if (isPrepared) { 
+                            if (isPlaying) exoPlayer.pause() 
+                            else {
+                                if (exoPlayer.playbackState == Player.STATE_ENDED) {
+                                    exoPlayer.seekTo(0)
+                                }
+                                exoPlayer.play() 
+                            }
+                        } 
+                    },
                     enabled = isPrepared,
                     modifier = Modifier.size(48.dp)
                 ) {
@@ -931,7 +941,18 @@ fun AudioPlayer(
             Column(modifier = Modifier.fillMaxSize().padding(8.dp), verticalArrangement = Arrangement.Center) {
                 Text(text = filename, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    IconButton(onClick = { if (isPrepared) { if (isPlaying) exoPlayer.pause() else exoPlayer.play() } }, enabled = isPrepared) {
+                    IconButton(
+                        onClick = { 
+                            if (isPrepared) { 
+                                if (isPlaying) exoPlayer.pause() 
+                                else {
+                                    if (exoPlayer.playbackState == Player.STATE_ENDED) {
+                                        exoPlayer.seekTo(0)
+                                    }
+                                    exoPlayer.play() 
+                                }
+                            } 
+                        }, enabled = isPrepared) {
                         Icon(imageVector = if (isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow, contentDescription = null)
                     }
                     Column(modifier = Modifier.weight(1f)) {
