@@ -210,7 +210,12 @@ fun AttachmentCard(
             ) {
                 val w = maxWidth.value
                 val currentIntrinsic =
-                    if (!isImage && !isVideo && isWide) 3.0f else intrinsicRatio
+                    if (!isImage && !isVideo && isWide) {
+                        // In wide mode, use a fixed height for files/audio to keep the card slim
+                        val fixedContentHeight = 100f
+                        if (w > 0) w / fixedContentHeight else 3.0f
+                    } else intrinsicRatio
+
 
                 val footerHeight =
                     if (showInfo && !isCompact && (showFilename || showActions || showSize)) 56f else 0f
