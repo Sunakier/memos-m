@@ -32,6 +32,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -105,6 +106,16 @@ fun AttachmentCard(
         displayType.startsWith("video/", ignoreCase = true) || displayType.contains("video", ignoreCase = true)
     }
 
+    var intrinsicRatio by remember {
+        mutableFloatStateOf(
+            when {
+                isAudio -> 2.0f
+                isVideo -> 1.4f
+                else -> 1.0f
+            }
+        )
+    }
+
     Card(
         modifier = modifier.clip(RoundedCornerShape(12.dp)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -121,6 +132,18 @@ fun AttachmentCard(
                 }
             }
             val showFooter = showInfo && !isCompact
+
+            // Report total ratio to parent
+            LaunchedEffect(intrinsicRatio, maxWidth, isCompact, showInfo) {
+                val totalRatio = if (showInfo && !isCompact) {
+                    val w = maxWidth.value
+                    // Approximate footer height is 56dp
+                    if (w > 0) w / (w / intrinsicRatio + 56f) else intrinsicRatio
+                } else {
+                    if (isAudio && !isVideo && !isImage) 1.0f else intrinsicRatio
+                }
+                onRatioAvailable(totalRatio)
+            }
 
             Column(modifier = Modifier.fillMaxSize()) {
                 Box(
@@ -153,7 +176,7 @@ fun AttachmentCard(
                                 isError = false
                                 val size = state.painter.intrinsicSize
                                 if (size.width > 0 && size.height > 0) {
-                                    onRatioAvailable(size.width / size.height)
+                                    intrinsicRatio = size.width / size.height
                                 }
                             },
                             onError = { isLoading = false; isError = true })
@@ -174,7 +197,7 @@ fun AttachmentCard(
                             url = attachment.externalLink,
                             token = token,
                             modifier = Modifier.fillMaxSize(),
-                            onRatioAvailable = onRatioAvailable
+                            onRatioAvailable = { intrinsicRatio = it }
                         )
                     } else if (isAudio && !attachment.externalLink.isNullOrBlank()) {
                         AudioPlayer(
@@ -186,12 +209,38 @@ fun AttachmentCard(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        Text(
-                            text = attachment.filename,
-                            style = MaterialTheme.typography.bodyLarge,
-                            maxLines = 3,
-                            modifier = Modifier.padding(16.dp)
-                        )
+                        // Unsupported media type display
+                        val fileIcon = remember(displayType) {
+                            when {
+                                displayType.contains("pdf", ignoreCase = true) -> Icons.Outlined.PictureAsPdf
+                                displayType.contains("text", ignoreCase = true) || displayType.contains("markdown", ignoreCase = true) -> Icons.Outlined.Description
+                                displayType.contains("zip", ignoreCase = true) || displayType.contains("archive", ignoreCase = true) || displayType.contains("tar", ignoreCase = true) -> Icons.Outlined.FolderZip
+                                else -> Icons.Outlined.InsertDriveFile
+                            }
+                        }
+
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = fileIcon,
+                                contentDescription = null,
+                                modifier = Modifier.size(if (isCompact) 32.dp else 48.dp),
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                            )
+                            if (!isCompact) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = attachment.filename,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
                     }
 
                     // Floating menu button for compact view
@@ -257,7 +306,7 @@ fun AttachmentCard(
                 }
 
                 if (showFooter) {
-                    Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).height(48.dp)) {
                         Text(
                             text = attachment.filename,
                             style = MaterialTheme.typography.labelSmall,

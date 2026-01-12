@@ -157,38 +157,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
                         items = uiState.attachments,
                         key = { it.name ?: it.filename }) { attachment ->
                         val key = attachment.name ?: attachment.filename
-                        val displayType = attachment.displayType
-                        val isAudio = remember(displayType) {
-                            displayType.startsWith(
-                                "audio/", ignoreCase = true
-                            ) || displayType.contains("audio", ignoreCase = true)
-                        }
-                        val isVideo = remember(displayType) {
-                            displayType.startsWith(
-                                "video/", ignoreCase = true
-                            ) || displayType.contains("video", ignoreCase = true)
-                        }
-
-                        // Use a consistent threshold for compact view across screen and card
-                        val isCompact = animatedCellWidth < 160.dp
-
-                        val contentRatio = aspectRatios[key] ?: when {
-                            isAudio -> 2.0f
-                            isVideo -> 1.4f
-                            else -> 1.0f
-                        }
-
-                        val ratio = if (isCompact) {
-                            // If compact, we typically want square for items without intrinsic ratio (like audio)
-                            if (aspectRatios[key] == null && isAudio) 1.0f else contentRatio
-                        } else {
-                            // When not compact, we add vertical space for the info bar.
-                            // The formula calculates the total ratio to preserve the content ratio
-                            // while accounting for the fixed footer height (approx 56dp).
-                            val widthDp = animatedCellWidth.value
-                            val footerHeightDp = 56f
-                            widthDp / (widthDp / contentRatio + footerHeightDp)
-                        }
+                        val ratio = aspectRatios[key] ?: 1.0f
 
                         AttachmentCard(
                             attachment = attachment,
