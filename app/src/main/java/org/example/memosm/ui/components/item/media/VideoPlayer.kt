@@ -35,12 +35,9 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
-import okhttp3.OkHttpClient
 import org.example.memosm.ui.components.item.findActivity
 
 @Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
@@ -64,12 +61,7 @@ fun VideoPlayer(
     }
 
     val exoPlayer = remember(url, token) {
-        val dataSourceFactory = DefaultDataSource.Factory(
-            context,
-            if (token != null) OkHttpDataSource.Factory(
-                OkHttpClient.Builder().build()
-            ) else DefaultDataSource.Factory(context)
-        )
+        val dataSourceFactory = MediaCache.createDataSourceFactory(context, token)
         ExoPlayer.Builder(context).setMediaSourceFactory(
             DefaultMediaSourceFactory(dataSourceFactory)
         ).build().apply {

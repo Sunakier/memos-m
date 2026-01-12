@@ -1,4 +1,5 @@
-import android.R.attr.onClick
+package org.example.memosm.ui.components.item.media
+
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
@@ -8,7 +9,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,13 +49,10 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
 import org.example.memosm.ui.components.item.mutableLongPositionOf
 import java.util.Locale
 
@@ -75,13 +72,8 @@ fun AudioPlayer(
     onPlayingStateChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
-    val exoPlayer = remember {
-        val dataSourceFactory = DefaultDataSource.Factory(
-            context,
-            if (token != null) OkHttpDataSource.Factory(
-                OkHttpClient.Builder().build()
-            ) else DefaultDataSource.Factory(context)
-        )
+    val exoPlayer = remember(url, token) {
+        val dataSourceFactory = MediaCache.createDataSourceFactory(context, token)
         ExoPlayer.Builder(context).setMediaSourceFactory(
             DefaultMediaSourceFactory(dataSourceFactory)
         ).build()
@@ -92,7 +84,7 @@ fun AudioPlayer(
     var currentPosition by mutableLongPositionOf()
     var isPrepared by remember { mutableStateOf(false) }
 
-    DisposableEffect(url) {
+    DisposableEffect(exoPlayer) {
         val mediaItem = MediaItem.fromUri(url)
         exoPlayer.setMediaItem(mediaItem)
         exoPlayer.prepare()
@@ -102,10 +94,8 @@ fun AudioPlayer(
                     isPrepared = true
                     duration = exoPlayer.duration
                 } else if (playbackState == Player.STATE_ENDED) {
-                    // Reset local states for UI
                     progress = 0f
                     currentPosition = 0
-                    // STOP auto-replay by pausing first, THEN seeking
                     exoPlayer.pause()
                     exoPlayer.seekTo(0)
                     onPlayingStateChanged(false)
@@ -183,13 +173,11 @@ fun AudioPlayer(
             else -> {
                 Column(
                     modifier = modifier
-                        .fillMaxSize() // This fills the 100.dp of the Card
-                        .padding(8.dp), // Reduced padding to give text more room
+                        .fillMaxSize()
+                        .padding(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // Use weight(1f) so the button area expands to fill available space
-                    // while leaving room for the text below
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -207,7 +195,6 @@ fun AudioPlayer(
                     }
 
                     if (mode == AudioPlayerMode.NORMAL) {
-                        // No Spacer needed if you use weight/Arrangement.Center effectively
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = filename,
@@ -220,7 +207,6 @@ fun AudioPlayer(
                 }
             }
         }
-
     }
 
     if (showContainer) {

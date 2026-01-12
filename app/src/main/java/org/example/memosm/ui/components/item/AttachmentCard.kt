@@ -1,6 +1,5 @@
 package org.example.memosm.ui.components.item
 
-import AudioPlayer
 import FullScreenImageViewer
 import android.app.Activity
 import android.app.DownloadManager
@@ -38,6 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
+import org.example.memosm.ui.components.item.media.AudioPlayer
+import org.example.memosm.ui.components.item.media.AudioPlayerMode
 import org.example.memosm.ui.components.item.media.FileThumbnail
 import org.example.memosm.ui.components.item.media.FileThumbnailMode
 import org.example.memosm.ui.components.item.media.MemoImage

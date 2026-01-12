@@ -38,6 +38,7 @@ import org.example.memosm.ui.components.ArchivedMemosScreen
 import org.example.memosm.ui.components.ErrorView
 import org.example.memosm.ui.components.composer.getVisibilityLabel
 import org.example.memosm.viewmodel.MemosViewModel
+
 private val SUPPORTED_LANGUAGES = listOf(
     "ar" to "العربية",
     "cs" to "Čeština",
@@ -73,19 +74,13 @@ private val SUPPORTED_LANGUAGES = listOf(
 )
 
 private val KAOMOJIS = listOf(
-    "(ﾉ´ з `)ノ",
-    "(o^ ^o)",
-    "(⁄ ⁄•⁄ω⁄•⁄ ⁄)",
-    "(⁄ ⁄>⁄ ▽ ⁄<⁄ ⁄)",
-    "(￣▽￣*)ゞ"
+    "(ﾉ´ з `)ノ", "(o^ ^o)", "(⁄ ⁄•⁄ω⁄•⁄ ⁄)", "(⁄ ⁄>⁄ ▽ ⁄<⁄ ⁄)", "(￣▽￣*)ゞ"
 )
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ProfileScreen(
-    viewModel: MemosViewModel,
-    onLogout: () -> Unit,
-    onToggleNavBar: (Boolean) -> Unit
+    viewModel: MemosViewModel, onLogout: () -> Unit, onToggleNavBar: (Boolean) -> Unit
 ) {
     var isArchivedVisible by rememberSaveable { mutableStateOf(false) }
 
@@ -99,30 +94,23 @@ fun ProfileScreen(
 
     SharedTransitionLayout {
         AnimatedContent(
-            targetState = isArchivedVisible,
-            transitionSpec = {
+            targetState = isArchivedVisible, transitionSpec = {
                 if (targetState) {
-                    (fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) +
-                            scaleIn(
-                                initialScale = 0.92f,
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioLowBouncy,
-                                    stiffness = Spring.StiffnessMediumLow
-                                )
-                            ))
-                        .togetherWith(fadeOut(spring(stiffness = Spring.StiffnessMediumLow)))
+                    (fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + scaleIn(
+                        initialScale = 0.92f, animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    )).togetherWith(fadeOut(spring(stiffness = Spring.StiffnessMediumLow)))
                 } else {
-                    fadeIn(spring(stiffness = Spring.StiffnessMediumLow))
-                        .togetherWith(
-                            fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) +
-                                    scaleOut(
-                                        targetScale = 0.92f,
-                                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-                                    )
+                    fadeIn(spring(stiffness = Spring.StiffnessMediumLow)).togetherWith(
+                            fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) + scaleOut(
+                                targetScale = 0.92f,
+                                animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                            )
                         )
                 }
-            },
-            label = "ProfileArchiveTransition"
+            }, label = "ProfileArchiveTransition"
         ) { showArchived ->
             if (showArchived) {
                 ArchivedMemosScreen(
@@ -134,9 +122,7 @@ fun ProfileScreen(
                         animatedVisibilityScope = this@AnimatedContent,
                         boundsTransform = { _, _ ->
                             spring(dampingRatio = 0.8f, stiffness = 380f)
-                        }
-                    )
-                )
+                        }))
             } else {
                 ProfileListPane(
                     viewModel = viewModel,
@@ -176,17 +162,13 @@ private fun ProfileListPane(
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ) {
             AccountsList(
-                accounts = accounts,
-                onSwitchAccount = {
+                accounts = accounts, onSwitchAccount = {
                     viewModel.switchAccount(it)
                     showAccountSwitcher = false
-                },
-                onRemoveAccount = { viewModel.removeAccount(it) },
-                onAddAccount = {
+                }, onRemoveAccount = { viewModel.removeAccount(it) }, onAddAccount = {
                     onLogout()
                     showAccountSwitcher = false
-                },
-                modifier = Modifier.padding(bottom = 32.dp)
+                }, modifier = Modifier.padding(bottom = 32.dp)
             )
         }
     }
@@ -219,9 +201,7 @@ private fun ProfileListPane(
                                 username = activeAccount.name ?: "",
                                 displayName = activeAccount.displayName,
                                 avatarUrl = activeAccount.avatarUrl
-                            ),
-                            onClick = { showAccountSwitcher = true }
-                        )
+                            ), onClick = { showAccountSwitcher = true })
                     } else if (uiState.isLoading) {
                         Box(
                             modifier = Modifier
@@ -250,22 +230,17 @@ private fun ProfileListPane(
                                     animatedVisibilityScope = animatedVisibilityScope,
                                     boundsTransform = { _, _ ->
                                         spring(dampingRatio = 0.8f, stiffness = 380f)
-                                    }
-                                ),
-                            onClick = onShowArchived
-                        ) {
+                                    }), onClick = onShowArchived) {
                             ListItem(
                                 headlineContent = { Text(stringResource(R.string.profile_archived)) },
                                 leadingContent = {
                                     Icon(
-                                        Icons.Outlined.Archive,
-                                        contentDescription = null
+                                        Icons.Outlined.Archive, contentDescription = null
                                     )
                                 },
                                 trailingContent = {
                                     Icon(
-                                        Icons.Outlined.ChevronRight,
-                                        contentDescription = null
+                                        Icons.Outlined.ChevronRight, contentDescription = null
                                     )
                                 },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
@@ -276,11 +251,10 @@ private fun ProfileListPane(
 
                 item {
                     SettingsCard(
-                        settings = userSettings ?: UserGeneralSetting(), 
+                        settings = userSettings ?: UserGeneralSetting(),
                         onUpdate = { locale, visibility ->
                             viewModel.updateUserGeneralSetting(locale, visibility)
-                        }
-                    )
+                        })
                 }
 
                 item {
@@ -315,14 +289,13 @@ private fun ProfileListPane(
                 item {
                     LogoutCard(onLogout)
                 }
-                
+
                 if (uiState.error != null) {
                     item {
                         ErrorView(
                             title = stringResource(R.string.common_error_failed_to_load_profile),
                             message = uiState.error!!,
-                            onRetry = { viewModel.refreshAll() }
-                        )
+                            onRetry = { viewModel.refreshAll() })
                     }
                 }
 
@@ -332,7 +305,8 @@ private fun ProfileListPane(
             } else if (!uiState.isLoading) {
                 item {
                     ErrorView(
-                        message = uiState.error ?: stringResource(R.string.profile_user_info_not_available),
+                        message = uiState.error
+                            ?: stringResource(R.string.profile_user_info_not_available),
                         onRetry = { viewModel.refreshAll() },
                         modifier = Modifier.fillParentMaxHeight(0.7f)
                     )
@@ -345,9 +319,7 @@ private fun ProfileListPane(
 @Composable
 fun ProfileHeader(user: User, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        onClick = onClick
+        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), onClick = onClick
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
             Row(
@@ -371,7 +343,9 @@ fun ProfileHeader(user: User, onClick: () -> Unit) {
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = if (!user.username.isNullOrBlank()) "@${user.username}" else stringResource(R.string.memo_unknown_user),
+                        text = if (!user.username.isNullOrBlank()) "@${user.username}" else stringResource(
+                            R.string.memo_unknown_user
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -636,8 +610,10 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
             SUPPORTED_LANGUAGES
         } else {
             SUPPORTED_LANGUAGES.filter {
-                it.second.contains(textFieldValue, ignoreCase = true) ||
-                        it.first.contains(textFieldValue, ignoreCase = true)
+                it.second.contains(textFieldValue, ignoreCase = true) || it.first.contains(
+                    textFieldValue,
+                    ignoreCase = true
+                )
             }
         }
 
@@ -657,8 +633,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                                 expanded = true
                                 val exactMatch = SUPPORTED_LANGUAGES.find { lang ->
                                     lang.second.equals(
-                                        it,
-                                        ignoreCase = true
+                                        it, ignoreCase = true
                                     )
                                 }
                                 if (exactMatch != null) {
@@ -671,16 +646,16 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                             singleLine = true,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, enabled = true),
+                                .menuAnchor(
+                                    ExposedDropdownMenuAnchorType.PrimaryEditable, enabled = true
+                                ),
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
                         )
 
                         if (filteredOptions.isNotEmpty()) {
                             ExposedDropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }
-                            ) {
+                                expanded = expanded, onDismissRequest = { expanded = false }) {
                                 filteredOptions.forEach { selectionOption ->
                                     DropdownMenuItem(
                                         text = { Text(selectionOption.second) },
@@ -876,16 +851,13 @@ fun InstanceCard(instance: InstanceProfile) {
             Spacer(modifier = Modifier.height(8.dp))
             val unknown = stringResource(R.string.memo_unknown_user)
             InfoRow(
-                stringResource(R.string.profile_instance_version),
-                instance.version ?: unknown
+                stringResource(R.string.profile_instance_version), instance.version ?: unknown
             )
             InfoRow(
-                stringResource(R.string.profile_instance_mode),
-                instance.mode ?: unknown
+                stringResource(R.string.profile_instance_mode), instance.mode ?: unknown
             )
             InfoRow(
-                stringResource(R.string.profile_instance_url),
-                instance.instanceUrl ?: unknown
+                stringResource(R.string.profile_instance_url), instance.instanceUrl ?: unknown
             )
         }
     }
@@ -920,8 +892,7 @@ fun AboutCard() {
                     .clickable {
                         Toast.makeText(context, KAOMOJIS.random(), Toast.LENGTH_SHORT).show()
                     }
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            )
+                    .padding(horizontal = 16.dp, vertical = 8.dp))
 
             val repoUrl = stringResource(R.string.profile_about_repo_url)
             val issuesUrl = stringResource(R.string.profile_about_issues_url)
@@ -929,7 +900,11 @@ fun AboutCard() {
             ListItem(
                 headlineContent = { Text(stringResource(R.string.profile_about_repo)) },
                 leadingContent = { Icon(Icons.Outlined.Code, contentDescription = null) },
-                trailingContent = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) },
+                trailingContent = {
+                    Icon(
+                        Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null
+                    )
+                },
                 modifier = Modifier.clickable {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(repoUrl))
                     context.startActivity(intent)
@@ -940,7 +915,11 @@ fun AboutCard() {
             ListItem(
                 headlineContent = { Text(stringResource(R.string.profile_about_issues)) },
                 leadingContent = { Icon(Icons.Outlined.BugReport, contentDescription = null) },
-                trailingContent = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) },
+                trailingContent = {
+                    Icon(
+                        Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null
+                    )
+                },
                 modifier = Modifier.clickable {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(issuesUrl))
                     context.startActivity(intent)
