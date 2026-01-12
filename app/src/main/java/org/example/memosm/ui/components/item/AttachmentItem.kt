@@ -111,7 +111,7 @@ fun AttachmentItem(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            Box(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
@@ -169,13 +169,16 @@ fun AttachmentItem(
                         modifier = Modifier.fillMaxSize()
                     )
                 } else if (isAudio && !attachment.externalLink.isNullOrBlank()) {
+                    val isCompact = maxWidth < 160.dp || maxHeight < 100.dp
                     AudioPlayer(
                         url = attachment.externalLink,
                         filename = attachment.filename,
                         token = token,
+                        compact = isCompact,
+                        showContainer = false,
                         modifier = Modifier
                             .padding(8.dp)
-                            .fillMaxWidth()
+                            .fillMaxSize()
                     )
                 } else {
                     Text(
@@ -480,7 +483,12 @@ fun Context.findActivity(): Activity? {
 @OptIn(UnstableApi::class)
 @Composable
 fun AudioPlayer(
-    url: String, filename: String, token: String, modifier: Modifier = Modifier
+    url: String,
+    filename: String,
+    token: String,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+    showContainer: Boolean = true
 ) {
     val context = LocalContext.current
     val exoPlayer = remember {
@@ -536,69 +544,104 @@ fun AudioPlayer(
         }
     }
 
-    Card(
-        modifier = modifier.height(100.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = filename,
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()
-            ) {
+    val content = @Composable {
+        if (compact) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                 IconButton(
                     onClick = {
                         if (isPrepared) {
-                            if (isPlaying) {
-                                exoPlayer.pause()
-                            } else {
-                                exoPlayer.play()
-                            }
+                            if (isPlaying) exoPlayer.pause() else exoPlayer.play()
                         }
-                    }, enabled = isPrepared
+                    },
+                    enabled = isPrepared,
+                    modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
                         contentDescription = if (isPlaying) stringResource(R.string.memo_action_pause) else stringResource(
                             R.string.memo_action_play
-                        )
+                        ),
+                        modifier = Modifier.size(32.dp),
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = filename,
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Slider(
-                        value = progress, onValueChange = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    IconButton(
+                        onClick = {
                             if (isPrepared) {
-                                progress = it
-                                exoPlayer.seekTo((it * duration).toLong())
+                                if (isPlaying) {
+                                    exoPlayer.pause()
+                                } else {
+                                    exoPlayer.play()
+                                }
                             }
-                        }, modifier = Modifier.height(24.dp)
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        }, enabled = isPrepared
                     ) {
-                        Text(
-                            text = formatTime(currentPosition),
-                            style = MaterialTheme.typography.labelSmall
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
+                            contentDescription = if (isPlaying) stringResource(R.string.memo_action_pause) else stringResource(
+                                R.string.memo_action_play
+                            )
                         )
-                        Text(
-                            text = formatTime(duration), style = MaterialTheme.typography.labelSmall
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Slider(
+                            value = progress, onValueChange = {
+                                if (isPrepared) {
+                                    progress = it
+                                    exoPlayer.seekTo((it * duration).toLong())
+                                }
+                            }, modifier = Modifier.height(24.dp)
                         )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = formatTime(currentPosition),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                            Text(
+                                text = formatTime(duration),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
                     }
                 }
             }
+        }
+    }
+
+    if (showContainer) {
+        Card(
+            modifier = modifier.then(if (!compact) Modifier.height(100.dp) else Modifier),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            content()
+        }
+    } else {
+        Box(modifier = modifier) {
+            content()
         }
     }
 }
