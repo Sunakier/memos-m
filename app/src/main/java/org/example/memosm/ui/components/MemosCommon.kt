@@ -298,34 +298,43 @@ fun GenericMemosListPane(
             )
         }
     ) {
-        if (isLoading && memos.isEmpty() && !isRefreshing) {
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-        } else if (uiState.error != null && memos.isEmpty()) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = uiState.error!!,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(16.dp)
-                )
-                Button(onClick = onRefresh) {
-                    Text(stringResource(R.string.profile_retry))
-                }
-            }
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize(),
-                contentPadding = contentPadding,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                header?.invoke(this)
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize(),
+            contentPadding = contentPadding,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            header?.invoke(this)
 
+            if (isLoading && memos.isEmpty() && !isRefreshing) {
+                item {
+                    Box(
+                        modifier = Modifier.fillParentMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+            } else if (uiState.error != null && memos.isEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier.fillParentMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = uiState.error!!,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        Button(onClick = onRefresh) {
+                            Text(stringResource(R.string.profile_retry))
+                        }
+                    }
+                }
+            } else {
                 items(memos, key = { it.name ?: it.content.hashCode() }) { memo ->
                     Box(
                         modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
