@@ -1,3 +1,4 @@
+import android.R.attr.onClick
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
@@ -7,10 +8,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -40,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
@@ -55,6 +59,12 @@ import okhttp3.OkHttpClient
 import org.example.memosm.ui.components.item.mutableLongPositionOf
 import java.util.Locale
 
+enum class AudioPlayerMode {
+    WIDE,
+    NORMAL,
+    COMPACT
+}
+
 @OptIn(UnstableApi::class)
 @Composable
 fun AudioPlayer(
@@ -62,7 +72,7 @@ fun AudioPlayer(
     filename: String,
     token: String,
     modifier: Modifier = Modifier,
-    compact: Boolean = false,
+    mode: AudioPlayerMode = AudioPlayerMode.NORMAL,
     showContainer: Boolean = true,
     onPlayingStateChanged: (Boolean) -> Unit = {}
 ) {
@@ -124,22 +134,8 @@ fun AudioPlayer(
     }
 
     val content = @Composable {
-        if (compact) {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                PlayPauseButton(
-                    isPlaying = isPlaying,
-                    isPrepared = isPrepared,
-                    onToggle = {
-                        if (isPrepared) {
-                            if (isPlaying) exoPlayer.pause()
-                            else exoPlayer.play()
-                        }
-                    },
-                    modifier = Modifier.size(48.dp)
-                )
-            }
-        } else {
-            Column(
+        when (mode) {
+            AudioPlayerMode.WIDE -> Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(8.dp),
@@ -187,12 +183,56 @@ fun AudioPlayer(
                     }
                 }
             }
+
+            else -> {
+                Column(
+                    modifier = modifier
+                        .fillMaxSize() // This fills the 100.dp of the Card
+                        .padding(8.dp), // Reduced padding to give text more room
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    // Use weight(1f) so the button area expands to fill available space
+                    // while leaving room for the text below
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        PlayPauseButton(
+                            isPlaying = isPlaying,
+                            isPrepared = isPrepared,
+                            onToggle = {
+                                if (isPrepared) {
+                                    if (isPlaying) exoPlayer.pause()
+                                    else exoPlayer.play()
+                                }
+                            },
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
+
+                    if (mode == AudioPlayerMode.NORMAL) {
+                        // No Spacer needed if you use weight/Arrangement.Center effectively
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = filename,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
         }
+
     }
 
     if (showContainer) {
         Card(
-            modifier = modifier.then(if (!compact) Modifier.height(100.dp) else Modifier),
+            modifier = modifier.then(if (mode != AudioPlayerMode.WIDE) Modifier.height(100.dp) else Modifier),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             shape = RoundedCornerShape(8.dp)
         ) { content() }
@@ -265,6 +305,7 @@ fun PlayPauseButton(
         }
     }
 }
+
 private fun formatTime(ms: Long): String {
     val totalSeconds = ms / 1000
     val minutes = totalSeconds / 60

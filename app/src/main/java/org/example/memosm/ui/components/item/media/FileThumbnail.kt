@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
+import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.PictureAsPdf
@@ -30,6 +31,7 @@ enum class FileType {
     PDF,
     DOCUMENT,
     ARCHIVE,
+    APK,
     GENERIC;
 
     companion object {
@@ -38,6 +40,7 @@ enum class FileType {
                 displayType.contains("pdf", ignoreCase = true) -> PDF
                 displayType.contains("text", ignoreCase = true) ||
                         displayType.contains("markdown", ignoreCase = true) -> DOCUMENT
+                displayType.contains("apk", ignoreCase = true) -> APK
                 displayType.contains("zip", ignoreCase = true) ||
                         displayType.contains("archive", ignoreCase = true) ||
                         displayType.contains("tar", ignoreCase = true) -> ARCHIVE
@@ -51,6 +54,7 @@ enum class FileType {
             PDF -> Icons.Outlined.PictureAsPdf
             DOCUMENT -> Icons.Outlined.Description
             ARCHIVE -> Icons.Outlined.FolderZip
+            APK -> Icons.Outlined.Archive
             GENERIC -> Icons.AutoMirrored.Outlined.InsertDriveFile
         }
 }

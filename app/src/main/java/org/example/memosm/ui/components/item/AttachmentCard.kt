@@ -167,7 +167,7 @@ fun AttachmentCard(
     var intrinsicRatio by remember {
         mutableFloatStateOf(
             when {
-                isAudio -> 2.0f
+                isAudio -> 1.0f
                 isVideo -> 1.777f // 16:9 as a better default for videos
                 else -> 1.0f
             }
@@ -211,18 +211,15 @@ fun AttachmentCard(
             ) {
                 val w = maxWidth.value
                 val currentIntrinsic =
-                    if (!isImage && !isVideo && !isAudio && isWide) 3.0f else intrinsicRatio
+                    if (!isImage && !isVideo && isWide) 3.0f else intrinsicRatio
 
                 val footerHeight =
                     if (showInfo && !isCompact && (showFilename || showActions || showSize)) 56f else 0f
 
-                val totalRatio = if (isAudio && !isCompact) {
-                    val h = 100f + footerHeight
-                    if (w > 0) w / h else 2.0f
-                } else if (footerHeight > 0f) {
+                val totalRatio = if (footerHeight > 0f) {
                     if (w > 0) w / (w / currentIntrinsic + footerHeight) else currentIntrinsic
                 } else {
-                    if (isAudio && !isVideo && !isImage) 1.0f else currentIntrinsic
+                    currentIntrinsic
                 }
                 onRatioAvailable(totalRatio)
             }
@@ -308,7 +305,11 @@ fun AttachmentCard(
                             url = audioUrl,
                             filename = filename,
                             token = token,
-                            compact = isCompact,
+                            mode = when {
+                                isWide -> AudioPlayerMode.WIDE
+                                isCompact -> AudioPlayerMode.COMPACT
+                                else -> AudioPlayerMode.NORMAL
+                            },
                             showContainer = false,
                             onPlayingStateChanged = { isAudioPlaying = it },
                             modifier = Modifier.fillMaxSize()
