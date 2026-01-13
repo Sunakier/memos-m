@@ -31,7 +31,7 @@ import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
 import com.mikepenz.markdown.compose.elements.highlightedCodeFence
 import com.mikepenz.markdown.compose.extendedspans.ExtendedSpans
-import com.mikepenz.markdown.compose.extendedspans.RoundedCornerSpanPainter
+//import com.mikepenz.markdown.compose.extendedspans.RoundedCornerSpanPainter
 import com.mikepenz.markdown.compose.extendedspans.SquigglyUnderlineSpanPainter
 import com.mikepenz.markdown.compose.extendedspans.rememberSquigglyUnderlineAnimator
 import com.mikepenz.markdown.m3.Markdown
@@ -75,7 +75,7 @@ fun MemoMarkdown(
             val animator = rememberSquigglyUnderlineAnimator()
             remember {
                 ExtendedSpans(
-//                    RoundedCornerSpanPainter(),
+                    RoundedCornerSpanPainter(),
 //                    SquigglyUnderlineSpanPainter(animator = animator)
                 )
             }
