@@ -75,7 +75,7 @@ fun MemoMarkdown(
             val animator = rememberSquigglyUnderlineAnimator()
             remember {
                 ExtendedSpans(
-                    RoundedCornerSpanPainter(),
+//                    RoundedCornerSpanPainter(),
 //                    SquigglyUnderlineSpanPainter(animator = animator)
                 )
             }
