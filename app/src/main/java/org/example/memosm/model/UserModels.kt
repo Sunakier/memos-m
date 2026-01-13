@@ -69,8 +69,10 @@ data class RefreshTokenResponse(
 )
 
 data class SignInRequest(
-    val passwordCredentials: PasswordCredentials? = null,
-    val ssoCredentials: SSOCredentials? = null
+//    @SerializedName("passwordCredentials") val passwordCredentials: PasswordCredentials? = null,
+//    val ssoCredentials: SSOCredentials? = null
+    val username: String,
+    val password: String
 )
 
 data class PasswordCredentials(

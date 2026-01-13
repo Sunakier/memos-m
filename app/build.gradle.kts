@@ -92,13 +92,26 @@ kotlin {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:4.28.2"
+        artifact = "com.google.protobuf:protoc:${libs.versions.protobuf.get()}"
+    }
+    plugins {
+        // Defines the gRPC plugins
+        create("grpc") {
+            artifact = "io.grpc:protoc-gen-grpc-java:${libs.versions.grpc.get()}"
+        }
+        create("grpckt") {
+            artifact = "io.grpc:protoc-gen-grpc-kotlin:${libs.versions.grpcKotlin.get()}:jdk8@jar"
+        }
     }
     generateProtoTasks {
         all().configureEach {
             builtins {
                 create("java") { option("lite") }
                 create("kotlin") { option("lite") }
+            }
+            plugins {
+                create("grpc") { option("lite") }
+                create("grpckt") { option("lite") }
             }
         }
     }
@@ -130,7 +143,12 @@ dependencies {
         exclude(group = "com.google.protobuf", module = "protobuf-java")
     }
     implementation(libs.okhttp.logging)
+
     implementation(libs.protobuf.kotlin.lite)
+    implementation(libs.grpc.okhttp)
+    implementation(libs.grpc.protobuf.lite)
+    implementation(libs.grpc.kotlin.stub)
+
     implementation(libs.google.play.services.location)
 
     implementation(libs.multiplatform.markdown.renderer.android)
