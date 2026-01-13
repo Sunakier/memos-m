@@ -74,9 +74,6 @@ android {
     }
 
     sourceSets {
-        named("main") {
-            java.srcDirs("src/main/proto")
-        }
         named("canary") {
             res.srcDirs("src/canary/res")
         }
@@ -92,36 +89,43 @@ kotlin {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:${libs.versions.protobuf.get()}"
+        // Use the full protoc artifact
+        artifact = "com.google.protobuf:protoc:4.28.2"
     }
+
     plugins {
-        // Defines the gRPC plugins
         create("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:${libs.versions.grpc.get()}"
+            artifact = "io.grpc:protoc-gen-grpc-java:1.68.1"
         }
         create("grpckt") {
-            artifact = "io.grpc:protoc-gen-grpc-kotlin:${libs.versions.grpcKotlin.get()}:jdk8@jar"
+            artifact = "io.grpc:protoc-gen-grpc-kotlin:1.4.1:jdk8@jar"
         }
     }
+
     generateProtoTasks {
         all().configureEach {
             builtins {
-                create("java") { option("lite") }
-                create("kotlin") { option("lite") }
+                create("java") // Removed .option("lite")
+                create("kotlin") // Removed .option("lite")
             }
             plugins {
-                create("grpc") { option("lite") }
-                create("grpckt") { option("lite") }
+                create("grpc") // Removed .option("lite")
+                create("grpckt") // Removed .option("lite")
             }
         }
     }
 }
 
 dependencies {
+
+    // ----------------------------
+    // Android / Compose
+    // ----------------------------
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -133,22 +137,40 @@ dependencies {
     implementation(libs.androidx.compose.material3.navigation.suite)
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
+
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
 
+    // ----------------------------
+    // REST Networking (Retrofit)
+    // ----------------------------
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
-    implementation(libs.retrofit.protobuf) {
-        exclude(group = "com.google.protobuf", module = "protobuf-java")
-    }
     implementation(libs.okhttp.logging)
 
-    implementation(libs.protobuf.kotlin.lite)
-    implementation(libs.grpc.okhttp)
-    implementation(libs.grpc.protobuf.lite)
-    implementation(libs.grpc.kotlin.stub)
+    // ----------------------------
+    // Protobuf (LITE ONLY)
+    // ----------------------------
+    implementation("com.google.protobuf:protobuf-kotlin:4.33.2")
+    implementation("com.google.api.grpc:proto-google-common-protos:2.33.0") {
+        exclude(group = "com.google.protobuf", module = "protobuf-java")
+    }
+    compileOnly("com.google.protobuf:protobuf-java:4.33.2")
 
+    // ----------------------------
+    // gRPC Kotlin (Android safe setup)
+    // ----------------------------
+    implementation("io.grpc:grpc-kotlin-stub:1.5.0")
+    implementation("io.grpc:grpc-protobuf:1.78.0")
+
+    // Transport (ONLY ONE, OkHttp is recommended)
+    implementation("io.grpc:grpc-okhttp:1.78.0")
+
+
+    // ----------------------------
+    // Other app deps
+    // ----------------------------
     implementation(libs.google.play.services.location)
 
     implementation(libs.multiplatform.markdown.renderer.android)
@@ -162,6 +184,9 @@ dependencies {
     implementation(libs.media3.common)
     implementation(libs.media3.datasource.okhttp)
 
+    // ----------------------------
+    // Tests
+    // ----------------------------
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
