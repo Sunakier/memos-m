@@ -1,6 +1,8 @@
 package org.example.memosm.ui.components.composer
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.*
@@ -59,43 +61,45 @@ fun MemoComposerDialog(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            MemoComposer(
-                onPublish = { content, visibility, attachments, location ->
-                    when {
-                        initialMemo != null -> {
-                            viewModel.updateMemo(
-                                initialMemo, content, visibility, attachments, location
-                            ) {
+            Box(modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+                MemoComposer(
+                    onPublish = { content, visibility, attachments, location ->
+                        when {
+                            initialMemo != null -> {
+                                viewModel.updateMemo(
+                                    initialMemo, content, visibility, attachments, location
+                                ) {
+                                    onDismiss()
+                                }
+                            }
+
+                            parentMemo != null -> {
+                                viewModel.createComment(parentMemo, content)
                                 onDismiss()
                             }
-                        }
 
-                        parentMemo != null -> {
-                            viewModel.createComment(parentMemo, content)
-                            onDismiss()
-                        }
-
-                        else -> {
-                            viewModel.createMemo(content, visibility, attachments, location) {
-                                onDismiss()
+                            else -> {
+                                viewModel.createMemo(content, visibility, attachments, location) {
+                                    onDismiss()
+                                }
                             }
                         }
-                    }
-                },
-                onUploadFile = { uri, context ->
-                    viewModel.uploadAttachment(uri, context)
-                },
-                availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
-                token = uiState.token,
-                isPosting = uiState.isPosting,
-                initialContent = initialMemo?.content ?: "",
-                initialVisibility = initialMemo?.visibility ?: parentMemo?.visibility
-                ?: uiState.userSettings?.memoVisibility ?: "PRIVATE",
-                initialAttachments = initialMemo?.attachments ?: emptyList(),
-                initialLocation = initialMemo?.location,
-                placeholder = placeholder,
-                autoFocus = true,
-            )
+                    },
+                    onUploadFile = { uri, context ->
+                        viewModel.uploadAttachment(uri, context)
+                    },
+                    availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
+                    token = uiState.token,
+                    isPosting = uiState.isPosting,
+                    initialContent = initialMemo?.content ?: "",
+                    initialVisibility = initialMemo?.visibility ?: parentMemo?.visibility
+                    ?: uiState.userSettings?.memoVisibility ?: "PRIVATE",
+                    initialAttachments = initialMemo?.attachments ?: emptyList(),
+                    initialLocation = initialMemo?.location,
+                    placeholder = placeholder,
+                    autoFocus = true,
+                )
+            }
         }
     }
 }

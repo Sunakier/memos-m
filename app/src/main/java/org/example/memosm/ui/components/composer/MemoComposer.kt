@@ -333,7 +333,8 @@ fun MemoComposer(
             availableTags = availableTags,
             enabled = !isPosting,
             autoFocus = autoFocus,
-            minHeightInLines = if (autoFocus) 5 else 3
+            minHeightInLines = if (autoFocus) 5 else 3,
+            maxHeightInLines = 15
         )
 
         if (draftAttachments.isNotEmpty()) {
