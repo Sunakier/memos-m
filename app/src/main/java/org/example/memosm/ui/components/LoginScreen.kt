@@ -112,7 +112,7 @@ fun LoginScreen(
                         .create(MemosApi::class.java)
 
                     try {
-                        authApi.getCurrentUserAuth()
+                        authApi.getCurrentSession()
                         onLoginSuccess(baseUrl, trimmedToken)
                     } catch (e: Exception) {
                         errorMessage =
@@ -141,7 +141,7 @@ fun LoginScreen(
                         val authApi = retrofit.newBuilder().client(authClient).build()
                             .create(MemosApi::class.java)
 
-                        authApi.getCurrentUserAuth()
+                        authApi.getCurrentSession()
                         onLoginSuccess(baseUrl, accessToken)
                     } catch (e: Exception) {
                         errorMessage =

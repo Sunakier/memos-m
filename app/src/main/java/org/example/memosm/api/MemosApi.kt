@@ -49,8 +49,8 @@ interface MemosApi {
     ): Attachment
 
     // --- AuthService ---
-    @GET("api/v1/auth/me")
-    suspend fun getCurrentUserAuth(): UserResponse
+//    @GET("api/v1/auth/me")
+//    suspend fun getCurrentUserAuth(): UserResponse
 
     @GET("api/v1/auth/sessions/current")
     suspend fun getCurrentSession(): CurrentSessionResponse

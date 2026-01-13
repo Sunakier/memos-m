@@ -398,13 +398,6 @@ class MemosViewModel(
             session.user?.let { updateUserInfo(it) }
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error fetching current session", e)
-            // Fallback to auth/me if sessions/current fails
-            try {
-                val response = api.getCurrentUserAuth()
-                response.user?.let { updateUserInfo(it) }
-            } catch (e2: Exception) {
-                Log.e("MemosViewModel", "Fallback user fetch failed", e2)
-            }
         }
     }
 
