@@ -40,37 +40,37 @@ import org.example.memosm.ui.components.composer.getVisibilityLabel
 import org.example.memosm.viewmodel.MemosViewModel
 
 private val SUPPORTED_LANGUAGES = listOf(
-    "ar" to "العربية",
-    "cs" to "Čeština",
-    "de" to "Deutsch",
-    "en" to "English",
-    "en-GB" to "British English",
-    "es" to "Español",
-    "fa" to "فارسی",
-    "fr" to "Français",
-    "hi" to "हिन्दी",
-    "hr" to "Hrvatski",
-    "hu" to "Magyar",
-    "id" to "Indonesia",
-    "it" to "Italiano",
-    "ja" to "日本語",
-    "ka" to "ქართული (საქართველო)",
-    "ko" to "한국어",
-    "mr" to "मराठी",
-    "nb" to "Norsk bokmål",
-    "nl" to "Nederlands",
-    "pl" to "Polski",
-    "pt-BR" to "Português (Brasil)",
-    "pt" to "Português europeu",
-    "ru" to "Русский",
-    "sl" to "Slovenščina",
-    "sv" to "Svenska",
-    "th" to "ไทย",
-    "tr" to "Türkçe",
-    "uk" to "Українська",
-    "vi" to "Tiếng Việt",
-    "zh-Hans" to "简体中文",
-    "zh-Hant" to "繁體中文"
+    "ar",
+    "cs",
+    "de",
+    "en",
+    "en-GB",
+    "es",
+    "fa",
+    "fr",
+    "hi",
+    "hr",
+    "hu",
+    "id",
+    "it",
+    "ja",
+    "ka",
+    "ko",
+    "mr",
+    "nb",
+    "nl",
+    "pl",
+    "pt-BR",
+    "pt",
+    "ru",
+    "sl",
+    "sv",
+    "th",
+    "tr",
+    "uk",
+    "vi",
+    "zh-Hans",
+    "zh-Hant"
 )
 
 private val KAOMOJIS = listOf(
@@ -104,11 +104,11 @@ fun ProfileScreen(
                     )).togetherWith(fadeOut(spring(stiffness = Spring.StiffnessMediumLow)))
                 } else {
                     fadeIn(spring(stiffness = Spring.StiffnessMediumLow)).togetherWith(
-                            fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) + scaleOut(
-                                targetScale = 0.92f,
-                                animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-                            )
+                        fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) + scaleOut(
+                            targetScale = 0.92f,
+                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
                         )
+                    )
                 }
             }, label = "ProfileArchiveTransition"
         ) { showArchived ->
@@ -122,7 +122,8 @@ fun ProfileScreen(
                         animatedVisibilityScope = this@AnimatedContent,
                         boundsTransform = { _, _ ->
                             spring(dampingRatio = 0.8f, stiffness = 380f)
-                        }))
+                        })
+                )
             } else {
                 ProfileListPane(
                     viewModel = viewModel,
@@ -163,12 +164,12 @@ private fun ProfileListPane(
         ) {
             AccountsList(
                 accounts = accounts, onSwitchAccount = {
-                    viewModel.switchAccount(it)
-                    showAccountSwitcher = false
-                }, onRemoveAccount = { viewModel.removeAccount(it) }, onAddAccount = {
-                    onLogout()
-                    showAccountSwitcher = false
-                }, modifier = Modifier.padding(bottom = 32.dp)
+                viewModel.switchAccount(it)
+                showAccountSwitcher = false
+            }, onRemoveAccount = { viewModel.removeAccount(it) }, onAddAccount = {
+                onLogout()
+                showAccountSwitcher = false
+            }, modifier = Modifier.padding(bottom = 32.dp)
             )
         }
     }
@@ -177,9 +178,7 @@ private fun ProfileListPane(
         modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter
     ) {
         LazyColumn(
-            modifier = Modifier
-                .widthIn(max = 600.dp)
-                .fillMaxWidth(),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 start = 16.dp,
                 top = 16.dp + WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
@@ -190,27 +189,33 @@ private fun ProfileListPane(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            val itemModifier = Modifier
+                .widthIn(max = 600.dp)
+                .fillMaxWidth()
+
             item {
-                if (user != null) {
-                    ProfileHeader(user, onClick = { showAccountSwitcher = true })
-                } else {
-                    val activeAccount = accounts.find { it.isActive }
-                    if (activeAccount != null) {
-                        ProfileHeader(
-                            User(
-                                name = activeAccount.name?.let { "users/$it" },
-                                username = activeAccount.name ?: "",
-                                displayName = activeAccount.displayName,
-                                avatarUrl = activeAccount.avatarUrl
-                            ), onClick = { showAccountSwitcher = true })
-                    } else if (uiState.isLoading) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+                Box(itemModifier) {
+                    if (user != null) {
+                        ProfileHeader(user, onClick = { showAccountSwitcher = true })
+                    } else {
+                        val activeAccount = accounts.find { it.isActive }
+                        if (activeAccount != null) {
+                            ProfileHeader(
+                                User(
+                                    name = activeAccount.name?.let { "users/$it" },
+                                    username = activeAccount.name ?: "",
+                                    displayName = activeAccount.displayName,
+                                    avatarUrl = activeAccount.avatarUrl
+                                ), onClick = { showAccountSwitcher = true })
+                        } else if (uiState.isLoading) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
                         }
                     }
                 }
@@ -218,85 +223,108 @@ private fun ProfileListPane(
 
             if (user != null || accounts.any { it.isActive }) {
                 item {
-                    StatsCard(stats)
+                    Box(itemModifier) {
+                        StatsCard(stats)
+                    }
                 }
 
                 item {
-                    with(sharedTransitionScope) {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .sharedBounds(
-                                    rememberSharedContentState(key = "archived_container"),
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    boundsTransform = { _, _ ->
-                                        spring(dampingRatio = 0.8f, stiffness = 380f)
-                                    }), onClick = onShowArchived) {
-                            ListItem(
-                                headlineContent = { Text(stringResource(R.string.profile_archived)) },
-                                leadingContent = {
-                                    Icon(
-                                        Icons.Outlined.Archive, contentDescription = null
-                                    )
-                                },
-                                trailingContent = {
-                                    Icon(
-                                        Icons.Outlined.ChevronRight, contentDescription = null
-                                    )
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                            )
+                    Box(itemModifier) {
+                        with(sharedTransitionScope) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .sharedBounds(
+                                        rememberSharedContentState(key = "archived_container"),
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        boundsTransform = { _, _ ->
+                                            spring(dampingRatio = 0.8f, stiffness = 380f)
+                                        }), onClick = onShowArchived
+                            ) {
+                                ListItem(
+                                    headlineContent = { Text(stringResource(R.string.profile_archived)) },
+                                    leadingContent = {
+                                        Icon(
+                                            Icons.Outlined.Archive, contentDescription = null
+                                        )
+                                    },
+                                    trailingContent = {
+                                        Icon(
+                                            Icons.Outlined.ChevronRight, contentDescription = null
+                                        )
+                                    },
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                                )
+                            }
                         }
                     }
                 }
 
                 item {
-                    SettingsCard(
-                        settings = userSettings ?: UserGeneralSetting(),
-                        onUpdate = { locale, visibility ->
-                            viewModel.updateUserGeneralSetting(locale, visibility)
-                        })
-                }
-
-                item {
-                    TagsCard(stats?.tagCount ?: emptyMap())
-                }
-
-                item {
-                    ShortcutsCard(shortcuts)
-                }
-
-                item {
-                    WebhooksCard(webhooks)
-                }
-
-                if (instance != null) {
-                    item {
-                        InstanceCard(instance)
+                    Box(itemModifier) {
+                        SettingsCard(
+                            settings = userSettings ?: UserGeneralSetting(),
+                            onUpdate = { locale, visibility ->
+                                viewModel.updateUserGeneralSetting(locale, visibility)
+                            })
                     }
                 }
 
                 item {
-                    AboutCard()
+                    Box(itemModifier) {
+                        TagsCard(stats?.tagCount ?: emptyMap())
+                    }
                 }
 
                 item {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
+                    Box(itemModifier) {
+                        ShortcutsCard(shortcuts)
+                    }
                 }
 
                 item {
-                    LogoutCard(onLogout)
+                    Box(itemModifier) {
+                        WebhooksCard(webhooks)
+                    }
+                }
+
+                if (instance != null) {
+                    item {
+                        Box(itemModifier) {
+                            InstanceCard(instance)
+                        }
+                    }
+                }
+
+                item {
+                    Box(itemModifier) {
+                        AboutCard()
+                    }
+                }
+
+                item {
+                    Box(itemModifier) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                    }
+                }
+
+                item {
+                    Box(itemModifier) {
+                        LogoutCard(onLogout)
+                    }
                 }
 
                 if (uiState.error != null) {
                     item {
-                        ErrorView(
-                            title = stringResource(R.string.common_error_failed_to_load_profile),
-                            message = uiState.error!!,
-                            onRetry = { viewModel.refreshAll() })
+                        Box(itemModifier) {
+                            ErrorView(
+                                title = stringResource(R.string.common_error_failed_to_load_profile),
+                                message = uiState.error!!,
+                                onRetry = { viewModel.refreshAll() })
+                        }
                     }
                 }
 
@@ -309,7 +337,7 @@ private fun ProfileListPane(
                         message = uiState.error
                             ?: stringResource(R.string.profile_user_info_not_available),
                         onRetry = { viewModel.refreshAll() },
-                        modifier = Modifier.fillParentMaxHeight(0.7f)
+                        modifier = itemModifier.fillParentMaxHeight(0.7f)
                     )
                 }
             }
@@ -611,18 +639,14 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
 
     if (showLocaleDialog) {
         var expanded by remember { mutableStateOf(false) }
-        val initialDisplayName =
-            SUPPORTED_LANGUAGES.find { it.first == tempLocale }?.second ?: tempLocale
+        val initialDisplayName = tempLocale
         var textFieldValue by remember { mutableStateOf(initialDisplayName) }
 
         val filteredOptions = if (textFieldValue.isEmpty()) {
             SUPPORTED_LANGUAGES
         } else {
             SUPPORTED_LANGUAGES.filter {
-                it.second.contains(textFieldValue, ignoreCase = true) || it.first.contains(
-                    textFieldValue,
-                    ignoreCase = true
-                )
+                it.contains(textFieldValue, ignoreCase = true)
             }
         }
 
@@ -640,16 +664,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                             onValueChange = {
                                 textFieldValue = it
                                 expanded = true
-                                val exactMatch = SUPPORTED_LANGUAGES.find { lang ->
-                                    lang.second.equals(
-                                        it, ignoreCase = true
-                                    )
-                                }
-                                if (exactMatch != null) {
-                                    tempLocale = exactMatch.first
-                                } else {
-                                    tempLocale = it
-                                }
+                                tempLocale = it
                             },
                             label = { Text(stringResource(R.string.profile_settings_locale_label)) },
                             singleLine = true,
@@ -667,10 +682,10 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                                 expanded = expanded, onDismissRequest = { expanded = false }) {
                                 filteredOptions.forEach { selectionOption ->
                                     DropdownMenuItem(
-                                        text = { Text(selectionOption.second) },
+                                        text = { Text(selectionOption) },
                                         onClick = {
-                                            textFieldValue = selectionOption.second
-                                            tempLocale = selectionOption.first
+                                            textFieldValue = selectionOption
+                                            tempLocale = selectionOption
                                             expanded = false
                                         },
                                         contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
@@ -711,8 +726,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                 headlineContent = { Text(stringResource(R.string.profile_settings_locale)) },
                 supportingContent = {
                     val displayName =
-                        SUPPORTED_LANGUAGES.find { it.first == settings.locale }?.second
-                            ?: if (settings.locale.isNullOrBlank()) stringResource(R.string.profile_settings_locale_default) else settings.locale
+                        settings.locale ?: stringResource(R.string.profile_settings_locale_default)
                     Text(
                         text = displayName,
                         style = MaterialTheme.typography.bodySmall,
@@ -792,10 +806,10 @@ fun ShortcutsCard(shortcuts: List<Shortcut>) {
                 shortcuts.forEach { shortcut ->
                     ListItem(
                         headlineContent = { Text(shortcut.title ?: "") }, leadingContent = {
-                            Icon(
-                                Icons.AutoMirrored.Outlined.Shortcut, contentDescription = null
-                            )
-                        }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        Icon(
+                            Icons.AutoMirrored.Outlined.Shortcut, contentDescription = null
+                        )
+                    }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
                 }
             }
@@ -825,22 +839,22 @@ fun WebhooksCard(webhooks: List<UserWebhook>) {
                 webhooks.forEach { webhook ->
                     ListItem(
                         headlineContent = {
-                            Text(
-                                webhook.displayName ?: webhook.name
-                                ?: stringResource(R.string.memo_unknown_user)
-                            )
-                        }, supportingContent = {
-                            Text(
-                                text = webhook.url,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1
-                            )
-                        }, leadingContent = {
-                            Icon(
-                                Icons.Outlined.Webhook, contentDescription = null
-                            )
-                        }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        Text(
+                            webhook.displayName ?: webhook.name
+                            ?: stringResource(R.string.memo_unknown_user)
+                        )
+                    }, supportingContent = {
+                        Text(
+                            text = webhook.url,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }, leadingContent = {
+                        Icon(
+                            Icons.Outlined.Webhook, contentDescription = null
+                        )
+                    }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
                 }
             }
