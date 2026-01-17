@@ -10,7 +10,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.protobuf)
     id("kotlin-parcelize")
 }
 
@@ -91,35 +90,6 @@ kotlin {
     }
 }
 
-protobuf {
-    protoc {
-        // Use the full protoc artifact
-        artifact = "com.google.protobuf:protoc:4.28.2"
-    }
-
-    plugins {
-        create("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.68.1"
-        }
-        create("grpckt") {
-            artifact = "io.grpc:protoc-gen-grpc-kotlin:1.4.1:jdk8@jar"
-        }
-    }
-
-    generateProtoTasks {
-        all().configureEach {
-            builtins {
-                create("java") // Removed .option("lite")
-                create("kotlin") // Removed .option("lite")
-            }
-            plugins {
-                create("grpc") // Removed .option("lite")
-                create("grpckt") // Removed .option("lite")
-            }
-        }
-    }
-}
-
 dependencies {
 
     // ----------------------------
@@ -152,25 +122,6 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp.logging)
-
-    // ----------------------------
-    // Protobuf (LITE ONLY)
-    // ----------------------------
-    implementation("com.google.protobuf:protobuf-kotlin:4.33.2")
-    implementation("com.google.api.grpc:proto-google-common-protos:2.33.0") {
-        exclude(group = "com.google.protobuf", module = "protobuf-java")
-    }
-    compileOnly("com.google.protobuf:protobuf-java:4.33.2")
-
-    // ----------------------------
-    // gRPC Kotlin (Android safe setup)
-    // ----------------------------
-    implementation("io.grpc:grpc-kotlin-stub:1.5.0")
-    implementation("io.grpc:grpc-protobuf:1.78.0")
-
-    // Transport (ONLY ONE, OkHttp is recommended)
-    implementation("io.grpc:grpc-okhttp:1.78.0")
-
 
     // ----------------------------
     // Other app deps
