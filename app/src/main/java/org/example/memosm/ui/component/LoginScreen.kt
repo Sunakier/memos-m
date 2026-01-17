@@ -18,19 +18,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.connectrpc.ProtocolClientConfig
-import com.connectrpc.extensions.GoogleJavaProtobufStrategy
-import com.connectrpc.impl.ProtocolClient
-import com.connectrpc.okhttp.ConnectOkHttpClient
-import com.connectrpc.protocols.NetworkProtocol
 import kotlinx.coroutines.launch
-import memos.api.v1.AuthServiceClient
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.example.memosm.R
 import org.example.memosm.api.MemosApi
-import org.example.memosm.api.loginAndCreateSession
-import org.example.memosm.model.SignInRequest
+import org.example.memosm.api.loginAndCreateToken
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -198,23 +191,20 @@ fun LoginContent(
                     }
 
                     try {
-                        val response = api.signIn(SignInRequest(username.trim(), password))
-                        val accessToken = response.accessToken
+                        // Login via Connect RPC and create access token
+                        val accessToken = loginAndCreateToken(
+                            baseUrl,
+                            username.trim(),
+                            password
+                        )
 
-                        // Verify token validity by fetching current user
-                        val verifyClient =
-                            OkHttpClient.Builder().addInterceptor(logging).addInterceptor { chain ->
-                                val request = chain.request().newBuilder()
-                                    .addHeader("Authorization", "Bearer $accessToken").build()
-                                chain.proceed(request)
-                            }.build()
-
-                        val verifyApi = retrofit.newBuilder().client(verifyClient).build()
-                            .create(MemosApi::class.java)
-
-                        verifyApi.getCurrentSession()
+                        // Log the token for testing
+                        Log.d("MemosLogin", "Login successful! Token: $accessToken")
+                        
                         onLoginSuccess(baseUrl, accessToken)
+                        
                     } catch (e: Exception) {
+                        Log.e("MemosLogin", "Login failed", e)
                         errorMessage =
                             "Login failed: ${e.localizedMessage ?: "Check your credentials"}"
                     }
