@@ -50,8 +50,7 @@ fun MemoDetailView(
     LaunchedEffect(listState) {
         var previousIndex = listState.firstVisibleItemIndex
         var previousScrollOffset = listState.firstVisibleItemScrollOffset
-        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
-            .collect { (index, offset) ->
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (index, offset) ->
                 isFabExpanded = when {
                     index == 0 && offset == 0 -> true
                     index > previousIndex -> false
@@ -76,53 +75,51 @@ fun MemoDetailView(
         tonalElevation = 1.dp
     ) {
         Scaffold(
-            contentWindowInsets = WindowInsets(0, 0, 0, 0),
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            Text(
-                                stringResource(R.string.memo_detail_title),
-                                modifier = Modifier.widthIn(max = 600.dp)
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        if (showBackButton) {
-                            IconButton(onClick = onBack) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = stringResource(R.string.memo_detail_back)
-                                )
-                            }
-                        }
-                    },
-                    // Set to empty because parent Scaffolds are already handling system bar insets
-                    windowInsets = WindowInsets(0, 0, 0, 0),
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-                )
-            }, floatingActionButton = {
-                if (uiState.currUser != null) {
-                    ExtendedFloatingActionButton(
-                        onClick = { showCommentDialog = true },
-                        expanded = isFabExpanded,
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null
-                            )
-                        },
-                        text = {
-                            Text(text = stringResource(R.string.memo_detail_add_comment))
-                        },
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            contentWindowInsets = WindowInsets(0, 0, 0, 0), topBar = {
+            TopAppBar(
+                title = {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Text(
+                        stringResource(R.string.memo_detail_title),
+                        modifier = Modifier.widthIn(max = 600.dp)
                     )
                 }
-            }, containerColor = Color.Transparent, modifier = Modifier.fillMaxSize()
+            },
+                navigationIcon = {
+                    if (showBackButton) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.memo_detail_back)
+                            )
+                        }
+                    }
+                },
+                // Set to empty because parent Scaffolds are already handling system bar insets
+                windowInsets = WindowInsets(0, 0, 0, 0),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
+        }, floatingActionButton = {
+            if (uiState.currUser != null) {
+                ExtendedFloatingActionButton(
+                    onClick = { showCommentDialog = true },
+                    expanded = isFabExpanded,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Add, contentDescription = null
+                        )
+                    },
+                    text = {
+                        Text(text = stringResource(R.string.memo_detail_add_comment))
+                    },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }, containerColor = Color.Transparent, modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
             Box(
                 modifier = Modifier

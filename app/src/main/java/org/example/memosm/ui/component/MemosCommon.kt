@@ -141,8 +141,7 @@ fun MemosScaffold(
     }
 
     Scaffold(
-        topBar = { topBar(isDetailVisible, isDualPane) }
-    ) { paddingValues ->
+        topBar = { topBar(isDetailVisible, isDualPane) }) { paddingValues ->
         NavigableListDetailPaneScaffold(
             modifier = Modifier
                 .padding(paddingValues)
@@ -164,15 +163,15 @@ fun MemosScaffold(
 
                         overlay(
                             { memo ->
-                                focusManager.clearFocus()
-                                scope.launch {
-                                    val id = memo.name ?: memo.content.hashCode().toString()
-                                    navigator.navigateTo(
-                                        ListDetailPaneScaffoldRole.Detail,
-                                        MemoKey(id, fromSearch = true)
-                                    )
-                                }
-                            },
+                            focusManager.clearFocus()
+                            scope.launch {
+                                val id = memo.name ?: memo.content.hashCode().toString()
+                                navigator.navigateTo(
+                                    ListDetailPaneScaffoldRole.Detail,
+                                    MemoKey(id, fromSearch = true)
+                                )
+                            }
+                        },
                             showSearchBar,
                             isSearchExpanded,
                             { isSearchExpanded = it },
@@ -298,12 +297,10 @@ fun GenericMemosListPane(
                     .align(Alignment.TopCenter)
                     .padding(top = 8.dp)
             )
-        }
-    ) {
+        }) {
         LazyColumn(
             state = listState,
-            modifier = Modifier
-                .fillMaxSize(),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = contentPadding,
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -313,8 +310,7 @@ fun GenericMemosListPane(
             if (isLoading && memos.isEmpty() && !isRefreshing) {
                 item {
                     Box(
-                        modifier = Modifier.fillParentMaxSize(),
-                        contentAlignment = Alignment.Center
+                        modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
                     }

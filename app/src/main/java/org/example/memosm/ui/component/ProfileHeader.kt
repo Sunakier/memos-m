@@ -45,8 +45,7 @@ fun ProfileHeader(user: User?, onClick: () -> Unit) {
                 Spacer(modifier = Modifier.width(24.dp))
                 Column {
                     Text(
-                        text = user?.displayName
-                            ?: stringResource(R.string.memo_unknown_user),
+                        text = user?.displayName ?: stringResource(R.string.memo_unknown_user),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )

@@ -123,38 +123,35 @@ fun MemoSearchBar(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .widthIn(max = 800.dp)
-                .fillMaxWidth(if (expanded) 1f else 0.9f),
-            inputField = {
-                SearchBarDefaults.InputField(
-                    query = query,
-                    onQueryChange = { query = it },
-                    onSearch = { focusManager.clearFocus() },
-                    expanded = expanded,
-                    onExpandedChange = {
-                        expanded = it
-                        onExpandedChange(it)
-                    },
-                    placeholder = { Text(placeholder) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (query.isNotEmpty() || searchSelectedTags.isNotEmpty() || startDateMillis != null || endDateMillis != null) {
-                            IconButton(onClick = {
-                                query = ""
-                                searchSelectedTags = emptySet()
-                                startDateMillis = null
-                                endDateMillis = null
-                            }) {
-                                Icon(Icons.Default.Clear, contentDescription = null)
-                            }
+                .fillMaxWidth(if (expanded) 1f else 0.9f), inputField = {
+            SearchBarDefaults.InputField(
+                query = query,
+                onQueryChange = { query = it },
+                onSearch = { focusManager.clearFocus() },
+                expanded = expanded,
+                onExpandedChange = {
+                    expanded = it
+                    onExpandedChange(it)
+                },
+                placeholder = { Text(placeholder) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (query.isNotEmpty() || searchSelectedTags.isNotEmpty() || startDateMillis != null || endDateMillis != null) {
+                        IconButton(onClick = {
+                            query = ""
+                            searchSelectedTags = emptySet()
+                            startDateMillis = null
+                            endDateMillis = null
+                        }) {
+                            Icon(Icons.Default.Clear, contentDescription = null)
                         }
-                    },
-                )
-            },
-            expanded = expanded,
-            onExpandedChange = {
-                expanded = it
-                onExpandedChange(it)
-            },
+                    }
+                },
+            )
+        }, expanded = expanded, onExpandedChange = {
+            expanded = it
+            onExpandedChange(it)
+        },
             // Reset window insets to zero since MemosScaffold already handles status bar padding
             windowInsets = WindowInsets(0, 0, 0, 0)
         ) {
@@ -188,8 +185,7 @@ fun MemoSearchBar(
                         memo.attachments ?: emptyList(),
                         memo.location
                     )
-                }
-            )
+                })
         }
     }
 }
@@ -395,9 +391,7 @@ private fun SearchResultContent(
                 contentAlignment = Alignment.CenterStart
             ) {
                 ExposedDropdownMenuBox(
-                    expanded = showSortMenu,
-                    onExpandedChange = { showSortMenu = it }
-                ) {
+                    expanded = showSortMenu, onExpandedChange = { showSortMenu = it }) {
                     val sortLabel = when (orderBy) {
                         "display_time desc" -> stringResource(R.string.search_sort_newest)
                         "display_time asc" -> stringResource(R.string.search_sort_oldest)
@@ -411,8 +405,10 @@ private fun SearchResultContent(
 
                     Surface(
                         onClick = { showSortMenu = true },
-                        modifier = Modifier
-                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true),
+                        modifier = Modifier.menuAnchor(
+                                ExposedDropdownMenuAnchorType.PrimaryNotEditable,
+                                true
+                            ),
                         shape = RoundedCornerShape(32.dp),
                         color = Color.Transparent
                     ) {
@@ -440,40 +436,31 @@ private fun SearchResultContent(
                     }
 
                     ExposedDropdownMenu(
-                        expanded = showSortMenu,
-                        onDismissRequest = { showSortMenu = false }
-                    ) {
+                        expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
                         DropdownMenuItem(
                             text = {
-                                Text(
-                                    stringResource(R.string.search_sort_newest),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Outlined.ArrowDownward,
-                                    null,
-                                    Modifier.size(18.dp)
-                                )
-                            },
-                            onClick = {
-                                onOrderByChange("display_time desc"); showSortMenu = false
-                            },
-                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            Text(
+                                stringResource(R.string.search_sort_newest),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }, leadingIcon = {
+                            Icon(
+                                Icons.Outlined.ArrowDownward, null, Modifier.size(18.dp)
+                            )
+                        }, onClick = {
+                            onOrderByChange("display_time desc"); showSortMenu = false
+                        }, contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                         )
                         DropdownMenuItem(
                             text = {
-                                Text(
-                                    stringResource(R.string.search_sort_oldest),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            },
+                            Text(
+                                stringResource(R.string.search_sort_oldest),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        },
                             leadingIcon = {
                                 Icon(
-                                    Icons.Outlined.ArrowUpward,
-                                    null,
-                                    Modifier.size(18.dp)
+                                    Icons.Outlined.ArrowUpward, null, Modifier.size(18.dp)
                                 )
                             },
                             onClick = { onOrderByChange("display_time asc"); showSortMenu = false },
@@ -530,8 +517,7 @@ private fun SearchResultContent(
                         },
                         onContentUpdate = if (isOwner) { newContent ->
                             onContentUpdate(memo, newContent)
-                        } else null
-                    )
+                        } else null)
                 }
             }
         }

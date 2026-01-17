@@ -34,12 +34,10 @@ enum class LoginMode {
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (String, String) -> Unit,
-    modifier: Modifier = Modifier
+    onLoginSuccess: (String, String) -> Unit, modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
     ) {
         LoginContent(
             onLoginSuccess = onLoginSuccess,
@@ -53,12 +51,10 @@ fun LoginScreen(
 
 @Composable
 fun LoginDialog(
-    onLoginSuccess: (String, String) -> Unit,
-    onDismiss: () -> Unit
+    onLoginSuccess: (String, String) -> Unit, onDismiss: () -> Unit
 ) {
     Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
             modifier = Modifier
@@ -71,8 +67,7 @@ fun LoginDialog(
         ) {
             Box {
                 IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier
+                    onClick = onDismiss, modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(8.dp)
                 ) {
@@ -80,8 +75,7 @@ fun LoginDialog(
                 }
 
                 LoginContent(
-                    onLoginSuccess = onLoginSuccess,
-                    modifier = Modifier.padding(24.dp)
+                    onLoginSuccess = onLoginSuccess, modifier = Modifier.padding(24.dp)
                 )
             }
         }
@@ -91,8 +85,7 @@ fun LoginDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginContent(
-    onLoginSuccess: (String, String) -> Unit,
-    modifier: Modifier = Modifier
+    onLoginSuccess: (String, String) -> Unit, modifier: Modifier = Modifier
 ) {
     var loginMode by remember { mutableStateOf(LoginMode.PASSWORD) }
     var hostUrl by remember { mutableStateOf("") }
@@ -122,8 +115,7 @@ fun LoginContent(
             if (!normalizedHost.startsWith("http")) {
                 normalizedHost = "https://$normalizedHost"
             }
-            val baseUrl =
-                if (normalizedHost.endsWith("/")) normalizedHost else "$normalizedHost/"
+            val baseUrl = if (normalizedHost.endsWith("/")) normalizedHost else "$normalizedHost/"
 
             val httpUrl = normalizedHost.toHttpUrlOrNull()
 
@@ -193,16 +185,14 @@ fun LoginContent(
                     try {
                         // Login via Connect RPC and create access token
                         val accessToken = loginAndCreateToken(
-                            baseUrl,
-                            username.trim(),
-                            password
+                            baseUrl, username.trim(), password
                         )
 
                         // Log the token for testing
                         Log.d("MemosLogin", "Login successful! Token: $accessToken")
-                        
+
                         onLoginSuccess(baseUrl, accessToken)
-                        
+
                     } catch (e: Exception) {
                         Log.e("MemosLogin", "Login failed", e)
                         errorMessage =
