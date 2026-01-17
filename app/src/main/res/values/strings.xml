@@ -46,6 +46,7 @@
 
     <string name="profile_about">About MemosM</string>
     <string name="profile_about_version">App Version</string>
+    <string name="profile_about_version_copied">Version copied to clipboard</string>
     <string name="profile_about_repo">Source Code</string>
     <string name="profile_about_repo_url" translatable="false">https://github.com/yamada-sexta/memos-m</string>
     <string name="profile_about_issues">Report an Issue</string>

@@ -1,0 +1,137 @@
+package org.example.memosm.ui.components
+
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
+import org.example.memosm.R
+import org.example.memosm.ui.nav.InfoRow
+
+private val KAOMOJIS = listOf(
+    "(ﾉ´ з `)ノ", "(o^ ^o)", "(⁄ ⁄•⁄ω⁄•⁄ ⁄)", "(⁄ ⁄>⁄ ▽ ⁄<⁄ ⁄)", "(￣▽￣*)ゞ"
+)
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun AboutAppCard() {
+    val context = LocalContext.current
+    val packageInfo = remember {
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0)
+        } catch (_: Exception) {
+            null
+        }
+    }
+    val versionName = packageInfo?.versionName ?: "1.0"
+    val versionCopiedMessage = stringResource(R.string.profile_about_version_copied)
+
+    val currentToast = remember { mutableStateOf<Toast?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            currentToast.value?.cancel()
+        }
+    }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(vertical = 16.dp)) {
+            Text(
+                stringResource(R.string.profile_about),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            InfoRow(
+                stringResource(R.string.profile_about_version),
+                versionName,
+                modifier = Modifier
+                    .combinedClickable(
+                        onClick = {
+                            currentToast.value?.cancel()
+                            val toast = Toast.makeText(context, KAOMOJIS.random(), Toast.LENGTH_SHORT)
+                            currentToast.value = toast
+                            toast.show()
+                        },
+                        onLongClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("App Version", versionName)
+                            clipboard.setPrimaryClip(clip)
+
+                            currentToast.value?.cancel()
+                            val toast = Toast.makeText(context, versionCopiedMessage, Toast.LENGTH_SHORT)
+                            currentToast.value = toast
+                            toast.show()
+                        }
+                    )
+                    .padding(horizontal = 16.dp, vertical = 8.dp))
+
+            val repoUrl = stringResource(R.string.profile_about_repo_url)
+            val issuesUrl = stringResource(R.string.profile_about_issues_url)
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.profile_about_repo)) },
+                leadingContent = { Icon(Icons.Outlined.Code, contentDescription = null) },
+                trailingContent = {
+                    Icon(
+                        Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null
+                    )
+                },
+                modifier = Modifier.combinedClickable(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, repoUrl.toUri())
+                        context.startActivity(intent)
+                    }
+                ),
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.profile_about_issues)) },
+                leadingContent = { Icon(Icons.Outlined.BugReport, contentDescription = null) },
+                trailingContent = {
+                    Icon(
+                        Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null
+                    )
+                },
+                modifier = Modifier.combinedClickable(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, issuesUrl.toUri())
+                        context.startActivity(intent)
+                    }
+                ),
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+        }
+    }
+}

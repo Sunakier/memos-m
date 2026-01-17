@@ -2,6 +2,10 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.text.SimpleDateFormat
 import java.util.Date
 
+val gitShortHash: Provider<String> = providers.exec {
+    commandLine("git", "rev-parse", "--short", "HEAD")
+}.standardOutput.asText.map { it.trim() }
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -38,7 +42,7 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
-            versionNameSuffix = "-debug"
+            versionNameSuffix = "-debug-${gitShortHash.get()}"
             manifestPlaceholders["appLabel"] = "MemosM (Debug)"
         }
         create("canary") {
@@ -50,7 +54,7 @@ android {
             applicationIdSuffix = ".canary"
             
             val timestamp = SimpleDateFormat("yyyyMMddHHmm").format(Date())
-            versionNameSuffix = "-canary-$timestamp"
+            versionNameSuffix = "-canary-$timestamp-${gitShortHash.get()}"
             
             manifestPlaceholders["appLabel"] = "MemosM"
             signingConfig = signingConfigs.getByName("release")

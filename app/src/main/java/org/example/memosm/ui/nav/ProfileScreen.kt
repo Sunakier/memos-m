@@ -34,10 +34,7 @@ import org.example.memosm.ui.components.ArchivedMemosScreen
 import org.example.memosm.ui.components.ErrorView
 import org.example.memosm.viewmodel.MemosViewModel
 import androidx.core.net.toUri
-
-private val KAOMOJIS = listOf(
-    "(ﾉ´ з `)ノ", "(o^ ^o)", "(⁄ ⁄•⁄ω⁄•⁄ ⁄)", "(⁄ ⁄>⁄ ▽ ⁄<⁄ ⁄)", "(￣▽￣*)ゞ"
-)
+import org.example.memosm.ui.components.AboutAppCard
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -440,72 +437,7 @@ fun InstanceCard(instance: InstanceProfile) {
     }
 }
 
-@Composable
-fun AboutAppCard() {
-    val context = LocalContext.current
-    val packageInfo = remember {
-        try {
-            context.packageManager.getPackageInfo(context.packageName, 0)
-        } catch (e: Exception) {
-            null
-        }
-    }
-    val versionName = packageInfo?.versionName ?: "1.0"
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(vertical = 16.dp)) {
-            Text(
-                stringResource(R.string.profile_about),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            InfoRow(
-                stringResource(R.string.profile_about_version),
-                versionName,
-                modifier = Modifier
-                    .clickable {
-                        Toast.makeText(context, KAOMOJIS.random(), Toast.LENGTH_SHORT).show()
-                    }
-                    .padding(horizontal = 16.dp, vertical = 8.dp))
-
-            val repoUrl = stringResource(R.string.profile_about_repo_url)
-            val issuesUrl = stringResource(R.string.profile_about_issues_url)
-
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.profile_about_repo)) },
-                leadingContent = { Icon(Icons.Outlined.Code, contentDescription = null) },
-                trailingContent = {
-                    Icon(
-                        Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null
-                    )
-                },
-                modifier = Modifier.clickable {
-                    val intent = Intent(Intent.ACTION_VIEW, repoUrl.toUri())
-                    context.startActivity(intent)
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
-
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.profile_about_issues)) },
-                leadingContent = { Icon(Icons.Outlined.BugReport, contentDescription = null) },
-                trailingContent = {
-                    Icon(
-                        Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null
-                    )
-                },
-                modifier = Modifier.clickable {
-                    val intent = Intent(Intent.ACTION_VIEW, issuesUrl.toUri())
-                    context.startActivity(intent)
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
-        }
-    }
-}
 
 @Composable
 fun InfoRow(label: String, value: String, modifier: Modifier = Modifier) {
