@@ -1,5 +1,7 @@
 package org.example.memosm.ui.nav
 
+import ProfileHeader
+import StatsCard
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -40,40 +42,6 @@ import org.example.memosm.ui.components.ArchivedMemosScreen
 import org.example.memosm.ui.components.ErrorView
 import org.example.memosm.ui.components.composer.getVisibilityLabel
 import org.example.memosm.viewmodel.MemosViewModel
-
-private val SUPPORTED_LANGUAGES = listOf(
-    "ar",
-    "cs",
-    "de",
-    "en",
-    "en-GB",
-    "es",
-    "fa",
-    "fr",
-    "hi",
-    "hr",
-    "hu",
-    "id",
-    "it",
-    "ja",
-    "ka",
-    "ko",
-    "mr",
-    "nb",
-    "nl",
-    "pl",
-    "pt-BR",
-    "pt",
-    "ru",
-    "sl",
-    "sv",
-    "th",
-    "tr",
-    "uk",
-    "vi",
-    "zh-Hans",
-    "zh-Hant"
-)
 
 private val KAOMOJIS = listOf(
     "(ﾉ´ з `)ノ", "(o^ ^o)", "(⁄ ⁄•⁄ω⁄•⁄ ⁄)", "(⁄ ⁄>⁄ ▽ ⁄<⁄ ⁄)", "(￣▽￣*)ゞ"
@@ -317,12 +285,6 @@ private fun ProfileListPane(
 
                 item {
                     Box(itemModifier) {
-                        TagsCard(stats?.tagCount ?: emptyMap())
-                    }
-                }
-
-                item {
-                    Box(itemModifier) {
                         ShortcutsCard(shortcuts)
                     }
                 }
@@ -390,58 +352,6 @@ private fun ProfileListPane(
     }
 }
 
-@Composable
-fun ProfileHeader(user: User, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), onClick = onClick
-    ) {
-        Column(modifier = Modifier.padding(24.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()
-            ) {
-                AsyncImage(
-                    model = user.avatarUrl,
-                    contentDescription = stringResource(R.string.profile_avatar_description),
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.width(24.dp))
-                Column {
-                    Text(
-                        text = user.displayName ?: user.username
-                        ?: stringResource(R.string.memo_unknown_user),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = if (!user.username.isNullOrBlank()) "@${user.username}" else stringResource(
-                            R.string.memo_unknown_user
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    user.name?.let { name ->
-                        val id = name.removePrefix("users/")
-                        Text(
-                            text = "${stringResource(R.string.profile_user_id)}: $id",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                    }
-                }
-            }
-            if (!user.description.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = user.description, style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun AccountsList(
@@ -524,140 +434,6 @@ fun AccountsList(
     }
 }
 
-@Composable
-fun StatsCard(stats: UserStats?) {
-    val notAvailable = stringResource(R.string.common_not_available)
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                stringResource(R.string.profile_statistics),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.Start)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // First Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                StatItem(
-                    label = stringResource(R.string.profile_stats_memos),
-                    value = stats?.totalMemoCount?.toString() ?: notAvailable,
-                    icon = Icons.AutoMirrored.Outlined.LibraryBooks,
-                    modifier = Modifier.weight(1f)
-                )
-                StatItem(
-                    label = stringResource(R.string.profile_stats_tags),
-                    value = stats?.tagCount?.size?.toString() ?: notAvailable,
-                    icon = Icons.Outlined.Tag,
-                    modifier = Modifier.weight(1f)
-                )
-                StatItem(
-                    label = stringResource(R.string.profile_stats_pinned),
-                    value = stats?.pinnedMemos?.size?.toString() ?: notAvailable,
-                    icon = Icons.Outlined.PushPin,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 16.dp, horizontal = 24.dp),
-                thickness = 0.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
-
-            // Second Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                StatItem(
-                    label = stringResource(R.string.profile_stats_links),
-                    value = stats?.memoTypeStats?.linkCount?.toString() ?: notAvailable,
-                    icon = Icons.Outlined.Link,
-                    modifier = Modifier.weight(1f)
-                )
-                StatItem(
-                    label = stringResource(R.string.profile_stats_code),
-                    value = stats?.memoTypeStats?.codeCount?.toString() ?: notAvailable,
-                    icon = Icons.Outlined.Code,
-                    modifier = Modifier.weight(1f)
-                )
-                StatItem(
-                    label = stringResource(R.string.profile_stats_todo),
-                    value = stats?.memoTypeStats?.todoCount?.toString() ?: notAvailable,
-                    icon = Icons.Outlined.TaskAlt,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun TagsCard(tagCount: Map<String, Int>) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                stringResource(R.string.profile_stats_tags),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (tagCount.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.profile_tags_no_tags),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    tagCount.forEach { (tag, count) ->
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "#$tag",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                if (count > 1) {
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = count.toString(),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                            alpha = 0.7f
-                                        )
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun StatItem(label: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
@@ -672,160 +448,6 @@ fun StatItem(label: String, value: String, icon: ImageVector, modifier: Modifier
             text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
         )
         Text(text = label, style = MaterialTheme.typography.labelSmall)
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> Unit) {
-    var showLocaleDialog by remember { mutableStateOf(false) }
-    var tempLocale by remember { mutableStateOf(settings.locale ?: "") }
-    var showVisibilityMenu by remember { mutableStateOf(false) }
-
-    if (showLocaleDialog) {
-        var expanded by remember { mutableStateOf(false) }
-        val initialDisplayName = tempLocale
-        var textFieldValue by remember { mutableStateOf(initialDisplayName) }
-
-        val filteredOptions = if (textFieldValue.isEmpty()) {
-            SUPPORTED_LANGUAGES
-        } else {
-            SUPPORTED_LANGUAGES.filter {
-                it.contains(textFieldValue, ignoreCase = true)
-            }
-        }
-
-        AlertDialog(
-            onDismissRequest = { showLocaleDialog = false },
-            title = { Text(stringResource(R.string.profile_settings_locale_edit)) },
-            text = {
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = it },
-                    ) {
-                        OutlinedTextField(
-                            value = textFieldValue,
-                            onValueChange = {
-                                textFieldValue = it
-                                expanded = true
-                                tempLocale = it
-                            },
-                            label = { Text(stringResource(R.string.profile_settings_locale_label)) },
-                            singleLine = true,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(
-                                    ExposedDropdownMenuAnchorType.PrimaryEditable, enabled = true
-                                ),
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                        )
-
-                        if (filteredOptions.isNotEmpty()) {
-                            ExposedDropdownMenu(
-                                expanded = expanded, onDismissRequest = { expanded = false }) {
-                                filteredOptions.forEach { selectionOption ->
-                                    DropdownMenuItem(
-                                        text = { Text(selectionOption) },
-                                        onClick = {
-                                            textFieldValue = selectionOption
-                                            tempLocale = selectionOption
-                                            expanded = false
-                                        },
-                                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    onUpdate(tempLocale, null)
-                    showLocaleDialog = false
-                }) {
-                    Text(stringResource(R.string.common_save))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLocaleDialog = false }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            })
-    }
-
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(vertical = 16.dp)) {
-            Text(
-                stringResource(R.string.profile_settings_general),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Locale
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.profile_settings_locale)) },
-                supportingContent = {
-                    val displayName =
-                        settings.locale ?: stringResource(R.string.profile_settings_locale_default)
-                    Text(
-                        text = displayName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                trailingContent = { Icon(Icons.Outlined.ChevronRight, contentDescription = null) },
-                modifier = Modifier.clickable {
-                    tempLocale = settings.locale ?: ""
-                    showLocaleDialog = true
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Memo Visibility
-            Box {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.profile_settings_visibility)) },
-                    supportingContent = {
-                        Text(
-                            text = if (settings.memoVisibility.isNullOrBlank()) getVisibilityLabel("PRIVATE") else getVisibilityLabel(
-                                settings.memoVisibility
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    trailingContent = {
-                        Icon(
-                            Icons.Outlined.ArrowDropDown, contentDescription = null
-                        )
-                    },
-                    modifier = Modifier.clickable { showVisibilityMenu = true },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                )
-
-                DropdownMenu(
-                    expanded = showVisibilityMenu,
-                    onDismissRequest = { showVisibilityMenu = false },
-                    modifier = Modifier.align(Alignment.BottomEnd)
-                ) {
-                    listOf("PRIVATE", "PROTECTED", "PUBLIC").forEach { visibility ->
-                        DropdownMenuItem(
-                            text = { Text(getVisibilityLabel(visibility)) },
-                            onClick = {
-                                onUpdate(null, visibility)
-                                showVisibilityMenu = false
-                            })
-                    }
-                }
-            }
-        }
     }
 }
 
