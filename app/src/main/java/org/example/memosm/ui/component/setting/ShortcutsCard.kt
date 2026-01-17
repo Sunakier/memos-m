@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.Shortcut
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
@@ -46,7 +47,7 @@ fun ShortcutsCard(
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = { showCreateDialog = true }, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.profile_shortcuts_add))
+                    Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.profile_shortcuts_add))
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -168,7 +169,6 @@ fun ShortcutEditDialog(
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
                 }
-                
                 OutlinedTextField(
                     value = titleText,
                     onValueChange = { 

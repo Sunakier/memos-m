@@ -64,7 +64,8 @@ data class MemosUiState(
     val isDraftLoaded: Boolean = false,
     val composerResetToken: Int = 0,
     // Filter state
-    val selectedTags: Set<String> = emptySet(),
+//    val selectedTags: Set<String> = emptySet(),
+    val selectedShortcut: Shortcut? = null,
     // Multi-account state
     val accounts: List<Account> = emptyList()
 )
@@ -223,6 +224,26 @@ class MemosViewModel(
         }
     }
 
+    private fun buildMemosFilter(): String? {
+        val filters = mutableListOf<String>()
+        _uiState.value.currUser?.name?.let { creatorName ->
+            val creatorId = creatorName.removePrefix("users/")
+            filters.add("creator_id == $creatorId")
+        }
+        
+//        if (_uiState.value.selectedTags.isNotEmpty()) {
+//            filters.add(_uiState.value.selectedTags.joinToString(" && ") { "tag in [\"$it\"]" })
+//        }
+
+        _uiState.value.selectedShortcut?.filter?.let { shortcutFilter ->
+            if (shortcutFilter.isNotBlank()) {
+                filters.add("($shortcutFilter)")
+            }
+        }
+        
+        return if (filters.isNotEmpty()) filters.joinToString(" && ") else null
+    }
+
     fun refreshAll() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -235,18 +256,8 @@ class MemosViewModel(
                 // Fetch current user details first to ensure we have the creator filter
                 fetchCurrentUser()
 
-                // Fetch memos with creator filter
-                val filters = mutableListOf<String>()
-                _uiState.value.currUser?.name?.let { creatorName ->
-                    val creatorId = creatorName.removePrefix("users/")
-                    filters.add("creator_id == $creatorId")
-                }
-                
-                if (_uiState.value.selectedTags.isNotEmpty()) {
-                    filters.add(_uiState.value.selectedTags.joinToString(" && ") { "tag in [\"$it\"]" })
-                }
-                
-                val filter = if (filters.isNotEmpty()) filters.joinToString(" && ") else null
+                // Fetch memos with current filter
+                val filter = buildMemosFilter()
                 
                 val memoResponse = api.listMemos(filter = filter, pageSize = DEFAULT_PAGE_SIZE)
                 val newMemos = memoResponse.memos?.map { processMemo(it) } ?: emptyList()
@@ -464,17 +475,7 @@ class MemosViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val filters = mutableListOf<String>()
-                _uiState.value.currUser?.name?.let { creatorName ->
-                    val creatorId = creatorName.removePrefix("users/")
-                    filters.add("creator_id == $creatorId")
-                }
-                
-                if (_uiState.value.selectedTags.isNotEmpty()) {
-                    filters.add(_uiState.value.selectedTags.joinToString(" && ") { "tag in [\"$it\"]" })
-                }
-                
-                val filter = if (filters.isNotEmpty()) filters.joinToString(" && ") else null
+                val filter = buildMemosFilter()
                 
                 val response = api.listMemos(pageToken = currentToken, filter = filter, pageSize = DEFAULT_PAGE_SIZE)
                 val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
@@ -672,10 +673,10 @@ class MemosViewModel(
         }
     }
 
-    fun toggleTagFilter(tag: String) {
-        val current = _uiState.value.selectedTags
-        val next = if (tag in current) current - tag else current + tag
-        _uiState.value = _uiState.value.copy(selectedTags = next)
+    fun toggleShortcutFilter(shortcut: Shortcut) {
+        val current = _uiState.value.selectedShortcut
+        val next = if (current?.name == shortcut.name) null else shortcut
+        _uiState.value = _uiState.value.copy(selectedShortcut = next)
         refreshAll()
     }
 

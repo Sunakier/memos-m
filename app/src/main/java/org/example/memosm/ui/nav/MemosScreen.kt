@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Shortcut
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -50,9 +52,7 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit = {
         onToggleNavBar = onToggleNavBar,
         listPane = { onMemoClick ->
             MemosListPane(
-                viewModel = viewModel,
-                listState = listState,
-                onMemoClick = onMemoClick
+                viewModel = viewModel, listState = listState, onMemoClick = onMemoClick
             )
         },
         overlay = { onMemoClick, showSearchBar, isSearchExpanded, onSearchExpandedChange, isDualPane, isDetailVisible ->
@@ -60,26 +60,22 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit = {
                 visible = showSearchBar && (!isSearchExpanded || isDualPane || !isDetailVisible),
                 enter = slideInVertically { -it } + fadeIn(),
                 exit = slideOutVertically { -it } + fadeOut(),
-                modifier = Modifier.align(Alignment.TopCenter)
-            ) {
+                modifier = Modifier.align(Alignment.TopCenter)) {
                 MemoSearchBar(
                     viewModel = viewModel,
                     onMemoClick = onMemoClick,
                     onExpandedChange = onSearchExpandedChange
                 )
             }
-        }
-    )
+        })
 }
 
 @Composable
 private fun MemosListPane(
-    viewModel: MemosViewModel,
-    listState: LazyListState,
-    onMemoClick: (Memo) -> Unit
+    viewModel: MemosViewModel, listState: LazyListState, onMemoClick: (Memo) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val tagListState = rememberLazyListState()
+    val shortcutListState = rememberLazyListState()
 
     GenericMemosListPane(
         viewModel = viewModel,
@@ -102,10 +98,10 @@ private fun MemosListPane(
                         Card(modifier = Modifier.widthIn(max = 800.dp)) {
                             MemoComposer(
                                 onPublish = { content, visibility, attachments, location ->
-                                    viewModel.createMemo(
-                                        content, visibility, attachments, location
-                                    )
-                                },
+                                viewModel.createMemo(
+                                    content, visibility, attachments, location
+                                )
+                            },
                                 onUploadFile = { uri, context ->
                                     viewModel.uploadAttachment(uri, context)
                                 },
@@ -131,20 +127,15 @@ private fun MemosListPane(
                 }
             }
 
-            // Horizontal Tag Row
-            val tagMap = uiState.userStats?.tagCount ?: emptyMap()
-            item(key = "tag_row") {
+            // Horizontal Shortcut Row
+            item(key = "shortcut_row") {
                 AnimatedVisibility(
-                    visible = tagMap.isNotEmpty(),
+                    visible = uiState.shortcuts.isNotEmpty(),
                     enter = fadeIn() + expandVertically(),
                     exit = fadeOut() + shrinkVertically()
                 ) {
-                    val sortedTags = remember(tagMap) {
-                        tagMap.keys.toList().sortedByDescending { tagMap[it] ?: 0 }
-                    }
-
                     LazyRow(
-                        state = tagListState,
+                        state = shortcutListState,
                         modifier = Modifier
                             .fillMaxWidth()
                             .graphicsLayer {
@@ -158,37 +149,29 @@ private fun MemosListPane(
                                 val endGradient = Brush.horizontalGradient(
                                     0.85f to Color.Black, 1f to Color.Transparent
                                 )
-                                if (tagListState.canScrollBackward) {
+                                if (shortcutListState.canScrollBackward) {
                                     drawRect(brush = startGradient, blendMode = BlendMode.DstIn)
                                 }
-                                if (tagListState.canScrollForward) {
+                                if (shortcutListState.canScrollForward) {
                                     drawRect(brush = endGradient, blendMode = BlendMode.DstIn)
                                 }
                             },
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        items(sortedTags, key = { it }) { tag ->
-                            val count = tagMap[tag] ?: 0
-                            val isSelected = tag in uiState.selectedTags
+                        items(uiState.shortcuts, key = { it.name ?: it.title ?: "" }) { shortcut ->
+                            val isSelected = uiState.selectedShortcut?.name == shortcut.name
                             FilterChip(
                                 selected = isSelected,
-                                onClick = { viewModel.toggleTagFilter(tag) },
+                                onClick = { viewModel.toggleShortcutFilter(shortcut) },
                                 label = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("#$tag")
-                                        if (count > 0) {
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text(
-                                                text = count.toString(),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(
-                                                    alpha = 0.7f
-                                                )
-                                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                    alpha = 0.7f
-                                                )
-                                            )
-                                        }
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Outlined.Shortcut,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(shortcut.title ?: "")
                                     }
                                 },
                                 shape = RoundedCornerShape(16.dp),
@@ -205,6 +188,5 @@ private fun MemosListPane(
                     }
                 }
             }
-        }
-    )
+        })
 }
