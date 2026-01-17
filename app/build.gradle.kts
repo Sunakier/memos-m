@@ -78,6 +78,9 @@ android {
     }
 
     sourceSets {
+        named("main") {
+            java.srcDir("build/bufbuild/generated/java")
+        }
         named("canary") {
             res.srcDirs("src/canary/res")
         }
@@ -85,7 +88,7 @@ android {
 }
 
 buf {
-    configFileLocation = rootProject.file("buf.yaml")
+    configFileLocation = file("buf.yaml")
     generate {
         includeImports = true
     }
@@ -142,6 +145,7 @@ dependencies {
     // Java specific dependencies.
     implementation("com.connectrpc:connect-kotlin-google-java-ext:0.7.4")
     implementation("com.google.protobuf:protobuf-java:4.33.4")
+    implementation(libs.google.common.protos)
 
     // ----------------------------
     // Other app deps

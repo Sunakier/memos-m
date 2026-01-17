@@ -18,6 +18,7 @@ playServicesLocation = "21.3.0"
 multiplatformMarkdownRenderer = "0.39.0"
 media3 = "1.9.0"
 buf = "0.10.3"
+googleCommonProtos = "2.63.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -58,6 +59,8 @@ media3-exoplayer-dash = { group = "androidx.media3", name = "media3-exoplayer-da
 media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 media3-common = { group = "androidx.media3", name = "media3-common", version.ref = "media3" }
 media3-datasource-okhttp = { group = "androidx.media3", name = "media3-datasource-okhttp", version.ref = "media3" }
+
+google-common-protos = { group = "com.google.api.grpc", name = "proto-google-common-protos", version.ref = "googleCommonProtos" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

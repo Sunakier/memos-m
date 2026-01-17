@@ -18,11 +18,18 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.connectrpc.ProtocolClientConfig
+import com.connectrpc.extensions.GoogleJavaProtobufStrategy
+import com.connectrpc.impl.ProtocolClient
+import com.connectrpc.okhttp.ConnectOkHttpClient
+import com.connectrpc.protocols.NetworkProtocol
 import kotlinx.coroutines.launch
+import memos.api.v1.AuthServiceClient
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.example.memosm.R
 import org.example.memosm.api.MemosApi
+import org.example.memosm.api.loginAndCreateSession
 import org.example.memosm.model.SignInRequest
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -78,7 +85,7 @@ fun LoginDialog(
                 ) {
                     Icon(Icons.Default.Close, contentDescription = "Close")
                 }
-                
+
                 LoginContent(
                     onLoginSuccess = onLoginSuccess,
                     modifier = Modifier.padding(24.dp)
@@ -183,7 +190,7 @@ fun LoginContent(
                             "Invalid token: ${e.localizedMessage ?: "Verification failed"}"
                     }
                 } else {
-                    // Password login via REST
+                    // Password login via Connect RPC
                     if (username.isBlank() || password.isBlank()) {
                         errorMessage = "Username and password cannot be empty"
                         isLoading = false
@@ -195,17 +202,17 @@ fun LoginContent(
                         val accessToken = response.accessToken
 
                         // Verify token validity by fetching current user
-                        val authClient =
+                        val verifyClient =
                             OkHttpClient.Builder().addInterceptor(logging).addInterceptor { chain ->
                                 val request = chain.request().newBuilder()
                                     .addHeader("Authorization", "Bearer $accessToken").build()
                                 chain.proceed(request)
                             }.build()
 
-                        val authApi = retrofit.newBuilder().client(authClient).build()
+                        val verifyApi = retrofit.newBuilder().client(verifyClient).build()
                             .create(MemosApi::class.java)
 
-                        authApi.getCurrentSession()
+                        verifyApi.getCurrentSession()
                         onLoginSuccess(baseUrl, accessToken)
                     } catch (e: Exception) {
                         errorMessage =

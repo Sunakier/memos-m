@@ -3,4 +3,4 @@ plugins:
   - remote: buf.build/protocolbuffers/java
     out: java
   - remote: buf.build/connectrpc/kotlin
-    out: kotlin
+    out: java
