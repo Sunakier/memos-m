@@ -43,7 +43,10 @@ fun LoginScreen(
     ) {
         LoginContent(
             onLoginSuccess = onLoginSuccess,
-            modifier = Modifier.padding(top = 64.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp)
+                .padding(top = 64.dp, bottom = 24.dp)
         )
     }
 }
