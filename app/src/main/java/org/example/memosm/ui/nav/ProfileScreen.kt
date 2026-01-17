@@ -12,12 +12,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -130,7 +132,8 @@ fun ProfileScreen(
                     onLogout = onLogout,
                     onShowArchived = { isArchivedVisible = true },
                     animatedVisibilityScope = this@AnimatedContent,
-                    sharedTransitionScope = this@SharedTransitionLayout
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    onToggleNavBar = onToggleNavBar
                 )
             }
         }
@@ -144,7 +147,8 @@ private fun ProfileListPane(
     onLogout: () -> Unit,
     onShowArchived: () -> Unit,
     animatedVisibilityScope: AnimatedVisibilityScope,
-    sharedTransitionScope: SharedTransitionScope
+    sharedTransitionScope: SharedTransitionScope,
+    onToggleNavBar: (Boolean) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val user = uiState.currUser
@@ -155,6 +159,44 @@ private fun ProfileListPane(
     val userSettings = uiState.userSettings
     val accounts = uiState.accounts
 
+    val listState = rememberLazyListState()
+
+    // Scroll direction tracking for nav bar visibility
+    var isScrollingDown by remember { mutableStateOf(false) }
+    var previousIndex by remember { mutableIntStateOf(0) }
+    var previousScrollOffset by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (currentIndex, currentOffset) ->
+            val wasScrollingDown = isScrollingDown
+            if (currentIndex > previousIndex) {
+                isScrollingDown = true
+            } else if (currentIndex < previousIndex) {
+                isScrollingDown = false
+            } else if (currentOffset > previousScrollOffset + 10) {
+                isScrollingDown = true
+            } else if (currentOffset < previousScrollOffset - 10) {
+                isScrollingDown = false
+            }
+
+            if (wasScrollingDown != isScrollingDown || currentIndex == 0) {
+                onToggleNavBar(!isScrollingDown || currentIndex == 0)
+            }
+
+            previousIndex = currentIndex
+            previousScrollOffset = currentOffset
+        }
+    }
+
+    // Double tap refresh logic: scroll to top
+    var lastProcessedTrigger by rememberSaveable { mutableLongStateOf(uiState.refreshTrigger) }
+    LaunchedEffect(uiState.refreshTrigger) {
+        if (uiState.refreshTrigger > lastProcessedTrigger) {
+            listState.animateScrollToItem(0)
+        }
+        lastProcessedTrigger = uiState.refreshTrigger
+    }
+
     var showAccountSwitcher by remember { mutableStateOf(false) }
 
     if (showAccountSwitcher) {
@@ -164,20 +206,23 @@ private fun ProfileListPane(
         ) {
             AccountsList(
                 accounts = accounts, onSwitchAccount = {
-                viewModel.switchAccount(it)
-                showAccountSwitcher = false
-            }, onRemoveAccount = { viewModel.removeAccount(it) }, onAddAccount = {
-                onLogout()
-                showAccountSwitcher = false
-            }, modifier = Modifier.padding(bottom = 32.dp)
+                    viewModel.switchAccount(it)
+                    showAccountSwitcher = false
+                }, onRemoveAccount = { viewModel.removeAccount(it) }, onAddAccount = {
+                    onLogout()
+                    showAccountSwitcher = false
+                }, modifier = Modifier.padding(bottom = 32.dp)
             )
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter
+    PullToRefreshBox(
+        isRefreshing = uiState.isRefreshing,
+        onRefresh = { viewModel.refreshAll() },
+        modifier = Modifier.fillMaxSize()
     ) {
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 start = 16.dp,
@@ -806,10 +851,10 @@ fun ShortcutsCard(shortcuts: List<Shortcut>) {
                 shortcuts.forEach { shortcut ->
                     ListItem(
                         headlineContent = { Text(shortcut.title ?: "") }, leadingContent = {
-                        Icon(
-                            Icons.AutoMirrored.Outlined.Shortcut, contentDescription = null
-                        )
-                    }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                            Icon(
+                                Icons.AutoMirrored.Outlined.Shortcut, contentDescription = null
+                            )
+                        }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
                 }
             }
@@ -839,22 +884,22 @@ fun WebhooksCard(webhooks: List<UserWebhook>) {
                 webhooks.forEach { webhook ->
                     ListItem(
                         headlineContent = {
-                        Text(
-                            webhook.displayName ?: webhook.name
-                            ?: stringResource(R.string.memo_unknown_user)
-                        )
-                    }, supportingContent = {
-                        Text(
-                            text = webhook.url,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1
-                        )
-                    }, leadingContent = {
-                        Icon(
-                            Icons.Outlined.Webhook, contentDescription = null
-                        )
-                    }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                            Text(
+                                webhook.displayName ?: webhook.name
+                                ?: stringResource(R.string.memo_unknown_user)
+                            )
+                        }, supportingContent = {
+                            Text(
+                                text = webhook.url,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }, leadingContent = {
+                            Icon(
+                                Icons.Outlined.Webhook, contentDescription = null
+                            )
+                        }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
                 }
             }
