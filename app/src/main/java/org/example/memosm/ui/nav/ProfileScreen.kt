@@ -3,14 +3,12 @@ package org.example.memosm.ui.nav
 import AccountsList
 import ProfileHeader
 import SettingsCard
+import ShortcutsCard
 import StatsCard
-import android.content.Intent
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -24,7 +22,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,8 +30,7 @@ import org.example.memosm.model.*
 import org.example.memosm.ui.components.ArchivedMemosScreen
 import org.example.memosm.ui.components.ErrorView
 import org.example.memosm.viewmodel.MemosViewModel
-import androidx.core.net.toUri
-import org.example.memosm.ui.components.AboutAppCard
+import org.example.memosm.ui.components.settings.AboutAppCard
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -335,38 +331,6 @@ private fun ProfileListPane(
 
 
 
-@Composable
-fun ShortcutsCard(shortcuts: List<Shortcut>) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                stringResource(R.string.profile_shortcuts),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (shortcuts.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.profile_shortcuts_none),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            } else {
-                shortcuts.forEach { shortcut ->
-                    ListItem(
-                        headlineContent = { Text(shortcut.title ?: "") }, leadingContent = {
-                            Icon(
-                                Icons.AutoMirrored.Outlined.Shortcut, contentDescription = null
-                            )
-                        }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                    )
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun WebhooksCard(webhooks: List<UserWebhook>) {
