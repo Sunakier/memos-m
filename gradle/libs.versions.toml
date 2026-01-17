@@ -17,6 +17,7 @@ coil = "3.3.0"
 playServicesLocation = "21.3.0"
 multiplatformMarkdownRenderer = "0.39.0"
 media3 = "1.9.0"
+buf = "0.10.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -62,3 +63,4 @@ media3-datasource-okhttp = { group = "androidx.media3", name = "media3-datasourc
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+buf = { id = "build.buf", version.ref = "buf" }

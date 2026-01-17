@@ -1,6 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.text.SimpleDateFormat
 import java.util.Date
+import build.buf.gradle.BUF_GENERATED_DIR
 
 val gitShortHash: Provider<String> = providers.exec {
     commandLine("git", "rev-parse", "--short", "HEAD")
@@ -10,6 +11,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.buf)
     id("kotlin-parcelize")
 }
 
@@ -77,10 +79,28 @@ android {
     }
 
     sourceSets {
+        named("main") {
+            proto {
+                srcDir("../proto")
+            }
+            java.srcDir(layout.buildDirectory.dir("$BUF_GENERATED_DIR/java"))
+            kotlin.srcDir(layout.buildDirectory.dir("$BUF_GENERATED_DIR/kotlin"))
+        }
         named("canary") {
             res.srcDirs("src/canary/res")
         }
     }
+}
+
+buf {
+    configFileLocation = rootProject.file("buf.yaml")
+    generate {
+        includeImports = true
+    }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    dependsOn("bufGenerate")
 }
 
 kotlin {
@@ -122,6 +142,13 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp.logging)
+
+    // ----------------------------
+    // Protobuf dependencies (example)
+    // ----------------------------
+    implementation("com.google.protobuf:protobuf-kotlin:4.29.3")
+    implementation("io.grpc:grpc-kotlin-stub:1.4.1")
+    implementation("io.grpc:grpc-protobuf:1.70.0")
 
     // ----------------------------
     // Other app deps
