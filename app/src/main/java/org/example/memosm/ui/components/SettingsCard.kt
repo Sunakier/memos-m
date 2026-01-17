@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.model.UserGeneralSetting
 import org.example.memosm.ui.components.composer.getVisibilityLabel
-//import org.example.memosm.ui.nav.SUPPORTED_LANGUAGES
 
 val SUPPORTED_LANGUAGES = listOf(
     "ar",
