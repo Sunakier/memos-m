@@ -90,7 +90,7 @@ android {
 buf {
     configFileLocation = file("buf.yaml")
     generate {
-        includeImports = true
+        includeImports = false
     }
 }
 
