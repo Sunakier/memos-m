@@ -1,12 +1,9 @@
 package org.example.memosm.ui.component.setting
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material.icons.automirrored.outlined.Shortcut
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
@@ -17,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
@@ -50,7 +48,7 @@ fun ShortcutsCard(
                     Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.profile_shortcuts_add))
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             if (shortcuts.isEmpty()) {
                 Text(
@@ -60,39 +58,50 @@ fun ShortcutsCard(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             } else {
-                shortcuts.forEach { shortcut ->
-                    ListItem(
-                        headlineContent = { Text(shortcut.title ?: "") },
-                        supportingContent = { 
+                shortcuts.forEachIndexed { index, shortcut ->
+                    if (index > 0) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 4.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                shortcut.filter ?: "", 
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1
-                            ) 
-                        },
-                        leadingContent = {
-                            Icon(
-                                Icons.AutoMirrored.Outlined.Shortcut, contentDescription = null
+                                text = shortcut.title ?: "",
+                                style = MaterialTheme.typography.bodyLarge
                             )
-                        },
-                        trailingContent = {
-                            Row {
-                                IconButton(onClick = { showEditDialog = shortcut }) {
-                                    Icon(Icons.Outlined.Edit, contentDescription = stringResource(R.string.memo_action_edit))
-                                }
-                                IconButton(onClick = { showDeleteConfirm = shortcut }) {
-                                    Icon(
-                                        Icons.Outlined.Delete, 
-                                        contentDescription = stringResource(R.string.memo_action_delete),
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                    )
+                            Text(
+                                text = shortcut.filter ?: "",
+                                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                        IconButton(onClick = { showEditDialog = shortcut }) {
+                            Icon(
+                                Icons.Outlined.Edit,
+                                contentDescription = stringResource(R.string.memo_action_edit),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        IconButton(onClick = { showDeleteConfirm = shortcut }) {
+                            Icon(
+                                Icons.Outlined.Delete,
+                                contentDescription = stringResource(R.string.memo_action_delete),
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
             }
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 
