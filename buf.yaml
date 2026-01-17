@@ -6,4 +6,4 @@ lint:
     - DEFAULT
 breaking:
   use:
-    - DEFAULT
+    - FILE

@@ -2,9 +2,5 @@ version: v2
 plugins:
   - remote: buf.build/protocolbuffers/java
     out: java
-  - remote: buf.build/protocolbuffers/kotlin
-    out: kotlin
-  - remote: buf.build/grpc/java
-    out: java
-  - remote: buf.build/grpc/kotlin
+  - remote: buf.build/connectrpc/kotlin
     out: kotlin

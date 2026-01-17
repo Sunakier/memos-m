@@ -1,7 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.text.SimpleDateFormat
 import java.util.Date
-import build.buf.gradle.BUF_GENERATED_DIR
 
 val gitShortHash: Provider<String> = providers.exec {
     commandLine("git", "rev-parse", "--short", "HEAD")
@@ -79,13 +78,6 @@ android {
     }
 
     sourceSets {
-        named("main") {
-            proto {
-                srcDir("../proto")
-            }
-            java.srcDir(layout.buildDirectory.dir("$BUF_GENERATED_DIR/java"))
-            kotlin.srcDir(layout.buildDirectory.dir("$BUF_GENERATED_DIR/kotlin"))
-        }
         named("canary") {
             res.srcDirs("src/canary/res")
         }
@@ -144,11 +136,12 @@ dependencies {
     implementation(libs.okhttp.logging)
 
     // ----------------------------
-    // Protobuf dependencies (example)
+    // Connect RPC / Protobuf dependencies
     // ----------------------------
-    implementation("com.google.protobuf:protobuf-kotlin:4.29.3")
-    implementation("io.grpc:grpc-kotlin-stub:1.4.1")
-    implementation("io.grpc:grpc-protobuf:1.70.0")
+    implementation("com.connectrpc:connect-kotlin-okhttp:0.7.4")
+    // Java specific dependencies.
+    implementation("com.connectrpc:connect-kotlin-google-java-ext:0.7.4")
+    implementation("com.google.protobuf:protobuf-java:4.33.4")
 
     // ----------------------------
     // Other app deps
