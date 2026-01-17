@@ -33,6 +33,7 @@ fun MemoDetailView(
     comments: List<Memo>,
     isLoadingComments: Boolean,
     token: String,
+    hostUrl: String = "",
     showBackButton: Boolean,
     onBack: () -> Unit,
     viewModel: MemosViewModel,
@@ -146,6 +147,7 @@ fun MemoDetailView(
                             user = uiState.users[memo.creator],
                             currentUser = uiState.currUser,
                             token = token,
+                            hostUrl = hostUrl,
                             colors = CardDefaults.cardColors(),
                             onEdit = if (isOwner) {
                                 { memoToEdit = memo }
@@ -235,6 +237,7 @@ fun MemoDetailView(
                             user = uiState.users[comment.creator],
                             currentUser = uiState.currUser,
                             token = token,
+                            hostUrl = hostUrl,
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
                             ),

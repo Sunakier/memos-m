@@ -225,6 +225,7 @@ fun MemosScaffold(
                                 comments = uiState.selectedMemoComments,
                                 isLoadingComments = uiState.isLoadingComments,
                                 token = uiState.token,
+                                hostUrl = uiState.hostUrl,
                                 showBackButton = navigator.canNavigateBack(),
                                 onBack = {
                                     focusManager.clearFocus()
@@ -338,6 +339,7 @@ fun GenericMemosListPane(
                             user = userProvider(memo),
                             currentUser = uiState.currUser,
                             token = uiState.token,
+                            hostUrl = uiState.hostUrl,
                             colors = if (memo == uiState.selectedMemo) {
                                 CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                             } else {

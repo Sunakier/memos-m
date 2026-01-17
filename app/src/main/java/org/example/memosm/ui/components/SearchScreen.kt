@@ -524,6 +524,7 @@ private fun SearchResultContent(
                         user = uiState.users[memo.creator],
                         currentUser = uiState.currUser,
                         token = uiState.token,
+                        hostUrl = uiState.hostUrl,
                         onClick = {
                             onMemoClick(memo)
                         },

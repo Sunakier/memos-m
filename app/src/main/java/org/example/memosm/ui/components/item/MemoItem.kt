@@ -61,6 +61,7 @@ fun MemoItem(
     user: User? = null,
     currentUser: User? = null,
     token: String,
+    hostUrl: String = "",
     colors: CardColors = CardDefaults.cardColors(),
     onClick: (() -> Unit)? = null,
     onEdit: (() -> Unit)? = null,
@@ -198,13 +199,14 @@ fun MemoItem(
                         }
                         DropdownMenu(
                             expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                            if (memo.name != null) {
+                            if (memo.name != null && hostUrl.isNotBlank()) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.memo_action_open_web)) },
                                     onClick = {
                                         showMenu = false
                                         val memoId = memo.name.removePrefix("memos/")
-                                        val webUrl = "https://memos.nannoda.com/memos/$memoId"
+                                        val baseUrl = if (hostUrl.endsWith("/")) hostUrl else "$hostUrl/"
+                                        val webUrl = "${baseUrl}memos/$memoId"
                                         try {
                                             val intent = Intent(Intent.ACTION_VIEW, webUrl.toUri())
                                             context.startActivity(intent)

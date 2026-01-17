@@ -52,6 +52,7 @@ data class MemosUiState(
     val isRefreshing: Boolean = false,
     val refreshTrigger: Long = 0L, // Used to trigger scroll to top
     val token: String = "",
+    val hostUrl: String = "",
     // Detail pane state
     val selectedMemo: Memo? = null,
     val selectedMemoComments: List<Memo> = emptyList(),
@@ -73,7 +74,7 @@ class MemosViewModel(
     private val dataStoreManager: DataStoreManager
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(MemosUiState(token = token))
+    private val _uiState = MutableStateFlow(MemosUiState(token = token, hostUrl = baseUrl))
     val uiState: StateFlow<MemosUiState> = _uiState.asStateFlow()
 
     private var sanitizedBaseUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
@@ -188,6 +189,7 @@ class MemosViewModel(
             // Clear current UI state for the new account
             _uiState.value = MemosUiState(
                 token = token,
+                hostUrl = baseUrl,
                 accounts = _uiState.value.accounts.map { 
                     it.copy(isActive = it.hostUrl == baseUrl && it.accessToken == token)
                 },
