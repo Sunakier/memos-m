@@ -4,12 +4,15 @@ import ProfileHeader
 import SettingsCard
 import StatsCard
 import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,15 +20,16 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.*
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -425,6 +429,10 @@ fun AccountsList(
                                 else -> Color.Transparent
                             }, label = "dismiss_background"
                         )
+                        val scale by animateFloatAsState(
+                            if (dismissState.targetValue == SwipeToDismissBoxValue.Settled) 0.7f else 1.3f,
+                            label = "dismiss_icon_scale"
+                        )
                         Box(
                             Modifier
                                 .fillMaxSize()
@@ -436,6 +444,7 @@ fun AccountsList(
                             Icon(
                                 Icons.Outlined.Delete,
                                 contentDescription = stringResource(R.string.common_delete),
+                                modifier = Modifier.scale(scale),
                                 tint = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }
@@ -445,8 +454,8 @@ fun AccountsList(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
                             containerColor = if (account.isActive)
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surfaceVariant
                         ),
                         onClick = { if (!account.isActive) onSwitchAccount(account) }
                     ) {
@@ -466,23 +475,28 @@ fun AccountsList(
                                 )
                             },
                             leadingContent = {
-                                AsyncImage(
-                                    model = account.avatarUrl,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                                    contentScale = ContentScale.Crop
-                                )
-                            },
-                            trailingContent = {
-                                if (account.isActive) {
-                                    Icon(
-                                        Icons.Outlined.Check,
-                                        contentDescription = "Active",
-                                        tint = MaterialTheme.colorScheme.primary
+                                Box {
+                                    AsyncImage(
+                                        model = account.avatarUrl,
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                                        contentScale = ContentScale.Crop
                                     )
+                                    if (account.isActive) {
+                                        Icon(
+                                            Icons.Filled.CheckCircle,
+                                            contentDescription = "Active",
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .align(Alignment.BottomEnd)
+                                                .background(MaterialTheme.colorScheme.surface, CircleShape)
+                                                .border(1.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
                                 }
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
@@ -494,22 +508,6 @@ fun AccountsList(
     }
 }
 
-
-@Composable
-fun StatItem(label: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(
-            icon,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
-        )
-        Text(text = label, style = MaterialTheme.typography.labelSmall)
-    }
-}
 
 @Composable
 fun ShortcutsCard(shortcuts: List<Shortcut>) {
