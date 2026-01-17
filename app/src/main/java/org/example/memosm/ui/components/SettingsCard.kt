@@ -36,13 +36,9 @@ import org.example.memosm.R
 import org.example.memosm.model.UserGeneralSetting
 import org.example.memosm.ui.components.composer.getVisibilityLabel
 
-val SUPPORTED_LANGUAGES = listOf(
-    "ar", "cs", "de", "en", "en-GB", "es", "fa", "fr", "hi", "hr", "hu", "id", "it", "ja", "ka",
-    "ko", "mr", "nb", "nl", "pl", "pt-BR", "pt", "ru", "sl", "sv", "th", "tr", "uk", "vi", "zh-Hans", "zh-Hant"
-)
-
 val LANGUAGE_NAMES = mapOf(
     "ar" to "العربية",
+    "ca" to "Català",
     "cs" to "Čeština",
     "de" to "Deutsch",
     "en" to "English",
@@ -50,20 +46,21 @@ val LANGUAGE_NAMES = mapOf(
     "es" to "Español",
     "fa" to "فارسی",
     "fr" to "Français",
+    "gl" to "Galego",
     "hi" to "हिन्दी",
     "hr" to "Hrvatski",
     "hu" to "Magyar",
     "id" to "Bahasa Indonesia",
     "it" to "Italiano",
     "ja" to "日本語",
-    "ka" to "ქართული",
+    "ka-GE" to "ქართული",
     "ko" to "한국어",
     "mr" to "मराठी",
     "nb" to "Norsk bokmål",
     "nl" to "Nederlands",
     "pl" to "Polski",
+    "pt-PT" to "Português",
     "pt-BR" to "Português (Brasil)",
-    "pt" to "Português",
     "ru" to "Русский",
     "sl" to "Slovenščina",
     "sv" to "Svenska",
@@ -91,7 +88,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
             SettingsSelectionItem(
                 label = stringResource(R.string.profile_settings_locale),
                 currentValue = settings.locale ?: "en",
-                options = SUPPORTED_LANGUAGES,
+                options = LANGUAGE_NAMES.keys.toList(),
                 labelProvider = { LANGUAGE_NAMES[it] ?: it },
                 onSelect = { onUpdate(it, null) }
             )
@@ -105,7 +102,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
             // Memo Visibility
             SettingsSelectionItem(
                 label = stringResource(R.string.profile_settings_visibility),
-                currentValue = if (settings.memoVisibility.isNullOrBlank()) "PRIVATE" else settings.memoVisibility!!,
+                currentValue = if (settings.memoVisibility.isNullOrBlank()) "PRIVATE" else settings.memoVisibility,
                 options = listOf("PRIVATE", "PROTECTED", "PUBLIC"),
                 labelProvider = { getVisibilityLabel(it) },
                 onSelect = { onUpdate(null, it) }

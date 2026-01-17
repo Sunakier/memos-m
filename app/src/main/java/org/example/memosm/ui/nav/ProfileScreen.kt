@@ -53,7 +53,10 @@ private val KAOMOJIS = listOf(
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ProfileScreen(
-    viewModel: MemosViewModel, onLogout: () -> Unit, onToggleNavBar: (Boolean) -> Unit
+    viewModel: MemosViewModel,
+    onLogout: () -> Unit,
+    onAddAccount: () -> Unit,
+    onToggleNavBar: (Boolean) -> Unit
 ) {
     var isArchivedVisible by rememberSaveable { mutableStateOf(false) }
 
@@ -101,6 +104,7 @@ fun ProfileScreen(
                 ProfileListPane(
                     viewModel = viewModel,
                     onLogout = onLogout,
+                    onAddAccount = onAddAccount,
                     onShowArchived = { isArchivedVisible = true },
                     animatedVisibilityScope = this@AnimatedContent,
                     sharedTransitionScope = this@SharedTransitionLayout,
@@ -116,6 +120,7 @@ fun ProfileScreen(
 private fun ProfileListPane(
     viewModel: MemosViewModel,
     onLogout: () -> Unit,
+    onAddAccount: () -> Unit,
     onShowArchived: () -> Unit,
     animatedVisibilityScope: AnimatedVisibilityScope,
     sharedTransitionScope: SharedTransitionScope,
@@ -180,7 +185,7 @@ private fun ProfileListPane(
                     viewModel.switchAccount(it)
                     showAccountSwitcher = false
                 }, onRemoveAccount = { viewModel.removeAccount(it) }, onAddAccount = {
-                    onLogout()
+                    onAddAccount()
                     showAccountSwitcher = false
                 }, modifier = Modifier.padding(bottom = 32.dp)
             )

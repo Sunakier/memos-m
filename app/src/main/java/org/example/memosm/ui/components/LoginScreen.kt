@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,9 +28,12 @@ enum class LoginMode {
     TOKEN, PASSWORD
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (String, String) -> Unit, modifier: Modifier = Modifier
+    onLoginSuccess: (String, String) -> Unit,
+    modifier: Modifier = Modifier,
+    onDismiss: (() -> Unit)? = null
 ) {
     var loginMode by remember { mutableStateOf(LoginMode.TOKEN) }
     var hostUrl by remember { mutableStateOf("") }
@@ -161,9 +166,21 @@ fun LoginScreen(
     Box(
         modifier = modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter
     ) {
+        if (onDismiss != null) {
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .statusBarsPadding()
+            ) {
+                Icon(Icons.Default.Close, contentDescription = "Close")
+            }
+        }
+
         Column(
             modifier = Modifier
-                .padding(top = 64.dp)
+                .padding(top = if (onDismiss != null) 32.dp else 64.dp)
                 .padding(horizontal = 16.dp)
                 .widthIn(max = 480.dp)
                 .fillMaxWidth(),
