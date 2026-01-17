@@ -1,6 +1,7 @@
 package org.example.memosm.ui.nav
 
 import ProfileHeader
+import SettingsCard
 import StatsCard
 import android.content.Intent
 import android.net.Uri
@@ -42,6 +43,7 @@ import org.example.memosm.ui.components.ArchivedMemosScreen
 import org.example.memosm.ui.components.ErrorView
 import org.example.memosm.ui.components.composer.getVisibilityLabel
 import org.example.memosm.viewmodel.MemosViewModel
+import androidx.core.net.toUri
 
 private val KAOMOJIS = listOf(
     "(ﾉ´ з `)ノ", "(o^ ^o)", "(⁄ ⁄•⁄ω⁄•⁄ ⁄)", "(⁄ ⁄>⁄ ▽ ⁄<⁄ ⁄)", "(￣▽￣*)ゞ"
@@ -596,7 +598,7 @@ fun AboutCard() {
                     )
                 },
                 modifier = Modifier.clickable {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(repoUrl))
+                    val intent = Intent(Intent.ACTION_VIEW, repoUrl.toUri())
                     context.startActivity(intent)
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
@@ -611,7 +613,7 @@ fun AboutCard() {
                     )
                 },
                 modifier = Modifier.clickable {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(issuesUrl))
+                    val intent = Intent(Intent.ACTION_VIEW, issuesUrl.toUri())
                     context.startActivity(intent)
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)

@@ -237,15 +237,15 @@ data class ListUserSettingsResponse(
 
 data class UserSetting(
     val name: String? = null,
-    @SerializedName("general_setting", alternate = ["generalSetting"])
+    @SerializedName("generalSetting", alternate = ["general_setting", "general", "GENERAL", "GeneralSetting"])
     val generalSetting: UserGeneralSetting? = null,
-    @SerializedName("webhooks_setting", alternate = ["webhooksSetting"])
+    @SerializedName("webhooksSetting", alternate = ["webhooks_setting"])
     val webhooksSetting: UserWebhooksSetting? = null
 )
 
 data class UserGeneralSetting(
     val locale: String? = null,
-    @SerializedName("memo_visibility", alternate = ["memoVisibility"])
+    @SerializedName("memoVisibility", alternate = ["memo_visibility"])
     val memoVisibility: String? = null,
     val theme: String? = null
 )

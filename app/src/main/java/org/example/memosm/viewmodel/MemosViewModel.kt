@@ -916,8 +916,8 @@ class MemosViewModel(
                 )
                 
                 val updateMask = mutableListOf<String>()
-                if (locale != null) updateMask.add("general_setting.locale")
-                if (memoVisibility != null) updateMask.add("general_setting.memo_visibility")
+                if (locale != null) updateMask.add("locale")
+                if (memoVisibility != null) updateMask.add("memoVisibility")
 
                 val maskString = updateMask.joinToString(",")
                 Log.d("MemosViewModel", "Updating settings for $userId with mask: $maskString")
