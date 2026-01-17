@@ -29,7 +29,7 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import org.example.memosm.R
 import org.example.memosm.data.DataStoreManager
-import org.example.memosm.ui.components.LoginDialog
+import org.example.memosm.ui.component.LoginDialog
 import org.example.memosm.ui.nav.AttachmentsScreen
 import org.example.memosm.ui.nav.ExploreScreen
 import org.example.memosm.ui.nav.MemosScreen

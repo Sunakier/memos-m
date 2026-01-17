@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -27,10 +26,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.model.*
-import org.example.memosm.ui.components.ArchivedMemosScreen
-import org.example.memosm.ui.components.ErrorView
+import org.example.memosm.ui.component.ArchivedMemosScreen
+import org.example.memosm.ui.component.ErrorView
 import org.example.memosm.viewmodel.MemosViewModel
-import org.example.memosm.ui.components.settings.AboutAppCard
+import org.example.memosm.ui.component.setting.AboutAppCard
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable

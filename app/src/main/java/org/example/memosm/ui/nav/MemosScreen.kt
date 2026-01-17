@@ -23,10 +23,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.model.Memo
-import org.example.memosm.ui.components.GenericMemosListPane
-import org.example.memosm.ui.components.composer.MemoComposer
-import org.example.memosm.ui.components.MemoSearchBar
-import org.example.memosm.ui.components.MemosScaffold
+import org.example.memosm.ui.component.GenericMemosListPane
+import org.example.memosm.ui.component.composer.MemoComposer
+import org.example.memosm.ui.component.MemoSearchBar
+import org.example.memosm.ui.component.MemosScaffold
 import org.example.memosm.viewmodel.MemosViewModel
 
 @Composable

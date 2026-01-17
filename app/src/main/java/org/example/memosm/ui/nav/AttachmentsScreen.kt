@@ -16,9 +16,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
-import org.example.memosm.ui.components.ErrorView
-import org.example.memosm.ui.components.item.AttachmentCard
-import org.example.memosm.ui.components.item.AttachmentCompactMode
+import org.example.memosm.ui.component.ErrorView
+import org.example.memosm.ui.component.item.AttachmentCard
+import org.example.memosm.ui.component.item.AttachmentCompactMode
 import org.example.memosm.viewmodel.MemosViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
