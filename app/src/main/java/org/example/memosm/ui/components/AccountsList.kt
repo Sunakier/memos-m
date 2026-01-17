@@ -2,8 +2,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.splineBasedDecay
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.AnchoredDraggableDefaults
 import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.DraggableAnchors
 import androidx.compose.foundation.gestures.Orientation
@@ -137,22 +137,25 @@ fun AccountsList(
                 // Track component width for calculating swipe progress
                 var componentWidth by remember { mutableFloatStateOf(1f) }
 
-                // Create anchored draggable state with custom thresholds
+                // Create anchored draggable state with simple constructor (non-deprecated)
                 val anchoredDraggableState = remember {
-                    AnchoredDraggableState<SwipeState>(
+                    AnchoredDraggableState(
                         initialValue = SwipeState.Settled,
                         anchors = DraggableAnchors {
                             SwipeState.Settled at 0f
                             SwipeState.Dismissed at -1f // Will be updated when width is known
-                        },
-                        // Require 90% swipe to trigger dismissal
-                        positionalThreshold = { distance: Float -> distance * 0.9f },
-                        // High velocity threshold to prevent accidental flings
-                        velocityThreshold = { with(density) { 1000.dp.toPx() } },
-                        snapAnimationSpec = tween(durationMillis = 200),
-                        decayAnimationSpec = splineBasedDecay(density)
+                        }
                     )
                 }
+
+                // Create fling behavior with custom thresholds (new API)
+                // Note: velocityThreshold is fixed at 125 dp/s in the API
+                val flingBehavior = AnchoredDraggableDefaults.flingBehavior(
+                    state = anchoredDraggableState,
+                    // Require 90% swipe to trigger dismissal
+                    positionalThreshold = { distance: Float -> distance * 0.9f },
+                    animationSpec = tween(durationMillis = 200)
+                )
 
                 // Update anchors when width changes
                 LaunchedEffect(componentWidth) {
@@ -286,7 +289,8 @@ fun AccountsList(
                             }
                             .anchoredDraggable(
                                 state = anchoredDraggableState,
-                                orientation = Orientation.Horizontal
+                                orientation = Orientation.Horizontal,
+                                flingBehavior = flingBehavior
                             ),
                         shape = currentShape,
                         colors = CardDefaults.cardColors(
