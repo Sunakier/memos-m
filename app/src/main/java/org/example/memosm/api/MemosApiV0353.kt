@@ -4,7 +4,7 @@ import okhttp3.MultipartBody
 import org.example.memosm.model.*
 import retrofit2.http.*
 
-interface MemosApi {
+interface MemosApiV0353 {
 
     // --- ActivityService ---
     @GET("api/v1/activities")

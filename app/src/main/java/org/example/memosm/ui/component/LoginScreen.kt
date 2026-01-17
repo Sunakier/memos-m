@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.example.memosm.R
-import org.example.memosm.api.MemosApi
+import org.example.memosm.api.MemosApiV0353
 import org.example.memosm.api.loginAndCreateToken
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -137,7 +137,7 @@ fun LoginContent(
                 val retrofit = Retrofit.Builder().baseUrl(baseUrl).client(client)
                     .addConverterFactory(GsonConverterFactory.create()).build()
 
-                val api = retrofit.create(MemosApi::class.java)
+                val api = retrofit.create(MemosApiV0353::class.java)
 
                 // Check if instance is valid by fetching instance profile
                 try {
@@ -165,7 +165,7 @@ fun LoginContent(
                         }.build()
 
                     val authApi = retrofit.newBuilder().client(authClient).build()
-                        .create(MemosApi::class.java)
+                        .create(MemosApiV0353::class.java)
 
                     try {
                         authApi.getCurrentSession()

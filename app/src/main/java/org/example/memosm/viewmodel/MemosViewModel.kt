@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
-import org.example.memosm.api.MemosApi
+import org.example.memosm.api.MemosApiV0353
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.model.*
 import retrofit2.HttpException
@@ -89,8 +89,8 @@ class MemosViewModel(
     private var draftSaveJob: Job? = null
     private val DEFAULT_PAGE_SIZE = 20
 
-    private var _api: MemosApi? = null
-    private val api: MemosApi 
+    private var _api: MemosApiV0353? = null
+    private val api: MemosApiV0353
         get() {
             if (_api == null) {
                 _api = createApi(sanitizedBaseUrl, token)
@@ -98,7 +98,7 @@ class MemosViewModel(
             return _api!!
         }
 
-    private fun createApi(baseUrl: String, token: String): MemosApi {
+    private fun createApi(baseUrl: String, token: String): MemosApiV0353 {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
@@ -111,7 +111,7 @@ class MemosViewModel(
         }.build()
 
         return Retrofit.Builder().baseUrl(baseUrl).client(client)
-            .addConverterFactory(GsonConverterFactory.create()).build().create(MemosApi::class.java)
+            .addConverterFactory(GsonConverterFactory.create()).build().create(MemosApiV0353::class.java)
     }
 
     init {
