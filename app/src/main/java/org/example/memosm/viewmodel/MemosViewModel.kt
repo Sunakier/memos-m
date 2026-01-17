@@ -1105,6 +1105,74 @@ class MemosViewModel(
         }
     }
 
+    // --- Webhook Management ---
+
+    fun createWebhook(displayName: String, url: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
+        val user = _uiState.value.currUser ?: return
+        val userId = user.name?.removePrefix("users/") ?: return
+
+        viewModelScope.launch {
+            try {
+                val webhook = api.createUserWebhook(userId, UserWebhook(displayName = displayName, url = url))
+                _uiState.value = _uiState.value.copy(
+                    webhooks = _uiState.value.webhooks + webhook
+                )
+                onSuccess()
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error creating webhook", e)
+                val errorMessage = parseError(e)
+                _uiState.value = _uiState.value.copy(error = "Failed to create webhook: $errorMessage")
+                onError(errorMessage)
+            }
+        }
+    }
+
+    fun updateWebhook(webhook: UserWebhook, displayName: String, url: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
+        val user = _uiState.value.currUser ?: return
+        val userId = user.name?.removePrefix("users/") ?: return
+        val webhookName = webhook.name ?: return
+        val webhookId = webhookName.substringAfterLast("/")
+
+        viewModelScope.launch {
+            try {
+                val updated = api.updateUserWebhook(
+                    userId,
+                    webhookId,
+                    UserWebhook(name = webhookName, displayName = displayName, url = url),
+                    updateMask = "display_name,url"
+                )
+                _uiState.value = _uiState.value.copy(
+                    webhooks = _uiState.value.webhooks.map { if (it.name == webhookName) updated else it }
+                )
+                onSuccess()
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error updating webhook", e)
+                val errorMessage = parseError(e)
+                _uiState.value = _uiState.value.copy(error = "Failed to update webhook: $errorMessage")
+                onError(errorMessage)
+            }
+        }
+    }
+
+    fun deleteWebhook(webhook: UserWebhook) {
+        val user = _uiState.value.currUser ?: return
+        val userId = user.name?.removePrefix("users/") ?: return
+        val webhookName = webhook.name ?: return
+        val webhookId = webhookName.substringAfterLast("/")
+
+        viewModelScope.launch {
+            try {
+                api.deleteUserWebhook(userId, webhookId)
+                _uiState.value = _uiState.value.copy(
+                    webhooks = _uiState.value.webhooks.filter { it.name != webhookName }
+                )
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error deleting webhook", e)
+                _uiState.value = _uiState.value.copy(error = "Failed to delete webhook: ${e.localizedMessage}")
+            }
+        }
+    }
+
     companion object {
         fun provideFactory(baseUrl: String, token: String, dataStoreManager: DataStoreManager): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {

@@ -30,6 +30,7 @@ import org.example.memosm.ui.component.ErrorView
 import org.example.memosm.viewmodel.MemosViewModel
 import org.example.memosm.ui.component.setting.AboutAppCard
 import org.example.memosm.ui.component.setting.ShortcutsCard
+import org.example.memosm.ui.component.setting.WebhooksCard
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -295,7 +296,16 @@ private fun ProfileListPane(
 
                 item {
                     Box(itemModifier) {
-                        WebhooksCard(webhooks)
+                        WebhooksCard(
+                            webhooks = webhooks,
+                            onCreate = { displayName, url, onSuccess, onError ->
+                                viewModel.createWebhook(displayName, url, onSuccess, onError)
+                            },
+                            onUpdate = { webhook, displayName, url, onSuccess, onError ->
+                                viewModel.updateWebhook(webhook, displayName, url, onSuccess, onError)
+                            },
+                            onDelete = { webhook -> viewModel.deleteWebhook(webhook) }
+                        )
                     }
                 }
 
@@ -342,50 +352,6 @@ private fun ProfileListPane(
 }
 
 
-@Composable
-fun WebhooksCard(webhooks: List<UserWebhook>) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                stringResource(R.string.profile_webhooks),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (webhooks.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.profile_webhooks_none),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            } else {
-                webhooks.forEach { webhook ->
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                webhook.displayName ?: webhook.name
-                                ?: stringResource(R.string.memo_unknown_user)
-                            )
-                        }, supportingContent = {
-                            Text(
-                                text = webhook.url,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1
-                            )
-                        }, leadingContent = {
-                            Icon(
-                                Icons.Outlined.Webhook, contentDescription = null
-                            )
-                        }, colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                    )
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun InstanceCard(instance: InstanceProfile) {
