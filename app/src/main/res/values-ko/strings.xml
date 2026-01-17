@@ -16,6 +16,7 @@
     <string name="profile_user_info_not_available">사용자 정보를 사용할 수 없습니다</string>
     <string name="profile_retry">재시도</string>
     <string name="profile_avatar_description">아바타</string>
+    <string name="profile_user_id">사용자 ID</string>
     <string name="profile_statistics">통계</string>
     <string name="profile_stats_memos">메모</string>
     <string name="profile_stats_tags">태그</string>
@@ -40,6 +41,15 @@
     <string name="profile_instance_mode">모드</string>
     <string name="profile_instance_url">URL</string>
     <string name="profile_logout">로그아웃</string>
+
+    <string name="profile_about">MemosM 정보</string>
+    <string name="profile_about_version">앱 버전</string>
+    <string name="profile_about_repo">소스 코드</string>
+    <string name="profile_about_issues">문제 보고</string>
+    <string name="profile_add_account">계정 추가</string>
+    <string name="profile_accounts">계정</string>
+    <string name="profile_remove_account_title">계정 삭제</string>
+    <string name="profile_remove_account_confirm">\"%1$s\" 계정을 삭제하시겠습니까? 이 계정에 액세스하려면 다시 로그인해야 합니다.</string>
 
     <string name="memo_action_edit">편집</string>
     <string name="memo_action_delete">삭제</string>
@@ -107,6 +117,8 @@
     <string name="common_cancel">취소</string>
     <string name="common_close">닫기</string>
     <string name="common_not_available">없음</string>
+    <string name="common_remove">제거</string>
+    <string name="common_delete">삭제</string>
     <string name="common_error_failed_to_load">로드할 수 없습니다</string>
     <string name="common_error_failed_to_load_memos">메모를 로드할 수 없습니다</string>
     <string name="common_error_failed_to_load_explore">둘러보기를 로드할 수 없습니다</string>

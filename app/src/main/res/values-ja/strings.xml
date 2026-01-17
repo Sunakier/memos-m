@@ -16,6 +16,7 @@
     <string name="profile_user_info_not_available">ユーザー情報が取得できません</string>
     <string name="profile_retry">再試行</string>
     <string name="profile_avatar_description">アバター</string>
+    <string name="profile_user_id">ユーザーID</string>
     <string name="profile_statistics">統計</string>
     <string name="profile_stats_memos">メモ</string>
     <string name="profile_stats_tags">タグ</string>
@@ -40,6 +41,15 @@
     <string name="profile_instance_mode">モード</string>
     <string name="profile_instance_url">URL</string>
     <string name="profile_logout">ログアウト</string>
+
+    <string name="profile_about">MemosMについて</string>
+    <string name="profile_about_version">アプリバージョン</string>
+    <string name="profile_about_repo">ソースコード</string>
+    <string name="profile_about_issues">問題を報告</string>
+    <string name="profile_add_account">アカウントを追加</string>
+    <string name="profile_accounts">アカウント</string>
+    <string name="profile_remove_account_title">アカウントを削除</string>
+    <string name="profile_remove_account_confirm">\"%1$s\" のアカウントを削除してもよろしいですか？このアカウントにアクセスするには、再度ログインする必要があります。</string>
 
     <string name="memo_action_edit">編集</string>
     <string name="memo_action_delete">削除</string>
@@ -107,6 +117,8 @@
     <string name="common_cancel">キャンセル</string>
     <string name="common_close">閉じる</string>
     <string name="common_not_available">N/A</string>
+    <string name="common_remove">削除</string>
+    <string name="common_delete">削除</string>
     <string name="common_error_failed_to_load">読み込めませんでした</string>
     <string name="common_error_failed_to_load_memos">メモを読み込めませんでした</string>
     <string name="common_error_failed_to_load_explore">共有メモを読み込めませんでした</string>

@@ -17,6 +17,7 @@
     <string name="profile_user_info_not_available">无法获取用户信息</string>
     <string name="profile_retry">重试</string>
     <string name="profile_avatar_description">头像</string>
+    <string name="profile_user_id">用户 ID</string>
     <string name="profile_statistics">统计</string>
     <string name="profile_stats_memos">笔记</string>
     <string name="profile_stats_tags">标签</string>
@@ -41,6 +42,15 @@
     <string name="profile_instance_mode">模式</string>
     <string name="profile_instance_url">链接</string>
     <string name="profile_logout">退出登录</string>
+
+    <string name="profile_about">关于 MemosM</string>
+    <string name="profile_about_version">应用版本</string>
+    <string name="profile_about_repo">源码仓库</string>
+    <string name="profile_about_issues">反馈问题</string>
+    <string name="profile_add_account">添加账号</string>
+    <string name="profile_accounts">账号管理</string>
+    <string name="profile_remove_account_title">移除账号</string>
+    <string name="profile_remove_account_confirm">确定要移除 \"%1$s\" 的账号吗？移除后需要重新登录才能访问。</string>
 
     <string name="memo_action_edit">编辑</string>
     <string name="memo_action_delete">删除</string>
@@ -108,6 +118,8 @@
     <string name="common_cancel">取消</string>
     <string name="common_close">关闭</string>
     <string name="common_not_available">无</string>
+    <string name="common_remove">移除</string>
+    <string name="common_delete">删除</string>
     <string name="common_error_failed_to_load">无法加载</string>
     <string name="common_error_failed_to_load_memos">无法加载笔记</string>
     <string name="common_error_failed_to_load_explore">无法加载探索</string>
