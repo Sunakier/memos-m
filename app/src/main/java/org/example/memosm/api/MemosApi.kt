@@ -282,6 +282,27 @@ interface MemosApi {
     @GET("api/v1/users/{user}/shortcuts")
     suspend fun getShortcuts(@Path("user") user: String): ShortcutResponse
 
+    @POST("api/v1/users/{user}/shortcuts")
+    suspend fun createShortcut(
+        @Path("user") user: String,
+        @Body shortcut: Shortcut,
+        @Query("validateOnly") validateOnly: Boolean? = null
+    ): Shortcut
+
+    @DELETE("api/v1/users/{user}/shortcuts/{shortcut}")
+    suspend fun deleteShortcut(
+        @Path("user") user: String,
+        @Path("shortcut") shortcut: String
+    )
+
+    @PATCH("api/v1/users/{user}/shortcuts/{shortcut}")
+    suspend fun updateShortcut(
+        @Path("user") user: String,
+        @Path("shortcut") shortcut: String,
+        @Body shortcutData: Shortcut,
+        @Query("updateMask") updateMask: String? = null
+    ): Shortcut
+
     @GET("api/v1/users/{user}/webhooks")
     suspend fun listUserWebhooks(@Path("user") user: String): ListUserWebhooksResponse
 

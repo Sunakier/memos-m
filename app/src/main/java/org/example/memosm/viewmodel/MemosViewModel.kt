@@ -21,6 +21,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import org.example.memosm.api.MemosApi
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.model.*
+import retrofit2.HttpException
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.InputStream
@@ -66,6 +67,11 @@ data class MemosUiState(
     val selectedTags: Set<String> = emptySet(),
     // Multi-account state
     val accounts: List<Account> = emptyList()
+)
+
+data class MemosErrorResponse(
+    val code: Int? = null,
+    val message: String? = null
 )
 
 class MemosViewModel(
@@ -1013,6 +1019,88 @@ class MemosViewModel(
     fun updateAttachmentCellWidth(width: Float) {
         viewModelScope.launch {
             dataStoreManager.saveAttachmentCellWidth(width)
+        }
+    }
+
+    // --- Shortcut Management ---
+
+    private fun parseError(e: Exception): String {
+        return if (e is HttpException) {
+            try {
+                val errorBody = e.response()?.errorBody()?.string()
+                val errorResponse = gson.fromJson(errorBody, MemosErrorResponse::class.java)
+                errorResponse.message ?: e.localizedMessage ?: "Unknown error"
+            } catch (parseEx: Exception) {
+                e.localizedMessage ?: "Unknown error"
+            }
+        } else {
+            e.localizedMessage ?: "Unknown error"
+        }
+    }
+
+    fun createShortcut(title: String, filter: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
+        val user = _uiState.value.currUser ?: return
+        val userId = user.name?.removePrefix("users/") ?: return
+        
+        viewModelScope.launch {
+            try {
+                val shortcut = api.createShortcut(userId, Shortcut(title = title, filter = filter))
+                _uiState.value = _uiState.value.copy(
+                    shortcuts = _uiState.value.shortcuts + shortcut
+                )
+                onSuccess()
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error creating shortcut", e)
+                val errorMessage = parseError(e)
+                _uiState.value = _uiState.value.copy(error = "Failed to create shortcut: $errorMessage")
+                onError(errorMessage)
+            }
+        }
+    }
+
+    fun updateShortcut(shortcut: Shortcut, title: String, filter: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
+        val user = _uiState.value.currUser ?: return
+        val userId = user.name?.removePrefix("users/") ?: return
+        val shortcutName = shortcut.name ?: return
+        val shortcutId = shortcutName.substringAfterLast("/")
+
+        viewModelScope.launch {
+            try {
+                val updated = api.updateShortcut(
+                    userId, 
+                    shortcutId, 
+                    Shortcut(name = shortcutName, title = title, filter = filter),
+                    updateMask = "title,filter"
+                )
+                _uiState.value = _uiState.value.copy(
+                    shortcuts = _uiState.value.shortcuts.map { if (it.name == shortcutName) updated else it }
+                )
+                onSuccess()
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error updating shortcut", e)
+                val errorMessage = parseError(e)
+                _uiState.value = _uiState.value.copy(error = "Failed to update shortcut: $errorMessage")
+                onError(errorMessage)
+            }
+        }
+    }
+
+    fun deleteShortcut(shortcut: Shortcut) {
+        val user = _uiState.value.currUser ?: return
+        val userId = user.name?.removePrefix("users/") ?: return
+        val shortcutName = shortcut.name ?: return
+        val shortcutId = shortcutName.substringAfterLast("/")
+
+        viewModelScope.launch {
+            try {
+                api.deleteShortcut(userId, shortcutId)
+                _uiState.value = _uiState.value.copy(
+                    shortcuts = _uiState.value.shortcuts.filter { it.name != shortcutName }
+                )
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error deleting shortcut", e)
+                _uiState.value = _uiState.value.copy(error = "Failed to delete shortcut: ${e.localizedMessage}")
+            }
         }
     }
 

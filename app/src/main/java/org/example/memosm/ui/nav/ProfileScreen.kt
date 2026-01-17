@@ -3,7 +3,6 @@ package org.example.memosm.ui.nav
 import AccountsList
 import ProfileHeader
 import SettingsCard
-import ShortcutsCard
 import StatsCard
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
@@ -30,6 +29,7 @@ import org.example.memosm.ui.component.ArchivedMemosScreen
 import org.example.memosm.ui.component.ErrorView
 import org.example.memosm.viewmodel.MemosViewModel
 import org.example.memosm.ui.component.setting.AboutAppCard
+import org.example.memosm.ui.component.setting.ShortcutsCard
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -274,7 +274,22 @@ private fun ProfileListPane(
 
                 item {
                     Box(itemModifier) {
-                        ShortcutsCard(shortcuts)
+                        ShortcutsCard(
+                            shortcuts = shortcuts,
+                            onCreate = { title, filter, onSuccess, onError ->
+                                viewModel.createShortcut(title, filter, onSuccess, onError)
+                            },
+                            onUpdate = { shortcut, title, filter, onSuccess, onError ->
+                                viewModel.updateShortcut(
+                                    shortcut,
+                                    title,
+                                    filter,
+                                    onSuccess,
+                                    onError
+                                )
+                            },
+                            onDelete = { shortcut -> viewModel.deleteShortcut(shortcut) }
+                        )
                     }
                 }
 
@@ -325,10 +340,6 @@ private fun ProfileListPane(
         }
     }
 }
-
-
-
-
 
 
 @Composable
@@ -399,7 +410,6 @@ fun InstanceCard(instance: InstanceProfile) {
         }
     }
 }
-
 
 
 @Composable
