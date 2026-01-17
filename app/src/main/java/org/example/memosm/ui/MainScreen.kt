@@ -24,14 +24,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import org.example.memosm.R
 import org.example.memosm.data.DataStoreManager
-import org.example.memosm.ui.components.LoginScreen
+import org.example.memosm.ui.components.LoginDialog
 import org.example.memosm.ui.nav.AttachmentsScreen
 import org.example.memosm.ui.nav.ExploreScreen
 import org.example.memosm.ui.nav.MemosScreen
@@ -77,22 +75,15 @@ fun MainScreen(
     val isMobile = layoutType == NavigationSuiteType.NavigationBar
 
     if (isAddingAccount) {
-        Dialog(
-            onDismissRequest = { isAddingAccount = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Surface(modifier = Modifier.fillMaxSize()) {
-                LoginScreen(
-                    onLoginSuccess = { newBaseUrl, newToken ->
-                        scope.launch {
-                            dataStoreManager.saveCredentials(newBaseUrl, newToken)
-                            isAddingAccount = false
-                        }
-                    },
-                    onDismiss = { isAddingAccount = false }
-                )
-            }
-        }
+        LoginDialog(
+            onLoginSuccess = { newBaseUrl, newToken ->
+                scope.launch {
+                    dataStoreManager.saveCredentials(newBaseUrl, newToken)
+                    isAddingAccount = false
+                }
+            },
+            onDismiss = { isAddingAccount = false }
+        )
     }
 
     @Composable

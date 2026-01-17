@@ -2,8 +2,10 @@ package org.example.memosm.ui.components
 
 import android.util.Log
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
@@ -14,6 +16,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -28,12 +32,64 @@ enum class LoginMode {
     TOKEN, PASSWORD
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     onLoginSuccess: (String, String) -> Unit,
-    modifier: Modifier = Modifier,
-    onDismiss: (() -> Unit)? = null
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        LoginContent(
+            onLoginSuccess = onLoginSuccess,
+            modifier = Modifier.padding(top = 64.dp)
+        )
+    }
+}
+
+@Composable
+fun LoginDialog(
+    onLoginSuccess: (String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .wrapContentHeight(),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
+        ) {
+            Box {
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Close")
+                }
+                
+                LoginContent(
+                    onLoginSuccess = onLoginSuccess,
+                    modifier = Modifier.padding(24.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LoginContent(
+    onLoginSuccess: (String, String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var loginMode by remember { mutableStateOf(LoginMode.TOKEN) }
     var hostUrl by remember { mutableStateOf("") }
@@ -163,121 +219,103 @@ fun LoginScreen(
         }
     }
 
-    Box(
-        modifier = modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top
     ) {
-        if (onDismiss != null) {
-            IconButton(
-                onClick = onDismiss,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .statusBarsPadding()
-            ) {
-                Icon(Icons.Default.Close, contentDescription = "Close")
-            }
+        Text(
+            text = stringResource(R.string.login_title),
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 32.dp)
+        )
+
+        SecondaryTabRow(
+            selectedTabIndex = loginMode.ordinal, modifier = Modifier.fillMaxWidth()
+        ) {
+            Tab(
+                selected = loginMode == LoginMode.TOKEN,
+                onClick = { loginMode = LoginMode.TOKEN },
+                text = { Text(stringResource(R.string.login_token)) })
+            Tab(
+                selected = loginMode == LoginMode.PASSWORD,
+                onClick = { loginMode = LoginMode.PASSWORD },
+                text = { Text(stringResource(R.string.login_password)) })
         }
 
-        Column(
-            modifier = Modifier
-                .padding(top = if (onDismiss != null) 32.dp else 64.dp)
-                .padding(horizontal = 16.dp)
-                .widthIn(max = 480.dp)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
-        ) {
-            Text(
-                text = stringResource(R.string.login_title),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 32.dp)
-            )
+        Spacer(modifier = Modifier.height(16.dp))
 
-            SecondaryTabRow(
-                selectedTabIndex = loginMode.ordinal, modifier = Modifier.fillMaxWidth()
-            ) {
-                Tab(
-                    selected = loginMode == LoginMode.TOKEN,
-                    onClick = { loginMode = LoginMode.TOKEN },
-                    text = { Text(stringResource(R.string.login_token)) })
-                Tab(
-                    selected = loginMode == LoginMode.PASSWORD,
-                    onClick = { loginMode = LoginMode.PASSWORD },
-                    text = { Text(stringResource(R.string.login_password)) })
+        OutlinedTextField(
+            value = hostUrl,
+            onValueChange = { hostUrl = it },
+            label = { Text(stringResource(R.string.login_host_url)) },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text(stringResource(R.string.login_host_url_placeholder)) },
+            enabled = !isLoading,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        when (loginMode) {
+            LoginMode.TOKEN -> {
+                OutlinedTextField(
+                    value = token,
+                    onValueChange = { token = it },
+                    label = { Text(stringResource(R.string.login_token)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isLoading,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { performLogin() })
+                )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = hostUrl,
-                onValueChange = { hostUrl = it },
-                label = { Text(stringResource(R.string.login_host_url)) },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text(stringResource(R.string.login_host_url_placeholder)) },
-                enabled = !isLoading,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            when (loginMode) {
-                LoginMode.TOKEN -> {
+            LoginMode.PASSWORD -> {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
-                        value = token,
-                        onValueChange = { token = it },
-                        label = { Text(stringResource(R.string.login_token)) },
+                        value = username,
+                        onValueChange = { username = it },
+                        label = { Text(stringResource(R.string.login_username)) },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isLoading,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text(stringResource(R.string.login_password)) },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isLoading,
+                        singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = { performLogin() })
                     )
                 }
-
-                LoginMode.PASSWORD -> {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        OutlinedTextField(
-                            value = username,
-                            onValueChange = { username = it },
-                            label = { Text(stringResource(R.string.login_username)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !isLoading,
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = password,
-                            onValueChange = { password = it },
-                            label = { Text(stringResource(R.string.login_password)) },
-                            visualTransformation = PasswordVisualTransformation(),
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !isLoading,
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = { performLogin() })
-                        )
-                    }
-                }
             }
+        }
 
-            errorMessage?.let {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = it, color = MaterialTheme.colorScheme.error)
-            }
+        errorMessage?.let {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = it, color = MaterialTheme.colorScheme.error)
+        }
 
-            Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-            Button(
-                onClick = { performLogin() },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading && hostUrl.isNotBlank()
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                } else {
-                    Text(stringResource(R.string.login_button))
-                }
+        Button(
+            onClick = { performLogin() },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading && hostUrl.isNotBlank()
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+            } else {
+                Text(stringResource(R.string.login_button))
             }
         }
     }
