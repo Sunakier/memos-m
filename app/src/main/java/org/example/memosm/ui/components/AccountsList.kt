@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -73,7 +72,7 @@ enum class SwipeState {
 fun AccountsList(
     accounts: List<Account>,
     onSwitchAccount: (Account) -> Unit,
-    onRemoveAccount: (Account) -> Unit,
+    onLogoutAccount: (Account) -> Unit,
     onAddAccount: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -89,13 +88,13 @@ fun AccountsList(
                 Text(
                     stringResource(
                         R.string.profile_remove_account_confirm,
-                        accountToRemove?.displayName ?: accountToRemove?.name ?: "Unknown"
+                        accountToRemove?.name ?: "Unknown"
                     )
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
-                    accountToRemove?.let { onRemoveAccount(it) }
+                    accountToRemove?.let { onLogoutAccount(it) }
                     accountToRemove = null
                 }) {
                     Text(
@@ -228,12 +227,14 @@ fun AccountsList(
                         bottomStart = animatedMinCorner,
                         bottomEnd = animatedMinCorner
                     )
+
                     index == accounts.size - 1 -> RoundedCornerShape(
                         topStart = animatedMinCorner,
                         topEnd = animatedMinCorner,
                         bottomStart = 28.dp,
                         bottomEnd = 28.dp
                     )
+
                     else -> RoundedCornerShape(animatedMinCorner)
                 }
 
@@ -304,7 +305,7 @@ fun AccountsList(
                         ListItem(
                             headlineContent = {
                                 Text(
-                                    "@${account.name}",
+                                    "@" + account.name,
                                     fontWeight = if (account.isActive) FontWeight.Bold else FontWeight.Normal
                                 )
                             },
