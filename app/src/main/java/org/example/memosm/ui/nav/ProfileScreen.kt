@@ -4,25 +4,23 @@ import ProfileHeader
 import SettingsCard
 import StatsCard
 import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -311,21 +309,6 @@ private fun ProfileListPane(
                     }
                 }
 
-                item {
-                    Box(itemModifier) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant
-                        )
-                    }
-                }
-
-                item {
-                    Box(itemModifier) {
-                        LogoutCard(onLogout)
-                    }
-                }
-
                 if (uiState.error != null) {
                     item {
                         Box(itemModifier) {
@@ -355,6 +338,7 @@ private fun ProfileListPane(
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountsList(
     accounts: List<Account>,
@@ -363,6 +347,39 @@ fun AccountsList(
     onAddAccount: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var accountToRemove by remember { mutableStateOf<Account?>(null) }
+
+    if (accountToRemove != null) {
+        AlertDialog(
+            onDismissRequest = { accountToRemove = null },
+            title = { Text(stringResource(R.string.profile_remove_account_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.profile_remove_account_confirm,
+                        accountToRemove?.displayName ?: accountToRemove?.name ?: "Unknown"
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    accountToRemove?.let { onRemoveAccount(it) }
+                    accountToRemove = null
+                }) {
+                    Text(
+                        stringResource(R.string.common_remove),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { accountToRemove = null }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
+    }
+
     Column(modifier = modifier.padding(vertical = 16.dp)) {
         Row(
             modifier = Modifier
@@ -372,66 +389,107 @@ fun AccountsList(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Accounts",
+                stringResource(R.string.profile_accounts),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             IconButton(onClick = onAddAccount) {
-                Icon(Icons.Outlined.Add, contentDescription = "Add Account")
+                Icon(
+                    Icons.Outlined.Add,
+                    contentDescription = stringResource(R.string.profile_add_account)
+                )
             }
         }
 
         accounts.forEach { account ->
-            ListItem(
-                modifier = Modifier.clickable { if (!account.isActive) onSwitchAccount(account) },
-                headlineContent = {
-                    Text(
-                        account.displayName ?: account.name ?: "Unknown User",
-                        fontWeight = if (account.isActive) FontWeight.Bold else FontWeight.Normal
-                    )
-                },
-                supportingContent = {
-                    Text(
-                        account.hostUrl,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                leadingContent = {
-                    AsyncImage(
-                        model = account.avatarUrl,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentScale = ContentScale.Crop
-                    )
-                },
-                trailingContent = {
-                    if (account.isActive) {
-                        Icon(
-                            Icons.Outlined.Check,
-                            contentDescription = "Active",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+            val dismissState = rememberSwipeToDismissBoxState(
+                confirmValueChange = {
+                    if (it == SwipeToDismissBoxValue.EndToStart) {
+                        accountToRemove = account
+                        false // Don't dismiss immediately, wait for confirmation
                     } else {
-                        IconButton(onClick = { onRemoveAccount(account) }) {
+                        false
+                    }
+                }
+            )
+
+            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                SwipeToDismissBox(
+                    state = dismissState,
+                    enableDismissFromStartToEnd = false,
+                    backgroundContent = {
+                        val color by animateColorAsState(
+                            when (dismissState.targetValue) {
+                                SwipeToDismissBoxValue.Settled -> Color.Transparent
+                                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                                else -> Color.Transparent
+                            }, label = "dismiss_background"
+                        )
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .clip(CardDefaults.shape)
+                                .background(color)
+                                .padding(horizontal = 24.dp),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
                             Icon(
                                 Icons.Outlined.Delete,
-                                contentDescription = "Remove Account",
-                                tint = MaterialTheme.colorScheme.error
+                                contentDescription = stringResource(R.string.common_delete),
+                                tint = MaterialTheme.colorScheme.onErrorContainer
                             )
                         }
                     }
-                },
-                colors = ListItemDefaults.colors(
-                    containerColor = if (account.isActive) MaterialTheme.colorScheme.primaryContainer.copy(
-                        alpha = 0.3f
-                    ) else Color.Transparent
-                )
-            )
+                ) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (account.isActive)
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ),
+                        onClick = { if (!account.isActive) onSwitchAccount(account) }
+                    ) {
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    account.displayName ?: account.name ?: "Unknown User",
+                                    fontWeight = if (account.isActive) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            supportingContent = {
+                                Text(
+                                    account.hostUrl,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            },
+                            leadingContent = {
+                                AsyncImage(
+                                    model = account.avatarUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                    contentScale = ContentScale.Crop
+                                )
+                            },
+                            trailingContent = {
+                                if (account.isActive) {
+                                    Icon(
+                                        Icons.Outlined.Check,
+                                        contentDescription = "Active",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -617,32 +675,6 @@ fun AboutCard() {
                     context.startActivity(intent)
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
-        }
-    }
-}
-
-@Composable
-fun LogoutCard(onLogout: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-            contentColor = MaterialTheme.colorScheme.onErrorContainer
-        ), onClick = onLogout
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null)
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                stringResource(R.string.profile_logout),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
             )
         }
     }

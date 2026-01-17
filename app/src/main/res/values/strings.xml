@@ -51,6 +51,9 @@
     <string name="profile_about_issues">Report an Issue</string>
     <string name="profile_about_issues_url" translatable="false">https://github.com/yamada-sexta/memos-m/issues</string>
     <string name="profile_add_account">Add Account</string>
+    <string name="profile_accounts">Accounts</string>
+    <string name="profile_remove_account_title">Remove Account</string>
+    <string name="profile_remove_account_confirm">Are you sure you want to remove the account for \"%1$s\"? You will need to login again to access this account.</string>
 
     <string name="memo_action_edit">Edit</string>
     <string name="memo_action_delete">Delete</string>
@@ -118,6 +121,8 @@
     <string name="common_cancel">Cancel</string>
     <string name="common_close">Close</string>
     <string name="common_not_available">N/A</string>
+    <string name="common_remove">Remove</string>
+    <string name="common_delete">Delete</string>
     <string name="common_error_failed_to_load">Unable to load</string>
     <string name="common_error_failed_to_load_memos">Unable to load memos</string>
     <string name="common_error_failed_to_load_explore">Unable to load explore</string>
