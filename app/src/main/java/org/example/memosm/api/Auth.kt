@@ -1,5 +1,6 @@
 package org.example.memosm.api
 
+import android.os.Build
 import com.connectrpc.ProtocolClientConfig
 import com.connectrpc.ResponseMessage
 import com.connectrpc.extensions.GoogleJavaProtobufStrategy
@@ -39,7 +40,11 @@ suspend fun loginAndCreateToken(
             cookieStore.getOrPut(url.host) { mutableListOf() }.apply {
                 // Remove existing cookies with same name before adding new ones
                 cookies.forEach { newCookie ->
-                    removeIf { it.name == newCookie.name }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        removeIf { it.name == newCookie.name }
+                    } else {
+                        removeAt(indexOfFirst { it.name == newCookie.name })
+                    }
                 }
                 addAll(cookies)
             }
