@@ -1,22 +1,26 @@
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.splineBasedDecay
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.gestures.DraggableAnchors
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.anchoredDraggable
+import androidx.compose.foundation.gestures.snapTo
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
@@ -28,17 +32,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxState
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -49,42 +49,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import org.example.memosm.R
 import org.example.memosm.model.Account
-import kotlin.collections.forEach
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DismissBackground(dismissState: SwipeToDismissBoxState) {
-//    val color = when (dismissState.dismissDirection) {
-//        SwipeToDismissBoxValue.StartToEnd -> Color
-//        SwipeToDismissBoxValue.Settled -> Color.Transparent
-//    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
-//            .background(color)
-            .padding(12.dp, 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Icon(
-            Icons.Outlined.Delete,
-            contentDescription = "delete"
-        )
-        Spacer(modifier = Modifier)
-        Icon(
-            Icons.Outlined.Delete,
-            contentDescription = "Archive"
-        )
-    }
+// Custom swipe anchor states
+enum class SwipeState {
+    Settled,   // Not swiped
+    Dismissed  // Fully swiped to end
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -98,6 +79,7 @@ fun AccountsList(
 ) {
     var accountToRemove by remember { mutableStateOf<Account?>(null) }
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
 
     if (accountToRemove != null) {
         AlertDialog(
@@ -149,79 +131,94 @@ fun AccountsList(
         }
         Column {
             accounts.forEachIndexed { index, account ->
-                // Define the default shape based on position in the list
-                val defaultShape = when {
-                    accounts.size == 1 -> RoundedCornerShape(28.dp)
-                    index == 0 -> RoundedCornerShape(
-                        topStart = 28.dp,
-                        topEnd = 28.dp,
-                        bottomStart = 4.dp,
-                        bottomEnd = 4.dp
-                    )
-                    index == accounts.size - 1 -> RoundedCornerShape(
-                        bottomStart = 28.dp,
-                        bottomEnd = 28.dp,
-                        topStart = 4.dp,
-                        topEnd = 4.dp
-                    )
-                    else -> RoundedCornerShape(4.dp)
-                }
-                
                 // Pill shape for when swiping
                 val pillShape = RoundedCornerShape(28.dp)
 
-                // Initialize state normally
-                val dismissState = rememberSwipeToDismissBoxState()
-                
-                // Track if we've crossed the threshold and should trigger deletion
+                // Track component width for calculating swipe progress
+                var componentWidth by remember { mutableFloatStateOf(1f) }
+
+                // Create anchored draggable state with custom thresholds
+                val anchoredDraggableState = remember {
+                    AnchoredDraggableState<SwipeState>(
+                        initialValue = SwipeState.Settled,
+                        anchors = DraggableAnchors {
+                            SwipeState.Settled at 0f
+                            SwipeState.Dismissed at -1f // Will be updated when width is known
+                        },
+                        // Require 90% swipe to trigger dismissal
+                        positionalThreshold = { distance: Float -> distance * 0.9f },
+                        // High velocity threshold to prevent accidental flings
+                        velocityThreshold = { with(density) { 1000.dp.toPx() } },
+                        snapAnimationSpec = tween(durationMillis = 200),
+                        decayAnimationSpec = splineBasedDecay(density)
+                    )
+                }
+
+                // Update anchors when width changes
+                LaunchedEffect(componentWidth) {
+                    if (componentWidth > 0) {
+                        val newAnchors = DraggableAnchors {
+                            SwipeState.Settled at 0f
+                            SwipeState.Dismissed at -componentWidth
+                        }
+                        anchoredDraggableState.updateAnchors(newAnchors)
+                    }
+                }
+
+                // Track if deletion has been triggered
                 var pendingDeletion by remember { mutableStateOf(false) }
 
-                // Monitor for when the dismiss animation completes after crossing threshold
-                // currentValue changes to EndToStart when the swipe is complete (user released past threshold)
-                LaunchedEffect(dismissState.currentValue) {
-                    if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
-                        // Row has "fallen" off to the left, now show the confirmation
+                // Monitor for when the swipe reaches the dismissed state
+                LaunchedEffect(anchoredDraggableState.settledValue) {
+                    if (anchoredDraggableState.settledValue == SwipeState.Dismissed) {
                         pendingDeletion = true
                         accountToRemove = account
                     }
                 }
-                
+
                 // Reset state when dialog is dismissed without confirming
                 LaunchedEffect(accountToRemove) {
                     if (accountToRemove == null && pendingDeletion) {
-                        // User cancelled the deletion, reset the swipe state
                         pendingDeletion = false
-                        dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+                        scope.launch {
+                            anchoredDraggableState.snapTo(SwipeState.Settled)
+                        }
                     }
                 }
 
-                // Has the swipe reached the threshold (middle or more)
-                val isThresholdReached by remember {
-                    derivedStateOf { dismissState.targetValue == SwipeToDismissBoxValue.EndToStart }
-                }
-                
-                // Determine if there's ACTIVE swiping happening
-                // When settled: currentValue == targetValue == Settled, progress == 1.0
-                // When swiping: currentValue != targetValue OR progress < 1.0
-                val isActivelySwiping by remember {
-                    derivedStateOf { 
-                        dismissState.currentValue != dismissState.targetValue ||
-                        (dismissState.progress < 1f && dismissState.progress > 0f)
+                // Calculate swipe progress (0 to 1)
+                val swipeProgress by remember {
+                    derivedStateOf {
+                        val currentOffset = try {
+                            anchoredDraggableState.requireOffset()
+                        } catch (e: IllegalStateException) {
+                            0f
+                        }
+                        if (componentWidth > 0) {
+                            (abs(currentOffset) / componentWidth).coerceIn(0f, 1f)
+                        } else 0f
                     }
                 }
-                
-                // Animate to pill shape ONLY when actively swiping
-                val shouldMorphToPill = isActivelySwiping
-                
+
+                // Icon animation threshold - triggers early (at ~10% swipe progress)
+                val isIconAnimationTriggered by remember {
+                    derivedStateOf { swipeProgress >= 0.1f }
+                }
+
+                // Determine if there's ACTIVE swiping happening
+                val isActivelySwiping by remember {
+                    derivedStateOf { swipeProgress > 0f }
+                }
+
                 // Animate the min corner (4dp -> 28dp) for the edges that need to change
                 val animatedMinCorner by animateDpAsState(
-                    targetValue = if (shouldMorphToPill) 28.dp else 4.dp,
+                    targetValue = if (isActivelySwiping) 28.dp else 4.dp,
                     label = "corner_morph"
                 )
-                
+
                 // Current animated shape for the card
                 val currentShape = when {
-                    accounts.size == 1 -> pillShape // Already a pill, no animation needed
+                    accounts.size == 1 -> pillShape
                     index == 0 -> RoundedCornerShape(
                         topStart = 28.dp,
                         topEnd = 28.dp,
@@ -237,78 +234,90 @@ fun AccountsList(
                     else -> RoundedCornerShape(animatedMinCorner)
                 }
 
-                // Background animations
+                // Background animations - triggered early at ~10% swipe
                 val backgroundColor by animateColorAsState(
-                    if (isThresholdReached) MaterialTheme.colorScheme.errorContainer else Color.Transparent,
+                    if (isIconAnimationTriggered) MaterialTheme.colorScheme.errorContainer else Color.Transparent,
                     label = "bg_color"
                 )
                 val iconColor by animateColorAsState(
-                    if (isThresholdReached) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
+                    if (isIconAnimationTriggered) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
                     label = "icon_color"
                 )
                 val iconScale by animateFloatAsState(
-                    if (isThresholdReached) 1.25f else 1.0f, 
+                    if (isIconAnimationTriggered) 1.25f else 1.0f,
                     label = "icon_scale"
                 )
 
-                Box(modifier = Modifier.padding(vertical = 1.dp)) {
-                    SwipeToDismissBox(
-                        state = dismissState,
-                        enableDismissFromStartToEnd = false,
-                        backgroundContent = {
-                            Box(
-                                Modifier
-                                    .fillMaxSize()
-                                    .clip(currentShape)
-                                    .background(backgroundColor)
-                                    .padding(horizontal = 24.dp),
-                                contentAlignment = Alignment.CenterEnd
-                            ) {
-                                // Only show icon when there is active swipe progress
-                                if (dismissState.progress > 0 || isThresholdReached) {
-                                    Icon(
-                                        Icons.Outlined.Delete,
-                                        contentDescription = null,
-                                        tint = iconColor,
-                                        modifier = Modifier.scale(iconScale)
-                                    )
-                                }
-                            }
-                        }
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = 1.dp)
+                        .onSizeChanged { componentWidth = it.width.toFloat() }
+                ) {
+                    // Background layer with delete icon
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clip(currentShape)
+                            .background(backgroundColor)
+                            .padding(horizontal = 24.dp),
+                        contentAlignment = Alignment.CenterEnd
                     ) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = currentShape,
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (account.isActive)
-                                    MaterialTheme.colorScheme.primaryContainer
-                                else
-                                    MaterialTheme.colorScheme.surfaceContainerHigh
-                            ),
-                            onClick = { if (!account.isActive) onSwitchAccount(account) }
-                        ) {
-                            ListItem(
-                                headlineContent = {
-                                    Text(
-                                        "@${account.name}",
-                                        fontWeight = if (account.isActive) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                },
-                                supportingContent = { Text(account.hostUrl) },
-                                leadingContent = {
-                                    AsyncImage(
-                                        model = account.avatarUrl,
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.surface),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        if (swipeProgress > 0) {
+                            Icon(
+                                Icons.Outlined.Delete,
+                                contentDescription = null,
+                                tint = iconColor,
+                                modifier = Modifier.scale(iconScale)
                             )
                         }
+                    }
+
+                    // Foreground card with swipe gesture
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset {
+                                val currentOffset = try {
+                                    anchoredDraggableState.requireOffset()
+                                } catch (e: IllegalStateException) {
+                                    0f
+                                }
+                                IntOffset(currentOffset.roundToInt(), 0)
+                            }
+                            .anchoredDraggable(
+                                state = anchoredDraggableState,
+                                orientation = Orientation.Horizontal
+                            ),
+                        shape = currentShape,
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (account.isActive)
+                                MaterialTheme.colorScheme.primaryContainer
+                            else
+                                MaterialTheme.colorScheme.surfaceContainerHigh
+                        ),
+                        onClick = { if (!account.isActive) onSwitchAccount(account) }
+                    ) {
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    "@${account.name}",
+                                    fontWeight = if (account.isActive) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            supportingContent = { Text(account.hostUrl) },
+                            leadingContent = {
+                                AsyncImage(
+                                    model = account.avatarUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.surface),
+                                    contentScale = ContentScale.Crop
+                                )
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        )
                     }
                 }
             }
