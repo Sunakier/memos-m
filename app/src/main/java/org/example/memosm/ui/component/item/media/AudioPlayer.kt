@@ -1,4 +1,4 @@
-package org.example.memosm.ui.components.item.media
+package org.example.memosm.ui.component.item.media
 
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedContent
@@ -53,7 +53,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.example.memosm.ui.components.item.mutableLongPositionOf
+import org.example.memosm.ui.component.item.mutableLongPositionOf
 import java.util.Locale
 
 enum class AudioPlayerMode {

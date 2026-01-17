@@ -8,9 +8,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import org.example.memosm.R
-import org.example.memosm.ui.components.GenericMemosListPane
-import org.example.memosm.ui.components.MemoSearchBar
-import org.example.memosm.ui.components.MemosScaffold
+import org.example.memosm.ui.component.GenericMemosListPane
+import org.example.memosm.ui.component.MemoSearchBar
+import org.example.memosm.ui.component.MemosScaffold
 import org.example.memosm.viewmodel.MemosViewModel
 import kotlin.collections.get
 

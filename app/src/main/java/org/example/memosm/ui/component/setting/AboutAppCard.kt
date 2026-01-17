@@ -1,4 +1,4 @@
-package org.example.memosm.ui.components.settings
+package org.example.memosm.ui.component.setting
 
 import android.content.ClipData
 import android.content.ClipboardManager

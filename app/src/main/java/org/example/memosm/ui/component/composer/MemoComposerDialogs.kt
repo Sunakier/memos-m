@@ -1,4 +1,4 @@
-package org.example.memosm.ui.components.composer
+package org.example.memosm.ui.component.composer
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState

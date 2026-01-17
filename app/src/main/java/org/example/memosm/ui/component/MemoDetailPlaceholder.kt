@@ -1,4 +1,4 @@
-package org.example.memosm.ui.components
+package org.example.memosm.ui.component
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*

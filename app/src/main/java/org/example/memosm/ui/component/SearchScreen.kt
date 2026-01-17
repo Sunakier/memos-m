@@ -1,4 +1,4 @@
-package org.example.memosm.ui.components
+package org.example.memosm.ui.component
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import org.example.memosm.R
 import org.example.memosm.model.Memo
-import org.example.memosm.ui.components.item.MemoItem
+import org.example.memosm.ui.component.item.MemoItem
 import org.example.memosm.viewmodel.MemosUiState
 import org.example.memosm.viewmodel.MemosViewModel
 import java.text.SimpleDateFormat

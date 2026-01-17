@@ -1,4 +1,4 @@
-package org.example.memosm.ui.components
+package org.example.memosm.ui.component
 
 import android.util.Log
 import androidx.compose.foundation.layout.*

@@ -1,4 +1,4 @@
-package org.example.memosm.ui.components.item
+package org.example.memosm.ui.component.item
 
 import android.content.Intent
 import android.net.Uri
@@ -49,7 +49,6 @@ import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.model.Reaction
 import org.example.memosm.model.User
-import org.example.memosm.viewmodel.MemosViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 

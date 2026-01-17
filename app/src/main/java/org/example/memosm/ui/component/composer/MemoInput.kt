@@ -1,4 +1,4 @@
-package org.example.memosm.ui.components.composer
+package org.example.memosm.ui.component.composer
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource

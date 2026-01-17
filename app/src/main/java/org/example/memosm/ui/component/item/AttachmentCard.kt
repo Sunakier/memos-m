@@ -1,4 +1,4 @@
-package org.example.memosm.ui.components.item
+package org.example.memosm.ui.component.item
 
 import FullScreenImageViewer
 import android.app.Activity
@@ -37,12 +37,12 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
-import org.example.memosm.ui.components.item.media.AudioPlayer
-import org.example.memosm.ui.components.item.media.AudioPlayerMode
-import org.example.memosm.ui.components.item.media.FileThumbnail
-import org.example.memosm.ui.components.item.media.FileThumbnailMode
-import org.example.memosm.ui.components.item.media.MemoImage
-import org.example.memosm.ui.components.item.media.VideoPlayer
+import org.example.memosm.ui.component.item.media.AudioPlayer
+import org.example.memosm.ui.component.item.media.AudioPlayerMode
+import org.example.memosm.ui.component.item.media.FileThumbnail
+import org.example.memosm.ui.component.item.media.FileThumbnailMode
+import org.example.memosm.ui.component.item.media.MemoImage
+import org.example.memosm.ui.component.item.media.VideoPlayer
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*

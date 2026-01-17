@@ -1,4 +1,4 @@
-package org.example.memosm.ui.components.item
+package org.example.memosm.ui.component.item
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -9,8 +9,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,7 +30,6 @@ import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
 import com.mikepenz.markdown.compose.elements.highlightedCodeFence
 import com.mikepenz.markdown.compose.extendedspans.ExtendedSpans
 //import com.mikepenz.markdown.compose.extendedspans.RoundedCornerSpanPainter
-import com.mikepenz.markdown.compose.extendedspans.SquigglyUnderlineSpanPainter
 import com.mikepenz.markdown.compose.extendedspans.rememberSquigglyUnderlineAnimator
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.model.MarkdownState
@@ -42,7 +39,6 @@ import com.mikepenz.markdown.model.markdownAnnotatorConfig
 import com.mikepenz.markdown.model.markdownExtendedSpans
 import com.mikepenz.markdown.utils.getUnescapedTextInNode
 import org.example.memosm.model.Attachment
-import org.example.memosm.viewmodel.MemosViewModel
 import org.intellij.markdown.IElementType
 import org.intellij.markdown.MarkdownElementTypes
 import org.intellij.markdown.ast.ASTNode

@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 import org.example.memosm.data.DataStoreManager
-import org.example.memosm.ui.components.LoginScreen
+import org.example.memosm.ui.component.LoginScreen
 import org.example.memosm.ui.MainScreen
 import org.example.memosm.ui.theme.MemosMTheme
 

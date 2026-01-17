@@ -1,4 +1,4 @@
-package org.example.memosm.ui.components.item.media
+package org.example.memosm.ui.component.item.media
 
 import android.net.Uri
 import android.util.Base64

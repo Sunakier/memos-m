@@ -1,4 +1,4 @@
-package org.example.memosm.ui.components.item.media
+package org.example.memosm.ui.component.item.media
 
 import android.content.pm.ActivityInfo
 import android.view.ViewGroup
@@ -38,7 +38,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
-import org.example.memosm.ui.components.item.findActivity
+import org.example.memosm.ui.component.item.findActivity
 
 @Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @OptIn(UnstableApi::class)

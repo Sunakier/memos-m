@@ -1,4 +1,4 @@
-package org.example.memosm.ui.components.composer
+package org.example.memosm.ui.component.composer
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -52,8 +52,8 @@ import kotlinx.coroutines.withContext
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Location
-import org.example.memosm.ui.components.item.AttachmentCard
-import org.example.memosm.ui.components.item.AttachmentCompactMode
+import org.example.memosm.ui.component.item.AttachmentCard
+import org.example.memosm.ui.component.item.AttachmentCompactMode
 import java.io.File
 
 @Composable
