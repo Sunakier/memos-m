@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Add
@@ -65,6 +66,7 @@ fun AccountsList(
     modifier: Modifier = Modifier
 ) {
     var accountToRemove by remember { mutableStateOf<Account?>(null) }
+    val scope = rememberCoroutineScope()
 
     if (accountToRemove != null) {
         AlertDialog(
@@ -95,137 +97,113 @@ fun AccountsList(
                 }
             })
     }
-    Column(modifier = modifier.padding(vertical = 16.dp)) {
-        // Header Section
+    Column(modifier = modifier.padding(16.dp)) {
+        // Header
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 8.dp), // Increased horizontal padding
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 stringResource(R.string.profile_accounts),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.ExtraBold, // More expressive weight
-                color = MaterialTheme.colorScheme.onSurface
+                fontWeight = FontWeight.Bold
             )
             IconButton(onClick = onAddAccount) {
                 Icon(Icons.Outlined.Add, contentDescription = null)
             }
         }
+        Column {
+            accounts.forEachIndexed { index, account ->
+                val shape = when {
+                    accounts.size == 1 -> RoundedCornerShape(28.dp)
+                    index == 0 -> RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp, bottomStart = 4.dp, bottomEnd = 4.dp)
+                    index == accounts.size - 1 -> RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp, topStart = 4.dp, topEnd = 4.dp)
+                    else -> RoundedCornerShape(4.dp)
+                }
 
-        // 1. Create the scope at the top of your Composable
-        val scope = rememberCoroutineScope()
+                // 1. Initialize state normally
+                val dismissState = rememberSwipeToDismissBoxState()
 
-        accounts.forEach { account ->
-            val dismissState = rememberSwipeToDismissBoxState(
-                positionalThreshold = { it * 0.4f }
-            )
-
-            // 2. Watch the state. When it hits the "dismissed" value, trigger logic
-            if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
-                accountToRemove = account
-
-                // 3. Launch a coroutine to snap the item back to the center
+                // 2. TRIGGER LOGIC: Monitor when the state has settled on "Dismissed"
+                // This ensures the user has released the swipe and the animation has finished.
                 LaunchedEffect(dismissState.currentValue) {
-                    scope.launch {
+                    if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                        accountToRemove = account
+                        // Snap back immediately so the UI is ready for the next action
+                        // once the dialog is dismissed.
                         dismissState.snapTo(SwipeToDismissBoxValue.Settled)
                     }
                 }
-            }
 
-            // --- Expressive Shape Animation ---
-            // When swiping, we make the corners sharper to create a "pushed" effect
-            val cornerSize by animateDpAsState(
-                targetValue = if (dismissState.targetValue != SwipeToDismissBoxValue.Settled) 12.dp else 28.dp,
-                label = "corner_animation"
-            )
-            val shape = androidx.compose.foundation.shape.RoundedCornerShape(cornerSize)
+                Box(modifier = Modifier.padding(vertical = 1.dp)) {
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        enableDismissFromStartToEnd = false,
+                        backgroundContent = {
+                            // 3. Re-implementing the Visual Feedback (The "Red" phase)
+                            // We use targetValue here because it reacts while the user is still dragging
+                            val isReached = dismissState.targetValue == SwipeToDismissBoxValue.EndToStart
 
-            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                SwipeToDismissBox(
-                    state = dismissState,
-                    enableDismissFromStartToEnd = false,
-                    backgroundContent = {
-                        val color by animateColorAsState(
-                            when (dismissState.targetValue) {
-                                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
-                                else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            }, label = "bg_color"
-                        )
-
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .clip(shape) // Shape morphs with the card
-                                .background(color)
-                                .padding(horizontal = 24.dp),
-                            contentAlignment = Alignment.CenterEnd
-                        ) {
-                            Icon(
-                                Icons.Outlined.Delete,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            val backgroundColor by animateColorAsState(
+                                if (isReached) MaterialTheme.colorScheme.errorContainer else Color.Transparent,
+                                label = "bg_color"
                             )
-                        }
-                    }
-                ) {
-                    // --- The Main Expressive Card ---
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = shape, // Dynamic morphing shape
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (account.isActive)
-                                MaterialTheme.colorScheme.secondaryContainer
-                            else
-                                MaterialTheme.colorScheme.surfaceContainerHigh // Subtle "pill" look
-                        ),
-                        onClick = { if (!account.isActive) onSwitchAccount(account) }
-                    ) {
-                        ListItem(
-                            headlineContent = {
-                                Text(
-                                    "@" + (account.name ?: "Unknown"),
-                                    style = MaterialTheme.typography.bodyLarge.copy(
-                                        fontWeight = if (account.isActive) FontWeight.Bold else FontWeight.Medium
+                            val iconColor by animateColorAsState(
+                                if (isReached) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.outline,
+                                label = "icon_color"
+                            )
+                            val scale by animateFloatAsState(
+                                if (isReached) 1.25f else 1.0f, label = "icon_scale"
+                            )
+
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .clip(shape)
+                                    .background(backgroundColor)
+                                    .padding(horizontal = 24.dp),
+                                contentAlignment = Alignment.CenterEnd
+                            ) {
+                                // Only show icon when there is active swipe progress
+                                if (dismissState.progress > 0 || isReached) {
+                                    Icon(
+                                        Icons.Outlined.Delete,
+                                        contentDescription = null,
+                                        tint = iconColor,
+                                        modifier = Modifier.scale(scale)
                                     )
-                                )
-                            },
-                            supportingContent = {
-                                Text(
-                                    account.hostUrl,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            },
-                            leadingContent = {
-                                Box(modifier = Modifier.padding(4.dp)) {
+                                }
+                            }
+                        }
+                    ) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = shape,
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (account.isActive)
+                                    MaterialTheme.colorScheme.primaryContainer
+                                else
+                                    MaterialTheme.colorScheme.surfaceContainerHigh
+                            ),
+                            onClick = { if (!account.isActive) onSwitchAccount(account) }
+                        ) {
+                            ListItem(
+                                headlineContent = {
+                                    Text("@${account.name}", fontWeight = if (account.isActive) FontWeight.Bold else FontWeight.Normal)
+                                },
+                                supportingContent = { Text(account.hostUrl) },
+                                leadingContent = {
                                     AsyncImage(
                                         model = account.avatarUrl,
                                         contentDescription = null,
-                                        modifier = Modifier
-                                            .size(48.dp) // Slightly larger avatar
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.surfaceDim),
+                                        modifier = Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface),
                                         contentScale = ContentScale.Crop
                                     )
-                                    if (account.isActive) {
-                                        Icon(
-                                            Icons.Filled.CheckCircle,
-                                            contentDescription = null,
-                                            modifier = Modifier
-                                                .size(18.dp)
-                                                .align(Alignment.BottomEnd)
-                                                .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape)
-                                                .border(2.dp, MaterialTheme.colorScheme.secondaryContainer, CircleShape),
-                                            tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                        )
-                                    }
-                                }
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                        )
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                            )
+                        }
                     }
                 }
             }
