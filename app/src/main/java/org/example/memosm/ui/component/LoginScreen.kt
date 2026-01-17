@@ -39,13 +39,18 @@ fun LoginScreen(
     Surface(
         modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
     ) {
-        LoginContent(
-            onLoginSuccess = onLoginSuccess,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp)
-                .padding(top = 64.dp, bottom = 24.dp)
-        )
+        Box(
+            modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter
+        ) {
+            LoginContent(
+                onLoginSuccess = onLoginSuccess,
+                modifier = Modifier
+                    .widthIn(max = 480.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 64.dp, bottom = 24.dp)
+            )
+        }
     }
 }
 
@@ -56,27 +61,33 @@ fun LoginDialog(
     Dialog(
         onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .wrapContentHeight(),
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp
+        Box(
+            modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
         ) {
-            Box {
-                IconButton(
-                    onClick = onDismiss, modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                ) {
-                    Icon(Icons.Default.Close, contentDescription = "Close")
-                }
+            Surface(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .widthIn(max = 480.dp)
+                    .fillMaxWidth()
+                    .wrapContentHeight(),
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp
+            ) {
+                Box {
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "Close")
+                    }
 
-                LoginContent(
-                    onLoginSuccess = onLoginSuccess, modifier = Modifier.padding(24.dp)
-                )
+                    LoginContent(
+                        onLoginSuccess = onLoginSuccess, modifier = Modifier.padding(24.dp)
+                    )
+                }
             }
         }
     }
