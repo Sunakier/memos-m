@@ -29,7 +29,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 enum class LoginMode {
-    TOKEN, PASSWORD
+    PASSWORD, TOKEN
 }
 
 @Composable
@@ -94,7 +94,7 @@ fun LoginContent(
     onLoginSuccess: (String, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var loginMode by remember { mutableStateOf(LoginMode.TOKEN) }
+    var loginMode by remember { mutableStateOf(LoginMode.PASSWORD) }
     var hostUrl by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
@@ -236,13 +236,13 @@ fun LoginContent(
             selectedTabIndex = loginMode.ordinal, modifier = Modifier.fillMaxWidth()
         ) {
             Tab(
-                selected = loginMode == LoginMode.TOKEN,
-                onClick = { loginMode = LoginMode.TOKEN },
-                text = { Text(stringResource(R.string.login_token)) })
-            Tab(
                 selected = loginMode == LoginMode.PASSWORD,
                 onClick = { loginMode = LoginMode.PASSWORD },
                 text = { Text(stringResource(R.string.login_password)) })
+            Tab(
+                selected = loginMode == LoginMode.TOKEN,
+                onClick = { loginMode = LoginMode.TOKEN },
+                text = { Text(stringResource(R.string.login_token)) })
         }
 
         Spacer(modifier = Modifier.height(16.dp))
