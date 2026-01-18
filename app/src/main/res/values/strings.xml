@@ -69,6 +69,14 @@
     <string name="profile_accounts">Accounts</string>
     <string name="profile_remove_account_title">Remove Account</string>
     <string name="profile_remove_account_confirm">Are you sure you want to remove the account for \"%1$s\"? You will need to login again to access this account.</string>
+    <string name="profile_edit_account">Edit Profile</string>
+    <string name="profile_username">Username</string>
+    <string name="profile_display_name">Display Name</string>
+    <string name="profile_email">Email</string>
+    <string name="profile_avatar_url">Avatar URL</string>
+    <string name="profile_description">Description</string>
+    <string name="profile_new_password">New Password</string>
+    <string name="profile_password_hint">Leave blank to keep current password</string>
 
     <string name="memo_action_edit">Edit</string>
     <string name="memo_action_delete">Delete</string>

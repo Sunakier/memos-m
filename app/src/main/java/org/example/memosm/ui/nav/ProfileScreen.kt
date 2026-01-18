@@ -29,6 +29,7 @@ import org.example.memosm.ui.component.ArchivedMemosScreen
 import org.example.memosm.ui.component.ErrorView
 import org.example.memosm.viewmodel.MemosViewModel
 import org.example.memosm.ui.component.setting.AboutAppCard
+import org.example.memosm.ui.component.setting.AccountEditDialog
 import org.example.memosm.ui.component.setting.ShortcutsCard
 import org.example.memosm.ui.component.setting.WebhooksCard
 
@@ -156,6 +157,33 @@ private fun ProfileListPane(
     }
 
     var showAccountSwitcher by remember { mutableStateOf(false) }
+    var accountToEdit by remember { mutableStateOf<Account?>(null) }
+    var isSavingProfile by remember { mutableStateOf(false) }
+
+    // Account Edit Dialog
+    accountToEdit?.let { account ->
+        AccountEditDialog(
+            account = account,
+            onDismiss = { accountToEdit = null },
+            onSave = { update ->
+                isSavingProfile = true
+                viewModel.updateUserProfile(
+                    username = update.username,
+                    email = update.email,
+                    displayName = update.displayName,
+                    avatarUrl = update.avatarUrl,
+                    description = update.description,
+                    password = update.password
+                ) { success ->
+                    isSavingProfile = false
+                    if (success) {
+                        accountToEdit = null
+                    }
+                }
+            },
+            isSaving = isSavingProfile
+        )
+    }
 
     if (showAccountSwitcher) {
         ModalBottomSheet(
@@ -163,13 +191,24 @@ private fun ProfileListPane(
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ) {
             AccountsList(
-                accounts = accounts, onSwitchAccount = {
+                accounts = accounts, 
+                onSwitchAccount = {
                     viewModel.switchAccount(it)
                     showAccountSwitcher = false
-                }, onLogoutAccount = { viewModel.removeAccount(it) }, onAddAccount = {
+                }, 
+                onLogoutAccount = { viewModel.removeAccount(it) },
+                onEditAccount = { account ->
+                    // Only allow editing the active account (need to be authenticated)
+                    if (account.isActive) {
+                        showAccountSwitcher = false
+                        accountToEdit = account
+                    }
+                },
+                onAddAccount = {
                     onAddAccount()
                     showAccountSwitcher = false
-                }, modifier = Modifier.padding(bottom = 32.dp)
+                }, 
+                modifier = Modifier.padding(bottom = 32.dp)
             )
         }
     }

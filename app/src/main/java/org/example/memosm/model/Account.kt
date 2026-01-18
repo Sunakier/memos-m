@@ -6,5 +6,7 @@ data class Account(
     val name: String? = null,
     val displayName: String? = null,
     val avatarUrl: String? = null,
+    val email: String? = null,
+    val description: String? = null,
     val isActive: Boolean = false
 )

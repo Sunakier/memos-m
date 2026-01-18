@@ -166,6 +166,8 @@ class MemosViewModel(
                 name = user?.username,
                 displayName = user?.displayName,
                 avatarUrl = user?.avatarUrl,
+                email = user?.email,
+                description = user?.description,
                 isActive = true
             )
 
@@ -946,6 +948,66 @@ class MemosViewModel(
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error updating user settings", e)
                 _uiState.value = _uiState.value.copy(error = "Failed to update settings: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    fun updateUserProfile(
+        username: String? = null,
+        email: String? = null,
+        displayName: String? = null,
+        avatarUrl: String? = null,
+        description: String? = null,
+        password: String? = null,
+        onComplete: (Boolean) -> Unit = {}
+    ) {
+        val user = _uiState.value.currUser ?: return onComplete(false)
+        val userId = user.name?.removePrefix("users/") ?: return onComplete(false)
+
+        viewModelScope.launch {
+            try {
+                val updateMask = mutableListOf<String>()
+                if (username != null) updateMask.add("username")
+                if (email != null) updateMask.add("email")
+                if (displayName != null) updateMask.add("display_name")
+                if (avatarUrl != null) updateMask.add("avatar_url")
+                if (description != null) updateMask.add("description")
+                if (password != null) updateMask.add("password")
+
+                if (updateMask.isEmpty()) {
+                    onComplete(true)
+                    return@launch
+                }
+
+                val updatedUser = api.updateUser(
+                    user = userId,
+                    userData = User(
+                        username = username,
+                        email = email,
+                        displayName = displayName,
+                        avatarUrl = avatarUrl,
+                        description = description,
+                        password = password
+                    ),
+                    updateMask = updateMask.joinToString(",")
+                )
+
+                // Update current user in state
+                val processedUser = processUser(updatedUser)
+                _uiState.value = _uiState.value.copy(
+                    currUser = processedUser,
+                    users = _uiState.value.users + ((updatedUser.name ?: "") to processedUser)
+                )
+
+                // Update the account in accounts list
+                updateCurrentAccountInList()
+
+                Log.d("MemosViewModel", "User profile updated successfully")
+                onComplete(true)
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error updating user profile", e)
+                _uiState.value = _uiState.value.copy(error = "Failed to update profile: ${e.localizedMessage}")
+                onComplete(false)
             }
         }
     }

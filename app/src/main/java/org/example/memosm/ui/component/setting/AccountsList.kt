@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -63,8 +64,9 @@ import kotlin.math.roundToInt
 
 // Custom swipe anchor states
 enum class SwipeState {
-    Settled,   // Not swiped
-    Dismissed  // Fully swiped to end
+    EditTriggered, // Fully swiped to right (edit)
+    Settled,       // Not swiped
+    Dismissed      // Fully swiped to left (delete)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,6 +75,7 @@ fun AccountsList(
     accounts: List<Account>,
     onSwitchAccount: (Account) -> Unit,
     onLogoutAccount: (Account) -> Unit,
+    onEditAccount: ((Account) -> Unit)? = null,
     onAddAccount: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -136,22 +139,22 @@ fun AccountsList(
                 // Track component width for calculating swipe progress
                 var componentWidth by remember { mutableFloatStateOf(1f) }
 
-                // Create anchored draggable state with simple constructor (non-deprecated)
+                // Create anchored draggable state with bidirectional support
                 val anchoredDraggableState = remember {
                     AnchoredDraggableState(
                         initialValue = SwipeState.Settled,
                         anchors = DraggableAnchors {
+                            SwipeState.EditTriggered at 1f // Will be updated to +componentWidth
                             SwipeState.Settled at 0f
-                            SwipeState.Dismissed at -1f // Will be updated when width is known
+                            SwipeState.Dismissed at -1f // Will be updated to -componentWidth
                         }
                     )
                 }
 
                 // Create fling behavior with custom thresholds (new API)
-                // Note: velocityThreshold is fixed at 125 dp/s in the API
                 val flingBehavior = AnchoredDraggableDefaults.flingBehavior(
                     state = anchoredDraggableState,
-                    // Require 90% swipe to trigger dismissal
+                    // Require 90% swipe to trigger action
                     positionalThreshold = { distance: Float -> distance * 0.9f },
                     animationSpec = tween(durationMillis = 200)
                 )
@@ -160,6 +163,7 @@ fun AccountsList(
                 LaunchedEffect(componentWidth) {
                     if (componentWidth > 0) {
                         val newAnchors = DraggableAnchors {
+                            SwipeState.EditTriggered at componentWidth
                             SwipeState.Settled at 0f
                             SwipeState.Dismissed at -componentWidth
                         }
@@ -169,12 +173,25 @@ fun AccountsList(
 
                 // Track if deletion has been triggered
                 var pendingDeletion by remember { mutableStateOf(false) }
+                var pendingEdit by remember { mutableStateOf(false) }
 
-                // Monitor for when the swipe reaches the dismissed state
+                // Monitor for when the swipe reaches the dismissed or edit state
                 LaunchedEffect(anchoredDraggableState.settledValue) {
-                    if (anchoredDraggableState.settledValue == SwipeState.Dismissed) {
-                        pendingDeletion = true
-                        accountToRemove = account
+                    when (anchoredDraggableState.settledValue) {
+                        SwipeState.Dismissed -> {
+                            pendingDeletion = true
+                            accountToRemove = account
+                        }
+                        SwipeState.EditTriggered -> {
+                            pendingEdit = true
+                            onEditAccount?.invoke(account)
+                            // Reset immediately after triggering edit
+                            scope.launch {
+                                anchoredDraggableState.snapTo(SwipeState.Settled)
+                            }
+                            pendingEdit = false
+                        }
+                        else -> {}
                     }
                 }
 
@@ -188,18 +205,27 @@ fun AccountsList(
                     }
                 }
 
-                // Calculate swipe progress (0 to 1)
-                val swipeProgress by remember {
+                // Calculate swipe progress (0 to 1) for both directions
+                val currentOffset by remember {
                     derivedStateOf {
-                        val currentOffset = try {
+                        try {
                             anchoredDraggableState.requireOffset()
                         } catch (e: IllegalStateException) {
                             0f
                         }
+                    }
+                }
+                
+                val swipeProgress by remember {
+                    derivedStateOf {
                         if (componentWidth > 0) {
                             (abs(currentOffset) / componentWidth).coerceIn(0f, 1f)
                         } else 0f
                     }
+                }
+                
+                val isSwipingRight by remember {
+                    derivedStateOf { currentOffset > 0 }
                 }
 
                 // Icon animation threshold - triggers early (at ~10% swipe progress)
@@ -238,13 +264,21 @@ fun AccountsList(
                     else -> RoundedCornerShape(animatedMinCorner)
                 }
 
-                // Background animations - triggered early at ~10% swipe
+                // Background animations - different colors for edit vs delete
                 val backgroundColor by animateColorAsState(
-                    if (isIconAnimationTriggered) MaterialTheme.colorScheme.errorContainer else Color.Transparent,
+                    when {
+                        isSwipingRight && isIconAnimationTriggered -> MaterialTheme.colorScheme.primaryContainer
+                        !isSwipingRight && isIconAnimationTriggered -> MaterialTheme.colorScheme.errorContainer
+                        else -> Color.Transparent
+                    },
                     label = "bg_color"
                 )
                 val iconColor by animateColorAsState(
-                    if (isIconAnimationTriggered) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
+                    when {
+                        isSwipingRight && isIconAnimationTriggered -> MaterialTheme.colorScheme.primary
+                        !isSwipingRight && isIconAnimationTriggered -> MaterialTheme.colorScheme.error
+                        else -> MaterialTheme.colorScheme.outline
+                    },
                     label = "icon_color"
                 )
                 val iconScale by animateFloatAsState(
@@ -257,22 +291,39 @@ fun AccountsList(
                         .padding(vertical = 1.dp)
                         .onSizeChanged { componentWidth = it.width.toFloat() }
                 ) {
-                    // Background layer with delete icon
+                    // Background layer with icons (edit on left, delete on right)
                     Box(
                         modifier = Modifier
                             .matchParentSize()
                             .clip(currentShape)
                             .background(backgroundColor)
-                            .padding(horizontal = 24.dp),
-                        contentAlignment = Alignment.CenterEnd
+                            .padding(horizontal = 24.dp)
                     ) {
-                        if (swipeProgress > 0) {
-                            Icon(
-                                Icons.Outlined.Delete,
-                                contentDescription = null,
-                                tint = iconColor,
-                                modifier = Modifier.scale(iconScale)
-                            )
+                        // Edit icon on the left (for right swipe)
+                        if (swipeProgress > 0 && isSwipingRight && onEditAccount != null) {
+                            Box(
+                                modifier = Modifier.align(Alignment.CenterStart)
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Edit,
+                                    contentDescription = null,
+                                    tint = iconColor,
+                                    modifier = Modifier.scale(iconScale)
+                                )
+                            }
+                        }
+                        // Delete icon on the right (for left swipe)
+                        if (swipeProgress > 0 && !isSwipingRight) {
+                            Box(
+                                modifier = Modifier.align(Alignment.CenterEnd)
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Delete,
+                                    contentDescription = null,
+                                    tint = iconColor,
+                                    modifier = Modifier.scale(iconScale)
+                                )
+                            }
                         }
                     }
 
@@ -281,17 +332,14 @@ fun AccountsList(
                         modifier = Modifier
                             .fillMaxWidth()
                             .offset {
-                                val currentOffset = try {
-                                    anchoredDraggableState.requireOffset()
-                                } catch (e: IllegalStateException) {
-                                    0f
-                                }
                                 IntOffset(currentOffset.roundToInt(), 0)
                             }
                             .anchoredDraggable(
                                 state = anchoredDraggableState,
                                 orientation = Orientation.Horizontal,
-                                flingBehavior = flingBehavior
+                                flingBehavior = flingBehavior,
+                                // Only enable right swipe if edit callback is provided
+                                enabled = true
                             ),
                         shape = currentShape,
                         colors = CardDefaults.cardColors(
