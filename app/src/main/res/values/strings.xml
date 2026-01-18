@@ -77,6 +77,8 @@
     <string name="profile_description">Description</string>
     <string name="profile_new_password">New Password</string>
     <string name="profile_password_hint">Leave blank to keep current password</string>
+    <string name="profile_edit_credentials">Edit Login Info</string>
+    <string name="profile_credential_hint">Changes saved locally. Use carefully – invalid credentials will require re-login.</string>
 
     <string name="memo_action_edit">Edit</string>
     <string name="memo_action_delete">Delete</string>

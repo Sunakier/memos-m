@@ -64,9 +64,9 @@ import kotlin.math.roundToInt
 
 // Custom swipe anchor states
 enum class SwipeState {
-    EditTriggered, // Fully swiped to right (edit)
-    Settled,       // Not swiped
-    Dismissed      // Fully swiped to left (delete)
+    EditTriggered,  // Fully swiped to right (edit)
+    Settled,        // Not swiped
+    Dismissed       // Fully swiped to left (delete)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -163,7 +163,9 @@ fun AccountsList(
                 LaunchedEffect(componentWidth) {
                     if (componentWidth > 0) {
                         val newAnchors = DraggableAnchors {
-                            SwipeState.EditTriggered at componentWidth
+                            if (onEditAccount != null) {
+                                SwipeState.EditTriggered at componentWidth
+                            }
                             SwipeState.Settled at 0f
                             SwipeState.Dismissed at -componentWidth
                         }
@@ -171,7 +173,7 @@ fun AccountsList(
                     }
                 }
 
-                // Track if deletion has been triggered
+                // Track if deletion/edit has been triggered
                 var pendingDeletion by remember { mutableStateOf(false) }
                 var pendingEdit by remember { mutableStateOf(false) }
 
@@ -338,7 +340,6 @@ fun AccountsList(
                                 state = anchoredDraggableState,
                                 orientation = Orientation.Horizontal,
                                 flingBehavior = flingBehavior,
-                                // Only enable right swipe if edit callback is provided
                                 enabled = true
                             ),
                         shape = currentShape,

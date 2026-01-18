@@ -226,6 +226,29 @@ class MemosViewModel(
         }
     }
 
+    fun updateAccountCredentials(oldAccount: Account, newHostUrl: String, newToken: String) {
+        viewModelScope.launch {
+            val currentAccounts = _uiState.value.accounts.toMutableList()
+            val existingIndex = currentAccounts.indexOfFirst { 
+                it.hostUrl == oldAccount.hostUrl && it.accessToken == oldAccount.accessToken 
+            }
+            
+            if (existingIndex != -1) {
+                // Update the account with new credentials, keep other info
+                currentAccounts[existingIndex] = oldAccount.copy(
+                    hostUrl = newHostUrl,
+                    accessToken = newToken
+                )
+                dataStoreManager.saveAccounts(currentAccounts)
+                
+                // If this was the active account, switch to the updated version
+                if (oldAccount.isActive) {
+                    switchAccount(currentAccounts[existingIndex])
+                }
+            }
+        }
+    }
+
     private fun buildMemosFilter(): String? {
         val filters = mutableListOf<String>()
         _uiState.value.currUser?.name?.let { creatorName ->

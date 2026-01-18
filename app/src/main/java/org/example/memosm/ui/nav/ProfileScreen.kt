@@ -32,6 +32,7 @@ import org.example.memosm.ui.component.setting.AboutAppCard
 import org.example.memosm.ui.component.setting.AccountEditDialog
 import org.example.memosm.ui.component.setting.ShortcutsCard
 import org.example.memosm.ui.component.setting.WebhooksCard
+import org.example.memosm.ui.component.LoginDialog
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -157,14 +158,18 @@ private fun ProfileListPane(
     }
 
     var showAccountSwitcher by remember { mutableStateOf(false) }
-    var accountToEdit by remember { mutableStateOf<Account?>(null) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var accountToEditCredentials by remember { mutableStateOf<Account?>(null) }
     var isSavingProfile by remember { mutableStateOf(false) }
 
-    // Account Edit Dialog
-    accountToEdit?.let { account ->
+    // Get current account for profile editing
+    val activeAccount = accounts.find { it.isActive }
+
+    // Profile Edit Dialog (remote API update)
+    if (showEditDialog && activeAccount != null) {
         AccountEditDialog(
-            account = account,
-            onDismiss = { accountToEdit = null },
+            account = activeAccount,
+            onDismiss = { showEditDialog = false },
             onSave = { update ->
                 isSavingProfile = true
                 viewModel.updateUserProfile(
@@ -177,11 +182,25 @@ private fun ProfileListPane(
                 ) { success ->
                     isSavingProfile = false
                     if (success) {
-                        accountToEdit = null
+                        showEditDialog = false
                     }
                 }
             },
             isSaving = isSavingProfile
+        )
+    }
+
+    // Credential Edit Dialog (local login info)
+    accountToEditCredentials?.let { account ->
+        LoginDialog(
+            onLoginSuccess = { baseUrl, token ->
+                // Update the account with new credentials
+                viewModel.updateAccountCredentials(account, baseUrl, token)
+                accountToEditCredentials = null
+                showAccountSwitcher = false
+            },
+            onDismiss = { accountToEditCredentials = null },
+            editAccount = account
         )
     }
 
@@ -198,11 +217,7 @@ private fun ProfileListPane(
                 }, 
                 onLogoutAccount = { viewModel.removeAccount(it) },
                 onEditAccount = { account ->
-                    // Only allow editing the active account (need to be authenticated)
-                    if (account.isActive) {
-                        showAccountSwitcher = false
-                        accountToEdit = account
-                    }
+                    accountToEditCredentials = account
                 },
                 onAddAccount = {
                     onAddAccount()
@@ -238,17 +253,23 @@ private fun ProfileListPane(
             item {
                 Box(itemModifier) {
                     if (user != null) {
-                        ProfileHeader(user, onClick = { showAccountSwitcher = true })
+                        ProfileHeader(
+                            user = user,
+                            onClick = { showAccountSwitcher = true },
+                            onEditClick = { showEditDialog = true }
+                        )
                     } else {
-                        val activeAccount = accounts.find { it.isActive }
                         if (activeAccount != null) {
                             ProfileHeader(
-                                User(
+                                user = User(
                                     name = activeAccount.name?.let { "users/$it" },
                                     username = activeAccount.name ?: "",
                                     displayName = activeAccount.displayName,
                                     avatarUrl = activeAccount.avatarUrl
-                                ), onClick = { showAccountSwitcher = true })
+                                ),
+                                onClick = { showAccountSwitcher = true },
+                                onEditClick = { showEditDialog = true }
+                            )
                         } else if (uiState.isLoading) {
                             Box(
                                 modifier = Modifier

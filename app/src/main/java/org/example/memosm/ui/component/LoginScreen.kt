@@ -24,6 +24,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import org.example.memosm.R
 import org.example.memosm.api.MemosApiV0353
 import org.example.memosm.api.loginAndCreateToken
+import org.example.memosm.model.Account
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -54,9 +55,18 @@ fun LoginScreen(
     }
 }
 
+/**
+ * Login dialog that can also be used for editing existing account credentials.
+ * 
+ * @param onLoginSuccess Callback with (baseUrl, token) on successful login/save
+ * @param onDismiss Callback when dialog is dismissed
+ * @param editAccount Optional - if provided, the dialog is in "edit mode" with pre-filled values
+ */
 @Composable
 fun LoginDialog(
-    onLoginSuccess: (String, String) -> Unit, onDismiss: () -> Unit
+    onLoginSuccess: (String, String) -> Unit,
+    onDismiss: () -> Unit,
+    editAccount: Account? = null
 ) {
     Dialog(
         onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -85,7 +95,9 @@ fun LoginDialog(
                     }
 
                     LoginContent(
-                        onLoginSuccess = onLoginSuccess, modifier = Modifier.padding(24.dp)
+                        onLoginSuccess = onLoginSuccess,
+                        modifier = Modifier.padding(24.dp),
+                        editAccount = editAccount
                     )
                 }
             }
@@ -96,11 +108,15 @@ fun LoginDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginContent(
-    onLoginSuccess: (String, String) -> Unit, modifier: Modifier = Modifier
+    onLoginSuccess: (String, String) -> Unit,
+    modifier: Modifier = Modifier,
+    editAccount: Account? = null
 ) {
-    var loginMode by remember { mutableStateOf(LoginMode.PASSWORD) }
-    var hostUrl by remember { mutableStateOf("") }
-    var token by remember { mutableStateOf("") }
+    // If editing, default to token mode and pre-fill values
+    val isEditMode = editAccount != null
+    var loginMode by remember { mutableStateOf(if (isEditMode) LoginMode.TOKEN else LoginMode.PASSWORD) }
+    var hostUrl by remember { mutableStateOf(editAccount?.hostUrl ?: "") }
+    var token by remember { mutableStateOf(editAccount?.accessToken ?: "") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -228,7 +244,7 @@ fun LoginContent(
         verticalArrangement = Arrangement.Top
     ) {
         Text(
-            text = stringResource(R.string.login_title),
+            text = if (isEditMode) stringResource(R.string.profile_edit_credentials) else stringResource(R.string.login_title),
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(bottom = 32.dp)
         )
@@ -316,7 +332,7 @@ fun LoginContent(
             if (isLoading) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
             } else {
-                Text(stringResource(R.string.login_button))
+                Text(if (isEditMode) stringResource(R.string.common_save) else stringResource(R.string.login_button))
             }
         }
     }
