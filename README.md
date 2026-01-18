@@ -24,6 +24,8 @@
 
 ### Canary Build
 
+# [DO NOT INSTALL!!!! MAJOR BUG]
+
 The Canary build contains the latest features and improvements.
 
 These versions are marked as **pre-release** and may contain experimental changes.
