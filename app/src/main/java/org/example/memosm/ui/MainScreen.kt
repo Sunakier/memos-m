@@ -78,7 +78,8 @@ fun MainScreen(
         LoginDialog(
             onLoginSuccess = { newBaseUrl, newToken ->
                 scope.launch {
-                    dataStoreManager.saveCredentials(newBaseUrl, newToken)
+                    dataStoreManager.addAccount(newBaseUrl, newToken)
+                    viewModel.updateCurrentAccountInList()
                     isAddingAccount = false
                 }
             },

@@ -29,17 +29,17 @@ class MainActivity : ComponentActivity() {
                 val dataStoreManager = remember { DataStoreManager(context) }
                 val scope = rememberCoroutineScope()
 
-                val savedUrl by dataStoreManager.hostUrl.collectAsState(initial = null)
-                val savedToken by dataStoreManager.accessToken.collectAsState(initial = null)
-
+                // Observe accounts instead of single credentials
+                val accounts by dataStoreManager.accounts.collectAsState(initial = null)
+                
                 // Wait for DataStore to emit initial values
                 var isCheckingSession by remember { mutableStateOf(true) }
 
-                LaunchedEffect(savedUrl, savedToken) {
-                    // This is a simple way to wait for the first emission from DataStore
-                    // In a real app, you'd use a more robust way to handle the "loading" state
-                    kotlinx.coroutines.delay(100)
-                    isCheckingSession = false
+                LaunchedEffect(accounts) {
+                    if (accounts != null) {
+                        // Once we have a non-null list (even if empty), we've finished the initial load
+                        isCheckingSession = false
+                    }
                 }
 
                 if (isCheckingSession) {
@@ -47,24 +47,27 @@ class MainActivity : ComponentActivity() {
                         CircularProgressIndicator()
                     }
                 } else {
+                    val activeAccount = accounts?.find { it.isActive }
+                    
                     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                        if (savedUrl != null && savedToken != null) {
+                        if (activeAccount != null) {
                             MainScreen(
-                                baseUrl = savedUrl!!,
-                                token = savedToken!!,
+                                baseUrl = activeAccount.hostUrl,
+                                token = activeAccount.accessToken,
                                 dataStoreManager = dataStoreManager,
                                 onLogout = {
                                     scope.launch {
-                                        dataStoreManager.clearCredentials()
+                                        dataStoreManager.deleteAccount(activeAccount.id)
                                     }
                                 },
                             )
                         } else {
+                            // If no active account, show login
                             LoginScreen(
                                 modifier = Modifier.padding(innerPadding),
                                 onLoginSuccess = { baseUrl, token ->
                                     scope.launch {
-                                        dataStoreManager.saveCredentials(baseUrl, token)
+                                        dataStoreManager.addAccount(baseUrl, token)
                                     }
                                 })
                         }

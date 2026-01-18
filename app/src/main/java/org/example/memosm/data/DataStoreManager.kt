@@ -42,7 +42,12 @@ class DataStoreManager(private val context: Context) {
             emptyList()
         } else {
             val type = object : TypeToken<List<Account>>() {}.type
-            gson.fromJson(json, type)
+            try {
+                val list: List<Account> = gson.fromJson(json, type)
+                list
+            } catch (e: Exception) {
+                emptyList()
+            }
         }
     }
 
@@ -66,6 +71,134 @@ class DataStoreManager(private val context: Context) {
             preferences[ACCOUNTS_JSON] = gson.toJson(accounts)
         }
     }
+
+    // --- Account Helpers ---
+
+    suspend fun getAccounts(): List<Account> {
+        val json = context.dataStore.data.map { it[ACCOUNTS_JSON] }.first()
+        
+        // If accounts list is empty, but we have legacy credentials, migrate them
+        if (json.isNullOrEmpty()) {
+            val legacyHost = context.dataStore.data.map { it[HOST_URL] }.first()
+            val legacyToken = context.dataStore.data.map { it[ACCESS_TOKEN] }.first()
+            
+            if (!legacyHost.isNullOrBlank() && !legacyToken.isNullOrBlank()) {
+                val newAccount = Account(
+                    hostUrl = legacyHost,
+                    accessToken = legacyToken,
+                    isActive = true
+                )
+                val list = listOf(newAccount)
+                saveAccounts(list)
+                return list
+            }
+            return emptyList()
+        }
+
+        val type = object : TypeToken<List<Account>>() {}.type
+        val list: List<Account> = try {
+            gson.fromJson(json, type)
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        var needsSave = false
+        val sanitized = list.map { account ->
+            @Suppress("SENSELESS_COMPARISON")
+            if (account.id == null || account.hostUrl == null || account.accessToken == null) {
+                needsSave = true
+                account.copy(
+                    id = account.id ?: java.util.UUID.randomUUID().toString(),
+                    hostUrl = account.hostUrl ?: "",
+                    accessToken = account.accessToken ?: ""
+                )
+            } else {
+                account
+            }
+        }
+
+        val final = if (sanitized.isNotEmpty() && sanitized.none { it.isActive }) {
+            needsSave = true
+            sanitized.mapIndexed { index, account -> 
+                if (index == 0) account.copy(isActive = true) else account 
+            }
+        } else {
+            sanitized
+        }
+
+        if (needsSave) {
+            saveAccounts(final)
+        }
+
+        return final
+    }
+
+    suspend fun addAccount(hostUrl: String, accessToken: String) {
+        val current = getAccounts().toMutableList()
+        // Check if account already exists to avoid duplicates
+        val existingIndex = current.indexOfFirst { it.hostUrl == hostUrl && it.accessToken == accessToken }
+        
+        if (existingIndex != -1) {
+            // Just activate it
+            setActiveAccount(current[existingIndex].id)
+        } else {
+            // Deactivate others
+            val updated = current.map { it.copy(isActive = false) }.toMutableList()
+            updated.add(Account(hostUrl = hostUrl, accessToken = accessToken, isActive = true))
+            saveAccounts(updated)
+        }
+        
+        // Also update legacy credentials for backward compatibility if needed, 
+        // or just to keep MainScreen working for now.
+        saveCredentials(hostUrl, accessToken)
+    }
+
+    suspend fun setActiveAccount(id: String) {
+        val current = getAccounts()
+        val updated = current.map { it.copy(isActive = it.id == id) }
+        saveAccounts(updated)
+        
+        // Update legacy credentials to the active one
+        val active = updated.find { it.isActive }
+        if (active != null) {
+            saveCredentials(active.hostUrl, active.accessToken)
+        }
+    }
+
+    suspend fun updateAccountLastUsed(id: String, timestamp: Long) {
+        val current = getAccounts()
+        val updated = current.map {
+            if (it.id == id) it.copy(lastUsed = timestamp) else it
+        }
+        saveAccounts(updated)
+    }
+
+    suspend fun deleteAccount(id: String) {
+        val current = getAccounts()
+        val updated = current.filterNot { it.id == id }
+        saveAccounts(updated)
+        
+        // If we deleted the active one, clear legacy credentials or set new active
+        if (updated.isEmpty()) {
+            clearCredentials()
+        } else if (updated.none { it.isActive }) {
+            setActiveAccount(updated.first().id)
+        }
+    }
+
+    suspend fun updateAccount(id: String, hostUrl: String, token: String) {
+        val current = getAccounts()
+        val updated = current.map {
+            if (it.id == id) {
+                val newAcc = it.copy(hostUrl = hostUrl, accessToken = token)
+                if (newAcc.isActive) saveCredentials(hostUrl, token)
+                newAcc
+            } else it
+        }
+        saveAccounts(updated)
+    }
+
+    // --- Other Settings ---
 
     suspend fun saveAttachmentCellWidth(width: Float) {
         context.dataStore.edit { preferences ->
@@ -96,39 +229,5 @@ class DataStoreManager(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences.clear()
         }
-    }
-
-    // --- Account Helpers ---
-
-    suspend fun getAccounts(): List<Account> {
-        return accounts.first()
-    }
-
-    suspend fun setActiveAccount(id: String) {
-        val current = getAccounts()
-        val updated = current.map { it.copy(isActive = it.id == id) }
-        saveAccounts(updated)
-    }
-
-    suspend fun updateAccountLastUsed(id: String, timestamp: Long) {
-        val current = getAccounts()
-        val updated = current.map {
-            if (it.id == id) it.copy(lastUsed = timestamp) else it
-        }
-        saveAccounts(updated)
-    }
-
-    suspend fun deleteAccount(id: String) {
-        val current = getAccounts()
-        val updated = current.filterNot { it.id == id }
-        saveAccounts(updated)
-    }
-
-    suspend fun updateAccount(id: String, hostUrl: String, token: String) {
-        val current = getAccounts()
-        val updated = current.map {
-            if (it.id == id) it.copy(hostUrl = hostUrl, accessToken = token) else it
-        }
-        saveAccounts(updated)
     }
 }

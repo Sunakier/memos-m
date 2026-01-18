@@ -150,7 +150,6 @@ class MemosViewModel(
     private fun startStateCollection() {
         collectionJob?.cancel()
         collectionJob = viewModelScope.launch {
-            // Nest combine calls to avoid argument limit and inference issues
             combine(
                 combine(
                     userMemoManager!!.listState,
@@ -188,9 +187,13 @@ class MemosViewModel(
                      _uiState.update { it.copy(session = it.session.copy(currUser = user)) }
                      userMemoManager?.fetch(refresh = true)
                      
-                     launch { fetchShortcuts(user.name ?: "") }
-                     launch { fetchUserSettings(user.name ?: "") }
-                     launch { fetchWebhooks(user.name ?: "") }
+                     // Ensure we use the full resource name (e.g. "users/1")
+                     val resourceName = user.name ?: ""
+                     if (resourceName.isNotBlank()) {
+                         launch { fetchShortcuts(resourceName) }
+                         launch { fetchUserSettings(resourceName) }
+                         launch { fetchWebhooks(resourceName) }
+                     }
                      
                      fetchInstanceProfile()
                 }
@@ -211,14 +214,16 @@ class MemosViewModel(
         }
     }
 
-    private suspend fun fetchUserSettings(userName: String) {
+    private suspend fun fetchUserSettings(userResourceName: String) {
          try {
-             val response = api?.listUserSettings(userName)
+             val response = api?.listUserSettings(userResourceName)
              val general = response?.settings?.find { it.name?.endsWith("general") == true || it.generalSetting != null }?.generalSetting
              if (general != null) {
                  _uiState.update { it.copy(session = it.session.copy(userSettings = general)) }
              }
-         } catch (e: Exception) { }
+         } catch (e: Exception) {
+             Log.e("MemosViewModel", "Error fetching user settings", e)
+         }
     }
     
     fun updateUserGeneralSetting(locale: String? = null, memoVisibility: String? = null) {
@@ -230,6 +235,7 @@ class MemosViewModel(
                     locale = locale ?: currentSetting.locale,
                     memoVisibility = memoVisibility ?: currentSetting.memoVisibility
                 )
+                // Use "general" as the final path segment, resource name is in path
                 api?.updateUserSetting(user.name!!, "general", UserSetting(generalSetting = newSetting), "general_setting")
                 fetchUserSettings(user.name!!)
             } catch (e: Exception) {
@@ -276,9 +282,9 @@ class MemosViewModel(
     
     // --- Shortcuts ---
     
-    private suspend fun fetchShortcuts(userName: String) {
+    private suspend fun fetchShortcuts(userResourceName: String) {
          try {
-             val response = api?.getShortcuts(userName)
+             val response = api?.getShortcuts(userResourceName)
              val shortcuts = response?.shortcuts ?: emptyList()
              _uiState.update { 
                  it.copy(userMemoList = it.userMemoList.copy(shortcuts = shortcuts)) 
@@ -318,6 +324,7 @@ class MemosViewModel(
             try {
                 val user = _uiState.value.session.currUser ?: return@launch
                 val update = shortcut.copy(title = title, filter = filter)
+                // shortcut.name is the full resource name
                 api?.updateShortcut(user.name!!, shortcut.name!!, update, "title,filter")
                 fetchShortcuts(user.name!!)
                 onSuccess()
@@ -339,12 +346,14 @@ class MemosViewModel(
 
     // --- Webhooks ---
     
-    private suspend fun fetchWebhooks(userName: String) {
+    private suspend fun fetchWebhooks(userResourceName: String) {
         try {
-            val response = api?.listUserWebhooks(userName)
+            val response = api?.listUserWebhooks(userResourceName)
             val hooks = response?.webhooks ?: emptyList()
             _uiState.update { it.copy(session = it.session.copy(webhooks = hooks)) }
-        } catch (e: Exception) { }
+        } catch (e: Exception) {
+            Log.e("MemosViewModel", "Error fetching webhooks", e)
+        }
     }
     
     fun createWebhook(displayName: String, url: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
@@ -551,7 +560,6 @@ class MemosViewModel(
         }
     }
     
-    // Companion object for factories to allow easy injection
     companion object {
         fun provideFactory(
             dataStoreManager: DataStoreManager
