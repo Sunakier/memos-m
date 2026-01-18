@@ -30,16 +30,16 @@ fun ExploreScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit =
 
     MemosScaffold(
         viewModel = viewModel,
-        memos = uiState.exploreMemos,
+        memos = uiState.exploreMemoList.list.items,
         listState = listState,
         onToggleNavBar = onToggleNavBar,
         listPane = { onMemoClick ->
             GenericMemosListPane(
                 viewModel = viewModel,
-                memos = uiState.exploreMemos,
-                isLoading = uiState.isExploring,
+                memos = uiState.exploreMemoList.list.items,
+                isLoading = uiState.exploreMemoList.list.isLoading,
                 isRefreshing = uiState.isRefreshing,
-                nextPageToken = uiState.exploreNextPageToken,
+                nextPageToken = uiState.exploreMemoList.list.nextPageToken,
                 onLoadMore = { viewModel.loadMoreExplore() },
                 onRefresh = { viewModel.fetchExplore(refresh = true) },
                 onMemoClick = onMemoClick,

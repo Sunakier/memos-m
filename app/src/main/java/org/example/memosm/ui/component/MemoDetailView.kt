@@ -64,8 +64,8 @@ fun MemoDetailView(
             }
     }
 
-    val isOwner = remember(memo.creator, uiState.currUser?.name) {
-        memo.creator == uiState.currUser?.name
+    val isOwner = remember(memo.creator, uiState.session.currUser?.name) {
+        memo.creator == uiState.session.currUser?.name
     }
 
     Surface(
@@ -103,7 +103,7 @@ fun MemoDetailView(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }, floatingActionButton = {
-            if (uiState.currUser != null) {
+            if (uiState.session.currUser != null) {
                 ExtendedFloatingActionButton(
                     onClick = { showCommentDialog = true },
                     expanded = isFabExpanded,
@@ -142,7 +142,7 @@ fun MemoDetailView(
                         MemoItem(
                             memo = memo,
                             user = uiState.users[memo.creator],
-                            currentUser = uiState.currUser,
+                            currentUser = uiState.session.currUser,
                             token = token,
                             hostUrl = hostUrl,
                             colors = CardDefaults.cardColors(),
@@ -228,11 +228,11 @@ fun MemoDetailView(
                     items(
                         comments,
                         key = { "comment_${it.name ?: it.content.hashCode()}" }) { comment ->
-                        val isCommentOwner = comment.creator == uiState.currUser?.name
+                        val isCommentOwner = comment.creator == uiState.session.currUser?.name
                         MemoItem(
                             memo = comment,
                             user = uiState.users[comment.creator],
-                            currentUser = uiState.currUser,
+                            currentUser = uiState.session.currUser,
                             token = token,
                             hostUrl = hostUrl,
                             colors = CardDefaults.cardColors(

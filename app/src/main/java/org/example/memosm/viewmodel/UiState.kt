@@ -1,0 +1,82 @@
+package org.example.memosm.viewmodel
+
+import org.example.memosm.model.*
+
+// --- Paginated List State (Generic) ---
+
+data class PaginatedListState<T>(
+    val items: List<T> = emptyList(),
+    val isLoading: Boolean = false,
+    val nextPageToken: String? = null
+)
+
+// --- Session State (Auth & User) ---
+
+data class SessionState(
+    val token: String = "",
+    val hostUrl: String = "",
+    val currUser: User? = null,
+    val userStats: UserStats? = null,
+    val userSettings: UserGeneralSetting? = null,
+    val webhooks: List<UserWebhook> = emptyList(),
+    val instanceProfile: InstanceProfile? = null
+)
+
+// --- Memo List State ---
+
+data class MemoListState(
+    val list: PaginatedListState<Memo> = PaginatedListState(),
+    val shortcuts: List<Shortcut> = emptyList(),
+    val selectedShortcut: Shortcut? = null
+)
+
+// --- Attachment List State ---
+
+data class AttachmentListState(
+    val list: PaginatedListState<Attachment> = PaginatedListState(),
+    val cellWidth: Float = 240f
+)
+
+// --- Draft State ---
+
+data class DraftState(
+    val draftMemo: Memo? = null,
+    val isDraftLoaded: Boolean = false,
+    val composerResetToken: Int = 0
+)
+
+// --- Detail Pane State ---
+
+data class DetailPaneState(
+    val selectedMemo: Memo? = null,
+    val comments: List<Memo> = emptyList(),
+    val isLoadingComments: Boolean = false
+)
+
+// --- Main UI State ---
+
+data class MemosUiState(
+    val session: SessionState = SessionState(),
+    val userMemoList: MemoListState = MemoListState(),
+    val exploreMemoList: MemoListState = MemoListState(),
+    val archivedMemoList: MemoListState = MemoListState(),
+    val searchMemoList: MemoListState = MemoListState(),
+    val attachmentList: AttachmentListState = AttachmentListState(),
+    val draft: DraftState = DraftState(),
+    val detailPane: DetailPaneState = DetailPaneState(),
+    
+    val accounts: List<Account> = emptyList(),
+    val users: Map<String, User> = emptyMap(),
+    
+    val isPosting: Boolean = false,
+    val isRefreshing: Boolean = false,
+    val refreshTrigger: Long = 0L,
+    val error: String? = null
+)
+
+// --- Error Response ---
+
+data class MemosErrorResponse(
+    val code: Int? = null,
+    val message: String? = null
+)

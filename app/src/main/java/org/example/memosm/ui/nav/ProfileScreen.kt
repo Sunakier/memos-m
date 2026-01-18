@@ -111,12 +111,12 @@ private fun ProfileListPane(
     onToggleNavBar: (Boolean) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val user = uiState.currUser
-    val stats = uiState.userStats
-    val shortcuts = uiState.shortcuts
-    val webhooks = uiState.webhooks
-    val instance = uiState.instanceProfile
-    val userSettings = uiState.userSettings
+    val user = uiState.session.currUser
+    val stats = uiState.session.userStats
+    val shortcuts = uiState.userMemoList.shortcuts
+    val webhooks = uiState.session.webhooks
+    val instance = uiState.session.instanceProfile
+    val userSettings = uiState.session.userSettings
     val accounts = uiState.accounts
 
     val listState = rememberLazyListState()
@@ -270,7 +270,7 @@ private fun ProfileListPane(
                                 onClick = { showAccountSwitcher = true },
                                 onEditClick = { showEditDialog = true }
                             )
-                        } else if (uiState.isLoading) {
+                        } else if (uiState.userMemoList.list.isLoading) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -397,7 +397,7 @@ private fun ProfileListPane(
                 item {
                     Spacer(modifier = Modifier.height(64.dp))
                 }
-            } else if (!uiState.isLoading) {
+            } else if (!uiState.userMemoList.list.isLoading) {
                 item {
                     ErrorView(
                         message = uiState.error

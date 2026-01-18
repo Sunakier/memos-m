@@ -47,7 +47,7 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit = {
 
     MemosScaffold(
         viewModel = viewModel,
-        memos = uiState.userMemos,
+        memos = uiState.userMemoList.list.items,
         listState = listState,
         onToggleNavBar = onToggleNavBar,
         listPane = { onMemoClick ->
@@ -79,10 +79,10 @@ private fun MemosListPane(
 
     GenericMemosListPane(
         viewModel = viewModel,
-        memos = uiState.userMemos,
-        isLoading = uiState.isLoading,
+        memos = uiState.userMemoList.list.items,
+        isLoading = uiState.userMemoList.list.isLoading,
         isRefreshing = uiState.isRefreshing,
-        nextPageToken = uiState.nextPageToken,
+        nextPageToken = uiState.userMemoList.list.nextPageToken,
         onLoadMore = { viewModel.loadMore() },
         onRefresh = { viewModel.refreshAll() },
         onMemoClick = onMemoClick,
@@ -91,7 +91,7 @@ private fun MemosListPane(
         header = {
             // Top input card
             item {
-                if (uiState.isDraftLoaded) {
+                if (uiState.draft.isDraftLoaded) {
                     Box(
                         modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
                     ) {
@@ -110,17 +110,17 @@ private fun MemosListPane(
                                         content, visibility, attachments, location
                                     )
                                 },
-                                availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
-                                token = uiState.token,
+                                availableTags = uiState.session.userStats?.tagCount?.keys ?: emptySet(),
+                                token = uiState.session.token,
                                 modifier = Modifier.padding(16.dp),
                                 isPosting = uiState.isPosting,
-                                initialContent = uiState.draftMemo?.content ?: "",
-                                initialAttachments = uiState.draftMemo?.attachments ?: emptyList(),
-                                initialVisibility = uiState.draftMemo?.visibility
-                                    ?: uiState.userSettings?.memoVisibility ?: "PRIVATE",
-                                initialLocation = uiState.draftMemo?.location,
+                                initialContent = uiState.draft.draftMemo?.content ?: "",
+                                initialAttachments = uiState.draft.draftMemo?.attachments ?: emptyList(),
+                                initialVisibility = uiState.draft.draftMemo?.visibility
+                                    ?: uiState.session.userSettings?.memoVisibility ?: "PRIVATE",
+                                initialLocation = uiState.draft.draftMemo?.location,
                                 submitLabel = stringResource(R.string.memo_publish),
-                                resetToken = uiState.composerResetToken
+                                resetToken = uiState.draft.composerResetToken
                             )
                         }
                     }
@@ -130,7 +130,7 @@ private fun MemosListPane(
             // Horizontal Shortcut Row
             item(key = "shortcut_row") {
                 AnimatedVisibility(
-                    visible = uiState.shortcuts.isNotEmpty(),
+                    visible = uiState.userMemoList.shortcuts.isNotEmpty(),
                     enter = fadeIn() + expandVertically(),
                     exit = fadeOut() + shrinkVertically()
                 ) {
@@ -158,8 +158,8 @@ private fun MemosListPane(
                             },
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        items(uiState.shortcuts, key = { it.name ?: it.title ?: "" }) { shortcut ->
-                            val isSelected = uiState.selectedShortcut?.name == shortcut.name
+                        items(uiState.userMemoList.shortcuts, key = { it.name ?: it.title ?: "" }) { shortcut ->
+                            val isSelected = uiState.userMemoList.selectedShortcut?.name == shortcut.name
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { viewModel.toggleShortcutFilter(shortcut) },

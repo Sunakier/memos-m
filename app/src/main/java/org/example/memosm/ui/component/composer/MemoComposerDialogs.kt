@@ -88,12 +88,12 @@ fun MemoComposerDialog(
                     onUploadFile = { uri, context ->
                         viewModel.uploadAttachment(uri, context)
                     },
-                    availableTags = uiState.userStats?.tagCount?.keys ?: emptySet(),
-                    token = uiState.token,
+                    availableTags = uiState.session.userStats?.tagCount?.keys ?: emptySet(),
+                    token = uiState.session.token,
                     isPosting = uiState.isPosting,
                     initialContent = initialMemo?.content ?: "",
                     initialVisibility = initialMemo?.visibility ?: parentMemo?.visibility
-                    ?: uiState.userSettings?.memoVisibility ?: "PRIVATE",
+                    ?: uiState.session.userSettings?.memoVisibility ?: "PRIVATE",
                     initialAttachments = initialMemo?.attachments ?: emptyList(),
                     initialLocation = initialMemo?.location,
                     placeholder = placeholder,

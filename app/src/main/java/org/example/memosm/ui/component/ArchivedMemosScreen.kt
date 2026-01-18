@@ -31,7 +31,7 @@ fun ArchivedMemosScreen(
     Box(modifier = modifier.fillMaxSize()) {
         MemosScaffold(
             viewModel = viewModel,
-            memos = uiState.archivedMemos,
+            memos = uiState.archivedMemoList.list.items,
             listState = listState,
             onToggleNavBar = onToggleNavBar,
             topBar = { isDetailVisible, isDualPane ->
@@ -49,15 +49,15 @@ fun ArchivedMemosScreen(
             listPane = { onMemoClick ->
                 GenericMemosListPane(
                     viewModel = viewModel,
-                    memos = uiState.archivedMemos,
-                    isLoading = uiState.isFetchingArchived,
+                    memos = uiState.archivedMemoList.list.items,
+                    isLoading = uiState.archivedMemoList.list.isLoading,
                     isRefreshing = uiState.isRefreshing,
-                    nextPageToken = uiState.archivedNextPageToken,
+                    nextPageToken = uiState.archivedMemoList.list.nextPageToken,
                     onLoadMore = { viewModel.loadMoreArchived() },
                     onRefresh = { viewModel.fetchArchivedMemos(refresh = true) },
                     onMemoClick = onMemoClick,
                     listState = listState,
-                    userProvider = { uiState.currUser },
+                    userProvider = { uiState.session.currUser },
                     contentPadding = PaddingValues(16.dp)
                 )
             }

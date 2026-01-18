@@ -112,7 +112,7 @@ fun MainScreen(
             )
 
             MainDestination.PROFILE -> {
-                val avatarUrl = uiState.currUser?.avatarUrl ?: uiState.accounts.find { it.isActive }?.avatarUrl
+                val avatarUrl = uiState.session.currUser?.avatarUrl ?: uiState.accounts.find { it.isActive }?.avatarUrl
                 if (avatarUrl != null) {
                     AsyncImage(
                         model = avatarUrl,

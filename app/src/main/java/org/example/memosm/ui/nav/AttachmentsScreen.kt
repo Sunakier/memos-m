@@ -34,7 +34,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
 
     // Animate the cell width changes for a smoother transition
     val animatedCellWidth by animateDpAsState(
-        targetValue = uiState.attachmentCellWidth.dp, animationSpec = spring(
+        targetValue = uiState.attachmentList.cellWidth.dp, animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow
         ), label = "CellWidthAnimation"
     )
@@ -80,12 +80,12 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
     val shouldLoadMore = remember {
         derivedStateOf {
             val totalItemsCount = listState.layoutInfo.totalItemsCount
-            if (totalItemsCount == 0 || uiState.isFetchingAttachments) return@derivedStateOf false
+            if (totalItemsCount == 0 || uiState.attachmentList.list.isLoading) return@derivedStateOf false
 
             val lastVisibleItem =
                 listState.layoutInfo.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf false
 
-            uiState.nextAttachmentsPageToken != null && !uiState.nextAttachmentsPageToken.isNullOrBlank() && lastVisibleItem.index >= totalItemsCount - 5
+            uiState.attachmentList.list.nextPageToken != null && !uiState.attachmentList.list.nextPageToken.isNullOrBlank() && lastVisibleItem.index >= totalItemsCount - 5
         }
     }
 
@@ -125,7 +125,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
                                     val zoomFactor = currentDistance / previousDistance
                                     if (zoomFactor != 1f) {
                                         val newWidth =
-                                            (uiState.attachmentCellWidth * zoomFactor).coerceIn(
+                                            (uiState.attachmentList.cellWidth * zoomFactor).coerceIn(
                                                 minCellWidth.value, maxCellWidth.value
                                             )
                                         viewModel.updateAttachmentCellWidth(newWidth)
@@ -137,9 +137,9 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
                         }
                     }
                 }) {
-            if (uiState.attachments.isEmpty() && uiState.isFetchingAttachments && !uiState.isRefreshing) {
+            if (uiState.attachmentList.list.items.isEmpty() && uiState.attachmentList.list.isLoading && !uiState.isRefreshing) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else if (uiState.attachments.isEmpty() && !uiState.isFetchingAttachments) {
+            } else if (uiState.attachmentList.list.items.isEmpty() && !uiState.attachmentList.list.isLoading) {
                 if (uiState.error != null) {
                     ErrorView(
                         title = stringResource(R.string.common_error_failed_to_load_attachments),
@@ -164,14 +164,14 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(
-                        items = uiState.attachments,
+                        items = uiState.attachmentList.list.items,
                         key = { it.name ?: it.filename }) { attachment ->
                         val key = attachment.name ?: attachment.filename
                         val ratio = aspectRatios[key] ?: 1.0f
 
                         AttachmentCard(
                             attachment = attachment,
-                            token = uiState.token,
+                            token = uiState.session.token,
                             compactMode = AttachmentCompactMode.Width,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -182,7 +182,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
                             })
                     }
 
-                    if (uiState.isFetchingAttachments && uiState.attachments.isNotEmpty()) {
+                    if (uiState.attachmentList.list.isLoading && uiState.attachmentList.list.items.isNotEmpty()) {
                         item(span = StaggeredGridItemSpan.FullLine) {
                             Box(
                                 modifier = Modifier
@@ -193,7 +193,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
                                 CircularProgressIndicator()
                             }
                         }
-                    } else if (!uiState.isFetchingAttachments && uiState.nextAttachmentsPageToken.isNullOrBlank() && uiState.attachments.isNotEmpty()) {
+                    } else if (!uiState.attachmentList.list.isLoading && uiState.attachmentList.list.nextPageToken.isNullOrBlank() && uiState.attachmentList.list.items.isNotEmpty()) {
                         item(span = StaggeredGridItemSpan.FullLine) {
                             Box(
                                 modifier = Modifier

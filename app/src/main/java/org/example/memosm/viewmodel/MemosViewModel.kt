@@ -26,54 +26,6 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.InputStream
 
-data class MemosUiState(
-    val userMemos: List<Memo> = emptyList(),
-    val exploreMemos: List<Memo> = emptyList(),
-    val archivedMemos: List<Memo> = emptyList(),
-    val searchMemos: List<Memo> = emptyList(),
-    val attachments: List<Attachment> = emptyList(),
-    val currUser: User? = null,
-    val users: Map<String, User> = emptyMap(), // Cache for users in explore
-    val userStats: UserStats? = null,
-    val userSettings: UserGeneralSetting? = null,
-    val webhooks: List<UserWebhook> = emptyList(),
-    val shortcuts: List<Shortcut> = emptyList(),
-    val instanceProfile: InstanceProfile? = null,
-    val isLoading: Boolean = false,
-    val isExploring: Boolean = false,
-    val isFetchingArchived: Boolean = false,
-    val isSearching: Boolean = false,
-    val isPosting: Boolean = false,
-    val isFetchingAttachments: Boolean = false,
-    val error: String? = null,
-    val nextPageToken: String? = null,
-    val exploreNextPageToken: String? = null,
-    val archivedNextPageToken: String? = null,
-    val nextAttachmentsPageToken: String? = null,
-    val isRefreshing: Boolean = false,
-    val refreshTrigger: Long = 0L, // Used to trigger scroll to top
-    val token: String = "",
-    val hostUrl: String = "",
-    // Detail pane state
-    val selectedMemo: Memo? = null,
-    val selectedMemoComments: List<Memo> = emptyList(),
-    val isLoadingComments: Boolean = false,
-    val attachmentCellWidth: Float = 240f,
-    // Draft state
-    val draftMemo: Memo? = null,
-    val isDraftLoaded: Boolean = false,
-    val composerResetToken: Int = 0,
-    // Filter state
-//    val selectedTags: Set<String> = emptySet(),
-    val selectedShortcut: Shortcut? = null,
-    // Multi-account state
-    val accounts: List<Account> = emptyList()
-)
-
-data class MemosErrorResponse(
-    val code: Int? = null,
-    val message: String? = null
-)
 
 class MemosViewModel(
     private var baseUrl: String, 
@@ -81,7 +33,9 @@ class MemosViewModel(
     private val dataStoreManager: DataStoreManager
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(MemosUiState(token = token, hostUrl = baseUrl))
+    private val _uiState = MutableStateFlow(MemosUiState(
+        session = SessionState(token = token, hostUrl = baseUrl)
+    ))
     val uiState: StateFlow<MemosUiState> = _uiState.asStateFlow()
 
     private var sanitizedBaseUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
@@ -118,7 +72,9 @@ class MemosViewModel(
         viewModelScope.launch {
             dataStoreManager.attachmentCellWidth.collectLatest { width ->
                 if (width != null) {
-                    _uiState.value = _uiState.value.copy(attachmentCellWidth = width)
+                    _uiState.value = _uiState.value.copy(
+                        attachmentList = _uiState.value.attachmentList.copy(cellWidth = width)
+                    )
                 }
             }
         }
@@ -146,8 +102,10 @@ class MemosViewModel(
             } else null
             
             _uiState.value = _uiState.value.copy(
-                draftMemo = draft,
-                isDraftLoaded = true
+                draft = _uiState.value.draft.copy(
+                    draftMemo = draft,
+                    isDraftLoaded = true
+                )
             )
         }
         
@@ -156,7 +114,7 @@ class MemosViewModel(
 
     private fun updateCurrentAccountInList() {
         viewModelScope.launch {
-            val user = _uiState.value.currUser
+            val user = _uiState.value.session.currUser
             val currentAccounts = dataStoreManager.accounts.first().toMutableList()
             val existingIndex = currentAccounts.indexOfFirst { it.hostUrl == baseUrl && it.accessToken == token }
             
@@ -197,12 +155,11 @@ class MemosViewModel(
             
             // Clear current UI state for the new account
             _uiState.value = MemosUiState(
-                token = token,
-                hostUrl = baseUrl,
+                session = SessionState(token = token, hostUrl = baseUrl),
                 accounts = _uiState.value.accounts.map { 
                     it.copy(isActive = it.hostUrl == baseUrl && it.accessToken == token)
                 },
-                attachmentCellWidth = _uiState.value.attachmentCellWidth
+                attachmentList = _uiState.value.attachmentList
             )
             
             refreshAll()
@@ -251,16 +208,12 @@ class MemosViewModel(
 
     private fun buildMemosFilter(): String? {
         val filters = mutableListOf<String>()
-        _uiState.value.currUser?.name?.let { creatorName ->
+        _uiState.value.session.currUser?.name?.let { creatorName ->
             val creatorId = creatorName.removePrefix("users/")
             filters.add("creator_id == $creatorId")
         }
-        
-//        if (_uiState.value.selectedTags.isNotEmpty()) {
-//            filters.add(_uiState.value.selectedTags.joinToString(" && ") { "tag in [\"$it\"]" })
-//        }
 
-        _uiState.value.selectedShortcut?.filter?.let { shortcutFilter ->
+        _uiState.value.userMemoList.selectedShortcut?.filter?.let { shortcutFilter ->
             if (shortcutFilter.isNotBlank()) {
                 filters.add("($shortcutFilter)")
             }
@@ -272,7 +225,9 @@ class MemosViewModel(
     fun refreshAll() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
-                isLoading = true, 
+                userMemoList = _uiState.value.userMemoList.copy(
+                    list = _uiState.value.userMemoList.list.copy(isLoading = true)
+                ),
                 isRefreshing = true,
                 refreshTrigger = System.currentTimeMillis(),
                 error = null
@@ -288,8 +243,12 @@ class MemosViewModel(
                 val newMemos = memoResponse.memos?.map { processMemo(it) } ?: emptyList()
 
                 _uiState.value = _uiState.value.copy(
-                    userMemos = newMemos,
-                    nextPageToken = if (memoResponse.nextPageToken.isNullOrBlank()) null else memoResponse.nextPageToken
+                    userMemoList = _uiState.value.userMemoList.copy(
+                        list = _uiState.value.userMemoList.list.copy(
+                            items = newMemos,
+                            nextPageToken = if (memoResponse.nextPageToken.isNullOrBlank()) null else memoResponse.nextPageToken
+                        )
+                    )
                 )
 
                 // Fetch attachments
@@ -301,7 +260,9 @@ class MemosViewModel(
                 // Fetch instance profile
                 try {
                     val instance = api.getInstanceProfile()
-                    _uiState.value = _uiState.value.copy(instanceProfile = instance)
+                    _uiState.value = _uiState.value.copy(
+                        session = _uiState.value.session.copy(instanceProfile = instance)
+                    )
                 } catch (e: Exception) {
                     Log.e("MemosViewModel", "Error fetching instance profile", e)
                 }
@@ -313,7 +274,12 @@ class MemosViewModel(
                 Log.e("MemosViewModel", "Error during refreshAll", e)
                 _uiState.value = _uiState.value.copy(error = e.localizedMessage)
             } finally {
-                _uiState.value = _uiState.value.copy(isLoading = false, isRefreshing = false)
+                _uiState.value = _uiState.value.copy(
+                    userMemoList = _uiState.value.userMemoList.copy(
+                        list = _uiState.value.userMemoList.list.copy(isLoading = false)
+                    ),
+                    isRefreshing = false
+                )
             }
         }
     }
@@ -335,23 +301,27 @@ class MemosViewModel(
     }
 
     fun fetchAttachments(loadMore: Boolean = false) {
-        if (_uiState.value.isFetchingAttachments) return
+        if (_uiState.value.attachmentList.list.isLoading) return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
-                isFetchingAttachments = true,
+                attachmentList = _uiState.value.attachmentList.copy(
+                    list = _uiState.value.attachmentList.list.copy(isLoading = true)
+                ),
                 isRefreshing = if (!loadMore) true else _uiState.value.isRefreshing,
                 refreshTrigger = if (!loadMore) System.currentTimeMillis() else _uiState.value.refreshTrigger
             )
             loadAttachmentsInternal(loadMore)
             _uiState.value = _uiState.value.copy(
-                isFetchingAttachments = false,
+                attachmentList = _uiState.value.attachmentList.copy(
+                    list = _uiState.value.attachmentList.list.copy(isLoading = false)
+                ),
                 isRefreshing = if (!loadMore) false else _uiState.value.isRefreshing
             )
         }
     }
 
     private suspend fun loadAttachmentsInternal(loadMore: Boolean) {
-        val currentToken = if (loadMore) _uiState.value.nextAttachmentsPageToken else null
+        val currentToken = if (loadMore) _uiState.value.attachmentList.list.nextPageToken else null
         if (loadMore && currentToken == null) return
 
         try {
@@ -361,10 +331,15 @@ class MemosViewModel(
             val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
             
             val processedAttachments = rawAttachments.map { processAttachment(it) }
+            val currentItems = _uiState.value.attachmentList.list.items
 
             _uiState.value = _uiState.value.copy(
-                attachments = if (loadMore) _uiState.value.attachments + processedAttachments else processedAttachments,
-                nextAttachmentsPageToken = newNextPageToken
+                attachmentList = _uiState.value.attachmentList.copy(
+                    list = _uiState.value.attachmentList.list.copy(
+                        items = if (loadMore) currentItems + processedAttachments else processedAttachments,
+                        nextPageToken = newNextPageToken
+                    )
+                )
             )
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error fetching attachments", e)
@@ -404,7 +379,11 @@ class MemosViewModel(
             val processedAttachment = processAttachment(attachment)
             
             _uiState.value = _uiState.value.copy(
-                attachments = listOf(processedAttachment) + _uiState.value.attachments
+                attachmentList = _uiState.value.attachmentList.copy(
+                    list = _uiState.value.attachmentList.list.copy(
+                        items = listOf(processedAttachment) + _uiState.value.attachmentList.list.items
+                    )
+                )
             )
             processedAttachment
         } catch (e: Exception) {
@@ -448,7 +427,7 @@ class MemosViewModel(
     private suspend fun updateUserInfo(user: User) {
         val processedUser = processUser(user)
         _uiState.value = _uiState.value.copy(
-            currUser = processedUser,
+            session = _uiState.value.session.copy(currUser = processedUser),
             users = _uiState.value.users + ((user.name ?: "") to processedUser)
         )
 
@@ -469,10 +448,14 @@ class MemosViewModel(
             }
 
             _uiState.value = _uiState.value.copy(
-                userStats = stats,
-                shortcuts = shortcuts.shortcuts ?: emptyList(),
-                webhooks = webhooks,
-                userSettings = generalSetting
+                session = _uiState.value.session.copy(
+                    userStats = stats,
+                    userSettings = generalSetting,
+                    webhooks = webhooks
+                ),
+                userMemoList = _uiState.value.userMemoList.copy(
+                    shortcuts = shortcuts.shortcuts ?: emptyList()
+                )
             )
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error fetching additional user details", e)
@@ -494,11 +477,16 @@ class MemosViewModel(
             return
         }
 
-        if (_uiState.value.isLoading) return
-        val currentToken = _uiState.value.nextPageToken ?: return
+        if (_uiState.value.userMemoList.list.isLoading) return
+        val currentToken = _uiState.value.userMemoList.list.nextPageToken ?: return
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(
+                userMemoList = _uiState.value.userMemoList.copy(
+                    list = _uiState.value.userMemoList.list.copy(isLoading = true)
+                ),
+                error = null
+            )
             try {
                 val filter = buildMemosFilter()
                 
@@ -506,28 +494,39 @@ class MemosViewModel(
                 val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
                 
                 val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
+                val currentMemos = _uiState.value.userMemoList.list.items
                 
                 _uiState.value = _uiState.value.copy(
-                    userMemos = _uiState.value.userMemos + newMemos,
-                    nextPageToken = newNextPageToken,
+                    userMemoList = _uiState.value.userMemoList.copy(
+                        list = _uiState.value.userMemoList.list.copy(
+                            items = currentMemos + newMemos,
+                            nextPageToken = newNextPageToken,
+                            isLoading = false
+                        )
+                    )
                 )
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error fetching more memos", e)
-                _uiState.value = _uiState.value.copy(error = e.localizedMessage)
-            } finally {
-                _uiState.value = _uiState.value.copy(isLoading = false)
+                _uiState.value = _uiState.value.copy(
+                    userMemoList = _uiState.value.userMemoList.copy(
+                        list = _uiState.value.userMemoList.list.copy(isLoading = false)
+                    ),
+                    error = e.localizedMessage
+                )
             }
         }
     }
 
     fun fetchExplore(refresh: Boolean = false, updateRefreshingState: Boolean = true) {
-        if (_uiState.value.isExploring && !refresh) return
-        val currentToken = if (refresh) null else _uiState.value.exploreNextPageToken
+        if (_uiState.value.exploreMemoList.list.isLoading && !refresh) return
+        val currentToken = if (refresh) null else _uiState.value.exploreMemoList.list.nextPageToken
         if (!refresh && currentToken == null) return
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
-                isExploring = true,
+                exploreMemoList = _uiState.value.exploreMemoList.copy(
+                    list = _uiState.value.exploreMemoList.list.copy(isLoading = true)
+                ),
                 error = if (refresh) null else _uiState.value.error,
                 isRefreshing = if (refresh && updateRefreshingState) true else _uiState.value.isRefreshing,
                 refreshTrigger = if (refresh && updateRefreshingState) System.currentTimeMillis() else _uiState.value.refreshTrigger
@@ -541,12 +540,16 @@ class MemosViewModel(
                 val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
                 
                 val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
+                val currentMemos = _uiState.value.exploreMemoList.list.items
                 
-                // Update the memos immediately so the list displays even if user fetching fails or is slow
                 _uiState.value = _uiState.value.copy(
-                    exploreMemos = if (refresh) newMemos else _uiState.value.exploreMemos + newMemos,
-                    exploreNextPageToken = newNextPageToken,
-                    isExploring = false,
+                    exploreMemoList = _uiState.value.exploreMemoList.copy(
+                        list = _uiState.value.exploreMemoList.list.copy(
+                            items = if (refresh) newMemos else currentMemos + newMemos,
+                            nextPageToken = newNextPageToken,
+                            isLoading = false
+                        )
+                    ),
                     isRefreshing = if (refresh && updateRefreshingState) false else _uiState.value.isRefreshing
                 )
 
@@ -573,7 +576,9 @@ class MemosViewModel(
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error fetching explore memos", e)
                 _uiState.value = _uiState.value.copy(
-                    isExploring = false,
+                    exploreMemoList = _uiState.value.exploreMemoList.copy(
+                        list = _uiState.value.exploreMemoList.list.copy(isLoading = false)
+                    ),
                     error = e.localizedMessage,
                     isRefreshing = if (refresh && updateRefreshingState) false else _uiState.value.isRefreshing
                 )
@@ -582,19 +587,21 @@ class MemosViewModel(
     }
 
     fun fetchArchivedMemos(refresh: Boolean = false) {
-        if (_uiState.value.isFetchingArchived && !refresh) return
-        val currentToken = if (refresh) null else _uiState.value.archivedNextPageToken
+        if (_uiState.value.archivedMemoList.list.isLoading && !refresh) return
+        val currentToken = if (refresh) null else _uiState.value.archivedMemoList.list.nextPageToken
         if (!refresh && currentToken == null) return
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
-                isFetchingArchived = true,
+                archivedMemoList = _uiState.value.archivedMemoList.copy(
+                    list = _uiState.value.archivedMemoList.list.copy(isLoading = true)
+                ),
                 error = if (refresh) null else _uiState.value.error,
                 isRefreshing = if (refresh) true else _uiState.value.isRefreshing
             )
             try {
                 val filters = mutableListOf<String>()
-                _uiState.value.currUser?.name?.let { creatorName ->
+                _uiState.value.session.currUser?.name?.let { creatorName ->
                     val creatorId = creatorName.removePrefix("users/")
                     filters.add("creator_id == $creatorId")
                 }
@@ -609,17 +616,24 @@ class MemosViewModel(
                 val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
                 
                 val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
+                val currentMemos = _uiState.value.archivedMemoList.list.items
                 
                 _uiState.value = _uiState.value.copy(
-                    archivedMemos = if (refresh) newMemos else _uiState.value.archivedMemos + newMemos,
-                    archivedNextPageToken = newNextPageToken,
-                    isFetchingArchived = false,
+                    archivedMemoList = _uiState.value.archivedMemoList.copy(
+                        list = _uiState.value.archivedMemoList.list.copy(
+                            items = if (refresh) newMemos else currentMemos + newMemos,
+                            nextPageToken = newNextPageToken,
+                            isLoading = false
+                        )
+                    ),
                     isRefreshing = if (refresh) false else _uiState.value.isRefreshing
                 )
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error fetching archived memos", e)
                 _uiState.value = _uiState.value.copy(
-                    isFetchingArchived = false,
+                    archivedMemoList = _uiState.value.archivedMemoList.copy(
+                        list = _uiState.value.archivedMemoList.list.copy(isLoading = false)
+                    ),
                     error = e.localizedMessage,
                     isRefreshing = if (refresh) false else _uiState.value.isRefreshing
                 )
@@ -628,19 +642,23 @@ class MemosViewModel(
     }
 
     fun loadMoreArchived() {
-        if (_uiState.value.archivedNextPageToken != null && !_uiState.value.isFetchingArchived) {
+        if (_uiState.value.archivedMemoList.list.nextPageToken != null && !_uiState.value.archivedMemoList.list.isLoading) {
             fetchArchivedMemos()
         }
     }
 
     fun prepareSearch(isExplore: Boolean, filter: String? = null, orderBy: String? = null) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSearching = true, searchMemos = emptyList())
+            _uiState.value = _uiState.value.copy(
+                searchMemoList = _uiState.value.searchMemoList.copy(
+                    list = _uiState.value.searchMemoList.list.copy(isLoading = true, items = emptyList())
+                )
+            )
             try {
                 val baseFilter = if (isExplore) {
                     "visibility in ['PUBLIC', 'PROTECTED']"
                 } else {
-                    _uiState.value.currUser?.name?.let { creatorName ->
+                    _uiState.value.session.currUser?.name?.let { creatorName ->
                         val creatorId = creatorName.removePrefix("users/")
                         "creator_id == $creatorId"
                     }
@@ -654,8 +672,12 @@ class MemosViewModel(
                 val searchMemos = response.memos?.map { processMemo(it) } ?: emptyList()
                 
                 _uiState.value = _uiState.value.copy(
-                    searchMemos = searchMemos,
-                    isSearching = false
+                    searchMemoList = _uiState.value.searchMemoList.copy(
+                        list = _uiState.value.searchMemoList.list.copy(
+                            items = searchMemos,
+                            isLoading = false
+                        )
+                    )
                 )
                 
                 if (isExplore) {
@@ -681,27 +703,33 @@ class MemosViewModel(
                 }
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error preparing search", e)
-                _uiState.value = _uiState.value.copy(isSearching = false)
+                _uiState.value = _uiState.value.copy(
+                    searchMemoList = _uiState.value.searchMemoList.copy(
+                        list = _uiState.value.searchMemoList.list.copy(isLoading = false)
+                    )
+                )
             }
         }
     }
 
     fun loadMore() {
-        if (_uiState.value.nextPageToken != null && !_uiState.value.isLoading) {
+        if (_uiState.value.userMemoList.list.nextPageToken != null && !_uiState.value.userMemoList.list.isLoading) {
             fetchMemos()
         }
     }
 
     fun loadMoreExplore() {
-        if (_uiState.value.exploreNextPageToken != null && !_uiState.value.isExploring) {
+        if (_uiState.value.exploreMemoList.list.nextPageToken != null && !_uiState.value.exploreMemoList.list.isLoading) {
             fetchExplore()
         }
     }
 
     fun toggleShortcutFilter(shortcut: Shortcut) {
-        val current = _uiState.value.selectedShortcut
+        val current = _uiState.value.userMemoList.selectedShortcut
         val next = if (current?.name == shortcut.name) null else shortcut
-        _uiState.value = _uiState.value.copy(selectedShortcut = next)
+        _uiState.value = _uiState.value.copy(
+            userMemoList = _uiState.value.userMemoList.copy(selectedShortcut = next)
+        )
         refreshAll()
     }
 
@@ -741,11 +769,18 @@ class MemosViewModel(
                     location = location,
                     state = "NORMAL"
                 ))
+                val currentMemos = _uiState.value.userMemoList.list.items
                 _uiState.value = _uiState.value.copy(
-                    userMemos = listOf(processMemo(memo)) + _uiState.value.userMemos,
+                    userMemoList = _uiState.value.userMemoList.copy(
+                        list = _uiState.value.userMemoList.list.copy(
+                            items = listOf(processMemo(memo)) + currentMemos
+                        )
+                    ),
                     isPosting = false,
-                    draftMemo = null,
-                    composerResetToken = _uiState.value.composerResetToken + 1
+                    draft = _uiState.value.draft.copy(
+                        draftMemo = null,
+                        composerResetToken = _uiState.value.draft.composerResetToken + 1
+                    )
                 )
                 dataStoreManager.clearMemoDraft()
                 onSuccess()
@@ -759,20 +794,22 @@ class MemosViewModel(
     }
 
     fun saveDraft(content: String, visibility: String, attachments: List<Attachment>, location: Location? = null) {
-        val draft = Memo(
+        val draftMemo = Memo(
             content = content,
             visibility = visibility,
             attachments = attachments,
             location = location
         )
         // Update UI state immediately
-        _uiState.value = _uiState.value.copy(draftMemo = draft)
+        _uiState.value = _uiState.value.copy(
+            draft = _uiState.value.draft.copy(draftMemo = draftMemo)
+        )
         
         // Debounce saving to DataStore
         draftSaveJob?.cancel()
         draftSaveJob = viewModelScope.launch {
             delay(1000) // Wait 1 second before saving to disk
-            val json = gson.toJson(draft)
+            val json = gson.toJson(draftMemo)
             dataStoreManager.saveMemoDraft(json)
         }
     }
@@ -793,7 +830,9 @@ class MemosViewModel(
                     )
                 )
                 _uiState.value = _uiState.value.copy(
-                    selectedMemoComments = _uiState.value.selectedMemoComments + processMemo(comment),
+                    detailPane = _uiState.value.detailPane.copy(
+                        comments = _uiState.value.detailPane.comments + processMemo(comment)
+                    ),
                     isPosting = false
                 )
                 onSuccess()
@@ -834,21 +873,27 @@ class MemosViewModel(
                 val processed = processMemo(updatedMemo)
                 
                 // Update in all lists
-                val updatedMemos = _uiState.value.userMemos.map {
+                val updatedUserMemos = _uiState.value.userMemoList.list.items.map {
                     if (it.name == memoName) processed else it
                 }
-                val updatedExploreMemos = _uiState.value.exploreMemos.map {
+                val updatedExploreMemos = _uiState.value.exploreMemoList.list.items.map {
                     if (it.name == memoName) processed else it
                 }
-                val updatedComments = _uiState.value.selectedMemoComments.map {
+                val updatedComments = _uiState.value.detailPane.comments.map {
                     if (it.name == memoName) processed else it
                 }
                 
                 _uiState.value = _uiState.value.copy(
-                    userMemos = updatedMemos,
-                    exploreMemos = updatedExploreMemos,
-                    selectedMemoComments = updatedComments,
-                    selectedMemo = if (_uiState.value.selectedMemo?.name == memoName) processed else _uiState.value.selectedMemo,
+                    userMemoList = _uiState.value.userMemoList.copy(
+                        list = _uiState.value.userMemoList.list.copy(items = updatedUserMemos)
+                    ),
+                    exploreMemoList = _uiState.value.exploreMemoList.copy(
+                        list = _uiState.value.exploreMemoList.list.copy(items = updatedExploreMemos)
+                    ),
+                    detailPane = _uiState.value.detailPane.copy(
+                        comments = updatedComments,
+                        selectedMemo = if (_uiState.value.detailPane.selectedMemo?.name == memoName) processed else _uiState.value.detailPane.selectedMemo
+                    ),
                     isPosting = false
                 )
                 onSuccess()
@@ -870,15 +915,21 @@ class MemosViewModel(
                 api.deleteMemo(memoId)
                 
                 // Update in all lists
-                val updatedMemos = _uiState.value.userMemos.filter { it.name != memoName }
-                val updatedExploreMemos = _uiState.value.exploreMemos.filter { it.name != memoName }
-                val updatedComments = _uiState.value.selectedMemoComments.filter { it.name != memoName }
+                val updatedUserMemos = _uiState.value.userMemoList.list.items.filter { it.name != memoName }
+                val updatedExploreMemos = _uiState.value.exploreMemoList.list.items.filter { it.name != memoName }
+                val updatedComments = _uiState.value.detailPane.comments.filter { it.name != memoName }
                 
                 _uiState.value = _uiState.value.copy(
-                    userMemos = updatedMemos,
-                    exploreMemos = updatedExploreMemos,
-                    selectedMemoComments = updatedComments,
-                    selectedMemo = if (_uiState.value.selectedMemo?.name == memoName) null else _uiState.value.selectedMemo
+                    userMemoList = _uiState.value.userMemoList.copy(
+                        list = _uiState.value.userMemoList.list.copy(items = updatedUserMemos)
+                    ),
+                    exploreMemoList = _uiState.value.exploreMemoList.copy(
+                        list = _uiState.value.exploreMemoList.list.copy(items = updatedExploreMemos)
+                    ),
+                    detailPane = _uiState.value.detailPane.copy(
+                        comments = updatedComments,
+                        selectedMemo = if (_uiState.value.detailPane.selectedMemo?.name == memoName) null else _uiState.value.detailPane.selectedMemo
+                    )
                 )
                 onSuccess()
             } catch (e: Exception) {
@@ -892,9 +943,11 @@ class MemosViewModel(
 
     fun selectMemo(memo: Memo?) {
         _uiState.value = _uiState.value.copy(
-            selectedMemo = memo,
-            selectedMemoComments = emptyList(),
-            isLoadingComments = memo != null
+            detailPane = _uiState.value.detailPane.copy(
+                selectedMemo = memo,
+                comments = emptyList(),
+                isLoadingComments = memo != null
+            )
         )
         
         if (memo != null) {
@@ -904,9 +957,7 @@ class MemosViewModel(
 
     fun clearSelectedMemo() {
         _uiState.value = _uiState.value.copy(
-            selectedMemo = null,
-            selectedMemoComments = emptyList(),
-            isLoadingComments = false
+            detailPane = DetailPaneState()
         )
     }
 
@@ -919,25 +970,27 @@ class MemosViewModel(
                 val response = api.listMemoComments(memoId)
                 val comments = response.memos?.map { processMemo(it) } ?: emptyList()
                 _uiState.value = _uiState.value.copy(
-                    selectedMemoComments = comments,
-                    isLoadingComments = false
+                    detailPane = _uiState.value.detailPane.copy(
+                        comments = comments,
+                        isLoadingComments = false
+                    )
                 )
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error fetching memo comments", e)
                 _uiState.value = _uiState.value.copy(
-                    isLoadingComments = false
+                    detailPane = _uiState.value.detailPane.copy(isLoadingComments = false)
                 )
             }
         }
     }
 
     fun updateUserGeneralSetting(locale: String? = null, memoVisibility: String? = null) {
-        val user = _uiState.value.currUser ?: return
+        val user = _uiState.value.session.currUser ?: return
         val userId = user.name?.removePrefix("users/") ?: return
         
         viewModelScope.launch {
             try {
-                val currentSettings = _uiState.value.userSettings ?: UserGeneralSetting()
+                val currentSettings = _uiState.value.session.userSettings ?: UserGeneralSetting()
                 val updatedGeneral = currentSettings.copy(
                     locale = locale ?: currentSettings.locale,
                     memoVisibility = memoVisibility ?: currentSettings.memoVisibility
@@ -964,7 +1017,7 @@ class MemosViewModel(
                 }
                 
                 _uiState.value = _uiState.value.copy(
-                    userSettings = updated.generalSetting,
+                    session = _uiState.value.session.copy(userSettings = updated.generalSetting),
                     error = null
                 )
                 Log.d("MemosViewModel", "Settings updated successfully")
@@ -984,7 +1037,7 @@ class MemosViewModel(
         password: String? = null,
         onComplete: (Boolean) -> Unit = {}
     ) {
-        val user = _uiState.value.currUser ?: return onComplete(false)
+        val user = _uiState.value.session.currUser ?: return onComplete(false)
         val userId = user.name?.removePrefix("users/") ?: return onComplete(false)
 
         viewModelScope.launch {
@@ -1018,7 +1071,7 @@ class MemosViewModel(
                 // Update current user in state
                 val processedUser = processUser(updatedUser)
                 _uiState.value = _uiState.value.copy(
-                    currUser = processedUser,
+                    session = _uiState.value.session.copy(currUser = processedUser),
                     users = _uiState.value.users + ((updatedUser.name ?: "") to processedUser)
                 )
 
@@ -1081,21 +1134,27 @@ class MemosViewModel(
             val updatedMemo = api.getMemo(memoName.removePrefix("memos/"))
             val processed = processMemo(updatedMemo)
             
-            val updatedMemos = _uiState.value.userMemos.map {
+            val updatedUserMemos = _uiState.value.userMemoList.list.items.map {
                 if (it.name == memoName) processed else it
             }
-            val updatedExploreMemos = _uiState.value.exploreMemos.map {
+            val updatedExploreMemos = _uiState.value.exploreMemoList.list.items.map {
                 if (it.name == memoName) processed else it
             }
-            val updatedComments = _uiState.value.selectedMemoComments.map {
+            val updatedComments = _uiState.value.detailPane.comments.map {
                 if (it.name == memoName) processed else it
             }
             
             _uiState.value = _uiState.value.copy(
-                userMemos = updatedMemos,
-                exploreMemos = updatedExploreMemos,
-                selectedMemoComments = updatedComments,
-                selectedMemo = if (_uiState.value.selectedMemo?.name == memoName) processed else _uiState.value.selectedMemo
+                userMemoList = _uiState.value.userMemoList.copy(
+                    list = _uiState.value.userMemoList.list.copy(items = updatedUserMemos)
+                ),
+                exploreMemoList = _uiState.value.exploreMemoList.copy(
+                    list = _uiState.value.exploreMemoList.list.copy(items = updatedExploreMemos)
+                ),
+                detailPane = _uiState.value.detailPane.copy(
+                    comments = updatedComments,
+                    selectedMemo = if (_uiState.value.detailPane.selectedMemo?.name == memoName) processed else _uiState.value.detailPane.selectedMemo
+                )
             )
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error refreshing memo after reaction", e)
@@ -1125,14 +1184,16 @@ class MemosViewModel(
     }
 
     fun createShortcut(title: String, filter: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
-        val user = _uiState.value.currUser ?: return
+        val user = _uiState.value.session.currUser ?: return
         val userId = user.name?.removePrefix("users/") ?: return
         
         viewModelScope.launch {
             try {
                 val shortcut = api.createShortcut(userId, Shortcut(title = title, filter = filter))
                 _uiState.value = _uiState.value.copy(
-                    shortcuts = _uiState.value.shortcuts + shortcut
+                    userMemoList = _uiState.value.userMemoList.copy(
+                        shortcuts = _uiState.value.userMemoList.shortcuts + shortcut
+                    )
                 )
                 onSuccess()
             } catch (e: Exception) {
@@ -1145,7 +1206,7 @@ class MemosViewModel(
     }
 
     fun updateShortcut(shortcut: Shortcut, title: String, filter: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
-        val user = _uiState.value.currUser ?: return
+        val user = _uiState.value.session.currUser ?: return
         val userId = user.name?.removePrefix("users/") ?: return
         val shortcutName = shortcut.name ?: return
         val shortcutId = shortcutName.substringAfterLast("/")
@@ -1159,7 +1220,9 @@ class MemosViewModel(
                     updateMask = "title,filter"
                 )
                 _uiState.value = _uiState.value.copy(
-                    shortcuts = _uiState.value.shortcuts.map { if (it.name == shortcutName) updated else it }
+                    userMemoList = _uiState.value.userMemoList.copy(
+                        shortcuts = _uiState.value.userMemoList.shortcuts.map { if (it.name == shortcutName) updated else it }
+                    )
                 )
                 onSuccess()
             } catch (e: Exception) {
@@ -1172,7 +1235,7 @@ class MemosViewModel(
     }
 
     fun deleteShortcut(shortcut: Shortcut) {
-        val user = _uiState.value.currUser ?: return
+        val user = _uiState.value.session.currUser ?: return
         val userId = user.name?.removePrefix("users/") ?: return
         val shortcutName = shortcut.name ?: return
         val shortcutId = shortcutName.substringAfterLast("/")
@@ -1181,7 +1244,9 @@ class MemosViewModel(
             try {
                 api.deleteShortcut(userId, shortcutId)
                 _uiState.value = _uiState.value.copy(
-                    shortcuts = _uiState.value.shortcuts.filter { it.name != shortcutName }
+                    userMemoList = _uiState.value.userMemoList.copy(
+                        shortcuts = _uiState.value.userMemoList.shortcuts.filter { it.name != shortcutName }
+                    )
                 )
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error deleting shortcut", e)
@@ -1193,14 +1258,16 @@ class MemosViewModel(
     // --- Webhook Management ---
 
     fun createWebhook(displayName: String, url: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
-        val user = _uiState.value.currUser ?: return
+        val user = _uiState.value.session.currUser ?: return
         val userId = user.name?.removePrefix("users/") ?: return
 
         viewModelScope.launch {
             try {
                 val webhook = api.createUserWebhook(userId, UserWebhook(displayName = displayName, url = url))
                 _uiState.value = _uiState.value.copy(
-                    webhooks = _uiState.value.webhooks + webhook
+                    session = _uiState.value.session.copy(
+                        webhooks = _uiState.value.session.webhooks + webhook
+                    )
                 )
                 onSuccess()
             } catch (e: Exception) {
@@ -1213,7 +1280,7 @@ class MemosViewModel(
     }
 
     fun updateWebhook(webhook: UserWebhook, displayName: String, url: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
-        val user = _uiState.value.currUser ?: return
+        val user = _uiState.value.session.currUser ?: return
         val userId = user.name?.removePrefix("users/") ?: return
         val webhookName = webhook.name ?: return
         val webhookId = webhookName.substringAfterLast("/")
@@ -1227,7 +1294,9 @@ class MemosViewModel(
                     updateMask = "display_name,url"
                 )
                 _uiState.value = _uiState.value.copy(
-                    webhooks = _uiState.value.webhooks.map { if (it.name == webhookName) updated else it }
+                    session = _uiState.value.session.copy(
+                        webhooks = _uiState.value.session.webhooks.map { if (it.name == webhookName) updated else it }
+                    )
                 )
                 onSuccess()
             } catch (e: Exception) {
@@ -1240,7 +1309,7 @@ class MemosViewModel(
     }
 
     fun deleteWebhook(webhook: UserWebhook) {
-        val user = _uiState.value.currUser ?: return
+        val user = _uiState.value.session.currUser ?: return
         val userId = user.name?.removePrefix("users/") ?: return
         val webhookName = webhook.name ?: return
         val webhookId = webhookName.substringAfterLast("/")
@@ -1249,7 +1318,9 @@ class MemosViewModel(
             try {
                 api.deleteUserWebhook(userId, webhookId)
                 _uiState.value = _uiState.value.copy(
-                    webhooks = _uiState.value.webhooks.filter { it.name != webhookName }
+                    session = _uiState.value.session.copy(
+                        webhooks = _uiState.value.session.webhooks.filter { it.name != webhookName }
+                    )
                 )
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error deleting webhook", e)

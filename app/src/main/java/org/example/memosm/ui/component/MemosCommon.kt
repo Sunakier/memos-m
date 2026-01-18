@@ -77,9 +77,9 @@ fun MemosScaffold(
         val currentMemoKey = navigator.currentDestination?.contentKey
         if (currentMemoKey != null) {
             val selectedId =
-                uiState.selectedMemo?.let { it.name ?: it.content.hashCode().toString() }
+                uiState.detailPane.selectedMemo?.let { it.name ?: it.content.hashCode().toString() }
             if (currentMemoKey.id != selectedId) {
-                val pool = if (currentMemoKey.fromSearch) uiState.searchMemos else memos
+                val pool = if (currentMemoKey.fromSearch) uiState.searchMemoList.list.items else memos
                 val memo = pool.find {
                     (it.name ?: it.content.hashCode().toString()) == currentMemoKey.id
                 }
@@ -87,7 +87,7 @@ fun MemosScaffold(
                     viewModel.selectMemo(memo)
                 }
             }
-        } else if (uiState.selectedMemo != null) {
+        } else if (uiState.detailPane.selectedMemo != null) {
             viewModel.clearSelectedMemo()
         }
     }
@@ -209,9 +209,9 @@ fun MemosScaffold(
                             }
                         }, label = "DetailPaneTransition"
                     ) { memoKey ->
-                        val memo = remember(memoKey, memos, uiState.searchMemos) {
+                        val memo = remember(memoKey, memos, uiState.searchMemoList.list.items) {
                             memoKey?.let { key ->
-                                val pool = if (key.fromSearch) uiState.searchMemos else memos
+                                val pool = if (key.fromSearch) uiState.searchMemoList.list.items else memos
                                 pool.find {
                                     (it.name ?: it.content.hashCode().toString()) == key.id
                                 }
@@ -221,10 +221,10 @@ fun MemosScaffold(
                         if (memo != null) {
                             MemoDetailView(
                                 memo = memo,
-                                comments = uiState.selectedMemoComments,
-                                isLoadingComments = uiState.isLoadingComments,
-                                token = uiState.token,
-                                hostUrl = uiState.hostUrl,
+                                comments = uiState.detailPane.comments,
+                                isLoadingComments = uiState.detailPane.isLoadingComments,
+                                token = uiState.session.token,
+                                hostUrl = uiState.session.hostUrl,
                                 showBackButton = navigator.canNavigateBack(),
                                 onBack = {
                                     focusManager.clearFocus()
@@ -329,14 +329,14 @@ fun GenericMemosListPane(
                     Box(
                         modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
                     ) {
-                        val isOwner = memo.creator == uiState.currUser?.name
+                        val isOwner = memo.creator == uiState.session.currUser?.name
                         MemoItem(
                             memo = memo,
                             user = userProvider(memo),
-                            currentUser = uiState.currUser,
-                            token = uiState.token,
-                            hostUrl = uiState.hostUrl,
-                            colors = if (memo == uiState.selectedMemo) {
+                            currentUser = uiState.session.currUser,
+                            token = uiState.session.token,
+                            hostUrl = uiState.session.hostUrl,
+                            colors = if (memo == uiState.detailPane.selectedMemo) {
                                 CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                             } else {
                                 CardDefaults.cardColors()

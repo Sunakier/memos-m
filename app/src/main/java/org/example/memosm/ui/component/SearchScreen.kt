@@ -64,10 +64,10 @@ fun MemoSearchBar(
     var orderBy by rememberSaveable { mutableStateOf("display_time desc") }
 
     // Aggregate tags from the search pool to be context-accurate
-    val availableTags = remember(uiState.searchMemos, uiState.userStats, isExplore) {
+    val availableTags = remember(uiState.searchMemoList.list.items, uiState.session.userStats, isExplore) {
         if (isExplore) {
             val tags = mutableMapOf<String, Int>()
-            uiState.searchMemos.forEach { memo ->
+            uiState.searchMemoList.list.items.forEach { memo ->
                 val regex = "#(\\w+)".toRegex()
                 regex.findAll(memo.content).forEach { match ->
                     val tag = match.groupValues[1]
@@ -76,7 +76,7 @@ fun MemoSearchBar(
             }
             tags.toList().sortedByDescending { it.second }.toMap()
         } else {
-            uiState.userStats?.tagCount ?: emptyMap()
+            uiState.session.userStats?.tagCount ?: emptyMap()
         }
     }
 
@@ -162,7 +162,7 @@ fun MemoSearchBar(
                 endDateMillis = endDateMillis,
                 orderBy = orderBy,
                 availableTags = availableTags,
-                filteredMemos = uiState.searchMemos,
+                filteredMemos = uiState.searchMemoList.list.items,
                 uiState = uiState,
                 onTagClick = { tag ->
                     searchSelectedTags = if (tag in searchSelectedTags) {
@@ -471,7 +471,7 @@ private fun SearchResultContent(
             }
         }
 
-        if (uiState.isSearching) {
+        if (uiState.searchMemoList.list.isLoading) {
             item {
                 Box(
                     modifier = Modifier
@@ -484,7 +484,7 @@ private fun SearchResultContent(
             }
         }
 
-        if (filteredMemos.isEmpty() && !uiState.isSearching) {
+        if (filteredMemos.isEmpty() && !uiState.searchMemoList.list.isLoading) {
             item {
                 Box(
                     modifier = Modifier
@@ -505,13 +505,13 @@ private fun SearchResultContent(
         } else {
             items(filteredMemos, key = { it.name ?: it.content.hashCode() }) { memo ->
                 Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
-                    val isOwner = memo.creator == uiState.currUser?.name
+                    val isOwner = memo.creator == uiState.session.currUser?.name
                     MemoItem(
                         memo = memo,
                         user = uiState.users[memo.creator],
-                        currentUser = uiState.currUser,
-                        token = uiState.token,
-                        hostUrl = uiState.hostUrl,
+                        currentUser = uiState.session.currUser,
+                        token = uiState.session.token,
+                        hostUrl = uiState.session.hostUrl,
                         onClick = {
                             onMemoClick(memo)
                         },
