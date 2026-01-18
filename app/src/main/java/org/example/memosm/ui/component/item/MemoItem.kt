@@ -308,6 +308,7 @@ fun MemoItem(
                         markdownState = markdownState,
                         onContentUpdate = onContentUpdate,
                         token = token,
+                        selectable = isDetailView,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 12.dp, end = 16.dp, bottom = 8.dp)

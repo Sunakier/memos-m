@@ -6,6 +6,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -54,8 +55,10 @@ fun MemoMarkdown(
     markdownState: MarkdownState,
     token: String,
     onContentUpdate: ((String) -> Unit)? = null,
+    selectable: Boolean = false,
 ) {
-    Markdown(
+    val markdownContent: @Composable () -> Unit = {
+        Markdown(
         markdownState = markdownState,
         imageTransformer = Coil3ImageTransformerImpl,
         animations = markdownAnimations(
@@ -109,9 +112,18 @@ fun MemoMarkdown(
             codeBlock = highlightedCodeBlock,
             codeFence = highlightedCodeFence,
 
-        ),
-        modifier = modifier
-    )
+            ),
+            modifier = modifier
+        )
+    }
+
+    if (selectable) {
+        SelectionContainer {
+            markdownContent()
+        }
+    } else {
+        markdownContent()
+    }
 }
 
 @Composable
