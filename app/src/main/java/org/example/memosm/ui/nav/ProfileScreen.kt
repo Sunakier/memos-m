@@ -252,7 +252,7 @@ private fun ProfileListPane(
 
             item {
                 Box(itemModifier) {
-                    val hostUrl = uiState.session.instanceProfile?.instanceUrl ?: ""
+                    val hostUrl = uiState.session.hostUrl
                     if (user != null) {
                         val rawAvatarUrl = user.avatarUrl
                         val avatarUrl = if (rawAvatarUrl != null) {

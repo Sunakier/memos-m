@@ -59,6 +59,10 @@ fun ProfileHeader(
                         coil3.request.ImageRequest.Builder(context)
                             .data(user?.avatarUrl)
                             .httpHeaders(headers)
+                            .listener(
+                                onError = { _, result -> android.util.Log.e("MemosMessage", "ProfileHeader loading error: ${user?.avatarUrl}", result.throwable) },
+                                onSuccess = { _, _ -> android.util.Log.d("MemosMessage", "ProfileHeader loading success: ${user?.avatarUrl}") }
+                            )
                             .build()
                     }
 
