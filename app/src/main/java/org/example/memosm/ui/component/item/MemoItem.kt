@@ -204,7 +204,8 @@ fun MemoItem(
                                     onClick = {
                                         showMenu = false
                                         val memoId = memo.name.removePrefix("memos/")
-                                        val baseUrl = if (hostUrl.endsWith("/")) hostUrl else "$hostUrl/"
+                                        val baseUrl =
+                                            if (hostUrl.endsWith("/")) hostUrl else "$hostUrl/"
                                         val webUrl = "${baseUrl}memos/$memoId"
                                         try {
                                             val intent = Intent(Intent.ACTION_VIEW, webUrl.toUri())
@@ -365,10 +366,14 @@ fun MemoItem(
                     if (isDetailView) {
                         Column(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(end = 8.dp)
                         ) {
                             attachments.forEach { attachment ->
-                                var aspectRatio by remember(attachment.name ?: attachment.filename) {
+                                var aspectRatio by remember(
+                                    attachment.name ?: attachment.filename
+                                ) {
                                     mutableFloatStateOf(16f / 9f)
                                 }
                                 AttachmentCard(
