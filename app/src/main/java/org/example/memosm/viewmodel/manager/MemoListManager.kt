@@ -16,7 +16,8 @@ class UserMemoListManager(
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
         val filter = filterProvider()
-        // If filter is null or empty, we might get a 400. ViewModel ensures it has creator.
+
+
         val response = api.listMemos(
             pageSize = PAGE_SIZE,
             pageToken = pageToken,
@@ -32,7 +33,6 @@ class ExploreMemoListManager(
 ) : BaseListManager<Memo>(scope) {
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
-        // Use row_status and multiple visibility checks for maximum compatibility
         val filter = "row_status == 'NORMAL' && (visibility == 'PUBLIC' || visibility == 'PROTECTED')"
         val response = api.listMemos(
             pageSize = PAGE_SIZE,
@@ -51,8 +51,14 @@ class ArchivedMemoListManager(
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
         val user = currentUserProvider() ?: return Pair(emptyList(), null)
-        // Must use user.name (users/1) and row_status
-        val filter = "creator == '${user.name}' && row_status == 'ARCHIVED'"
+        val userId = user.name?.substringAfterLast("/") ?: ""
+        
+        // Use creator_id and row_status
+        val filter = if (userId.isNotEmpty()) {
+            "creator_id == $userId && row_status == 'ARCHIVED'"
+        } else {
+            "row_status == 'ARCHIVED'"
+        }
         
         val response = api.listMemos(
             pageSize = PAGE_SIZE,

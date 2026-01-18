@@ -68,9 +68,6 @@ class MemosViewModel(
     }
 
     private fun createApi(baseUrl: String, token: String): MemosApiV0353 {
-        // Ensure baseUrl is a proper domain root for Retrofit
-        // If the user provided a full path like https://memos.com/api/v1/, 
-        // we should ideally strip the api/v1/ part because the interface adds it.
         var normalizedBaseUrl = baseUrl.trimEnd('/') + "/"
         if (normalizedBaseUrl.endsWith("/api/v1/")) {
             normalizedBaseUrl = normalizedBaseUrl.removeSuffix("api/v1/")
@@ -126,9 +123,18 @@ class MemosViewModel(
                 api = createApi(account.hostUrl, account.accessToken)
                 val currentApi = api!!
 
-                // Re-initialize Managers with the NEW API instance
+                // Initialize Managers
                 userMemoManager = UserMemoListManager(viewModelScope, currentApi) {
-                    val base = "state == 'NORMAL'"
+                    val user = _uiState.value.session.currUser
+                    val userId = user?.name?.substringAfterLast("/") ?: ""
+                    
+                    // Use creator_id and row_status
+                    val base = if (userId.isNotEmpty()) {
+                        "creator_id == $userId && row_status == 'NORMAL'"
+                    } else {
+                        "row_status == 'NORMAL'"
+                    }
+                    
                     val shortcut = _uiState.value.userMemoList.selectedShortcut
                     if (shortcut != null && !shortcut.filter.isNullOrBlank()) {
                          "$base && ${shortcut.filter}"
@@ -193,6 +199,8 @@ class MemosViewModel(
                 val user = api?.getCurrentSession()?.user
                 if (user != null) {
                      _uiState.update { it.copy(session = it.session.copy(currUser = user)) }
+                     
+                     // Force refresh user memos now that we have the numeric userId
                      userMemoManager?.fetch(refresh = true)
                      
                      val resourceName = user.name ?: ""
