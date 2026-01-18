@@ -8,15 +8,6 @@ import org.example.memosm.viewmodel.PaginatedListState
 
 private const val PAGE_SIZE = 10
 
-// Helper to filter/process memos if needed (e.g. attachment URL fixups)
-// This mirrors the logic previously in MemosViewModel
-private fun processMemoHelper(memo: Memo, baseUrl: String = ""): Memo {
-    // If we needed to strip hostUrl or ensure absolute paths, we'd do it here.
-    // For now assuming the data model passes through as-is or logic is simple.
-    // If complex attachment processing is needed, we can inject a helper.
-    return memo
-}
-
 class UserMemoListManager(
     scope: CoroutineScope,
     private val api: MemosApiV0353,
@@ -25,6 +16,7 @@ class UserMemoListManager(
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
         val filter = filterProvider()
+        // If filter is null or empty, we might get a 400. ViewModel ensures it has creator.
         val response = api.listMemos(
             pageSize = PAGE_SIZE,
             pageToken = pageToken,
@@ -40,10 +32,12 @@ class ExploreMemoListManager(
 ) : BaseListManager<Memo>(scope) {
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
+        // Use row_status and multiple visibility checks for maximum compatibility
+        val filter = "row_status == 'NORMAL' && (visibility == 'PUBLIC' || visibility == 'PROTECTED')"
         val response = api.listMemos(
             pageSize = PAGE_SIZE,
             pageToken = pageToken,
-            filter = "visibilities == ['PUBLIC', 'PROTECTED']"
+            filter = filter
         )
         return Pair(response.memos ?: emptyList(), response.nextPageToken)
     }
@@ -57,6 +51,7 @@ class ArchivedMemoListManager(
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
         val user = currentUserProvider() ?: return Pair(emptyList(), null)
+        // Must use user.name (users/1) and row_status
         val filter = "creator == '${user.name}' && row_status == 'ARCHIVED'"
         
         val response = api.listMemos(
@@ -74,16 +69,10 @@ class SearchMemoListManager(
 ) : BaseListManager<Memo>(scope) {
 
     private var currentFilter: String? = null
-    // We might also want to support sorting, but the API might not support it in the same call or it handles it via filter/params
-    // The original code had an 'orderBy' param implementation in prepareSearch
-    
-    // Original ViewModel prepareSearch logic:
-    // viewModel.prepareSearch(isExplore, filterString, orderBy)
-    // Here we can just store the filter string.
     
     fun updateFilter(filter: String?) {
         currentFilter = filter
-        reset() // Clear current results
+        reset() 
     }
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {

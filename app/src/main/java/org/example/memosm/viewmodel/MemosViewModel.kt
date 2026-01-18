@@ -68,12 +68,20 @@ class MemosViewModel(
     }
 
     private fun createApi(baseUrl: String, token: String): MemosApiV0353 {
+        // Ensure baseUrl is a proper domain root for Retrofit
+        // If the user provided a full path like https://memos.com/api/v1/, 
+        // we should ideally strip the api/v1/ part because the interface adds it.
+        var normalizedBaseUrl = baseUrl.trimEnd('/') + "/"
+        if (normalizedBaseUrl.endsWith("/api/v1/")) {
+            normalizedBaseUrl = normalizedBaseUrl.removeSuffix("api/v1/")
+        }
+
         val client = OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(token))
             .build()
 
         val retrofit = Retrofit.Builder()
-            .baseUrl(baseUrl.trimEnd('/') + "/")
+            .baseUrl(normalizedBaseUrl)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -118,9 +126,9 @@ class MemosViewModel(
                 api = createApi(account.hostUrl, account.accessToken)
                 val currentApi = api!!
 
-                // Initialize Managers
+                // Re-initialize Managers with the NEW API instance
                 userMemoManager = UserMemoListManager(viewModelScope, currentApi) {
-                    val base = "row_status == 'NORMAL'"
+                    val base = "state == 'NORMAL'"
                     val shortcut = _uiState.value.userMemoList.selectedShortcut
                     if (shortcut != null && !shortcut.filter.isNullOrBlank()) {
                          "$base && ${shortcut.filter}"
@@ -187,7 +195,6 @@ class MemosViewModel(
                      _uiState.update { it.copy(session = it.session.copy(currUser = user)) }
                      userMemoManager?.fetch(refresh = true)
                      
-                     // Ensure we use the full resource name (e.g. "users/1")
                      val resourceName = user.name ?: ""
                      if (resourceName.isNotBlank()) {
                          launch { fetchShortcuts(resourceName) }
@@ -235,7 +242,6 @@ class MemosViewModel(
                     locale = locale ?: currentSetting.locale,
                     memoVisibility = memoVisibility ?: currentSetting.memoVisibility
                 )
-                // Use "general" as the final path segment, resource name is in path
                 api?.updateUserSetting(user.name!!, "general", UserSetting(generalSetting = newSetting), "general_setting")
                 fetchUserSettings(user.name!!)
             } catch (e: Exception) {
@@ -324,7 +330,6 @@ class MemosViewModel(
             try {
                 val user = _uiState.value.session.currUser ?: return@launch
                 val update = shortcut.copy(title = title, filter = filter)
-                // shortcut.name is the full resource name
                 api?.updateShortcut(user.name!!, shortcut.name!!, update, "title,filter")
                 fetchShortcuts(user.name!!)
                 onSuccess()
