@@ -533,8 +533,8 @@ class MemosViewModel(
         viewModelScope.launch {
             try {
                  val reaction = Reaction(contentId = memo.name!!, reactionType = reactionType)
-                 val request = UpsertMemoReactionRequest(name = memo.name!!, reaction = reaction)
-                 api?.upsertMemoReaction(memo.name!!, request)
+                 val request = UpsertMemoReactionRequest(name = memo.name, reaction = reaction)
+                 api?.upsertMemoReaction(memo.name, request)
                  userMemoManager?.fetch(refresh = true) 
                  exploreMemoManager?.fetch(refresh = true)
             } catch (e: Exception) { }

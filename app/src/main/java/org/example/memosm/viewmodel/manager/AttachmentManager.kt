@@ -85,7 +85,7 @@ class AttachmentManager(
             name = uri.path
             val cut = name?.lastIndexOf('/')
             if (cut != null && cut != -1) {
-                name = name?.substring(cut + 1)
+                name = name.substring(cut + 1)
             }
         }
         return name
