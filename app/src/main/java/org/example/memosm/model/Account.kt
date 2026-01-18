@@ -8,5 +8,7 @@ data class Account(
     val avatarUrl: String? = null,
     val email: String? = null,
     val description: String? = null,
-    val isActive: Boolean = false
+    val isActive: Boolean = false,
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val lastUsed: Long = 0
 )

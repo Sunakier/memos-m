@@ -55,7 +55,7 @@ fun MainScreen(
     var currentDestination by rememberSaveable { mutableStateOf(MainDestination.MEMOS) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
     val viewModel: MemosViewModel =
-        viewModel(factory = MemosViewModel.provideFactory(baseUrl, token, dataStoreManager))
+        viewModel(factory = MemosViewModel.provideFactory(dataStoreManager))
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()

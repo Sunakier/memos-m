@@ -24,14 +24,15 @@ import org.example.memosm.ui.component.composer.MemoComposerDialog
 import org.example.memosm.ui.component.composer.MemoEditDialog
 import org.example.memosm.ui.component.item.MemoItem
 import org.example.memosm.viewmodel.MemosViewModel
+import org.example.memosm.viewmodel.PaginatedListState
 import kotlin.collections.get
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemoDetailView(
     memo: Memo,
-    comments: List<Memo>,
-    isLoadingComments: Boolean,
+    comments: PaginatedListState<Memo>,
+
     token: String,
     hostUrl: String = "",
     showBackButton: Boolean,
@@ -155,8 +156,8 @@ fun MemoDetailView(
                             onUpsertReaction = { emoji ->
                                 viewModel.upsertMemoReaction(memo, emoji)
                             },
-                            onDeleteReaction = { reactionName ->
-                                viewModel.deleteMemoReaction(memo, reactionName)
+                            onDeleteReaction = { reaction ->
+                                viewModel.deleteMemoReaction(memo, reaction.reactionType)
                             },
                             onContentUpdate = if (isOwner) { newContent ->
                                 viewModel.updateMemo(
@@ -186,7 +187,7 @@ fun MemoDetailView(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = stringResource(R.string.memo_detail_comments, comments.size),
+                                text = stringResource(R.string.memo_detail_comments, comments.items.size),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -194,7 +195,7 @@ fun MemoDetailView(
                     }
 
                     // Loading indicator for comments
-                    if (isLoadingComments) {
+                    if (comments.isLoading) {
                         item(key = "loading") {
                             Box(
                                 modifier = Modifier
@@ -208,7 +209,7 @@ fun MemoDetailView(
                     }
 
                     // Comments list
-                    if (!isLoadingComments && comments.isEmpty()) {
+                    if (!comments.isLoading && comments.items.isEmpty()) {
                         item(key = "empty_comments") {
                             Box(
                                 modifier = Modifier
@@ -226,7 +227,7 @@ fun MemoDetailView(
                     }
 
                     items(
-                        comments,
+                        comments.items,
                         key = { "comment_${it.name ?: it.content.hashCode()}" }) { comment ->
                         val isCommentOwner = comment.creator == uiState.session.currUser?.name
                         MemoItem(
@@ -247,8 +248,8 @@ fun MemoDetailView(
                             onUpsertReaction = { emoji ->
                                 viewModel.upsertMemoReaction(comment, emoji)
                             },
-                            onDeleteReaction = { reactionName ->
-                                viewModel.deleteMemoReaction(comment, reactionName)
+                            onDeleteReaction = { reaction ->
+                                viewModel.deleteMemoReaction(comment, reaction.reactionType)
                             },
                             onContentUpdate = if (isCommentOwner) { newContent ->
                                 viewModel.updateMemo(

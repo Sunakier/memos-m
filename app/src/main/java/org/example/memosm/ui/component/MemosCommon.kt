@@ -222,7 +222,6 @@ fun MemosScaffold(
                             MemoDetailView(
                                 memo = memo,
                                 comments = uiState.detailPane.comments,
-                                isLoadingComments = uiState.detailPane.isLoadingComments,
                                 token = uiState.session.token,
                                 hostUrl = uiState.session.hostUrl,
                                 showBackButton = navigator.canNavigateBack(),
@@ -354,8 +353,8 @@ fun GenericMemosListPane(
                             onUpsertReaction = { emoji ->
                                 viewModel.upsertMemoReaction(memo, emoji)
                             },
-                            onDeleteReaction = { reactionName ->
-                                viewModel.deleteMemoReaction(memo, reactionName)
+                            onDeleteReaction = { reaction ->
+                                viewModel.deleteMemoReaction(memo, reaction.reactionType)
                             },
                             onContentUpdate = if (isOwner) { newContent ->
                                 viewModel.updateMemo(

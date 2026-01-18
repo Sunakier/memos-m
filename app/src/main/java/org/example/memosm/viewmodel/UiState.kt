@@ -49,8 +49,8 @@ data class DraftState(
 
 data class DetailPaneState(
     val selectedMemo: Memo? = null,
-    val comments: List<Memo> = emptyList(),
-    val isLoadingComments: Boolean = false
+    val comments: PaginatedListState<Memo> = PaginatedListState(),
+    // isLoadingComments is now part of comments.isLoading
 )
 
 // --- Main UI State ---

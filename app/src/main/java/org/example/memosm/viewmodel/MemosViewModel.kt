@@ -2,1340 +2,579 @@ package org.example.memosm.viewmodel
 
 import android.content.Context
 import android.net.Uri
-import android.util.Base64
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.google.gson.Gson
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
+import org.example.memosm.api.AuthInterceptor
 import org.example.memosm.api.MemosApiV0353
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.model.*
-import retrofit2.HttpException
+import org.example.memosm.viewmodel.manager.*
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.io.InputStream
-
 
 class MemosViewModel(
-    private var baseUrl: String, 
-    private var token: String,
     private val dataStoreManager: DataStoreManager
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(MemosUiState(
-        session = SessionState(token = token, hostUrl = baseUrl)
-    ))
+    private val _uiState = MutableStateFlow(MemosUiState())
     val uiState: StateFlow<MemosUiState> = _uiState.asStateFlow()
 
-    private var sanitizedBaseUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
-    private val gson = Gson()
-    private var draftSaveJob: Job? = null
-    private val DEFAULT_PAGE_SIZE = 20
+    private var api: MemosApiV0353? = null
+    
+    // Managers
+    private var userMemoManager: UserMemoListManager? = null
+    private var exploreMemoManager: ExploreMemoListManager? = null
+    private var archivedMemoManager: ArchivedMemoListManager? = null
+    private var searchMemoManager: SearchMemoListManager? = null
+    private var commentManager: CommentListManager? = null
+    private var attachmentManager: AttachmentManager? = null
 
-    private var _api: MemosApiV0353? = null
-    private val api: MemosApiV0353
-        get() {
-            if (_api == null) {
-                _api = createApi(sanitizedBaseUrl, token)
-            }
-            return _api!!
-        }
-
-    private fun createApi(baseUrl: String, token: String): MemosApiV0353 {
-        val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        }
-        val client = OkHttpClient.Builder().addInterceptor(logging).addInterceptor { chain ->
-            val request =
-                chain.request().newBuilder()
-                    .addHeader("Authorization", "Bearer $token")
-                    .build()
-            chain.proceed(request)
-        }.build()
-
-        return Retrofit.Builder().baseUrl(baseUrl).client(client)
-            .addConverterFactory(GsonConverterFactory.create()).build().create(MemosApiV0353::class.java)
-    }
+    private var collectionJob: Job? = null
 
     init {
+        updateCurrentAccountInList()
+        
+        // Restore Draft
         viewModelScope.launch {
-            dataStoreManager.attachmentCellWidth.collectLatest { width ->
-                if (width != null) {
-                    _uiState.value = _uiState.value.copy(
-                        attachmentList = _uiState.value.attachmentList.copy(cellWidth = width)
-                    )
+            dataStoreManager.memoDraftJson.collect { json ->
+                if (!json.isNullOrBlank()) {
+                    try {
+                        val draft = Gson().fromJson(json, Memo::class.java)
+                        _uiState.update { 
+                            it.copy(draft = it.draft.copy(draftMemo = draft, isDraftLoaded = true)) 
+                        }
+                    } catch (e: Exception) {
+                        Log.e("MemosViewModel", "Error loading draft", e)
+                    }
+                } else {
+                     _uiState.update { 
+                        it.copy(draft = it.draft.copy(isDraftLoaded = true)) 
+                    }
                 }
             }
         }
-
-        viewModelScope.launch {
-            dataStoreManager.accounts.collectLatest { accounts ->
-                _uiState.value = _uiState.value.copy(accounts = accounts)
-                // If the current account is not in the list (e.g. first login), add it
-                if (accounts.none { it.hostUrl == baseUrl && it.accessToken == token }) {
-                    updateCurrentAccountInList()
-                }
-            }
-        }
-        
-        // Load draft
-        viewModelScope.launch {
-            val draftJson = dataStoreManager.memoDraftJson.first()
-            val draft = if (!draftJson.isNullOrBlank()) {
-                try {
-                    gson.fromJson(draftJson, Memo::class.java)
-                } catch (e: Exception) {
-                    Log.e("MemosViewModel", "Error parsing draft JSON", e)
-                    null
-                }
-            } else null
-            
-            _uiState.value = _uiState.value.copy(
-                draft = _uiState.value.draft.copy(
-                    draftMemo = draft,
-                    isDraftLoaded = true
-                )
-            )
-        }
-        
-        refreshAll()
     }
 
-    private fun updateCurrentAccountInList() {
-        viewModelScope.launch {
-            val user = _uiState.value.session.currUser
-            val currentAccounts = dataStoreManager.accounts.first().toMutableList()
-            val existingIndex = currentAccounts.indexOfFirst { it.hostUrl == baseUrl && it.accessToken == token }
-            
-            val newAccount = Account(
-                hostUrl = baseUrl,
-                accessToken = token,
-                name = user?.username,
-                displayName = user?.displayName,
-                avatarUrl = user?.avatarUrl,
-                email = user?.email,
-                description = user?.description,
-                isActive = true
-            )
+    private fun createApi(baseUrl: String, token: String): MemosApiV0353 {
+        val client = OkHttpClient.Builder()
+            .addInterceptor(AuthInterceptor(token))
+            .build()
 
-            if (existingIndex != -1) {
-                currentAccounts[existingIndex] = newAccount
+        val retrofit = Retrofit.Builder()
+            .baseUrl(baseUrl.trimEnd('/') + "/")
+            .client(client)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+        return retrofit.create(MemosApiV0353::class.java)
+    }
+
+    fun updateCurrentAccountInList() {
+        viewModelScope.launch {
+            val accounts = dataStoreManager.getAccounts()
+            val activeAccount = accounts.find { it.isActive }
+            
+            _uiState.update { it.copy(accounts = accounts) }
+
+            if (activeAccount != null) {
+                switchAccount(activeAccount)
             } else {
-                currentAccounts.add(newAccount)
+                 _uiState.update { it.copy(error = "No active account found") }
             }
-            
-            // Mark others as inactive
-            val finalAccounts = currentAccounts.map { 
-                it.copy(isActive = it.hostUrl == baseUrl && it.accessToken == token)
-            }
-            
-            dataStoreManager.saveAccounts(finalAccounts)
         }
     }
 
     fun switchAccount(account: Account) {
         viewModelScope.launch {
-            baseUrl = account.hostUrl
-            token = account.accessToken
-            sanitizedBaseUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
-            _api = null // Force recreation of API
-            
-            dataStoreManager.saveCredentials(baseUrl, token)
-            
-            // Clear current UI state for the new account
-            _uiState.value = MemosUiState(
-                session = SessionState(token = token, hostUrl = baseUrl),
-                accounts = _uiState.value.accounts.map { 
-                    it.copy(isActive = it.hostUrl == baseUrl && it.accessToken == token)
-                },
-                attachmentList = _uiState.value.attachmentList
-            )
-            
-            refreshAll()
-        }
-    }
+            try {
+                dataStoreManager.setActiveAccount(account.id)
+                dataStoreManager.updateAccountLastUsed(account.id, System.currentTimeMillis())
 
-    fun removeAccount(account: Account) {
-        viewModelScope.launch {
-            val currentAccounts = _uiState.value.accounts.filter { 
-                !(it.hostUrl == account.hostUrl && it.accessToken == account.accessToken)
-            }
-            dataStoreManager.saveAccounts(currentAccounts)
-            
-            if (account.hostUrl == baseUrl && account.accessToken == token) {
-                if (currentAccounts.isNotEmpty()) {
-                    switchAccount(currentAccounts.first())
-                } else {
-                    dataStoreManager.clearCredentials()
+                _uiState.update { 
+                    it.copy(
+                        session = SessionState(
+                            token = account.accessToken,
+                            hostUrl = account.hostUrl,
+                            currUser = null
+                        ),
+                        accounts = it.accounts.map { acc -> 
+                            acc.copy(isActive = acc.id == account.id) 
+                        }
+                    )
                 }
+
+                api = createApi(account.hostUrl, account.accessToken)
+                val currentApi = api!!
+
+                // Initialize Managers
+                userMemoManager = UserMemoListManager(viewModelScope, currentApi) {
+                    val base = "row_status == 'NORMAL'"
+                    val shortcut = _uiState.value.userMemoList.selectedShortcut
+                    if (shortcut != null && !shortcut.filter.isNullOrBlank()) {
+                         "$base && ${shortcut.filter}"
+                    } else {
+                        base
+                    }
+                }
+                exploreMemoManager = ExploreMemoListManager(viewModelScope, currentApi)
+                archivedMemoManager = ArchivedMemoListManager(viewModelScope, currentApi) {
+                    _uiState.value.session.currUser
+                }
+                searchMemoManager = SearchMemoListManager(viewModelScope, currentApi)
+                commentManager = CommentListManager(viewModelScope, currentApi)
+                attachmentManager = AttachmentManager(viewModelScope, currentApi, _uiState.value.attachmentList.cellWidth)
+
+                startStateCollection()
+                fetchCurrentUser()
+                exploreMemoManager?.fetch()
+
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error switching account", e)
+                 _uiState.update { it.copy(error = e.message) }
             }
         }
     }
-
-    fun updateAccountCredentials(oldAccount: Account, newHostUrl: String, newToken: String) {
-        viewModelScope.launch {
-            val currentAccounts = _uiState.value.accounts.toMutableList()
-            val existingIndex = currentAccounts.indexOfFirst { 
-                it.hostUrl == oldAccount.hostUrl && it.accessToken == oldAccount.accessToken 
-            }
-            
-            if (existingIndex != -1) {
-                // Update the account with new credentials, keep other info
-                currentAccounts[existingIndex] = oldAccount.copy(
-                    hostUrl = newHostUrl,
-                    accessToken = newToken
+    
+    private fun startStateCollection() {
+        collectionJob?.cancel()
+        collectionJob = viewModelScope.launch {
+            // Nest combine calls to avoid argument limit and inference issues
+            combine(
+                combine(
+                    userMemoManager!!.listState,
+                    exploreMemoManager!!.listState,
+                    archivedMemoManager!!.listState
+                ) { u, e, a -> Triple(u, e, a) },
+                combine(
+                    searchMemoManager!!.listState,
+                    commentManager!!.listState,
+                    attachmentManager!!.listState
+                ) { s, c, at -> Triple(s, c, at) },
+                attachmentManager!!.cellWidth
+            ) { (userMemos, exploreMemos, archivedMemos), (searchMemos, comments, attachments), cellWidth ->
+                _uiState.value.copy(
+                    userMemoList = _uiState.value.userMemoList.copy(list = userMemos),
+                    exploreMemoList = _uiState.value.exploreMemoList.copy(list = exploreMemos),
+                    archivedMemoList = _uiState.value.archivedMemoList.copy(list = archivedMemos),
+                    searchMemoList = _uiState.value.searchMemoList.copy(list = searchMemos),
+                    detailPane = _uiState.value.detailPane.copy(comments = comments),
+                    attachmentList = AttachmentListState(list = attachments, cellWidth = cellWidth)
                 )
-                dataStoreManager.saveAccounts(currentAccounts)
-                
-                // If this was the active account, switch to the updated version
-                if (oldAccount.isActive) {
-                    switchAccount(currentAccounts[existingIndex])
-                }
+            }.collect { newState ->
+                _uiState.value = newState
             }
         }
     }
 
-    private fun buildMemosFilter(): String? {
-        val filters = mutableListOf<String>()
-        _uiState.value.session.currUser?.name?.let { creatorName ->
-            val creatorId = creatorName.removePrefix("users/")
-            filters.add("creator_id == $creatorId")
-        }
+    // --- User & Session ---
 
-        _uiState.value.userMemoList.selectedShortcut?.filter?.let { shortcutFilter ->
-            if (shortcutFilter.isNotBlank()) {
-                filters.add("($shortcutFilter)")
+    private fun fetchCurrentUser() {
+        viewModelScope.launch {
+            try {
+                val user = api?.getCurrentSession()?.user
+                if (user != null) {
+                     _uiState.update { it.copy(session = it.session.copy(currUser = user)) }
+                     userMemoManager?.fetch(refresh = true)
+                     
+                     launch { fetchShortcuts(user.name ?: "") }
+                     launch { fetchUserSettings(user.name ?: "") }
+                     launch { fetchWebhooks(user.name ?: "") }
+                     
+                     fetchInstanceProfile()
+                }
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error fetching current user", e)
             }
+        }
+    }
+    
+    private suspend fun fetchInstanceProfile() {
+        try {
+            val profile = api?.getInstanceProfile()
+            if (profile != null) {
+                _uiState.update { it.copy(session = it.session.copy(instanceProfile = profile)) }
+            }
+        } catch (e: Exception) {
+            Log.e("MemosViewModel", "Error fetching instance profile", e)
+        }
+    }
+
+    private suspend fun fetchUserSettings(userName: String) {
+         try {
+             val response = api?.listUserSettings(userName)
+             val general = response?.settings?.find { it.name?.endsWith("general") == true || it.generalSetting != null }?.generalSetting
+             if (general != null) {
+                 _uiState.update { it.copy(session = it.session.copy(userSettings = general)) }
+             }
+         } catch (e: Exception) { }
+    }
+    
+    fun updateUserGeneralSetting(locale: String? = null, memoVisibility: String? = null) {
+        viewModelScope.launch {
+            try {
+                val user = _uiState.value.session.currUser ?: return@launch
+                val currentSetting = _uiState.value.session.userSettings ?: UserGeneralSetting()
+                val newSetting = currentSetting.copy(
+                    locale = locale ?: currentSetting.locale,
+                    memoVisibility = memoVisibility ?: currentSetting.memoVisibility
+                )
+                api?.updateUserSetting(user.name!!, "general", UserSetting(generalSetting = newSetting), "general_setting")
+                fetchUserSettings(user.name!!)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
+            }
+        }
+    }
+    
+    fun updateUserProfile(username: String? = null, email: String? = null, displayName: String? = null, avatarUrl: String? = null, description: String? = null, password: String? = null, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val currentUser = _uiState.value.session.currUser ?: return@launch
+                val update = User(
+                    username = username,
+                    email = email,
+                    displayName = displayName,
+                    avatarUrl = avatarUrl,
+                    description = description,
+                    password = password
+                )
+                val maskParts = mutableListOf<String>()
+                if (username != null) maskParts.add("username")
+                if (email != null) maskParts.add("email")
+                if (displayName != null) maskParts.add("display_name")
+                if (avatarUrl != null) maskParts.add("avatar_url")
+                if (description != null) maskParts.add("description")
+                if (password != null) maskParts.add("password")
+                
+                val mask = maskParts.joinToString(",")
+                
+                if (mask.isNotEmpty()) {
+                    api?.updateUser(currentUser.name!!, update, mask)
+                    fetchCurrentUser()
+                    onResult(true)
+                } else {
+                    onResult(true)
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
+                onResult(false)
+            }
+        }
+    }
+    
+    // --- Shortcuts ---
+    
+    private suspend fun fetchShortcuts(userName: String) {
+         try {
+             val response = api?.getShortcuts(userName)
+             val shortcuts = response?.shortcuts ?: emptyList()
+             _uiState.update { 
+                 it.copy(userMemoList = it.userMemoList.copy(shortcuts = shortcuts)) 
+             }
+         } catch (e: Exception) {
+             Log.e("MemosViewModel", "Error fetching shortcuts", e)
+         }
+    }
+    
+    fun toggleShortcutFilter(shortcut: Shortcut) {
+        val currentchk = _uiState.value.userMemoList.selectedShortcut
+        val newSelection = if (currentchk == shortcut) null else shortcut
+        
+        _uiState.update { 
+            it.copy(userMemoList = it.userMemoList.copy(selectedShortcut = newSelection))
         }
         
-        return if (filters.isNotEmpty()) filters.joinToString(" && ") else null
+        userMemoManager?.fetch(refresh = true)
+    }
+    
+    fun createShortcut(title: String, filter: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+         viewModelScope.launch {
+            try {
+                val user = _uiState.value.session.currUser ?: return@launch
+                val shortcut = Shortcut(title = title, filter = filter)
+                api?.createShortcut(user.name!!, shortcut)
+                fetchShortcuts(user.name!!)
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.message ?: "Unknown error")
+            }
+        }
+    }
+    
+    fun updateShortcut(shortcut: Shortcut, title: String, filter: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val user = _uiState.value.session.currUser ?: return@launch
+                val update = shortcut.copy(title = title, filter = filter)
+                api?.updateShortcut(user.name!!, shortcut.name!!, update, "title,filter")
+                fetchShortcuts(user.name!!)
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.message ?: "Unknown error")
+            }
+        }
+    }
+    
+    fun deleteShortcut(shortcut: Shortcut) {
+        viewModelScope.launch {
+            try {
+                val user = _uiState.value.session.currUser ?: return@launch
+                api?.deleteShortcut(user.name!!, shortcut.name!!)
+                fetchShortcuts(user.name!!)
+            } catch (e: Exception) { }
+        }
     }
 
-    fun refreshAll() {
+    // --- Webhooks ---
+    
+    private suspend fun fetchWebhooks(userName: String) {
+        try {
+            val response = api?.listUserWebhooks(userName)
+            val hooks = response?.webhooks ?: emptyList()
+            _uiState.update { it.copy(session = it.session.copy(webhooks = hooks)) }
+        } catch (e: Exception) { }
+    }
+    
+    fun createWebhook(displayName: String, url: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                userMemoList = _uiState.value.userMemoList.copy(
-                    list = _uiState.value.userMemoList.list.copy(isLoading = true)
-                ),
-                isRefreshing = true,
-                refreshTrigger = System.currentTimeMillis(),
-                error = null
-            )
             try {
-                // Fetch current user details first to ensure we have the creator filter
-                fetchCurrentUser()
-
-                // Fetch memos with current filter
-                val filter = buildMemosFilter()
-                
-                val memoResponse = api.listMemos(filter = filter, pageSize = DEFAULT_PAGE_SIZE)
-                val newMemos = memoResponse.memos?.map { processMemo(it) } ?: emptyList()
-
-                _uiState.value = _uiState.value.copy(
-                    userMemoList = _uiState.value.userMemoList.copy(
-                        list = _uiState.value.userMemoList.list.copy(
-                            items = newMemos,
-                            nextPageToken = if (memoResponse.nextPageToken.isNullOrBlank()) null else memoResponse.nextPageToken
-                        )
-                    )
-                )
-
-                // Fetch attachments
-                loadAttachmentsInternal(loadMore = false)
-
-                // Fetch explore memos
-                fetchExplore(refresh = true, updateRefreshingState = false)
-
-                // Fetch instance profile
-                try {
-                    val instance = api.getInstanceProfile()
-                    _uiState.value = _uiState.value.copy(
-                        session = _uiState.value.session.copy(instanceProfile = instance)
-                    )
-                } catch (e: Exception) {
-                    Log.e("MemosViewModel", "Error fetching instance profile", e)
-                }
-                
-                // After fetching user, update account info in list
-                updateCurrentAccountInList()
-                
+                val user = _uiState.value.session.currUser ?: return@launch
+                val webhook = UserWebhook(displayName = displayName, url = url)
+                api?.createUserWebhook(user.name!!, webhook)
+                fetchWebhooks(user.name!!)
+                onSuccess()
             } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error during refreshAll", e)
-                _uiState.value = _uiState.value.copy(error = e.localizedMessage)
-            } finally {
-                _uiState.value = _uiState.value.copy(
-                    userMemoList = _uiState.value.userMemoList.copy(
-                        list = _uiState.value.userMemoList.list.copy(isLoading = false)
-                    ),
-                    isRefreshing = false
-                )
+                onError(e.message ?: "Unknown error")
+            }
+        }
+    }
+    
+    fun updateWebhook(webhook: UserWebhook, displayName: String, url: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+             try {
+                val user = _uiState.value.session.currUser ?: return@launch
+                val update = webhook.copy(displayName = displayName, url = url)
+                api?.updateUserWebhook(user.name!!, webhook.name!!, update, "display_name,url")
+                fetchWebhooks(user.name!!)
+                onSuccess()
+            } catch (e: Exception) {
+                onError(e.message ?: "Unknown error")
+            }
+        }
+    }
+    
+    fun deleteWebhook(webhook: UserWebhook) {
+        viewModelScope.launch {
+            try {
+                val user = _uiState.value.session.currUser ?: return@launch
+                api?.deleteUserWebhook(user.name!!, webhook.name!!)
+                fetchWebhooks(user.name!!)
+            } catch (e: Exception) { }
+        }
+    }
+
+    // --- Account (Local) ---
+    
+    fun removeAccount(account: Account) {
+        viewModelScope.launch {
+            try {
+                dataStoreManager.deleteAccount(account.id)
+                updateCurrentAccountInList()
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error deleting account", e)
             }
         }
     }
 
-    private fun processMemo(memo: Memo): Memo {
-        val processedAttachments = memo.attachments?.map { processAttachment(it) }
-        return memo.copy(attachments = processedAttachments)
-    }
-
-    private fun processAttachment(attachment: Attachment): Attachment {
-        val downloadUrl = if (attachment.externalLink.isNullOrBlank()) {
-            "${sanitizedBaseUrl.removeSuffix("/")}/file/${attachment.name ?: ""}/${attachment.filename}"
-        } else if (!attachment.externalLink.startsWith("http")) {
-            "${sanitizedBaseUrl.removeSuffix("/")}${if (attachment.externalLink.startsWith("/")) "" else "/"}${attachment.externalLink}"
-        } else {
-            attachment.externalLink
-        }
-        return attachment.copy(externalLink = downloadUrl)
-    }
-
-    fun fetchAttachments(loadMore: Boolean = false) {
-        if (_uiState.value.attachmentList.list.isLoading) return
+    fun updateAccountCredentials(account: Account, hostUrl: String, token: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                attachmentList = _uiState.value.attachmentList.copy(
-                    list = _uiState.value.attachmentList.list.copy(isLoading = true)
-                ),
-                isRefreshing = if (!loadMore) true else _uiState.value.isRefreshing,
-                refreshTrigger = if (!loadMore) System.currentTimeMillis() else _uiState.value.refreshTrigger
-            )
-            loadAttachmentsInternal(loadMore)
-            _uiState.value = _uiState.value.copy(
-                attachmentList = _uiState.value.attachmentList.copy(
-                    list = _uiState.value.attachmentList.list.copy(isLoading = false)
-                ),
-                isRefreshing = if (!loadMore) false else _uiState.value.isRefreshing
-            )
+            try {
+                dataStoreManager.updateAccount(account.id, hostUrl, token)
+                updateCurrentAccountInList()
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error updating credentials", e)
+            }
         }
     }
 
-    private suspend fun loadAttachmentsInternal(loadMore: Boolean) {
-        val currentToken = if (loadMore) _uiState.value.attachmentList.list.nextPageToken else null
-        if (loadMore && currentToken == null) return
+    // --- List Accessors ---
 
-        try {
-            val response = api.listAttachments(pageToken = currentToken, pageSize = DEFAULT_PAGE_SIZE)
-            val rawAttachments = response.attachments ?: emptyList()
-            
-            val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
-            
-            val processedAttachments = rawAttachments.map { processAttachment(it) }
-            val currentItems = _uiState.value.attachmentList.list.items
+    fun refreshAll() {
+        _uiState.update { it.copy(isRefreshing = true, refreshTrigger = System.currentTimeMillis()) }
+        userMemoManager?.fetch(refresh = true)
+        exploreMemoManager?.fetch(refresh = true)
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = false) }
+        }
+    }
+    
+    fun loadMore() = userMemoManager?.loadMore()
+    fun fetchExplore(refresh: Boolean = false) = exploreMemoManager?.fetch(refresh)
+    fun loadMoreExplore() = exploreMemoManager?.loadMore()
+    
+    fun fetchArchivedMemos(refresh: Boolean = false) = archivedMemoManager?.fetch(refresh)
+    fun loadMoreArchived() = archivedMemoManager?.loadMore()
+    
+    fun prepareSearch(isExplore: Boolean, filter: String?, orderBy: String? = null) {
+        searchMemoManager?.updateFilter(filter)
+        searchMemoManager?.fetch(refresh = true)
+    }
+    
+    fun fetchAttachments(loadMore: Boolean = false) {
+        if (loadMore) attachmentManager?.loadMore()
+        else attachmentManager?.fetch(refresh = true)
+    }
+    
+    fun updateAttachmentCellWidth(width: Float) {
+        attachmentManager?.updateCellWidth(width)
+    }
+    
+    // --- Detail & CRUD ---
+    
+    fun selectMemo(memo: Memo?) {
+        _uiState.update { 
+            it.copy(detailPane = it.detailPane.copy(selectedMemo = memo))
+        }
+        if (memo != null) {
+            commentManager?.setMemo(memo.name ?: "")
+        }
+    }
+    
+    fun clearSelectedMemo() = selectMemo(null)
 
-            _uiState.value = _uiState.value.copy(
-                attachmentList = _uiState.value.attachmentList.copy(
-                    list = _uiState.value.attachmentList.list.copy(
-                        items = if (loadMore) currentItems + processedAttachments else processedAttachments,
-                        nextPageToken = newNextPageToken
-                    )
-                )
-            )
-        } catch (e: Exception) {
-            Log.e("MemosViewModel", "Error fetching attachments", e)
+    fun createMemo(content: String, visibility: String, attachments: List<Attachment>? = null, location: Location? = null, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(isPosting = true) }
+                val memo = Memo(content = content, visibility = visibility, attachments = attachments, location = location)
+                val created = api?.createMemo(memo)
+                if (created != null) {
+                    onSuccess()
+                    userMemoManager?.fetch(refresh = true)
+                    saveDraft("", "PRIVATE", emptyList(), null)
+                    _uiState.update { it.copy(draft = it.draft.copy(composerResetToken = System.currentTimeMillis().toInt())) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
+            } finally {
+                _uiState.update { it.copy(isPosting = false) }
+            }
+        }
+    }
+    
+    fun updateMemo(memo: Memo, content: String, visibility: String, attachments: List<Attachment>, location: Location? = null, onSuccess: () -> Unit = {}) {
+         viewModelScope.launch {
+             try {
+                 val update = memo.copy(content = content, visibility = visibility, attachments = attachments, location = location)
+                 val updated = api?.updateMemo(memo.name!!, update, "content,visibility,attachments,location")
+                 if (updated != null) {
+                     onSuccess()
+                     userMemoManager?.fetch(refresh = true)
+                     if (memo.visibility == "PUBLIC" || memo.visibility == "PROTECTED") exploreMemoManager?.fetch(refresh = true)
+                 }
+             } catch (e: Exception) {
+                 _uiState.update { it.copy(error = e.message) }
+             }
+         }
+    }
+
+    fun deleteMemo(memo: Memo, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                api?.deleteMemo(memo.name!!)
+                onSuccess()
+                userMemoManager?.fetch(refresh = true)
+                exploreMemoManager?.fetch(refresh = true)
+                archivedMemoManager?.fetch(refresh = true)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
+            }
+        }
+    }
+    
+    fun createComment(parentMemo: Memo, content: String, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                 val comment = Memo(content = content, visibility = parentMemo.visibility)
+                 api?.createMemoComment(parentMemo.name!!, comment)
+                 onSuccess()
+                 commentManager?.fetch(refresh = true)
+            } catch (e: Exception) { }
         }
     }
 
     suspend fun uploadAttachment(uri: Uri, context: Context): Attachment? {
-        Log.d("MemosViewModel", "Starting upload for URI: $uri")
-        return try {
-            val contentResolver = context.contentResolver
-            val fileName = getFileName(uri, context) ?: "upload_${System.currentTimeMillis()}"
-
-            // Get MIME type from content resolver, but fall back to extension-based detection
-            val resolverMimeType = contentResolver.getType(uri)
-            val mimeType = if (resolverMimeType == null || resolverMimeType == "application/octet-stream") {
-                getMimeTypeFromExtension(fileName) ?: resolverMimeType ?: "application/octet-stream"
-            } else {
-                resolverMimeType
-            }
-
-            val inputStream: InputStream? = contentResolver.openInputStream(uri)
-            val bytes = inputStream?.readBytes() ?: return null
-            inputStream.close()
-
-            // Memos API expects bytes to be Base64 encoded in JSON
-            val base64Content = Base64.encodeToString(bytes, Base64.NO_WRAP)
-            Log.d("MemosViewModel", "Encoded file to Base64, size: ${base64Content.length}")
-
-            val request = Attachment(
-                filename = fileName,
-                type = mimeType,
-                content = base64Content
-            )
-
-            val attachment = api.createAttachment(request)
-            Log.d("MemosViewModel", "Upload success: ${attachment.name}")
-            val processedAttachment = processAttachment(attachment)
-            
-            _uiState.value = _uiState.value.copy(
-                attachmentList = _uiState.value.attachmentList.copy(
-                    list = _uiState.value.attachmentList.list.copy(
-                        items = listOf(processedAttachment) + _uiState.value.attachmentList.list.items
-                    )
-                )
-            )
-            processedAttachment
-        } catch (e: Exception) {
-            Log.e("MemosViewModel", "Error uploading attachment", e)
-            null
-        }
-    }
-
-    private fun getFileName(uri: Uri, context: Context): String? {
-        var name: String? = null
-        if (uri.scheme == "content") {
-            val cursor = context.contentResolver.query(uri, null, null, null, null)
-            cursor?.use {
-                if (it.moveToFirst()) {
-                    val index = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                    if (index != -1) name = it.getString(index)
-                }
-            }
-        }
-        return name ?: uri.path?.let { path ->
-            val cut = path.lastIndexOf('/')
-            if (cut != -1) path.substring(cut + 1) else path
-        }
-    }
-
-    private fun getMimeTypeFromExtension(fileName: String): String? {
-        val extension = fileName.substringAfterLast('.', "").lowercase()
-        if (extension.isEmpty()) return null
-        return android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
-    }
-
-    private suspend fun fetchCurrentUser() {
-        try {
-            val session = api.getCurrentSession()
-            session.user?.let { updateUserInfo(it) }
-        } catch (e: Exception) {
-            Log.e("MemosViewModel", "Error fetching current session", e)
-        }
-    }
-
-    private suspend fun updateUserInfo(user: User) {
-        val processedUser = processUser(user)
-        _uiState.value = _uiState.value.copy(
-            session = _uiState.value.session.copy(currUser = processedUser),
-            users = _uiState.value.users + ((user.name ?: "") to processedUser)
-        )
-
-        val userId = user.name?.removePrefix("users/") ?: return
-        try {
-            val stats = api.getUserStats(userId)
-            val shortcuts = api.getShortcuts(userId)
-            val webhooks = try { api.listUserWebhooks(userId).webhooks ?: emptyList() } catch (e: Exception) { emptyList() }
-            
-            val generalSetting = try {
-                api.getUserSetting(userId, "GENERAL").generalSetting
-            } catch (e: Exception) {
-                try {
-                    api.getUserSetting(userId, "general").generalSetting
-                } catch (e2: Exception) {
-                    null
-                }
-            }
-
-            _uiState.value = _uiState.value.copy(
-                session = _uiState.value.session.copy(
-                    userStats = stats,
-                    userSettings = generalSetting,
-                    webhooks = webhooks
-                ),
-                userMemoList = _uiState.value.userMemoList.copy(
-                    shortcuts = shortcuts.shortcuts ?: emptyList()
-                )
-            )
-        } catch (e: Exception) {
-            Log.e("MemosViewModel", "Error fetching additional user details", e)
-        }
-    }
-
-    private fun processUser(user: User): User {
-        val avatarUrl = user.avatarUrl
-        return if (avatarUrl != null && !avatarUrl.startsWith("http")) {
-            user.copy(avatarUrl = sanitizedBaseUrl.removeSuffix("/") + avatarUrl)
-        } else {
-            user
-        }
-    }
-
-    fun fetchMemos(refresh: Boolean = false) {
-        if (refresh) {
-            refreshAll()
-            return
-        }
-
-        if (_uiState.value.userMemoList.list.isLoading) return
-        val currentToken = _uiState.value.userMemoList.list.nextPageToken ?: return
-
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                userMemoList = _uiState.value.userMemoList.copy(
-                    list = _uiState.value.userMemoList.list.copy(isLoading = true)
-                ),
-                error = null
-            )
-            try {
-                val filter = buildMemosFilter()
-                
-                val response = api.listMemos(pageToken = currentToken, filter = filter, pageSize = DEFAULT_PAGE_SIZE)
-                val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
-                
-                val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
-                val currentMemos = _uiState.value.userMemoList.list.items
-                
-                _uiState.value = _uiState.value.copy(
-                    userMemoList = _uiState.value.userMemoList.copy(
-                        list = _uiState.value.userMemoList.list.copy(
-                            items = currentMemos + newMemos,
-                            nextPageToken = newNextPageToken,
-                            isLoading = false
-                        )
-                    )
-                )
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error fetching more memos", e)
-                _uiState.value = _uiState.value.copy(
-                    userMemoList = _uiState.value.userMemoList.copy(
-                        list = _uiState.value.userMemoList.list.copy(isLoading = false)
-                    ),
-                    error = e.localizedMessage
-                )
-            }
-        }
-    }
-
-    fun fetchExplore(refresh: Boolean = false, updateRefreshingState: Boolean = true) {
-        if (_uiState.value.exploreMemoList.list.isLoading && !refresh) return
-        val currentToken = if (refresh) null else _uiState.value.exploreMemoList.list.nextPageToken
-        if (!refresh && currentToken == null) return
-
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                exploreMemoList = _uiState.value.exploreMemoList.copy(
-                    list = _uiState.value.exploreMemoList.list.copy(isLoading = true)
-                ),
-                error = if (refresh) null else _uiState.value.error,
-                isRefreshing = if (refresh && updateRefreshingState) true else _uiState.value.isRefreshing,
-                refreshTrigger = if (refresh && updateRefreshingState) System.currentTimeMillis() else _uiState.value.refreshTrigger
-            )
-            try {
-                val response = api.listMemos(
-                    pageToken = currentToken,
-                    filter = "visibility in ['PUBLIC', 'PROTECTED']",
-                    pageSize = DEFAULT_PAGE_SIZE
-                )
-                val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
-                
-                val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
-                val currentMemos = _uiState.value.exploreMemoList.list.items
-                
-                _uiState.value = _uiState.value.copy(
-                    exploreMemoList = _uiState.value.exploreMemoList.copy(
-                        list = _uiState.value.exploreMemoList.list.copy(
-                            items = if (refresh) newMemos else currentMemos + newMemos,
-                            nextPageToken = newNextPageToken,
-                            isLoading = false
-                        )
-                    ),
-                    isRefreshing = if (refresh && updateRefreshingState) false else _uiState.value.isRefreshing
-                )
-
-                // Background fetch for user details
-                val unknownCreators = newMemos
-                    .mapNotNull { it.creator }
-                    .filter { it !in _uiState.value.users }
-                    .distinct()
-                
-                launch {
-                    unknownCreators.forEach { creatorName ->
-                        try {
-                            val userId = creatorName.removePrefix("users/")
-                            val user = api.getUser(userId)
-                            val processedUser = processUser(user)
-                            _uiState.value = _uiState.value.copy(
-                                users = _uiState.value.users + (creatorName to processedUser)
-                            )
-                        } catch (e: Exception) {
-                            Log.e("MemosViewModel", "Error fetching user $creatorName", e)
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error fetching explore memos", e)
-                _uiState.value = _uiState.value.copy(
-                    exploreMemoList = _uiState.value.exploreMemoList.copy(
-                        list = _uiState.value.exploreMemoList.list.copy(isLoading = false)
-                    ),
-                    error = e.localizedMessage,
-                    isRefreshing = if (refresh && updateRefreshingState) false else _uiState.value.isRefreshing
-                )
-            }
-        }
-    }
-
-    fun fetchArchivedMemos(refresh: Boolean = false) {
-        if (_uiState.value.archivedMemoList.list.isLoading && !refresh) return
-        val currentToken = if (refresh) null else _uiState.value.archivedMemoList.list.nextPageToken
-        if (!refresh && currentToken == null) return
-
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                archivedMemoList = _uiState.value.archivedMemoList.copy(
-                    list = _uiState.value.archivedMemoList.list.copy(isLoading = true)
-                ),
-                error = if (refresh) null else _uiState.value.error,
-                isRefreshing = if (refresh) true else _uiState.value.isRefreshing
-            )
-            try {
-                val filters = mutableListOf<String>()
-                _uiState.value.session.currUser?.name?.let { creatorName ->
-                    val creatorId = creatorName.removePrefix("users/")
-                    filters.add("creator_id == $creatorId")
-                }
-                val filter = if (filters.isNotEmpty()) filters.joinToString(" && ") else null
-
-                val response = api.listMemos(
-                    pageToken = currentToken,
-                    state = "ARCHIVED",
-                    filter = filter,
-                    pageSize = DEFAULT_PAGE_SIZE
-                )
-                val newMemos = response.memos?.map { processMemo(it) } ?: emptyList()
-                
-                val newNextPageToken = if (response.nextPageToken.isNullOrBlank() || response.nextPageToken == currentToken) null else response.nextPageToken
-                val currentMemos = _uiState.value.archivedMemoList.list.items
-                
-                _uiState.value = _uiState.value.copy(
-                    archivedMemoList = _uiState.value.archivedMemoList.copy(
-                        list = _uiState.value.archivedMemoList.list.copy(
-                            items = if (refresh) newMemos else currentMemos + newMemos,
-                            nextPageToken = newNextPageToken,
-                            isLoading = false
-                        )
-                    ),
-                    isRefreshing = if (refresh) false else _uiState.value.isRefreshing
-                )
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error fetching archived memos", e)
-                _uiState.value = _uiState.value.copy(
-                    archivedMemoList = _uiState.value.archivedMemoList.copy(
-                        list = _uiState.value.archivedMemoList.list.copy(isLoading = false)
-                    ),
-                    error = e.localizedMessage,
-                    isRefreshing = if (refresh) false else _uiState.value.isRefreshing
-                )
-            }
-        }
-    }
-
-    fun loadMoreArchived() {
-        if (_uiState.value.archivedMemoList.list.nextPageToken != null && !_uiState.value.archivedMemoList.list.isLoading) {
-            fetchArchivedMemos()
-        }
-    }
-
-    fun prepareSearch(isExplore: Boolean, filter: String? = null, orderBy: String? = null) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                searchMemoList = _uiState.value.searchMemoList.copy(
-                    list = _uiState.value.searchMemoList.list.copy(isLoading = true, items = emptyList())
-                )
-            )
-            try {
-                val baseFilter = if (isExplore) {
-                    "visibility in ['PUBLIC', 'PROTECTED']"
-                } else {
-                    _uiState.value.session.currUser?.name?.let { creatorName ->
-                        val creatorId = creatorName.removePrefix("users/")
-                        "creator_id == $creatorId"
-                    }
-                }
-                
-                val finalFilter = if (filter != null) {
-                    if (baseFilter != null) "$baseFilter && $filter" else filter
-                } else baseFilter
-
-                val response = api.listMemos(filter = finalFilter, orderBy = orderBy, pageSize = 200)
-                val searchMemos = response.memos?.map { processMemo(it) } ?: emptyList()
-                
-                _uiState.value = _uiState.value.copy(
-                    searchMemoList = _uiState.value.searchMemoList.copy(
-                        list = _uiState.value.searchMemoList.list.copy(
-                            items = searchMemos,
-                            isLoading = false
-                        )
-                    )
-                )
-                
-                if (isExplore) {
-                    val unknownCreators = searchMemos
-                        .mapNotNull { it.creator }
-                        .filter { it !in _uiState.value.users }
-                        .distinct()
-                    
-                    launch {
-                        unknownCreators.forEach { creatorName ->
-                            try {
-                                val userId = creatorName.removePrefix("users/")
-                                val user = api.getUser(userId)
-                                val processedUser = processUser(user)
-                                _uiState.value = _uiState.value.copy(
-                                    users = _uiState.value.users + (creatorName to processedUser)
-                                )
-                            } catch (e: Exception) {
-                                Log.e("MemosViewModel", "Error fetching user $creatorName for search", e)
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error preparing search", e)
-                _uiState.value = _uiState.value.copy(
-                    searchMemoList = _uiState.value.searchMemoList.copy(
-                        list = _uiState.value.searchMemoList.list.copy(isLoading = false)
-                    )
-                )
-            }
-        }
-    }
-
-    fun loadMore() {
-        if (_uiState.value.userMemoList.list.nextPageToken != null && !_uiState.value.userMemoList.list.isLoading) {
-            fetchMemos()
-        }
-    }
-
-    fun loadMoreExplore() {
-        if (_uiState.value.exploreMemoList.list.nextPageToken != null && !_uiState.value.exploreMemoList.list.isLoading) {
-            fetchExplore()
-        }
-    }
-
-    fun toggleShortcutFilter(shortcut: Shortcut) {
-        val current = _uiState.value.userMemoList.selectedShortcut
-        val next = if (current?.name == shortcut.name) null else shortcut
-        _uiState.value = _uiState.value.copy(
-            userMemoList = _uiState.value.userMemoList.copy(selectedShortcut = next)
-        )
-        refreshAll()
-    }
-
-    fun createMemo(
-        content: String, 
-        visibility: String = "PRIVATE", 
-        attachments: List<Attachment>? = null,
-        location: Location? = null,
-        onSuccess: () -> Unit = {}
-    ) {
-        if (content.isBlank() && attachments.isNullOrEmpty()) return
-
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isPosting = true)
-            try {
-                // Upload any cached attachments that have base64 content but no server-assigned name
-                val processedAttachments = attachments?.map { attachment ->
-                    if (attachment.name == null && !attachment.content.isNullOrBlank()) {
-                        // This is a cached attachment with base64 content - upload it first
-                        try {
-                            val uploaded = api.createAttachment(attachment)
-                            Log.d("MemosViewModel", "Uploaded cached attachment: ${uploaded.name}")
-                            uploaded
-                        } catch (e: Exception) {
-                            Log.e("MemosViewModel", "Failed to upload cached attachment", e)
-                            throw e
-                        }
-                    } else {
-                        attachment
-                    }
-                }
-
-                val memo = api.createMemo(Memo(
-                    content = content, 
-                    visibility = visibility,
-                    attachments = processedAttachments,
-                    location = location,
-                    state = "NORMAL"
-                ))
-                val currentMemos = _uiState.value.userMemoList.list.items
-                _uiState.value = _uiState.value.copy(
-                    userMemoList = _uiState.value.userMemoList.copy(
-                        list = _uiState.value.userMemoList.list.copy(
-                            items = listOf(processMemo(memo)) + currentMemos
-                        )
-                    ),
-                    isPosting = false,
-                    draft = _uiState.value.draft.copy(
-                        draftMemo = null,
-                        composerResetToken = _uiState.value.draft.composerResetToken + 1
-                    )
-                )
-                dataStoreManager.clearMemoDraft()
-                onSuccess()
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error creating memo", e)
-                _uiState.value = _uiState.value.copy(
-                    isPosting = false, error = "Failed to create memo: ${e.localizedMessage}"
-                )
-            }
-        }
+        return attachmentManager?.uploadAttachment(uri, context)
     }
 
     fun saveDraft(content: String, visibility: String, attachments: List<Attachment>, location: Location? = null) {
-        val draftMemo = Memo(
-            content = content,
-            visibility = visibility,
-            attachments = attachments,
-            location = location
-        )
-        // Update UI state immediately
-        _uiState.value = _uiState.value.copy(
-            draft = _uiState.value.draft.copy(draftMemo = draftMemo)
-        )
-        
-        // Debounce saving to DataStore
-        draftSaveJob?.cancel()
-        draftSaveJob = viewModelScope.launch {
-            delay(1000) // Wait 1 second before saving to disk
-            val json = gson.toJson(draftMemo)
-            dataStoreManager.saveMemoDraft(json)
+        val draftMemo = Memo(content = content, visibility = visibility, attachments = attachments, location = location)
+        _uiState.update { 
+            it.copy(draft = it.draft.copy(draftMemo = draftMemo))
         }
-    }
-
-    fun createComment(parentMemo: Memo, content: String, onSuccess: () -> Unit = {}) {
-        if (content.isBlank()) return
-        val memoId = parentMemo.name?.removePrefix("memos/") ?: return
-
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isPosting = true)
-            try {
-                val comment = api.createMemoComment(
-                    memo = memoId,
-                    comment = Memo(
-                        content = content,
-                        visibility = parentMemo.visibility,
-                        state = "NORMAL"
-                    )
-                )
-                _uiState.value = _uiState.value.copy(
-                    detailPane = _uiState.value.detailPane.copy(
-                        comments = _uiState.value.detailPane.comments + processMemo(comment)
-                    ),
-                    isPosting = false
-                )
-                onSuccess()
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error creating comment", e)
-                _uiState.value = _uiState.value.copy(
-                    isPosting = false, error = "Failed to create comment: ${e.localizedMessage}"
-                )
-            }
-        }
-    }
-
-    fun updateMemo(
-        memo: Memo,
-        content: String,
-        visibility: String,
-        attachments: List<Attachment>,
-        location: Location? = null,
-        onSuccess: () -> Unit = {}
-    ) {
-        val memoName = memo.name ?: return
-        val memoId = memoName.removePrefix("memos/")
-        
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isPosting = true)
-            try {
-                val updatedMemo = api.updateMemo(
-                    memo = memoId,
-                    memoData = Memo(
-                        content = content,
-                        visibility = visibility,
-                        attachments = attachments,
-                        location = location
-                    ),
-                    updateMask = "content,visibility,attachments,location"
-                )
-                
-                val processed = processMemo(updatedMemo)
-                
-                // Update in all lists
-                val updatedUserMemos = _uiState.value.userMemoList.list.items.map {
-                    if (it.name == memoName) processed else it
-                }
-                val updatedExploreMemos = _uiState.value.exploreMemoList.list.items.map {
-                    if (it.name == memoName) processed else it
-                }
-                val updatedComments = _uiState.value.detailPane.comments.map {
-                    if (it.name == memoName) processed else it
-                }
-                
-                _uiState.value = _uiState.value.copy(
-                    userMemoList = _uiState.value.userMemoList.copy(
-                        list = _uiState.value.userMemoList.list.copy(items = updatedUserMemos)
-                    ),
-                    exploreMemoList = _uiState.value.exploreMemoList.copy(
-                        list = _uiState.value.exploreMemoList.list.copy(items = updatedExploreMemos)
-                    ),
-                    detailPane = _uiState.value.detailPane.copy(
-                        comments = updatedComments,
-                        selectedMemo = if (_uiState.value.detailPane.selectedMemo?.name == memoName) processed else _uiState.value.detailPane.selectedMemo
-                    ),
-                    isPosting = false
-                )
-                onSuccess()
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error updating memo", e)
-                _uiState.value = _uiState.value.copy(
-                    isPosting = false, error = "Failed to update memo: ${e.localizedMessage}"
-                )
-            }
-        }
-    }
-
-    fun deleteMemo(memo: Memo, onSuccess: () -> Unit = {}) {
-        val memoName = memo.name ?: return
-        val memoId = memoName.removePrefix("memos/")
-        
-        viewModelScope.launch {
-            try {
-                api.deleteMemo(memoId)
-                
-                // Update in all lists
-                val updatedUserMemos = _uiState.value.userMemoList.list.items.filter { it.name != memoName }
-                val updatedExploreMemos = _uiState.value.exploreMemoList.list.items.filter { it.name != memoName }
-                val updatedComments = _uiState.value.detailPane.comments.filter { it.name != memoName }
-                
-                _uiState.value = _uiState.value.copy(
-                    userMemoList = _uiState.value.userMemoList.copy(
-                        list = _uiState.value.userMemoList.list.copy(items = updatedUserMemos)
-                    ),
-                    exploreMemoList = _uiState.value.exploreMemoList.copy(
-                        list = _uiState.value.exploreMemoList.list.copy(items = updatedExploreMemos)
-                    ),
-                    detailPane = _uiState.value.detailPane.copy(
-                        comments = updatedComments,
-                        selectedMemo = if (_uiState.value.detailPane.selectedMemo?.name == memoName) null else _uiState.value.detailPane.selectedMemo
-                    )
-                )
-                onSuccess()
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error deleting memo", e)
-                _uiState.value = _uiState.value.copy(
-                    error = "Failed to delete memo: ${e.localizedMessage}"
-                )
-            }
-        }
-    }
-
-    fun selectMemo(memo: Memo?) {
-        _uiState.value = _uiState.value.copy(
-            detailPane = _uiState.value.detailPane.copy(
-                selectedMemo = memo,
-                comments = emptyList(),
-                isLoadingComments = memo != null
-            )
-        )
-        
-        if (memo != null) {
-            fetchMemoComments(memo)
-        }
-    }
-
-    fun clearSelectedMemo() {
-        _uiState.value = _uiState.value.copy(
-            detailPane = DetailPaneState()
-        )
-    }
-
-    private fun fetchMemoComments(memo: Memo) {
-        val memoName = memo.name ?: return
-        val memoId = memoName.removePrefix("memos/")
-        
-        viewModelScope.launch {
-            try {
-                val response = api.listMemoComments(memoId)
-                val comments = response.memos?.map { processMemo(it) } ?: emptyList()
-                _uiState.value = _uiState.value.copy(
-                    detailPane = _uiState.value.detailPane.copy(
-                        comments = comments,
-                        isLoadingComments = false
-                    )
-                )
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error fetching memo comments", e)
-                _uiState.value = _uiState.value.copy(
-                    detailPane = _uiState.value.detailPane.copy(isLoadingComments = false)
-                )
-            }
-        }
-    }
-
-    fun updateUserGeneralSetting(locale: String? = null, memoVisibility: String? = null) {
-        val user = _uiState.value.session.currUser ?: return
-        val userId = user.name?.removePrefix("users/") ?: return
-        
-        viewModelScope.launch {
-            try {
-                val currentSettings = _uiState.value.session.userSettings ?: UserGeneralSetting()
-                val updatedGeneral = currentSettings.copy(
-                    locale = locale ?: currentSettings.locale,
-                    memoVisibility = memoVisibility ?: currentSettings.memoVisibility
-                )
-                
-                val settingKey = "GENERAL"
-                val request = UserSetting(
-                    name = "users/$userId/settings/$settingKey",
-                    generalSetting = updatedGeneral
-                )
-                
-                val updateMask = mutableListOf<String>()
-                if (locale != null) updateMask.add("locale")
-                if (memoVisibility != null) updateMask.add("memoVisibility")
-
-                val maskString = updateMask.joinToString(",")
-                Log.d("MemosViewModel", "Updating settings for $userId with mask: $maskString")
-
-                val updated = try {
-                    api.updateUserSetting(userId, settingKey, request, maskString)
-                } catch (e: Exception) {
-                    Log.w("MemosViewModel", "Update with 'GENERAL' failed, trying 'general'", e)
-                    api.updateUserSetting(userId, "general", request.copy(name = "users/$userId/settings/general"), maskString)
-                }
-                
-                _uiState.value = _uiState.value.copy(
-                    session = _uiState.value.session.copy(userSettings = updated.generalSetting),
-                    error = null
-                )
-                Log.d("MemosViewModel", "Settings updated successfully")
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error updating user settings", e)
-                _uiState.value = _uiState.value.copy(error = "Failed to update settings: ${e.localizedMessage}")
-            }
-        }
-    }
-
-    fun updateUserProfile(
-        username: String? = null,
-        email: String? = null,
-        displayName: String? = null,
-        avatarUrl: String? = null,
-        description: String? = null,
-        password: String? = null,
-        onComplete: (Boolean) -> Unit = {}
-    ) {
-        val user = _uiState.value.session.currUser ?: return onComplete(false)
-        val userId = user.name?.removePrefix("users/") ?: return onComplete(false)
-
-        viewModelScope.launch {
-            try {
-                val updateMask = mutableListOf<String>()
-                if (username != null) updateMask.add("username")
-                if (email != null) updateMask.add("email")
-                if (displayName != null) updateMask.add("display_name")
-                if (avatarUrl != null) updateMask.add("avatar_url")
-                if (description != null) updateMask.add("description")
-                if (password != null) updateMask.add("password")
-
-                if (updateMask.isEmpty()) {
-                    onComplete(true)
-                    return@launch
-                }
-
-                val updatedUser = api.updateUser(
-                    user = userId,
-                    userData = User(
-                        username = username,
-                        email = email,
-                        displayName = displayName,
-                        avatarUrl = avatarUrl,
-                        description = description,
-                        password = password
-                    ),
-                    updateMask = updateMask.joinToString(",")
-                )
-
-                // Update current user in state
-                val processedUser = processUser(updatedUser)
-                _uiState.value = _uiState.value.copy(
-                    session = _uiState.value.session.copy(currUser = processedUser),
-                    users = _uiState.value.users + ((updatedUser.name ?: "") to processedUser)
-                )
-
-                // Update the account in accounts list
-                updateCurrentAccountInList()
-
-                Log.d("MemosViewModel", "User profile updated successfully")
-                onComplete(true)
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error updating user profile", e)
-                _uiState.value = _uiState.value.copy(error = "Failed to update profile: ${e.localizedMessage}")
-                onComplete(false)
-            }
+            dataStoreManager.saveMemoDraft(Gson().toJson(draftMemo))
         }
     }
 
     fun upsertMemoReaction(memo: Memo, reactionType: String) {
-        val memoName = memo.name ?: return
-        val memoId = memoName.removePrefix("memos/")
-        
         viewModelScope.launch {
             try {
-                api.upsertMemoReaction(
-                    memo = memoId,
-                    request = UpsertMemoReactionRequest(
-                        name = memoName,
-                        reaction = Reaction(
-                            contentId = memoName,
-                            reactionType = reactionType
-                        )
-                    )
-                )
-                // Refresh the memo to get updated reactions
-                refreshMemo(memoName)
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error upserting reaction", e)
-            }
+                 val reaction = Reaction(contentId = memo.name!!, reactionType = reactionType)
+                 val request = UpsertMemoReactionRequest(name = memo.name!!, reaction = reaction)
+                 api?.upsertMemoReaction(memo.name!!, request)
+                 userMemoManager?.fetch(refresh = true) 
+                 exploreMemoManager?.fetch(refresh = true)
+            } catch (e: Exception) { }
         }
     }
-
-    fun deleteMemoReaction(memo: Memo, reaction: Reaction) {
-        val memoName = memo.name ?: return
-        val reactionName = reaction.name ?: return
-//        val memoId = memoName.removePrefix("memos/")
-        val reactionId = reactionName.removePrefix("reactions/")
-        // Holy shit the documentation was so ass
-        viewModelScope.launch {
+    
+    fun deleteMemoReaction(memo: Memo, reactionType: String) {
+         viewModelScope.launch {
             try {
-                // Use the reaction type (emoji) directly as the identifier in the path
-                api.deleteMemoReaction(reactionId)
-                refreshMemo(memoName)
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error deleting reaction", e)
-            }
+                 api?.deleteMemoReaction(reactionType)
+                 userMemoManager?.fetch(refresh = true) 
+                 exploreMemoManager?.fetch(refresh = true)
+            } catch (e: Exception) { }
         }
     }
-
-    private suspend fun refreshMemo(memoName: String) {
-        try {
-            val updatedMemo = api.getMemo(memoName.removePrefix("memos/"))
-            val processed = processMemo(updatedMemo)
-            
-            val updatedUserMemos = _uiState.value.userMemoList.list.items.map {
-                if (it.name == memoName) processed else it
-            }
-            val updatedExploreMemos = _uiState.value.exploreMemoList.list.items.map {
-                if (it.name == memoName) processed else it
-            }
-            val updatedComments = _uiState.value.detailPane.comments.map {
-                if (it.name == memoName) processed else it
-            }
-            
-            _uiState.value = _uiState.value.copy(
-                userMemoList = _uiState.value.userMemoList.copy(
-                    list = _uiState.value.userMemoList.list.copy(items = updatedUserMemos)
-                ),
-                exploreMemoList = _uiState.value.exploreMemoList.copy(
-                    list = _uiState.value.exploreMemoList.list.copy(items = updatedExploreMemos)
-                ),
-                detailPane = _uiState.value.detailPane.copy(
-                    comments = updatedComments,
-                    selectedMemo = if (_uiState.value.detailPane.selectedMemo?.name == memoName) processed else _uiState.value.detailPane.selectedMemo
-                )
-            )
-        } catch (e: Exception) {
-            Log.e("MemosViewModel", "Error refreshing memo after reaction", e)
-        }
-    }
-
-    fun updateAttachmentCellWidth(width: Float) {
-        viewModelScope.launch {
-            dataStoreManager.saveAttachmentCellWidth(width)
-        }
-    }
-
-    // --- Shortcut Management ---
-
-    private fun parseError(e: Exception): String {
-        return if (e is HttpException) {
-            try {
-                val errorBody = e.response()?.errorBody()?.string()
-                val errorResponse = gson.fromJson(errorBody, MemosErrorResponse::class.java)
-                errorResponse.message ?: e.localizedMessage ?: "Unknown error"
-            } catch (parseEx: Exception) {
-                e.localizedMessage ?: "Unknown error"
-            }
-        } else {
-            e.localizedMessage ?: "Unknown error"
-        }
-    }
-
-    fun createShortcut(title: String, filter: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
-        val user = _uiState.value.session.currUser ?: return
-        val userId = user.name?.removePrefix("users/") ?: return
-        
-        viewModelScope.launch {
-            try {
-                val shortcut = api.createShortcut(userId, Shortcut(title = title, filter = filter))
-                _uiState.value = _uiState.value.copy(
-                    userMemoList = _uiState.value.userMemoList.copy(
-                        shortcuts = _uiState.value.userMemoList.shortcuts + shortcut
-                    )
-                )
-                onSuccess()
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error creating shortcut", e)
-                val errorMessage = parseError(e)
-                _uiState.value = _uiState.value.copy(error = "Failed to create shortcut: $errorMessage")
-                onError(errorMessage)
-            }
-        }
-    }
-
-    fun updateShortcut(shortcut: Shortcut, title: String, filter: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
-        val user = _uiState.value.session.currUser ?: return
-        val userId = user.name?.removePrefix("users/") ?: return
-        val shortcutName = shortcut.name ?: return
-        val shortcutId = shortcutName.substringAfterLast("/")
-
-        viewModelScope.launch {
-            try {
-                val updated = api.updateShortcut(
-                    userId, 
-                    shortcutId, 
-                    Shortcut(name = shortcutName, title = title, filter = filter),
-                    updateMask = "title,filter"
-                )
-                _uiState.value = _uiState.value.copy(
-                    userMemoList = _uiState.value.userMemoList.copy(
-                        shortcuts = _uiState.value.userMemoList.shortcuts.map { if (it.name == shortcutName) updated else it }
-                    )
-                )
-                onSuccess()
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error updating shortcut", e)
-                val errorMessage = parseError(e)
-                _uiState.value = _uiState.value.copy(error = "Failed to update shortcut: $errorMessage")
-                onError(errorMessage)
-            }
-        }
-    }
-
-    fun deleteShortcut(shortcut: Shortcut) {
-        val user = _uiState.value.session.currUser ?: return
-        val userId = user.name?.removePrefix("users/") ?: return
-        val shortcutName = shortcut.name ?: return
-        val shortcutId = shortcutName.substringAfterLast("/")
-
-        viewModelScope.launch {
-            try {
-                api.deleteShortcut(userId, shortcutId)
-                _uiState.value = _uiState.value.copy(
-                    userMemoList = _uiState.value.userMemoList.copy(
-                        shortcuts = _uiState.value.userMemoList.shortcuts.filter { it.name != shortcutName }
-                    )
-                )
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error deleting shortcut", e)
-                _uiState.value = _uiState.value.copy(error = "Failed to delete shortcut: ${e.localizedMessage}")
-            }
-        }
-    }
-
-    // --- Webhook Management ---
-
-    fun createWebhook(displayName: String, url: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
-        val user = _uiState.value.session.currUser ?: return
-        val userId = user.name?.removePrefix("users/") ?: return
-
-        viewModelScope.launch {
-            try {
-                val webhook = api.createUserWebhook(userId, UserWebhook(displayName = displayName, url = url))
-                _uiState.value = _uiState.value.copy(
-                    session = _uiState.value.session.copy(
-                        webhooks = _uiState.value.session.webhooks + webhook
-                    )
-                )
-                onSuccess()
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error creating webhook", e)
-                val errorMessage = parseError(e)
-                _uiState.value = _uiState.value.copy(error = "Failed to create webhook: $errorMessage")
-                onError(errorMessage)
-            }
-        }
-    }
-
-    fun updateWebhook(webhook: UserWebhook, displayName: String, url: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
-        val user = _uiState.value.session.currUser ?: return
-        val userId = user.name?.removePrefix("users/") ?: return
-        val webhookName = webhook.name ?: return
-        val webhookId = webhookName.substringAfterLast("/")
-
-        viewModelScope.launch {
-            try {
-                val updated = api.updateUserWebhook(
-                    userId,
-                    webhookId,
-                    UserWebhook(name = webhookName, displayName = displayName, url = url),
-                    updateMask = "display_name,url"
-                )
-                _uiState.value = _uiState.value.copy(
-                    session = _uiState.value.session.copy(
-                        webhooks = _uiState.value.session.webhooks.map { if (it.name == webhookName) updated else it }
-                    )
-                )
-                onSuccess()
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error updating webhook", e)
-                val errorMessage = parseError(e)
-                _uiState.value = _uiState.value.copy(error = "Failed to update webhook: $errorMessage")
-                onError(errorMessage)
-            }
-        }
-    }
-
-    fun deleteWebhook(webhook: UserWebhook) {
-        val user = _uiState.value.session.currUser ?: return
-        val userId = user.name?.removePrefix("users/") ?: return
-        val webhookName = webhook.name ?: return
-        val webhookId = webhookName.substringAfterLast("/")
-
-        viewModelScope.launch {
-            try {
-                api.deleteUserWebhook(userId, webhookId)
-                _uiState.value = _uiState.value.copy(
-                    session = _uiState.value.session.copy(
-                        webhooks = _uiState.value.session.webhooks.filter { it.name != webhookName }
-                    )
-                )
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error deleting webhook", e)
-                _uiState.value = _uiState.value.copy(error = "Failed to delete webhook: ${e.localizedMessage}")
-            }
-        }
-    }
-
+    
+    // Companion object for factories to allow easy injection
     companion object {
-        fun provideFactory(baseUrl: String, token: String, dataStoreManager: DataStoreManager): ViewModelProvider.Factory =
-            object : ViewModelProvider.Factory {
-                @Suppress("UNCHECKED_CAST")
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return MemosViewModel(baseUrl, token, dataStoreManager) as T
+        fun provideFactory(
+            dataStoreManager: DataStoreManager
+        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+             override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                if (modelClass.isAssignableFrom(MemosViewModel::class.java)) {
+                    @Suppress("UNCHECKED_CAST")
+                    return MemosViewModel(dataStoreManager) as T
                 }
+                throw IllegalArgumentException("Unknown ViewModel class")
             }
+        }
+    }
+    
+    class Factory(
+        private val dataStoreManager: DataStoreManager
+    ) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(MemosViewModel::class.java)) {
+                @Suppress("UNCHECKED_CAST")
+                return MemosViewModel(dataStoreManager) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class")
+        }
     }
 }

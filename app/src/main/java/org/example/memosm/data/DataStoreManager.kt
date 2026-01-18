@@ -11,6 +11,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import org.example.memosm.model.Account
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -95,5 +96,39 @@ class DataStoreManager(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences.clear()
         }
+    }
+
+    // --- Account Helpers ---
+
+    suspend fun getAccounts(): List<Account> {
+        return accounts.first()
+    }
+
+    suspend fun setActiveAccount(id: String) {
+        val current = getAccounts()
+        val updated = current.map { it.copy(isActive = it.id == id) }
+        saveAccounts(updated)
+    }
+
+    suspend fun updateAccountLastUsed(id: String, timestamp: Long) {
+        val current = getAccounts()
+        val updated = current.map {
+            if (it.id == id) it.copy(lastUsed = timestamp) else it
+        }
+        saveAccounts(updated)
+    }
+
+    suspend fun deleteAccount(id: String) {
+        val current = getAccounts()
+        val updated = current.filterNot { it.id == id }
+        saveAccounts(updated)
+    }
+
+    suspend fun updateAccount(id: String, hostUrl: String, token: String) {
+        val current = getAccounts()
+        val updated = current.map {
+            if (it.id == id) it.copy(hostUrl = hostUrl, accessToken = token) else it
+        }
+        saveAccounts(updated)
     }
 }
