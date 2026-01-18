@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import coil3.network.httpHeaders
 import kotlinx.coroutines.launch
 import org.example.memosm.R
 import org.example.memosm.data.DataStoreManager
@@ -115,8 +116,26 @@ fun MainScreen(
             MainDestination.PROFILE -> {
                 val avatarUrl = uiState.session.currUser?.avatarUrl ?: uiState.accounts.find { it.isActive }?.avatarUrl
                 if (avatarUrl != null) {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val token = uiState.session.token
+                    
+                    val imageRequest = remember<coil3.request.ImageRequest>(avatarUrl, token) {
+                        val headers = coil3.network.NetworkHeaders.Builder()
+                            .apply {
+                                if (token.isNotEmpty()) {
+                                    set("Authorization", "Bearer $token")
+                                }
+                            }
+                            .build()
+
+                        coil3.request.ImageRequest.Builder(context)
+                            .data(avatarUrl)
+                            .httpHeaders(headers)
+                            .build()
+                    }
+                    
                     AsyncImage(
-                        model = avatarUrl,
+                        model = imageRequest,
                         contentDescription = null,
                         modifier = modifier
                             .then(

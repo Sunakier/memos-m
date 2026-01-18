@@ -21,7 +21,8 @@ data class User(
     val password: String? = null,
     val state: String? = null,
     val createTime: String? = null,
-    val updateTime: String? = null
+    val updateTime: String? = null,
+    val token: String? = null
 )
 
 data class UserStats(

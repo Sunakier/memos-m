@@ -197,8 +197,12 @@ class MemosViewModel(
         viewModelScope.launch {
             try {
                 val user = api?.getCurrentSession()?.user
+                Log.d("MemosViewModel", "fetchCurrentUser: user=$user")
                 if (user != null) {
-                     _uiState.update { it.copy(session = it.session.copy(currUser = user)) }
+                     _uiState.update { 
+                         Log.d("MemosViewModel", "Updating session with user: ${user.name}")
+                         it.copy(session = it.session.copy(currUser = user)) 
+                     }
                      
                      // Force refresh user memos now that we have the numeric userId
                      userMemoManager?.fetch(refresh = true)
@@ -208,6 +212,7 @@ class MemosViewModel(
                          launch { fetchShortcuts(resourceName) }
                          launch { fetchUserSettings(resourceName) }
                          launch { fetchWebhooks(resourceName) }
+                         launch { fetchUserStats(resourceName) }
                      }
                      
                      fetchInstanceProfile()
@@ -226,6 +231,17 @@ class MemosViewModel(
             }
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error fetching instance profile", e)
+        }
+    }
+
+    private suspend fun fetchUserStats(userResourceName: String) {
+        try {
+            val stats = api?.getUserStats(userResourceName)
+            if (stats != null) {
+                _uiState.update { it.copy(session = it.session.copy(userStats = stats)) }
+            }
+        } catch (e: Exception) {
+            Log.e("MemosViewModel", "Error fetching user stats", e)
         }
     }
 

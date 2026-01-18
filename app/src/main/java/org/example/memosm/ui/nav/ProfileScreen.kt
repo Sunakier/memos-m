@@ -252,20 +252,32 @@ private fun ProfileListPane(
 
             item {
                 Box(itemModifier) {
+                    val hostUrl = uiState.session.instanceProfile?.instanceUrl ?: ""
                     if (user != null) {
+                        val rawAvatarUrl = user.avatarUrl
+                        val avatarUrl = if (rawAvatarUrl != null) {
+                            if (rawAvatarUrl.startsWith("http")) rawAvatarUrl else "${hostUrl.trimEnd('/')}$rawAvatarUrl"
+                        } else null
+
                         ProfileHeader(
-                            user = user,
+                            user = user.copy(avatarUrl = avatarUrl, token = uiState.session.token),
                             onClick = { showAccountSwitcher = true },
                             onEditClick = { showEditDialog = true }
                         )
                     } else {
                         if (activeAccount != null) {
+                            val rawAvatarUrl = activeAccount.avatarUrl
+                            val avatarUrl = if (rawAvatarUrl != null) {
+                                if (rawAvatarUrl.startsWith("http")) rawAvatarUrl else "${hostUrl.trimEnd('/')}$rawAvatarUrl"
+                            } else null
+
                             ProfileHeader(
                                 user = User(
                                     name = activeAccount.name?.let { "users/$it" },
                                     username = activeAccount.name ?: "",
                                     displayName = activeAccount.displayName,
-                                    avatarUrl = activeAccount.avatarUrl
+                                    avatarUrl = avatarUrl,
+                                    token = uiState.session.token
                                 ),
                                 onClick = { showAccountSwitcher = true },
                                 onEditClick = { showEditDialog = true }

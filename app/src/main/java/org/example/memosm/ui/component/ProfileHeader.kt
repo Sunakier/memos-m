@@ -1,4 +1,5 @@
 import androidx.compose.foundation.background
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.network.httpHeaders
 import org.example.memosm.R
 import org.example.memosm.model.User
 
@@ -43,8 +45,25 @@ fun ProfileHeader(
                 Row(
                     verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()
                 ) {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val token = user?.token
+                    val imageRequest = remember<coil3.request.ImageRequest>(user?.avatarUrl, token) {
+                        val headers = coil3.network.NetworkHeaders.Builder()
+                            .apply {
+                                if (!token.isNullOrEmpty()) {
+                                    set("Authorization", "Bearer $token")
+                                }
+                            }
+                            .build()
+
+                        coil3.request.ImageRequest.Builder(context)
+                            .data(user?.avatarUrl)
+                            .httpHeaders(headers)
+                            .build()
+                    }
+
                     AsyncImage(
-                        model = user?.avatarUrl,
+                        model = imageRequest,
                         contentDescription = stringResource(R.string.profile_avatar_description),
                         modifier = Modifier
                             .size(64.dp)
