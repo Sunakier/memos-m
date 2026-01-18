@@ -37,6 +37,8 @@ import org.example.memosm.ui.nav.MemosScreen
 import org.example.memosm.ui.nav.ProfileScreen
 import org.example.memosm.viewmodel.MemosViewModel
 
+import org.example.memosm.ui.component.resolveResourceUrl
+
 enum class MainDestination(
     val labelRes: Int
 ) {
@@ -114,7 +116,13 @@ fun MainScreen(
             )
 
             MainDestination.PROFILE -> {
-                val avatarUrl = uiState.session.currUser?.avatarUrl ?: uiState.accounts.find { it.isActive }?.avatarUrl
+                val user = uiState.session.currUser
+                val account = uiState.accounts.find { it.isActive }
+                val rawAvatarUrl = user?.avatarUrl ?: account?.avatarUrl
+                val hostUrl = uiState.session.hostUrl
+
+                val avatarUrl = resolveResourceUrl(hostUrl, rawAvatarUrl)
+
                 if (avatarUrl != null) {
                     val context = androidx.compose.ui.platform.LocalContext.current
                     val token = uiState.session.token

@@ -112,6 +112,7 @@ private fun MemosListPane(
                                 },
                                 availableTags = uiState.session.userStats?.tagCount?.keys ?: emptySet(),
                                 token = uiState.session.token,
+                                hostUrl = uiState.session.hostUrl,
                                 modifier = Modifier.padding(16.dp),
                                 isPosting = uiState.isPosting,
                                 initialContent = uiState.draft.draftMemo?.content ?: "",

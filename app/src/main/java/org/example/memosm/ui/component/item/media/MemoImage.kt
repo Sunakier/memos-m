@@ -31,21 +31,24 @@ import coil3.request.ImageRequest
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
 
+import org.example.memosm.ui.component.resolveResourceUrl
+
 @Composable
 fun MemoImage(
     modifier: Modifier = Modifier,
     attachment: Attachment?,
     token: String?,
+    hostUrl: String,
     uri: Uri = Uri.EMPTY,
     filename: String,
     onRatioAvailable: (Float) -> Unit = {},
     onClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val model = remember(uri, attachment) {
+    val model = remember(uri, attachment, hostUrl) {
         when {
             uri != Uri.EMPTY -> uri
-            !attachment?.externalLink.isNullOrBlank() -> attachment.externalLink
+            !attachment?.externalLink.isNullOrBlank() -> resolveResourceUrl(hostUrl, attachment.externalLink)
             !attachment?.content.isNullOrBlank() -> {
                 try {
                     Base64.decode(attachment.content, Base64.NO_WRAP)
@@ -57,10 +60,10 @@ fun MemoImage(
         }
     }
 
-    val cacheKey = remember(uri, attachment) {
+    val cacheKey = remember(uri, attachment, hostUrl) {
         when {
             uri != Uri.EMPTY -> uri.toString()
-            !attachment?.externalLink.isNullOrBlank() -> attachment.externalLink
+            !attachment?.externalLink.isNullOrBlank() -> resolveResourceUrl(hostUrl, attachment.externalLink)
             attachment?.name != null -> attachment.name
             else -> null
         }

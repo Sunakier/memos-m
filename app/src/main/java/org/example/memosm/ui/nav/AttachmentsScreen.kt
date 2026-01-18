@@ -172,6 +172,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
                         AttachmentCard(
                             attachment = attachment,
                             token = uiState.session.token,
+                            hostUrl = uiState.session.hostUrl,
                             compactMode = AttachmentCompactMode.Width,
                             modifier = Modifier
                                 .fillMaxWidth()

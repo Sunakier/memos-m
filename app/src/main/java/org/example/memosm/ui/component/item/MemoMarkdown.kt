@@ -54,6 +54,7 @@ fun MemoMarkdown(
     content: String,
     markdownState: MarkdownState,
     token: String,
+    hostUrl: String,
     onContentUpdate: ((String) -> Unit)? = null,
     selectable: Boolean = false,
 ) {
@@ -106,7 +107,8 @@ fun MemoMarkdown(
                 MarkdownAttachmentImage(
                     content = model.content,
                     node = model.node,
-                    token = token
+                    token = token,
+                    hostUrl = hostUrl
                 )
             },
             codeBlock = highlightedCodeBlock,
@@ -127,7 +129,7 @@ fun MemoMarkdown(
 }
 
 @Composable
-fun MarkdownAttachmentImage(content: String, node: ASTNode, token: String) {
+fun MarkdownAttachmentImage(content: String, node: ASTNode, token: String, hostUrl: String) {
     val link = node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_DESTINATION)
         ?.getUnescapedTextInNode(content) ?: return
 
@@ -139,6 +141,7 @@ fun MarkdownAttachmentImage(content: String, node: ASTNode, token: String) {
             mimeType = "image/auto"
         ),
         token = token,
+        hostUrl = hostUrl,
         modifier = Modifier
             .padding(vertical = 8.dp)
             .fillMaxWidth()

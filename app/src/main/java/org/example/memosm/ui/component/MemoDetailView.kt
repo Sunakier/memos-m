@@ -271,6 +271,7 @@ fun MemoDetailView(
         MemoComposerDialog(
             onDismiss = { showCommentDialog = false },
             viewModel = viewModel,
+            hostUrl = hostUrl,
             title = stringResource(R.string.memo_detail_add_comment),
             parentMemo = memo,
             placeholder = stringResource(R.string.memo_detail_comment_placeholder)
@@ -279,7 +280,7 @@ fun MemoDetailView(
 
     memoToEdit?.let { m ->
         MemoEditDialog(
-            memo = m, onDismiss = { memoToEdit = null }, viewModel = viewModel
+            memo = m, onDismiss = { memoToEdit = null }, viewModel = viewModel, hostUrl = hostUrl
         )
     }
 

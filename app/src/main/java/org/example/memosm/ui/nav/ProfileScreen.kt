@@ -255,9 +255,7 @@ private fun ProfileListPane(
                     val hostUrl = uiState.session.hostUrl
                     if (user != null) {
                         val rawAvatarUrl = user.avatarUrl
-                        val avatarUrl = if (rawAvatarUrl != null) {
-                            if (rawAvatarUrl.startsWith("http")) rawAvatarUrl else "${hostUrl.trimEnd('/')}$rawAvatarUrl"
-                        } else null
+                        val avatarUrl = org.example.memosm.ui.component.resolveResourceUrl(hostUrl, rawAvatarUrl)
 
                         ProfileHeader(
                             user = user.copy(avatarUrl = avatarUrl, token = uiState.session.token),
@@ -267,9 +265,7 @@ private fun ProfileListPane(
                     } else {
                         if (activeAccount != null) {
                             val rawAvatarUrl = activeAccount.avatarUrl
-                            val avatarUrl = if (rawAvatarUrl != null) {
-                                if (rawAvatarUrl.startsWith("http")) rawAvatarUrl else "${hostUrl.trimEnd('/')}$rawAvatarUrl"
-                            } else null
+                            val avatarUrl = org.example.memosm.ui.component.resolveResourceUrl(hostUrl, rawAvatarUrl)
 
                             ProfileHeader(
                                 user = User(

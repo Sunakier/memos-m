@@ -309,6 +309,7 @@ fun MemoItem(
                         markdownState = markdownState,
                         onContentUpdate = onContentUpdate,
                         token = token,
+                        hostUrl = hostUrl,
                         selectable = isDetailView,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -379,6 +380,7 @@ fun MemoItem(
                                 AttachmentCard(
                                     attachment = attachment,
                                     token = token,
+                                    hostUrl = hostUrl,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .aspectRatio(aspectRatio),
@@ -425,6 +427,7 @@ fun MemoItem(
                                 AttachmentCard(
                                     attachment = attachment,
                                     token = token,
+                                    hostUrl = hostUrl,
                                     modifier = Modifier.size(width = 240.dp, height = 160.dp),
                                     showInfo = false,
                                     compactMode = AttachmentCompactMode.Area

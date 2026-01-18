@@ -46,16 +46,19 @@ import org.example.memosm.ui.component.item.media.VideoPlayer
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import org.example.memosm.ui.component.resolveResourceUrl
 
 enum class AttachmentCompactMode {
     Area, Width, Height, Always, Never
 }
+
 
 @Composable
 fun AttachmentCard(
     modifier: Modifier = Modifier,
     attachment: Attachment?,
     token: String?,
+    hostUrl: String,
     uri: Uri = Uri.EMPTY,
     showInfo: Boolean = true,
     showActions: Boolean = true,
@@ -123,11 +126,14 @@ fun AttachmentCard(
     }
 
     // Audio handling (temp file for base64 if needed)
-    val audioUrl = remember(uri, attachment, displayType) {
+    val audioUrl = remember(uri, attachment, displayType, hostUrl) {
         if (!isAudio) return@remember null
         when {
             uri != Uri.EMPTY -> uri.toString()
-            !attachment?.externalLink.isNullOrBlank() -> attachment.externalLink
+            !attachment?.externalLink.isNullOrBlank() -> resolveResourceUrl(
+                hostUrl, attachment.externalLink
+            )
+
             !attachment?.content.isNullOrBlank() -> {
                 try {
                     val bytes = Base64.decode(attachment.content, Base64.NO_WRAP)
@@ -231,6 +237,7 @@ fun AttachmentCard(
                         MemoImage(
                             attachment = attachment,
                             token = token,
+                            hostUrl = hostUrl,
                             uri = uri,
                             filename = filename,
                             modifier = Modifier.fillMaxSize(),
@@ -238,8 +245,9 @@ fun AttachmentCard(
                             onClick = { showFullScreenImage = true })
                     } else if (isVideo && (!attachment?.externalLink.isNullOrBlank() || uri != Uri.EMPTY)) {
                         VideoPlayer(
-                            url = if (uri != Uri.EMPTY) uri.toString() else attachment?.externalLink
-                                ?: "",
+                            url = if (uri != Uri.EMPTY) uri.toString() else resolveResourceUrl(
+                                hostUrl, attachment?.externalLink
+                            ) ?: "",
                             token = token,
                             modifier = Modifier.fillMaxSize(),
                             onRatioAvailable = { intrinsicRatio = it })
@@ -324,11 +332,15 @@ fun AttachmentCard(
                                                 onClick = {
                                                     showMenu = false
                                                     try {
-                                                        val intent = Intent(
-                                                            Intent.ACTION_VIEW,
-                                                            attachment.externalLink.toUri()
+                                                        val url = resolveResourceUrl(
+                                                            hostUrl, attachment.externalLink
                                                         )
-                                                        context.startActivity(intent)
+                                                        if (url != null) {
+                                                            val intent = Intent(
+                                                                Intent.ACTION_VIEW, url.toUri()
+                                                            )
+                                                            context.startActivity(intent)
+                                                        }
                                                     } catch (e: Exception) {
                                                         Log.e(
                                                             "AttachmentCard",
@@ -401,11 +413,15 @@ fun AttachmentCard(
                                         IconButton(
                                             onClick = {
                                                 try {
-                                                    val intent = Intent(
-                                                        Intent.ACTION_VIEW,
-                                                        attachment.externalLink.toUri()
+                                                    val url = resolveResourceUrl(
+                                                        hostUrl, attachment.externalLink
                                                     )
-                                                    context.startActivity(intent)
+                                                    if (url != null) {
+                                                        val intent = Intent(
+                                                            Intent.ACTION_VIEW, url.toUri()
+                                                        )
+                                                        context.startActivity(intent)
+                                                    }
                                                 } catch (e: Exception) {
                                                     Log.e(
                                                         "AttachmentCard",
@@ -479,7 +495,9 @@ fun AttachmentCard(
             text = { Text(stringResource(R.string.attachments_download_dialog_confirm, filename)) },
             confirmButton = {
                 TextButton(onClick = {
-                    if (attachment != null) downloadAttachmentFile(context, attachment, token)
+                    if (attachment != null) downloadAttachmentFile(
+                        context, attachment, token, hostUrl
+                    )
                     showDownloadDialog = false
                 }) {
                     Text(stringResource(R.string.attachments_download_button))
@@ -493,10 +511,13 @@ fun AttachmentCard(
     }
 
     if (showFullScreenImage && isImage && (uri != Uri.EMPTY || !attachment?.externalLink.isNullOrBlank() || !attachment?.content.isNullOrBlank())) {
-        val model = remember(uri, attachment) {
+        val model = remember(uri, attachment, hostUrl) {
             when {
                 uri != Uri.EMPTY -> uri
-                !attachment?.externalLink.isNullOrBlank() -> attachment.externalLink
+                !attachment?.externalLink.isNullOrBlank() -> resolveResourceUrl(
+                    hostUrl, attachment.externalLink
+                )
+
                 !attachment?.content.isNullOrBlank() -> {
                     try {
                         Base64.decode(attachment.content, Base64.NO_WRAP)
@@ -530,8 +551,10 @@ fun AttachmentInfoRow(label: String, value: String) {
     }
 }
 
-private fun downloadAttachmentFile(context: Context, attachment: Attachment, token: String?) {
-    val url = attachment.externalLink ?: return
+private fun downloadAttachmentFile(
+    context: Context, attachment: Attachment, token: String?, hostUrl: String
+) {
+    val url = resolveResourceUrl(hostUrl, attachment.externalLink) ?: return
     try {
         var request = DownloadManager.Request(url.toUri()).setTitle(attachment.filename)
             .setDescription(context.getString(R.string.attachments_download_started))

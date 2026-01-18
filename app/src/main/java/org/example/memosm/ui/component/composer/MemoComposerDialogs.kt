@@ -19,6 +19,7 @@ import org.example.memosm.viewmodel.MemosViewModel
 fun MemoComposerDialog(
     onDismiss: () -> Unit,
     viewModel: MemosViewModel,
+    hostUrl: String,
     title: String,
     initialMemo: Memo? = null,
     parentMemo: Memo? = null, // If provided, it's a comment
@@ -61,7 +62,11 @@ fun MemoComposerDialog(
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            Box(modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+            Box(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 MemoComposer(
                     onPublish = { content, visibility, attachments, location ->
                         when {
@@ -90,6 +95,7 @@ fun MemoComposerDialog(
                     },
                     availableTags = uiState.session.userStats?.tagCount?.keys ?: emptySet(),
                     token = uiState.session.token,
+                    hostUrl = hostUrl,
                     isPosting = uiState.isPosting,
                     initialContent = initialMemo?.content ?: "",
                     initialVisibility = initialMemo?.visibility ?: parentMemo?.visibility
@@ -106,11 +112,12 @@ fun MemoComposerDialog(
 
 @Composable
 fun MemoEditDialog(
-    memo: Memo, onDismiss: () -> Unit, viewModel: MemosViewModel
+    memo: Memo, onDismiss: () -> Unit, viewModel: MemosViewModel, hostUrl: String
 ) {
     MemoComposerDialog(
         onDismiss = onDismiss,
         viewModel = viewModel,
+        hostUrl = hostUrl,
         title = stringResource(R.string.memo_dialog_edit_title),
         initialMemo = memo
     )

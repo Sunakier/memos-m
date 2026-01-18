@@ -404,7 +404,10 @@ fun GenericMemosListPane(
 
     memoToEdit?.let { memo ->
         MemoEditDialog(
-            memo = memo, onDismiss = { memoToEdit = null }, viewModel = viewModel
+            memo = memo,
+            onDismiss = { memoToEdit = null },
+            viewModel = viewModel,
+            hostUrl = uiState.session.hostUrl
         )
     }
 
@@ -414,4 +417,10 @@ fun GenericMemosListPane(
             memoToDelete = null
         })
     }
+}
+
+fun resolveResourceUrl(hostUrl: String, relativeUrl: String?): String? {
+    if (relativeUrl == null) return null
+    if (relativeUrl.startsWith("http")) return relativeUrl
+    return "${hostUrl.trimEnd('/')}$relativeUrl"
 }

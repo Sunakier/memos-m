@@ -130,6 +130,7 @@ fun MemoComposer(
     onUploadFile: suspend (Uri, Context) -> Attachment?,
     availableTags: Set<String>,
     token: String,
+    hostUrl: String,
     modifier: Modifier = Modifier,
     isPosting: Boolean = false,
     initialContent: String = "",
@@ -355,6 +356,7 @@ fun MemoComposer(
                         AttachmentCard(
                             attachment = attachment,
                             token = token,
+                            hostUrl = hostUrl,
                             uri = uri,
                             modifier = Modifier.fillMaxSize(),
                             showInfo = false,
