@@ -55,7 +55,6 @@ You can also download from [release](https://github.com/yamada-sexta/memos-m/rel
     - [x] Checkboxes
     - [x] Codeblocks with syntax highlighting
     - [x] Table
-    - [ ] Select text
   - Attachment
     - [x] View attachments
     - [ ] Edit attachments
