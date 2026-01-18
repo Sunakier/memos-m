@@ -130,9 +130,9 @@ class MemosViewModel(
                     
                     // Use creator_id and row_status
                     val base = if (userId.isNotEmpty()) {
-                        "creator_id == $userId && row_status == 'NORMAL'"
+                        "creator_id == $userId"
                     } else {
-                        "row_status == 'NORMAL'"
+                        ""
                     }
                     
                     val shortcut = _uiState.value.userMemoList.selectedShortcut
