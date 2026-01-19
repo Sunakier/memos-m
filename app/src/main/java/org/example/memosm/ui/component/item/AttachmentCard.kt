@@ -46,7 +46,7 @@ import org.example.memosm.ui.component.item.media.VideoPlayer
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
-import org.example.memosm.ui.component.resolveResourceUrl
+import org.example.memosm.viewmodel.manager.AttachmentManager
 
 enum class AttachmentCompactMode {
     Area, Width, Height, Always, Never
@@ -130,35 +130,36 @@ fun AttachmentCard(
         if (!isAudio) return@remember null
         when {
             uri != Uri.EMPTY -> uri.toString()
-            !attachment?.externalLink.isNullOrBlank() -> resolveResourceUrl(
-                hostUrl, attachment.externalLink
-            )
-
-            !attachment?.content.isNullOrBlank() -> {
-                try {
-                    val bytes = Base64.decode(attachment.content, Base64.NO_WRAP)
-                    val ext = when {
-                        displayType.contains("aac") -> "aac"
-                        displayType.contains("mp3") || displayType.contains("mpeg") -> "mp3"
-                        displayType.contains("ogg") -> "ogg"
-                        displayType.contains("wav") -> "wav"
-                        displayType.contains("m4a") -> "m4a"
-                        else -> "aac"
+            else -> AttachmentManager.getAttachmentUrl(hostUrl, attachment) ?: when {
+                !attachment?.content.isNullOrBlank() -> {
+                    try {
+                        val bytes = Base64.decode(attachment.content, Base64.NO_WRAP)
+                        val ext = when {
+                            displayType.contains("aac") -> "aac"
+                            displayType.contains("mp3") || displayType.contains("mpeg") -> "mp3"
+                            displayType.contains("ogg") -> "ogg"
+                            displayType.contains("wav") -> "wav"
+                            displayType.contains("m4a") -> "m4a"
+                            else -> "aac"
+                        }
+                        val tempFile =
+                            File(context.cacheDir, "cached_audio_${filename.hashCode()}.$ext")
+                        if (!tempFile.exists() || tempFile.length() != bytes.size.toLong()) {
+                            tempFile.writeBytes(bytes)
+                        }
+                        tempFile.toUri().toString()
+                    } catch (e: Exception) {
+                        Log.e("AttachmentCard", "Error creating temp audio file", e)
+                        null
                     }
-                    val tempFile =
-                        File(context.cacheDir, "cached_audio_${filename.hashCode()}.$ext")
-                    if (!tempFile.exists() || tempFile.length() != bytes.size.toLong()) {
-                        tempFile.writeBytes(bytes)
-                    }
-                    tempFile.toUri().toString()
-                } catch (e: Exception) {
-                    Log.e("AttachmentCard", "Error creating temp audio file", e)
-                    null
                 }
+                else -> null
             }
-
-            else -> null
         }
+    }
+
+    LaunchedEffect(attachment, hostUrl) {
+        android.util.Log.d("MemosDebug", "AttachmentCard: type=${attachment?.type}, extLink=${attachment?.externalLink}, hostUrl=$hostUrl")
     }
 
     // Default ratios before loading
@@ -244,10 +245,8 @@ fun AttachmentCard(
                             onRatioAvailable = { intrinsicRatio = it },
                             onClick = { showFullScreenImage = true })
                     } else if (isVideo && (!attachment?.externalLink.isNullOrBlank() || uri != Uri.EMPTY)) {
-                        VideoPlayer(
-                            url = if (uri != Uri.EMPTY) uri.toString() else resolveResourceUrl(
-                                hostUrl, attachment?.externalLink
-                            ) ?: "",
+                            VideoPlayer(
+                            url = if (uri != Uri.EMPTY) uri.toString() else AttachmentManager.getAttachmentUrl(hostUrl, attachment) ?: "",
                             token = token,
                             modifier = Modifier.fillMaxSize(),
                             onRatioAvailable = { intrinsicRatio = it })
@@ -332,7 +331,7 @@ fun AttachmentCard(
                                                 onClick = {
                                                     showMenu = false
                                                     try {
-                                                        val url = resolveResourceUrl(
+                                                        val url = AttachmentManager.resolveResourceUrl(
                                                             hostUrl, attachment.externalLink
                                                         )
                                                         if (url != null) {
@@ -413,7 +412,7 @@ fun AttachmentCard(
                                         IconButton(
                                             onClick = {
                                                 try {
-                                                    val url = resolveResourceUrl(
+                                                    val url = AttachmentManager.resolveResourceUrl(
                                                         hostUrl, attachment.externalLink
                                                     )
                                                     if (url != null) {
@@ -514,11 +513,8 @@ fun AttachmentCard(
         val model = remember(uri, attachment, hostUrl) {
             when {
                 uri != Uri.EMPTY -> uri
-                !attachment?.externalLink.isNullOrBlank() -> resolveResourceUrl(
-                    hostUrl, attachment.externalLink
-                )
-
-                !attachment?.content.isNullOrBlank() -> {
+                else -> AttachmentManager.getAttachmentUrl(hostUrl, attachment) ?: when {
+                    !attachment?.content.isNullOrBlank() -> {
                     try {
                         Base64.decode(attachment.content, Base64.NO_WRAP)
                     } catch (_: Exception) {
@@ -529,6 +525,8 @@ fun AttachmentCard(
                 else -> null
             }
         }
+    }
+        
         if (model != null) {
             FullScreenImageViewer(
                 model = model,
@@ -554,7 +552,7 @@ fun AttachmentInfoRow(label: String, value: String) {
 private fun downloadAttachmentFile(
     context: Context, attachment: Attachment, token: String?, hostUrl: String
 ) {
-    val url = resolveResourceUrl(hostUrl, attachment.externalLink) ?: return
+    val url = AttachmentManager.getAttachmentUrl(hostUrl, attachment) ?: return
     try {
         var request = DownloadManager.Request(url.toUri()).setTitle(attachment.filename)
             .setDescription(context.getString(R.string.attachments_download_started))

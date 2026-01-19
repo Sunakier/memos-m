@@ -31,7 +31,7 @@ import coil3.request.ImageRequest
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
 
-import org.example.memosm.ui.component.resolveResourceUrl
+import org.example.memosm.viewmodel.manager.AttachmentManager
 
 @Composable
 fun MemoImage(
@@ -48,25 +48,29 @@ fun MemoImage(
     val model = remember(uri, attachment, hostUrl) {
         when {
             uri != Uri.EMPTY -> uri
-            !attachment?.externalLink.isNullOrBlank() -> resolveResourceUrl(hostUrl, attachment.externalLink)
-            !attachment?.content.isNullOrBlank() -> {
-                try {
-                    Base64.decode(attachment.content, Base64.NO_WRAP)
-                } catch (_: Exception) {
-                    null
+            else -> AttachmentManager.getAttachmentUrl(hostUrl, attachment) ?: when {
+                !attachment?.content.isNullOrBlank() -> {
+                    try {
+                        Base64.decode(attachment.content, Base64.NO_WRAP)
+                    } catch (_: Exception) {
+                        null
+                    }
                 }
+                else -> null
             }
-            else -> null
         }
     }
 
     val cacheKey = remember(uri, attachment, hostUrl) {
         when {
             uri != Uri.EMPTY -> uri.toString()
-            !attachment?.externalLink.isNullOrBlank() -> resolveResourceUrl(hostUrl, attachment.externalLink)
-            attachment?.name != null -> attachment.name
-            else -> null
+            attachment?.name != null -> "${hostUrl}_${attachment.name}"
+            else -> AttachmentManager.getAttachmentUrl(hostUrl, attachment)
         }
+    }
+    
+    LaunchedEffect(model, token) {
+        android.util.Log.d("MemosDebug", "MemoImage: model=$model, hasToken=${token != null}, hostUrl=$hostUrl")
     }
 
     // Use cached ratio if available
@@ -107,6 +111,7 @@ fun MemoImage(
             contentScale = ContentScale.Crop,
             onLoading = { isLoading = true; isError = false },
             onSuccess = { state ->
+                android.util.Log.d("MemosDebug", "MemoImage success: $filename")
                 isLoading = false
                 isError = false
                 val size = state.painter.intrinsicSize
@@ -116,7 +121,10 @@ fun MemoImage(
                     onRatioAvailable(ratio)
                 }
             },
-            onError = { isLoading = false; isError = true }
+            onError = { 
+                android.util.Log.e("MemosDebug", "MemoImage error: $filename, result=${it.result.throwable}")
+                isLoading = false; isError = true 
+            }
         )
 
         if (isLoading) {

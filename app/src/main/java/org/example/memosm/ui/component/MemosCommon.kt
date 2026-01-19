@@ -32,14 +32,15 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import org.example.memosm.R
-import org.example.memosm.model.Memo
-import org.example.memosm.model.User
-import org.example.memosm.ui.MemoKey
 import org.example.memosm.ui.component.composer.DeleteConfirmationDialog
 import org.example.memosm.ui.component.composer.MemoEditDialog
 import org.example.memosm.ui.component.item.MemoItem
 import org.example.memosm.viewmodel.MemosViewModel
+
+import org.example.memosm.model.Memo
+import org.example.memosm.model.User
+import org.example.memosm.ui.MemoKey
+import org.example.memosm.R
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -420,7 +421,15 @@ fun GenericMemosListPane(
 }
 
 fun resolveResourceUrl(hostUrl: String, relativeUrl: String?): String? {
-    if (relativeUrl == null) return null
+    if (relativeUrl.isNullOrBlank()) return null
     if (relativeUrl.startsWith("http")) return relativeUrl
-    return "${hostUrl.trimEnd('/')}$relativeUrl"
+    
+    val cleanHost = hostUrl.trimEnd('/')
+    val cleanRelative = relativeUrl.trimStart('/')
+    
+    val result = "$cleanHost/$cleanRelative"
+    android.util.Log.d("MemosDebug", "resolveResourceUrl: host=$hostUrl, relative=$relativeUrl -> $result")
+    return result
 }
+
+

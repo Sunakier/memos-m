@@ -90,4 +90,32 @@ class AttachmentManager(
         }
         return name
     }
+
+    companion object {
+        fun resolveResourceUrl(hostUrl: String, relativeUrl: String?): String? {
+            if (relativeUrl.isNullOrBlank()) return null
+            if (relativeUrl.startsWith("http")) return relativeUrl
+            
+            val cleanHost = hostUrl.trimEnd('/')
+            val cleanRelative = relativeUrl.trimStart('/')
+            
+            val result = "$cleanHost/$cleanRelative"
+            android.util.Log.d("MemosDebug", "AttachmentManager.resolve: host=$hostUrl, relative=$relativeUrl -> $result")
+            return result
+        }
+
+        fun getAttachmentUrl(hostUrl: String, attachment: Attachment?): String? {
+            if (attachment == null) return null
+            
+            val url = if (!attachment.externalLink.isNullOrBlank()) {
+                resolveResourceUrl(hostUrl, attachment.externalLink)
+            } else if (!attachment.name.isNullOrBlank()) {
+                resolveResourceUrl(hostUrl, "file/${attachment.name}/${attachment.filename}")
+            } else {
+                null
+            }
+            android.util.Log.d("MemosDebug", "AttachmentManager.getUrl: name=${attachment.name}, ext=${attachment.externalLink} -> $url")
+            return url
+        }
+    }
 }
