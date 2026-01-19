@@ -129,18 +129,14 @@ fun MemoItem(
                         }
                         if (avatarUrl != null) {
                             val imageRequest = remember(avatarUrl, token) {
-                                val headers = coil3.network.NetworkHeaders.Builder()
-                                    .apply {
+                                val headers = coil3.network.NetworkHeaders.Builder().apply {
                                         if (token.isNotEmpty()) {
                                             set("Authorization", "Bearer $token")
                                         }
-                                    }
-                                    .build()
+                                    }.build()
 
-                                coil3.request.ImageRequest.Builder(context)
-                                    .data(avatarUrl)
-                                    .httpHeaders(headers)
-                                    .build()
+                                coil3.request.ImageRequest.Builder(context).data(avatarUrl)
+                                    .httpHeaders(headers).build()
                             }
                             AsyncImage(
                                 model = imageRequest,
@@ -304,24 +300,21 @@ fun MemoItem(
                         .fillMaxWidth()
                         .then(
                             if (maxHeight != Dp.Unspecified) {
-                                Modifier
-                                    .heightIn(max = maxHeight)
-                                    .graphicsLayer {
-                                        compositingStrategy = CompositingStrategy.Offscreen
+                            Modifier.heightIn(max = maxHeight).graphicsLayer {
+                                    compositingStrategy = CompositingStrategy.Offscreen
+                                }.drawWithContent {
+                                    drawContent()
+                                    if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
+                                        drawRect(
+                                            brush = Brush.verticalGradient(
+                                                0.7f to Color.Black, 1.0f to Color.Transparent
+                                            ), blendMode = BlendMode.DstIn
+                                        )
                                     }
-                                    .drawWithContent {
-                                        drawContent()
-                                        if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
-                                            drawRect(
-                                                brush = Brush.verticalGradient(
-                                                    0.7f to Color.Black, 1.0f to Color.Transparent
-                                                ), blendMode = BlendMode.DstIn
-                                            )
-                                        }
-                                    }
-                            } else {
-                                Modifier
-                            })) {
+                                }
+                        } else {
+                            Modifier
+                        })) {
                     MemoMarkdown(
                         content = memo.content,
                         markdownState = markdownState,
@@ -403,8 +396,7 @@ fun MemoItem(
                                         .fillMaxWidth()
                                         .aspectRatio(aspectRatio),
                                     compactMode = AttachmentCompactMode.Never,
-                                    onRatioAvailable = { aspectRatio = it }
-                                )
+                                    onRatioAvailable = { aspectRatio = it })
                             }
                         }
                     } else {
@@ -540,8 +532,7 @@ fun MemoItem(
                 TextButton(onClick = { showRawTextDialog = false }) {
                     Text(stringResource(R.string.common_close))
                 }
-            }
-        )
+            })
     }
 }
 

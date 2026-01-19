@@ -5,7 +5,7 @@ import okhttp3.Interceptor
 import okhttp3.Response
 
 class AuthInterceptor(private var token: String) : Interceptor {
-    
+
     fun updateToken(newToken: String) {
         token = newToken
     }
@@ -13,11 +13,11 @@ class AuthInterceptor(private var token: String) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
         val builder = original.newBuilder()
-        
+
         if (token.isNotEmpty()) {
             builder.header("Authorization", "Bearer $token")
         }
-        
+
         val request = builder.build()
         Log.d("MemosApi", "--> ${request.method} ${request.url}")
         if (token.isNotEmpty()) {
@@ -35,7 +35,7 @@ class AuthInterceptor(private var token: String) : Interceptor {
         val durationMs = (endTime - startTime) / 1e6
 
         Log.d("MemosApi", "<-- ${response.code} ${request.url} (${durationMs.toInt()}ms)")
-        
+
         return response
     }
 }

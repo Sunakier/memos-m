@@ -3,14 +3,11 @@ package org.example.memosm.model
 import com.google.gson.annotations.SerializedName
 
 data class ListMemosResponse(
-    val memos: List<Memo>?,
-    val nextPageToken: String?
+    val memos: List<Memo>?, val nextPageToken: String?
 )
 
 data class ListAttachmentsResponse(
-    val attachments: List<Attachment>?,
-    val nextPageToken: String?,
-    val totalSize: Int?
+    val attachments: List<Attachment>?, val nextPageToken: String?, val totalSize: Int?
 )
 
 data class Memo(
@@ -49,14 +46,11 @@ data class Attachment(
 }
 
 data class MemoRelation(
-    val memo: MemoSnippet,
-    val relatedMemo: MemoSnippet,
-    val type: String
+    val memo: MemoSnippet, val relatedMemo: MemoSnippet, val type: String
 )
 
 data class MemoSnippet(
-    val name: String,
-    val snippet: String? = null
+    val name: String, val snippet: String? = null
 )
 
 data class Reaction(
@@ -75,16 +69,13 @@ data class MemoProperty(
 )
 
 data class Location(
-    val placeholder: String? = null,
-    val latitude: Double? = null,
-    val longitude: Double? = null
+    val placeholder: String? = null, val latitude: Double? = null, val longitude: Double? = null
 )
 
 // --- Activity Models ---
 
 data class ListActivitiesResponse(
-    val activities: List<Activity>?,
-    val nextPageToken: String?
+    val activities: List<Activity>?, val nextPageToken: String?
 )
 
 data class Activity(
@@ -101,45 +92,35 @@ data class ActivityPayload(
 )
 
 data class ActivityMemoCommentPayload(
-    val memo: String? = null,
-    val relatedMemo: String? = null
+    val memo: String? = null, val relatedMemo: String? = null
 )
 
 // --- Additional Memo Service Models ---
 
 data class ListMemoAttachmentsResponse(
-    val attachments: List<Attachment>?,
-    val nextPageToken: String?
+    val attachments: List<Attachment>?, val nextPageToken: String?
 )
 
 data class SetMemoAttachmentsRequest(
-    val name: String,
-    val attachments: List<Attachment>
+    val name: String, val attachments: List<Attachment>
 )
 
 data class ListMemoCommentsResponse(
-    val memos: List<Memo>?,
-    val nextPageToken: String?,
-    val totalSize: Int?
+    val memos: List<Memo>?, val nextPageToken: String?, val totalSize: Int?
 )
 
 data class ListMemoReactionsResponse(
-    val reactions: List<Reaction>?,
-    val nextPageToken: String?,
-    val totalSize: Int?
+    val reactions: List<Reaction>?, val nextPageToken: String?, val totalSize: Int?
 )
 
 data class UpsertMemoReactionRequest(
-    val name: String,
-    val reaction: Reaction
+    val name: String, val reaction: Reaction
 )
 
 data class ListMemoRelationsResponse(
-    val relations: List<MemoRelation>?,
-    val nextPageToken: String?
+    val relations: List<MemoRelation>?, val nextPageToken: String?
 )
 
 data class SetMemoRelationsRequest(
-    val name: String,
-    val relations: List<MemoRelation>
+    val name: String, val relations: List<MemoRelation>
 )

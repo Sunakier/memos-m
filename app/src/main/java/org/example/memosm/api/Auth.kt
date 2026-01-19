@@ -28,9 +28,7 @@ import okhttp3.OkHttpClient
  * @throws Exception if the login fails or a network error occurs.
  */
 suspend fun loginAndCreateToken(
-    baseUrl: String,
-    username: String,
-    password: String
+    baseUrl: String, username: String, password: String
 ): String {
     // Create a CookieJar to persist cookies between requests
     val cookieJar = object : CookieJar {
@@ -56,14 +54,11 @@ suspend fun loginAndCreateToken(
     }
 
     // Create OkHttp client with cookie jar
-    val okHttpClient = OkHttpClient.Builder()
-        .cookieJar(cookieJar)
-        .build()
+    val okHttpClient = OkHttpClient.Builder().cookieJar(cookieJar).build()
 
     // Create Connect RPC client
     val protocolClient = ProtocolClient(
-        httpClient = ConnectOkHttpClient(okHttpClient),
-        config = ProtocolClientConfig(
+        httpClient = ConnectOkHttpClient(okHttpClient), config = ProtocolClientConfig(
             host = baseUrl,
             serializationStrategy = GoogleJavaProtobufStrategy(),
             networkProtocol = NetworkProtocol.GRPC_WEB,
@@ -74,15 +69,12 @@ suspend fun loginAndCreateToken(
     val userClient = UserServiceClient(protocolClient)
 
     // 1. Prepare the credentials message
-    val credentials = CreateSessionRequest.PasswordCredentials.newBuilder()
-        .setUsername(username)
-        .setPassword(password)
-        .build()
+    val credentials = CreateSessionRequest.PasswordCredentials.newBuilder().setUsername(username)
+        .setPassword(password).build()
 
     // 2. Prepare the create session request
-    val sessionRequest = CreateSessionRequest.newBuilder()
-        .setPasswordCredentials(credentials)
-        .build()
+    val sessionRequest =
+        CreateSessionRequest.newBuilder().setPasswordCredentials(credentials).build()
 
     // 3. Execute the session creation RPC call
     val sessionResponse = authClient.createSession(sessionRequest, emptyMap())
@@ -91,8 +83,12 @@ suspend fun loginAndCreateToken(
         is ResponseMessage.Success -> {
             sessionResponse.message.user
         }
+
         is ResponseMessage.Failure -> {
-            throw Exception("Login failed [${sessionResponse.cause.code}]: ${sessionResponse.cause.message}", sessionResponse.cause)
+            throw Exception(
+                "Login failed [${sessionResponse.cause.code}]: ${sessionResponse.cause.message}",
+                sessionResponse.cause
+            )
         }
     }
 
@@ -100,14 +96,11 @@ suspend fun loginAndCreateToken(
     val timestamp = System.currentTimeMillis()
     val tokenDescription = "MemoM-$timestamp"
 
-    val accessToken = UserAccessToken.newBuilder()
-        .setDescription(tokenDescription)
-        .build()
+    val accessToken = UserAccessToken.newBuilder().setDescription(tokenDescription).build()
 
-    val tokenRequest = CreateUserAccessTokenRequest.newBuilder()
-        .setParent(user.name) // e.g., "users/1"
-        .setAccessToken(accessToken)
-        .build()
+    val tokenRequest =
+        CreateUserAccessTokenRequest.newBuilder().setParent(user.name) // e.g., "users/1"
+            .setAccessToken(accessToken).build()
 
     val tokenResponse = userClient.createUserAccessToken(tokenRequest, emptyMap())
 
@@ -115,8 +108,12 @@ suspend fun loginAndCreateToken(
         is ResponseMessage.Success -> {
             tokenResponse.message.accessToken
         }
+
         is ResponseMessage.Failure -> {
-            throw Exception("Failed to create token [${tokenResponse.cause.code}]: ${tokenResponse.cause.message}", tokenResponse.cause)
+            throw Exception(
+                "Failed to create token [${tokenResponse.cause.code}]: ${tokenResponse.cause.message}",
+                tokenResponse.cause
+            )
         }
     }
 }

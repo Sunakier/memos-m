@@ -46,9 +46,7 @@ data class ShortcutResponse(
 )
 
 data class Shortcut(
-    val name: String? = null,
-    val title: String? = null,
-    val filter: String? = null
+    val name: String? = null, val title: String? = null, val filter: String? = null
 )
 
 data class InstanceProfile(
@@ -65,33 +63,25 @@ data class RefreshTokenRequest(
 )
 
 data class RefreshTokenResponse(
-    val accessToken: String,
-    val expiresAt: String
+    val accessToken: String, val expiresAt: String
 )
 
 data class SignInRequest(
 //    @SerializedName("passwordCredentials") val passwordCredentials: PasswordCredentials? = null,
 //    val ssoCredentials: SSOCredentials? = null
-    val username: String,
-    val password: String
+    val username: String, val password: String
 )
 
 data class PasswordCredentials(
-    val username: String,
-    val password: String
+    val username: String, val password: String
 )
 
 data class SSOCredentials(
-    val idpId: Int,
-    val code: String,
-    val redirectUri: String,
-    val codeVerifier: String? = null
+    val idpId: Int, val code: String, val redirectUri: String, val codeVerifier: String? = null
 )
 
 data class SignInResponse(
-    val user: User,
-    val accessToken: String,
-    val accessTokenExpiresAt: String
+    val user: User, val accessToken: String, val accessTokenExpiresAt: String
 )
 
 data class GetCurrentUserResponse(
@@ -127,10 +117,7 @@ data class OAuth2Config(
 )
 
 data class FieldMapping(
-    val identifier: String,
-    val displayName: String,
-    val email: String,
-    val avatarUrl: String
+    val identifier: String, val displayName: String, val email: String, val avatarUrl: String
 )
 
 // --- Instance Models ---
@@ -154,9 +141,7 @@ data class GeneralSetting(
 )
 
 data class CustomProfile(
-    val title: String? = null,
-    val description: String? = null,
-    val logoUrl: String? = null
+    val title: String? = null, val description: String? = null, val logoUrl: String? = null
 )
 
 data class MemoRelatedSetting(
@@ -186,14 +171,11 @@ data class S3Config(
 // --- User Expansion Models ---
 
 data class ListUsersResponse(
-    val users: List<User>?,
-    val nextPageToken: String? = null,
-    val totalSize: Int? = null
+    val users: List<User>?, val nextPageToken: String? = null, val totalSize: Int? = null
 )
 
 data class ListUserNotificationsResponse(
-    val notifications: List<UserNotification>?,
-    val nextPageToken: String?
+    val notifications: List<UserNotification>?, val nextPageToken: String?
 )
 
 data class UserNotification(
@@ -220,34 +202,34 @@ data class PersonalAccessToken(
 )
 
 data class CreatePersonalAccessTokenRequest(
-    val parent: String,
-    val description: String? = null,
-    val expiresInDays: Int? = null
+    val parent: String, val description: String? = null, val expiresInDays: Int? = null
 )
 
 data class CreatePersonalAccessTokenResponse(
-    val personalAccessToken: PersonalAccessToken,
-    val token: String
+    val personalAccessToken: PersonalAccessToken, val token: String
 )
 
 data class ListUserSettingsResponse(
-    val settings: List<UserSetting>?,
-    val nextPageToken: String?,
-    val totalSize: Int?
+    val settings: List<UserSetting>?, val nextPageToken: String?, val totalSize: Int?
 )
 
 data class UserSetting(
     val name: String? = null,
-    @SerializedName("generalSetting", alternate = ["general_setting", "general", "GENERAL", "GeneralSetting"])
-    val generalSetting: UserGeneralSetting? = null,
-    @SerializedName("webhooksSetting", alternate = ["webhooks_setting"])
-    val webhooksSetting: UserWebhooksSetting? = null
+    @SerializedName(
+        "generalSetting", alternate = ["general_setting", "general", "GENERAL", "GeneralSetting"]
+    ) val generalSetting: UserGeneralSetting? = null,
+    @SerializedName(
+        "webhooksSetting",
+        alternate = ["webhooks_setting"]
+    ) val webhooksSetting: UserWebhooksSetting? = null
 )
 
 data class UserGeneralSetting(
     val locale: String? = null,
-    @SerializedName("memoVisibility", alternate = ["memo_visibility"])
-    val memoVisibility: String? = null,
+    @SerializedName(
+        "memoVisibility",
+        alternate = ["memo_visibility"]
+    ) val memoVisibility: String? = null,
     val theme: String? = null
 )
 

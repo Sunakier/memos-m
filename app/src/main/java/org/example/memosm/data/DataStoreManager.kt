@@ -76,17 +76,15 @@ class DataStoreManager(private val context: Context) {
 
     suspend fun getAccounts(): List<Account> {
         val json = context.dataStore.data.map { it[ACCOUNTS_JSON] }.first()
-        
+
         // If accounts list is empty, but we have legacy credentials, migrate them
         if (json.isNullOrEmpty()) {
             val legacyHost = context.dataStore.data.map { it[HOST_URL] }.first()
             val legacyToken = context.dataStore.data.map { it[ACCESS_TOKEN] }.first()
-            
+
             if (!legacyHost.isNullOrBlank() && !legacyToken.isNullOrBlank()) {
                 val newAccount = Account(
-                    hostUrl = legacyHost,
-                    accessToken = legacyToken,
-                    isActive = true
+                    hostUrl = legacyHost, accessToken = legacyToken, isActive = true
                 )
                 val list = listOf(newAccount)
                 saveAccounts(list)
@@ -104,11 +102,9 @@ class DataStoreManager(private val context: Context) {
 
         var needsSave = false
         val sanitized = list.map { account ->
-            @Suppress("SENSELESS_COMPARISON")
-            if (account.id == null || account.hostUrl == null || account.accessToken == null) {
+            @Suppress("SENSELESS_COMPARISON") if (account.id == null || account.hostUrl == null || account.accessToken == null) {
                 needsSave = true
-                @Suppress("USELESS_ELVIS")
-                account.copy(
+                @Suppress("USELESS_ELVIS") account.copy(
                     id = account.id ?: java.util.UUID.randomUUID().toString(),
                     hostUrl = account.hostUrl ?: "",
                     accessToken = account.accessToken ?: ""
@@ -120,8 +116,8 @@ class DataStoreManager(private val context: Context) {
 
         val final = if (sanitized.isNotEmpty() && sanitized.none { it.isActive }) {
             needsSave = true
-            sanitized.mapIndexed { index, account -> 
-                if (index == 0) account.copy(isActive = true) else account 
+            sanitized.mapIndexed { index, account ->
+                if (index == 0) account.copy(isActive = true) else account
             }
         } else {
             sanitized
@@ -137,8 +133,9 @@ class DataStoreManager(private val context: Context) {
     suspend fun addAccount(hostUrl: String, accessToken: String) {
         val current = getAccounts().toMutableList()
         // Check if account already exists to avoid duplicates
-        val existingIndex = current.indexOfFirst { it.hostUrl == hostUrl && it.accessToken == accessToken }
-        
+        val existingIndex =
+            current.indexOfFirst { it.hostUrl == hostUrl && it.accessToken == accessToken }
+
         if (existingIndex != -1) {
             // Just activate it
             setActiveAccount(current[existingIndex].id)
@@ -148,7 +145,7 @@ class DataStoreManager(private val context: Context) {
             updated.add(Account(hostUrl = hostUrl, accessToken = accessToken, isActive = true))
             saveAccounts(updated)
         }
-        
+
         // Also update legacy credentials for backward compatibility if needed, 
         // or just to keep MainScreen working for now.
         saveCredentials(hostUrl, accessToken)
@@ -158,7 +155,7 @@ class DataStoreManager(private val context: Context) {
         val current = getAccounts()
         val updated = current.map { it.copy(isActive = it.id == id) }
         saveAccounts(updated)
-        
+
         // Update legacy credentials to the active one
         val active = updated.find { it.isActive }
         if (active != null) {
@@ -178,7 +175,7 @@ class DataStoreManager(private val context: Context) {
         val current = getAccounts()
         val updated = current.filterNot { it.id == id }
         saveAccounts(updated)
-        
+
         // If we deleted the active one, clear legacy credentials or set new active
         if (updated.isEmpty()) {
             clearCredentials()

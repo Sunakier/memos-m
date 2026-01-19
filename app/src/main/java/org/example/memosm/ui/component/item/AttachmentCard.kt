@@ -160,13 +160,17 @@ fun AttachmentCard(
                         null
                     }
                 }
+
                 else -> null
             }
         }
     }
 
     LaunchedEffect(attachment, hostUrl) {
-        android.util.Log.d("MemosDebug", "AttachmentCard: type=${attachment?.type}, extLink=${attachment?.externalLink}, hostUrl=$hostUrl")
+        android.util.Log.d(
+            "MemosDebug",
+            "AttachmentCard: type=${attachment?.type}, extLink=${attachment?.externalLink}, hostUrl=$hostUrl"
+        )
     }
 
     // Default ratios before loading
@@ -252,7 +256,10 @@ fun AttachmentCard(
                             onRatioAvailable = { intrinsicRatio = it },
                             onClick = { showFullScreenImage = true })
                     } else if (isVideo) {
-                        val videoUrl = if (uri != Uri.EMPTY) uri.toString() else AttachmentManager.getAttachmentUrl(hostUrl, attachment)
+                        val videoUrl =
+                            if (uri != Uri.EMPTY) uri.toString() else AttachmentManager.getAttachmentUrl(
+                                hostUrl, attachment
+                            )
                         if (!videoUrl.isNullOrBlank()) {
                             VideoPlayer(
                                 url = videoUrl,
@@ -277,7 +284,9 @@ fun AttachmentCard(
                     } else {
                         // Check if it's a profile picture/avatar
                         val isProfilePicture = remember(displayType) {
-                            displayType.startsWith("avatar/", ignoreCase = true) || filename.contains("profile", ignoreCase = true)
+                            displayType.startsWith(
+                                "avatar/", ignoreCase = true
+                            ) || filename.contains("profile", ignoreCase = true)
                         }
 
                         if (isProfilePicture) {
@@ -289,8 +298,7 @@ fun AttachmentCard(
                                 filename = filename,
                                 isRound = true,
                                 modifier = Modifier.fillMaxSize(),
-                                onClick = { showFullScreenImage = true }
-                            )
+                                onClick = { showFullScreenImage = true })
                         } else {
                             FileThumbnail(
                                 displayType = displayType,
@@ -359,9 +367,10 @@ fun AttachmentCard(
                                                 onClick = {
                                                     showMenu = false
                                                     try {
-                                                        val url = AttachmentManager.resolveResourceUrl(
-                                                            hostUrl, attachment.externalLink
-                                                        )
+                                                        val url =
+                                                            AttachmentManager.resolveResourceUrl(
+                                                                hostUrl, attachment.externalLink
+                                                            )
                                                         if (url != null) {
                                                             val intent = Intent(
                                                                 Intent.ACTION_VIEW, url.toUri()
@@ -543,18 +552,18 @@ fun AttachmentCard(
                 uri != Uri.EMPTY -> uri
                 else -> AttachmentManager.getAttachmentUrl(hostUrl, attachment) ?: when {
                     !attachment?.content.isNullOrBlank() -> {
-                    try {
-                        Base64.decode(attachment.content, Base64.NO_WRAP)
-                    } catch (_: Exception) {
-                        null
+                        try {
+                            Base64.decode(attachment.content, Base64.NO_WRAP)
+                        } catch (_: Exception) {
+                            null
+                        }
                     }
-                }
 
-                else -> null
+                    else -> null
+                }
             }
         }
-    }
-        
+
         if (model != null) {
             FullScreenImageViewer(
                 model = model,

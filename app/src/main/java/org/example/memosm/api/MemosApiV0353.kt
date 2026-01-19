@@ -72,10 +72,18 @@ interface MemosApiV0353 {
     ): IdentityProvider
 
     @GET("api/v1/{identityProvider}")
-    suspend fun getIdentityProvider(@Path("identityProvider", encoded = true) identityProvider: String): IdentityProvider
+    suspend fun getIdentityProvider(
+        @Path(
+            "identityProvider", encoded = true
+        ) identityProvider: String
+    ): IdentityProvider
 
     @DELETE("api/v1/{identityProvider}")
-    suspend fun deleteIdentityProvider(@Path("identityProvider", encoded = true) identityProvider: String)
+    suspend fun deleteIdentityProvider(
+        @Path(
+            "identityProvider", encoded = true
+        ) identityProvider: String
+    )
 
     @PATCH("api/v1/{identityProvider}")
     suspend fun updateIdentityProvider(
@@ -124,7 +132,9 @@ interface MemosApiV0353 {
 
     @PATCH("api/v1/{memo}")
     suspend fun updateMemo(
-        @Path("memo", encoded = true) memo: String, @Body memoData: Memo, @Query("updateMask") updateMask: String
+        @Path("memo", encoded = true) memo: String,
+        @Body memoData: Memo,
+        @Query("updateMask") updateMask: String
     ): Memo
 
     @GET("api/v1/{memo}/attachments")
@@ -168,7 +178,7 @@ interface MemosApiV0353 {
 
     @DELETE("api/v1/reactions/{reaction}")
     suspend fun deleteMemoReaction(
-         @Path("reaction", encoded = true) reaction: String
+        @Path("reaction", encoded = true) reaction: String
     )
 
     @GET("api/v1/{memo}/relations")
@@ -228,7 +238,8 @@ interface MemosApiV0353 {
 
     @DELETE("api/v1/{user}/notifications/{notification}")
     suspend fun deleteUserNotification(
-        @Path("user", encoded = true) user: String, @Path("notification", encoded = true) notification: String
+        @Path("user", encoded = true) user: String,
+        @Path("notification", encoded = true) notification: String
     )
 
     @PATCH("api/v1/{user}/notifications/{notification}")
@@ -253,7 +264,8 @@ interface MemosApiV0353 {
 
     @DELETE("api/v1/{user}/personalAccessTokens/{personalAccessToken}")
     suspend fun deletePersonalAccessToken(
-        @Path("user", encoded = true) user: String, @Path("personalAccessToken", encoded = true) personalAccessToken: String
+        @Path("user", encoded = true) user: String,
+        @Path("personalAccessToken", encoded = true) personalAccessToken: String
     )
 
     @GET("api/v1/{user}/settings")
@@ -301,7 +313,11 @@ interface MemosApiV0353 {
     ): Shortcut
 
     @GET("api/v1/{user}/webhooks")
-    suspend fun listUserWebhooks(@Path("user", encoded = true) user: String): ListUserWebhooksResponse
+    suspend fun listUserWebhooks(
+        @Path(
+            "user", encoded = true
+        ) user: String
+    ): ListUserWebhooksResponse
 
     @POST("api/v1/{user}/webhooks")
     suspend fun createUserWebhook(
