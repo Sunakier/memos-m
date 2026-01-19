@@ -50,6 +50,7 @@ import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.model.Reaction
 import org.example.memosm.model.User
+import org.example.memosm.ui.component.item.markdown.MemoMarkdown
 import org.example.memosm.ui.component.resolveResourceUrl
 import java.text.SimpleDateFormat
 import java.util.*

@@ -1,4 +1,4 @@
-package org.example.memosm.ui.component.item
+package org.example.memosm.ui.component.item.markdown
 
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.RoundRect

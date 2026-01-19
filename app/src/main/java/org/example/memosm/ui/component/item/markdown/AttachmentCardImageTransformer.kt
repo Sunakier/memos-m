@@ -1,5 +1,6 @@
-package org.example.memosm.ui.component.item
+package org.example.memosm.ui.component.item.markdown
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -8,13 +9,22 @@ import androidx.compose.ui.graphics.painter.Painter
 import com.mikepenz.markdown.model.ImageData
 import com.mikepenz.markdown.model.ImageTransformer
 
+/**
+ * ImageTransformer that:
+ * - intercepts markdown images
+ * - records their URLs
+ * - suppresses default image rendering
+ */
 object AttachmentCardImageTransformer : ImageTransformer {
+
     @Composable
     override fun transform(link: String): ImageData? {
-        android.util.Log.d("MemosDebug", "AttachmentCardImageTransformer: transform link=$link")
-        // We return a dummy ImageData because we handle the rendering in the component
-        // explicitly using AttachmentCard. The library requires non-null ImageData
-        // to invoke the image component.
+        Log.d("MemosDebug", "AttachmentCardImageTransformer: transform link=$link")
+
+        // Record the image link so the paragraph renderer can use it
+        ImageBlockCollector.add(link)
+
+        // Return a dummy ImageData so markdown-compose thinks the image was handled
         return ImageData(
             painter = ColorPainter(Color.Transparent)
         )
@@ -22,6 +32,7 @@ object AttachmentCardImageTransformer : ImageTransformer {
 
     @Composable
     override fun intrinsicSize(painter: Painter): Size {
-        return Size(100f, 100f) // Return non-zero size to ensure layout
+        // Must be non-zero or layout may collapse
+        return Size(1f, 1f)
     }
 }

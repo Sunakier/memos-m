@@ -1,5 +1,6 @@
-package org.example.memosm.ui.component.item
+package org.example.memosm.ui.component.item.markdown
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -10,6 +11,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +34,7 @@ import com.mikepenz.markdown.compose.MarkdownElement
 import com.mikepenz.markdown.compose.components.MarkdownComponentModel
 import com.mikepenz.markdown.compose.components.MarkdownComponents
 import com.mikepenz.markdown.compose.components.markdownComponents
+import com.mikepenz.markdown.compose.elements.MarkdownParagraph
 import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
 import com.mikepenz.markdown.compose.elements.highlightedCodeFence
 import com.mikepenz.markdown.compose.extendedspans.ExtendedSpans
@@ -45,6 +48,8 @@ import com.mikepenz.markdown.model.markdownAnnotatorConfig
 import com.mikepenz.markdown.model.markdownExtendedSpans
 import com.mikepenz.markdown.utils.getUnescapedTextInNode
 import org.example.memosm.model.Attachment
+import org.example.memosm.ui.component.item.AttachmentCard
+import org.example.memosm.ui.component.item.AttachmentCompactMode
 import org.intellij.markdown.IElementType
 import org.intellij.markdown.MarkdownElementTypes
 import org.intellij.markdown.ast.ASTNode
@@ -52,6 +57,8 @@ import org.intellij.markdown.ast.findChildOfType
 import org.intellij.markdown.ast.getTextInNode
 import org.intellij.markdown.flavours.gfm.GFMElementTypes
 import org.intellij.markdown.flavours.gfm.GFMTokenTypes
+
+
 
 @Composable
 fun MemoMarkdown(
@@ -63,72 +70,80 @@ fun MemoMarkdown(
     onContentUpdate: ((String) -> Unit)? = null,
     selectable: Boolean = false,
 ) {
-    android.util.Log.d("MemosDebug", "MemoMarkdown: content length=${content.length}, hasImage=${content.contains("![")}")
+    Log.d(
+        "MemosDebug",
+        "MemoMarkdown: content length=${content.length}, hasImage=${content.contains("![")}"
+    )
     val markdownContent: @Composable () -> Unit = {
         Markdown(
-        markdownState = markdownState,
-        imageTransformer = AttachmentCardImageTransformer,
-        animations = markdownAnimations(
-            animateTextSize = {
-                this
-                /** No animation */
-            }
-        ),
-        annotator = markdownAnnotator(
-            config = markdownAnnotatorConfig(eolAsNewLine = true)
-        ),
-        extendedSpans = markdownExtendedSpans {
-            val animator = rememberSquigglyUnderlineAnimator()
-            remember {
-                ExtendedSpans(
-                    RoundedCornerSpanPainter(),
+            markdownState = markdownState,
+            imageTransformer = Coil3ImageTransformerImpl,
+            animations = markdownAnimations(
+                animateTextSize = {
+                    this
+                    /** No animation */
+                }),
+            annotator = markdownAnnotator(
+                config = markdownAnnotatorConfig(eolAsNewLine = true)
+            ),
+            extendedSpans = markdownExtendedSpans {
+                val animator = rememberSquigglyUnderlineAnimator()
+                remember {
+                    ExtendedSpans(
+                        RoundedCornerSpanPainter(),
 //                    SquigglyUnderlineSpanPainter(animator = animator)
-                )
-            }
-        },
-        components = markdownComponents(
-            checkbox = { model ->
-                ClickableCheckbox(
-                    model = model, content = content, onToggle = onContentUpdate
-                )
+                    )
+                }
             },
-            blockQuote = { model ->
-                CustomMarkdownBlockQuote(
-                    content = model.content, node = model.node, style = model.typography.quote
-                )
-            },
-            table = { model ->
-                CustomMarkdownTable(
-                    content = model.content, node = model.node
-                )
-            },
-            horizontalRule = {
-                MarkdownDivider(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp)
-                )
-            },
-            image = { model ->
-                android.util.Log.d("MemosDebug", "MemoMarkdown: image component triggered")
-                MarkdownAttachmentImage(
-                    content = model.content,
-                    node = model.node,
-                    token = token,
-                    hostUrl = hostUrl
-                )
-            },
-            codeBlock = highlightedCodeBlock,
-            codeFence = highlightedCodeFence,
-            paragraph = { model ->
-                CustomMarkdownParagraph(
-                    content = model.content,
-                    node = model.node,
-                    components = LocalMarkdownComponents.current,
-                    token = token,
-                    hostUrl = hostUrl
-                )
-            }
+            components = markdownComponents(
+                checkbox = { model ->
+                    ClickableCheckbox(
+                        model = model, content = content, onToggle = onContentUpdate
+                    )
+                },
+                blockQuote = { model ->
+                    CustomMarkdownBlockQuote(
+                        content = model.content, node = model.node, style = model.typography.quote
+                    )
+                },
+                table = { model ->
+                    CustomMarkdownTable(
+                        content = model.content, node = model.node
+                    )
+                },
+                horizontalRule = {
+                    MarkdownDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp)
+                    )
+                },
+//            image = { model ->
+//                Log.d("MemosDebug", "MemoMarkdown: image component triggered")
+//                MarkdownAttachmentImage(
+//                    content = model.content,
+//                    node = model.node,
+//                    token = token,
+//                    hostUrl = hostUrl
+//                )
+//            },
+                codeBlock = highlightedCodeBlock,
+                codeFence = highlightedCodeFence,
+//                paragraph = { model ->
+//                    // First render any images collected before this paragraph
+//                    RenderCollectedImages(
+//                        token = token, hostUrl = hostUrl
+//                    )
+//
+//                    // Then render the paragraph normally (this preserves inline markdown!)
+//                    MarkdownParagraph(
+//                        content = model.content,
+//                        node = model.node,
+//                        style = model.typography.paragraph
+//                    )
+//                }
+
+
             ),
             modifier = modifier
         )
@@ -141,6 +156,7 @@ fun MemoMarkdown(
     } else {
         markdownContent()
     }
+
 }
 
 @Composable
@@ -148,7 +164,7 @@ fun MarkdownAttachmentImage(content: String, node: ASTNode, token: String, hostU
     val link = node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_DESTINATION)
         ?.getUnescapedTextInNode(content)
 
-    android.util.Log.d("MemosDebug", "MarkdownAttachmentImage: link=$link")
+    Log.d("MemosDebug", "MarkdownAttachmentImage: link=$link")
 
     if (link == null) return
 
@@ -158,10 +174,7 @@ fun MarkdownAttachmentImage(content: String, node: ASTNode, token: String, hostU
 
     AttachmentCard(
         attachment = Attachment(
-            externalLink = link,
-            filename = link,
-            type = "image",
-            mimeType = "image/auto"
+            externalLink = link, filename = link, type = "image", mimeType = "image/auto"
         ),
         token = token,
         hostUrl = hostUrl,
@@ -176,10 +189,9 @@ fun MarkdownAttachmentImage(content: String, node: ASTNode, token: String, hostU
         compactMode = AttachmentCompactMode.Never,
         onRatioAvailable = {
             if (it > 0) {
-                 aspectRatio = it
+                aspectRatio = it
             }
-        }
-    )
+        })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -209,8 +221,7 @@ private fun ClickableCheckbox(
             modifier = Modifier
                 .padding(end = 4.dp)
                 .size(20.dp),
-            enabled = onToggle != null
-        )
+            enabled = onToggle != null)
     }
 }
 
@@ -272,11 +283,7 @@ fun CustomMarkdownBlockQuote(
 
 @Composable
 fun CustomMarkdownParagraph(
-    content: String,
-    node: ASTNode,
-    components: MarkdownComponents,
-    token: String,
-    hostUrl: String
+    content: String, node: ASTNode, components: MarkdownComponents, token: String, hostUrl: String
 ) {
     // Basic paragraph container, usually a wrapping logic or just a Column/FlowRow depending on implementation.
     // Since images might need to be full width, we probably use a Column or let them flow.
@@ -297,33 +304,30 @@ fun CustomMarkdownParagraph(
 
     Column(modifier = Modifier.fillMaxWidth()) {
         node.children.forEach { child ->
-             when (child.type) {
-                 MarkdownElementTypes.IMAGE -> {
-                     android.util.Log.d("MemosDebug", "CustomMarkdownParagraph: Found IMAGE node")
-                     MarkdownAttachmentImage(
-                         content = content,
-                         node = child,
-                         token = token,
-                         hostUrl = hostUrl
-                     )
-                 }
-                 else -> {
-                     MarkdownElement(
-                         node = child,
-                         components = components,
-                         content = content,
-                         includeSpacer = false
-                     )
-                 }
-             }
+            when (child.type) {
+                MarkdownElementTypes.IMAGE -> {
+                    Log.d("MemosDebug", "CustomMarkdownParagraph: Found IMAGE node")
+                    MarkdownAttachmentImage(
+                        content = content, node = child, token = token, hostUrl = hostUrl
+                    )
+                }
+
+                else -> {
+                    MarkdownElement(
+                        node = child,
+                        components = components,
+                        content = content,
+                        includeSpacer = false
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
 fun CustomMarkdownTable(
-    content: String,
-    node: ASTNode
+    content: String, node: ASTNode
 ) {
     val header = remember(node) { node.findChildOfType(GFMElementTypes.HEADER) }
     val rows = remember(node) { node.children.filter { it.type == GFMElementTypes.ROW } }
@@ -398,7 +402,9 @@ fun CustomMarkdownTable(
                                         verticalArrangement = Arrangement.Center
                                     ) {
                                         cellNode.children.forEach { child ->
-                                            MarkdownElement(child, markdownComponents, content, false)
+                                            MarkdownElement(
+                                                child, markdownComponents, content, false
+                                            )
                                         }
                                     }
                                 }
@@ -431,6 +437,7 @@ fun CustomMarkdownTable(
     }
 
 }
+
 @Composable
 fun MarkdownDivider(
     modifier: Modifier = Modifier,
@@ -438,17 +445,6 @@ fun MarkdownDivider(
     thickness: Dp = LocalMarkdownDimens.current.dividerThickness,
 ) {
     HorizontalDivider(
-        modifier = modifier, thickness = thickness, color = color
-    )
-}
-
-@Composable
-fun VerticalMarkdownDivider(
-    modifier: Modifier = Modifier,
-    color: Color = LocalMarkdownColors.current.dividerColor,
-    thickness: Dp = LocalMarkdownDimens.current.dividerThickness,
-) {
-    VerticalDivider(
         modifier = modifier, thickness = thickness, color = color
     )
 }
