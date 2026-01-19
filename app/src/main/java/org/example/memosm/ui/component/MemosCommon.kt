@@ -124,14 +124,16 @@ fun MemosScaffold(
         navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
     val isDualPane = isListVisible && isDetailVisible
 
+    var isSearchExpanded by remember { mutableStateOf(false) }
+
     // Determine if the nav bar should be shown based on scroll state
     val showNavBarByScroll by remember {
         derivedStateOf { !isScrollingDown || listState.firstVisibleItemIndex == 0 }
     }
 
-    LaunchedEffect(showNavBarByScroll, isDetailVisible, isDualPane) {
-        if (isDetailVisible && !isDualPane) {
-            // Hide navbar when viewing detail on single-pane (mobile)
+    LaunchedEffect(showNavBarByScroll, isDetailVisible, isDualPane, isSearchExpanded) {
+        if ((isDetailVisible || isSearchExpanded) && !isDualPane) {
+            // Hide navbar when viewing detail or searching on single-pane (mobile)
             onToggleNavBar(false)
         } else {
             // Restore navbar state based on scroll direction when returning to list or when in dual-pane
@@ -139,7 +141,6 @@ fun MemosScaffold(
         }
     }
 
-    var isSearchExpanded by remember { mutableStateOf(false) }
     val showSearchBar by remember {
         derivedStateOf { showNavBarByScroll }
     }
