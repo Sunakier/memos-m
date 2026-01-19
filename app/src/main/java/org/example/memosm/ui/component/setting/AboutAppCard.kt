@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -36,9 +37,7 @@ import androidx.core.net.toUri
 import org.example.memosm.R
 import org.example.memosm.ui.nav.InfoRow
 
-private val KAOMOJIS = listOf(
-    "(ﾉ´ з `)ノ", "(o^ ^o)", "(⁄ ⁄•⁄ω⁄•⁄ ⁄)", "(⁄ ⁄>⁄ ▽ ⁄<⁄ ⁄)", "(￣▽￣*)ゞ"
-)
+private data class KaomojiMessage(val text: String, val kaomoji: String)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -51,8 +50,20 @@ fun AboutAppCard() {
             null
         }
     }
-    val versionName = packageInfo?.versionName ?: "1.0"
+    val versionName = packageInfo?.versionName ?: "UNKNOWN"
     val versionCopiedMessage = stringResource(R.string.profile_about_version_copied)
+
+    val kaomojisArray = stringArrayResource(R.array.profile_about_kaomojis)
+    val kaomojis = remember(kaomojisArray) {
+        kaomojisArray.mapNotNull { item ->
+            val parts = item.split("|")
+            if (parts.size == 2) {
+                KaomojiMessage(parts[0], parts[1])
+            } else {
+                null
+            }
+        }
+    }
 
     val currentToast = remember { mutableStateOf<Toast?>(null) }
 
@@ -79,9 +90,16 @@ fun AboutAppCard() {
                     .combinedClickable(
                         onClick = {
                             currentToast.value?.cancel()
-                            val toast = Toast.makeText(context, KAOMOJIS.random(), Toast.LENGTH_SHORT)
-                            currentToast.value = toast
-                            toast.show()
+                            val item = kaomojis.randomOrNull()
+                            if (item != null) {
+                                val toast = Toast.makeText(
+                                    context,
+                                    "${item.text} ${item.kaomoji}",
+                                    Toast.LENGTH_SHORT
+                                )
+                                currentToast.value = toast
+                                toast.show()
+                            }
                         },
                         onLongClick = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager

@@ -165,4 +165,14 @@
     <string name="search_sort_title">Sort</string>
     <string name="search_sort_newest">Newest First</string>
     <string name="search_sort_oldest">Oldest First</string>
+
+    <string-array name="profile_about_kaomojis">
+        <item>Yay!|(ﾉ´ з `)ノ</item>
+        <item>Hehe|(o^ ^o)</item>
+        <item>Don\'t click me!|(⁄ ⁄•⁄ω⁄•⁄ ⁄)</item>
+        <item>Stop it!|(⁄ ⁄&gt;⁄ ▽ ⁄&lt;⁄ ⁄)</item>
+        <item>You found me!|(￣▽￣*)ゞ</item>
+        <item>Ouch!|&gt;_&lt;</item>
+        <item>Please stop...|m(_ _)m</item>
+    </string-array>
 </resources>
