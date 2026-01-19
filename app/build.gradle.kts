@@ -8,7 +8,6 @@ val gitShortHash: Provider<String> = providers.exec {
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.buf)
     id("kotlin-parcelize")
@@ -79,11 +78,19 @@ android {
 
     sourceSets {
         named("main") {
-            java.srcDir("build/bufbuild/generated/java")
+            java.directories.add(("build/bufbuild/generated/java"))
         }
         named("canary") {
-            res.srcDirs("src/canary/res")
+            res.directories.add(("src/canary/res"))
         }
+    }
+}
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        // Add the buf generated directory as a static source directory
+        // This replaces: sourceSets.named("main") { java.directories.add(...) }
+        variant.sources.java?.addStaticSourceDirectory("build/bufbuild/generated/java")
     }
 }
 
@@ -96,13 +103,6 @@ buf {
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     dependsOn("bufGenerate")
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_11)
-        freeCompilerArgs.add("-opt-in=androidx.compose.material3.ExperimentalMaterial3Api")
-    }
 }
 
 dependencies {
@@ -141,10 +141,10 @@ dependencies {
     // ----------------------------
     // Connect RPC / Protobuf dependencies
     // ----------------------------
-    implementation("com.connectrpc:connect-kotlin-okhttp:0.7.4")
+    implementation(libs.connect.kotlin.okhttp)
     // Java specific dependencies.
-    implementation("com.connectrpc:connect-kotlin-google-java-ext:0.7.4")
-    implementation("com.google.protobuf:protobuf-java:4.33.4")
+    implementation(libs.connect.kotlin.google.java.ext)
+    implementation(libs.protobuf.java)
     implementation(libs.google.common.protos)
 
     // ----------------------------

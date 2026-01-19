@@ -1,5 +1,6 @@
 [versions]
-agp = "8.13.2"
+agp = "9.0.0"
+connectKotlinOkhttp = "0.7.4"
 kotlin = "2.3.0"
 coreKtx = "1.17.0"
 junit = "4.13.2"
@@ -8,6 +9,7 @@ espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.12.2"
 composeBom = "2026.01.00"
+protobufJava = "4.33.4"
 retrofit = "3.0.0"
 okhttp = "5.3.2"
 composeAdaptive = "1.2.0"
@@ -15,13 +17,15 @@ lifecycleViewmodelCompose = "2.10.0"
 datastore = "1.2.0"
 coil = "3.3.0"
 playServicesLocation = "21.3.0"
-multiplatformMarkdownRenderer = "0.39.0"
+multiplatformMarkdownRenderer = "0.39.1"
 media3 = "1.9.0"
 buf = "0.10.3"
-googleCommonProtos = "2.63.2"
+googleCommonProtos = "2.64.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+connect-kotlin-google-java-ext = { module = "com.connectrpc:connect-kotlin-google-java-ext", version.ref = "connectKotlinOkhttp" }
+connect-kotlin-okhttp = { module = "com.connectrpc:connect-kotlin-okhttp", version.ref = "connectKotlinOkhttp" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -45,6 +49,7 @@ androidx-compose-material-icons-extended = { group = "androidx.compose.material"
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobufJava" }
 retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
 retrofit-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
 okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
