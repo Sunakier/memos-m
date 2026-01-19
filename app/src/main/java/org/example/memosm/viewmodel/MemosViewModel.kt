@@ -552,13 +552,20 @@ class MemosViewModel(
                  val updated = api?.updateMemo(memo.name!!, update, "content,visibility,attachments,location")
                  if (updated != null) {
                      onSuccess()
-                     // In-place update: replace just this memo in the lists
-                     userMemoManager?.updateState { state ->
+                     // In-place update: replace just this memo in all lists to keep UI consistent
+                     val transform = { state: PaginatedListState<Memo> ->
                          state.copy(items = state.items.map { if (it.name == memo.name) updated else it })
                      }
-                     if (memo.visibility == "PUBLIC" || memo.visibility == "PROTECTED") {
-                         exploreMemoManager?.updateState { state ->
-                             state.copy(items = state.items.map { if (it.name == memo.name) updated else it })
+                     userMemoManager?.updateState(transform)
+                     exploreMemoManager?.updateState(transform)
+                     archivedMemoManager?.updateState(transform)
+                     searchMemoManager?.updateState(transform)
+                     commentManager?.updateState(transform)
+
+                     // Keep selectedMemo in sync
+                     if (_uiState.value.detailPane.selectedMemo?.name == updated.name) {
+                         _uiState.update { 
+                             it.copy(detailPane = it.detailPane.copy(selectedMemo = updated))
                          }
                      }
                  }

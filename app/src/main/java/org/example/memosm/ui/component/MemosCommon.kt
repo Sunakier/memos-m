@@ -72,14 +72,15 @@ fun MemosScaffold(
     }
 
     // Sync selected memo with navigator
-    LaunchedEffect(navigator.currentDestination) {
+    // We add memos and search items as dependencies to ensure selectedMemo is updated if the items in the list change (e.g. after an edit)
+    LaunchedEffect(navigator.currentDestination, memos, uiState.searchMemoList.list.items) {
         focusManager.clearFocus()
 
         val currentMemoKey = navigator.currentDestination?.contentKey
         if (currentMemoKey != null) {
             val selectedId =
                 uiState.detailPane.selectedMemo?.let { it.name ?: it.content.hashCode().toString() }
-            if (currentMemoKey.id != selectedId) {
+            if (currentMemoKey.id != selectedId || uiState.detailPane.selectedMemo == null) {
                 val pool = if (currentMemoKey.fromSearch) uiState.searchMemoList.list.items else memos
                 val memo = pool.find {
                     (it.name ?: it.content.hashCode().toString()) == currentMemoKey.id
@@ -336,7 +337,7 @@ fun GenericMemosListPane(
                             currentUser = uiState.session.currUser,
                             token = uiState.session.token,
                             hostUrl = uiState.session.hostUrl,
-                            colors = if (memo == uiState.detailPane.selectedMemo) {
+                            colors = if (memo.name != null && memo.name == uiState.detailPane.selectedMemo?.name) {
                                 CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                             } else {
                                 CardDefaults.cardColors()
@@ -431,5 +432,3 @@ fun resolveResourceUrl(hostUrl: String, relativeUrl: String?): String? {
     android.util.Log.d("MemosDebug", "resolveResourceUrl: host=$hostUrl, relative=$relativeUrl -> $result")
     return result
 }
-
-
