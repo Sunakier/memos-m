@@ -60,7 +60,7 @@ abstract class BaseListManager<T>(
 
     override fun loadMore() {
         android.util.Log.d("MemosListManager", "loadMore: isLoading=${_listState.value.isLoading}, nextToken=${_listState.value.nextPageToken}")
-        if (_listState.value.isLoading || _listState.value.nextPageToken == null) return
+        if (_listState.value.isLoading || _listState.value.nextPageToken.isNullOrBlank()) return
         loadInternal(pageToken = _listState.value.nextPageToken)
     }
 
@@ -80,10 +80,12 @@ abstract class BaseListManager<T>(
                 android.util.Log.d("MemosListManager", "loadInternal: pageToken=$pageToken")
                 _listState.value = _listState.value.copy(isLoading = true)
 
-                val (newItems, nextToken) = fetchFromApi(pageToken)
+                val (newItems, rawNextToken) = fetchFromApi(pageToken)
+                val nextToken = if (rawNextToken.isNullOrBlank()) null else rawNextToken
+                
                 val processedItems = newItems.map { processItem(it) }
 
-                android.util.Log.d("MemosListManager", "loadInternal: fetched ${newItems.size} items, nextToken=$nextToken")
+                android.util.Log.d("MemosListManager", "loadInternal: fetched ${newItems.size} items, rawToken='$rawNextToken' -> nextToken=$nextToken")
 
                 _listState.value = _listState.value.copy(
                     items = if (pageToken == null) processedItems else _listState.value.items + processedItems,
