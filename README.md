@@ -44,7 +44,7 @@ You can also download from [release](https://github.com/yamada-sexta/memos-m/rel
     - [x] Login with password
   - User info
     - [x] View user info
-    - [ ] Edit user info  
+    - [x] Edit user info  
 - Memos
   - Basic
     - [x] View/post/edit Memos
