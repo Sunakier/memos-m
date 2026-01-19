@@ -48,10 +48,6 @@ fun ProfileScreen(
         isArchivedVisible = false
     }
 
-    LaunchedEffect(isArchivedVisible) {
-        onToggleNavBar(!isArchivedVisible)
-    }
-
     SharedTransitionLayout {
         AnimatedContent(
             targetState = isArchivedVisible, transitionSpec = {
@@ -128,7 +124,6 @@ private fun ProfileListPane(
 
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (currentIndex, currentOffset) ->
-            val wasScrollingDown = isScrollingDown
             if (currentIndex > previousIndex) {
                 isScrollingDown = true
             } else if (currentIndex < previousIndex) {
@@ -139,9 +134,7 @@ private fun ProfileListPane(
                 isScrollingDown = false
             }
 
-            if (wasScrollingDown != isScrollingDown || currentIndex == 0) {
-                onToggleNavBar(!isScrollingDown || currentIndex == 0)
-            }
+            onToggleNavBar(!isScrollingDown || currentIndex == 0)
 
             previousIndex = currentIndex
             previousScrollOffset = currentOffset
@@ -240,8 +233,7 @@ private fun ProfileListPane(
                 start = 16.dp,
                 top = 16.dp + WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
                 end = 16.dp,
-                bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues()
-                    .calculateBottomPadding()
+                bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
             ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)

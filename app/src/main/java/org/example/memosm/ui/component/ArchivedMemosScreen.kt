@@ -42,7 +42,7 @@ fun ArchivedMemosScreen(
                             IconButton(onClick = onBack) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                             }
-                        }
+                        },
                     )
                 }
             },
@@ -60,7 +60,6 @@ fun ArchivedMemosScreen(
                     userProvider = { uiState.session.currUser },
                     contentPadding = PaddingValues(16.dp)
                 )
-            }
-        )
+            })
     }
 }
