@@ -1,5 +1,6 @@
 package org.example.memosm.ui.component.item.markdown
 
+import MarkdownAttachmentImage
 import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
