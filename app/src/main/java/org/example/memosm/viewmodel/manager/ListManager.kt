@@ -10,8 +10,9 @@ import org.example.memosm.viewmodel.PaginatedListState
 interface ListManager<T> {
     val listState: StateFlow<PaginatedListState<T>>
     
-    // Refresh: true to reload from scratch (page 1), false to fetch if empty
-    fun fetch(refresh: Boolean = false)
+    // Refresh: true to reload from page 1, false to fetch if empty
+    // SoftRefresh: when true, keeps existing items visible during refresh (no reset)
+    fun fetch(refresh: Boolean = false, softRefresh: Boolean = false)
     
     // Load next page if available
     fun loadMore()
@@ -35,9 +36,9 @@ abstract class BaseListManager<T>(
     // Optional: Process item before adding to state (e.g. resolve relative URLs)
     protected open suspend fun processItem(item: T): T = item
 
-    override fun fetch(refresh: Boolean) {
-        android.util.Log.d("MemosListManager", "fetch: refresh=$refresh, currentItems=${_listState.value.items.size}")
-        if (refresh) {
+    override fun fetch(refresh: Boolean, softRefresh: Boolean) {
+        android.util.Log.d("MemosListManager", "fetch: refresh=$refresh, softRefresh=$softRefresh, currentItems=${_listState.value.items.size}")
+        if (refresh && !softRefresh) {
             reset()
         }
         

@@ -552,8 +552,15 @@ class MemosViewModel(
                  val updated = api?.updateMemo(memo.name!!, update, "content,visibility,attachments,location")
                  if (updated != null) {
                      onSuccess()
-                     userMemoManager?.fetch(refresh = true)
-                     if (memo.visibility == "PUBLIC" || memo.visibility == "PROTECTED") exploreMemoManager?.fetch(refresh = true)
+                     // In-place update: replace just this memo in the lists
+                     userMemoManager?.updateState { state ->
+                         state.copy(items = state.items.map { if (it.name == memo.name) updated else it })
+                     }
+                     if (memo.visibility == "PUBLIC" || memo.visibility == "PROTECTED") {
+                         exploreMemoManager?.updateState { state ->
+                             state.copy(items = state.items.map { if (it.name == memo.name) updated else it })
+                         }
+                     }
                  }
              } catch (e: Exception) {
                  _uiState.update { it.copy(error = e.message) }
