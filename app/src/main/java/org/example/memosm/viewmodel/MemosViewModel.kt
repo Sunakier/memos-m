@@ -42,6 +42,7 @@ class MemosViewModel(
     private var attachmentManager: AttachmentManager? = null
 
     private var collectionJob: Job? = null
+    private val pendingUserRequests = mutableSetOf<String>()
 
     init {
         updateCurrentAccountInList()
@@ -116,9 +117,11 @@ class MemosViewModel(
                         ),
                         accounts = it.accounts.map { acc -> 
                             acc.copy(isActive = acc.id == account.id) 
-                        }
+                        },
+                        users = emptyMap()
                     )
                 }
+                pendingUserRequests.clear()
 
                 api = createApi(account.hostUrl, account.accessToken)
                 val currentApi = api!!
@@ -187,11 +190,41 @@ class MemosViewModel(
                 )
             }.collect { newState ->
                 _uiState.value = newState
+                
+                // Fetch missing users for all visible lists
+                val allCreators = (newState.userMemoList.list.items + 
+                                  newState.exploreMemoList.list.items + 
+                                  newState.searchMemoList.list.items + 
+                                  newState.archivedMemoList.list.items)
+                                  .mapNotNull { it.creator }
+                                  .distinct()
+                fetchUsers(allCreators)
             }
         }
     }
 
     // --- User & Session ---
+
+    private fun fetchUsers(names: List<String>) {
+        val toFetch = names.filter { it !in _uiState.value.users && it !in pendingUserRequests }
+        if (toFetch.isEmpty()) return
+        
+        toFetch.forEach { name ->
+            pendingUserRequests.add(name)
+            viewModelScope.launch {
+                try {
+                    val user = api?.getUser(name)
+                    if (user != null) {
+                        _uiState.update { it.copy(users = it.users + (name to user)) }
+                    }
+                } catch (e: Exception) {
+                    Log.e("MemosViewModel", "Error fetching user $name", e)
+                } finally {
+                    pendingUserRequests.remove(name)
+                }
+            }
+        }
+    }
 
     private fun fetchCurrentUser() {
         viewModelScope.launch {

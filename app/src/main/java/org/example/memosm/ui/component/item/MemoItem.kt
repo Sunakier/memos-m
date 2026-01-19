@@ -44,11 +44,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import coil3.compose.AsyncImage
+import coil3.network.httpHeaders
 import com.mikepenz.markdown.model.rememberMarkdownState
 import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.model.Reaction
 import org.example.memosm.model.User
+import org.example.memosm.ui.component.resolveResourceUrl
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -122,10 +124,26 @@ fun MemoItem(
                     verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)
                 ) {
                     if (user != null) {
-                        val avatarUrl = user.avatarUrl
+                        val avatarUrl = remember(user.avatarUrl, hostUrl) {
+                            resolveResourceUrl(hostUrl, user.avatarUrl)
+                        }
                         if (avatarUrl != null) {
+                            val imageRequest = remember(avatarUrl, token) {
+                                val headers = coil3.network.NetworkHeaders.Builder()
+                                    .apply {
+                                        if (token.isNotEmpty()) {
+                                            set("Authorization", "Bearer $token")
+                                        }
+                                    }
+                                    .build()
+
+                                coil3.request.ImageRequest.Builder(context)
+                                    .data(avatarUrl)
+                                    .httpHeaders(headers)
+                                    .build()
+                            }
                             AsyncImage(
-                                model = avatarUrl,
+                                model = imageRequest,
                                 contentDescription = stringResource(R.string.profile_avatar_description),
                                 modifier = Modifier
                                     .size(28.dp)

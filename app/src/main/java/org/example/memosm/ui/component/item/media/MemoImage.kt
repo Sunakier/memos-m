@@ -5,7 +5,9 @@ import android.util.Base64
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BrokenImage
 import androidx.compose.material3.CircularProgressIndicator
@@ -19,6 +21,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -36,20 +40,22 @@ import org.example.memosm.viewmodel.manager.AttachmentManager
 @Composable
 fun MemoImage(
     modifier: Modifier = Modifier,
-    attachment: Attachment?,
-    token: String?,
-    hostUrl: String,
+    attachment: Attachment? = null,
+    token: String? = null,
+    hostUrl: String = "",
     uri: Uri = Uri.EMPTY,
-    filename: String,
+    filename: String = "",
+    isRound: Boolean = false,
+    placeholderIcon: ImageVector? = null,
     onRatioAvailable: (Float) -> Unit = {},
-    onClick: () -> Unit = {}
+    onClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val model = remember(uri, attachment, hostUrl) {
         when {
             uri != Uri.EMPTY -> uri
-            else -> AttachmentManager.getAttachmentUrl(hostUrl, attachment) ?: when {
-                !attachment?.content.isNullOrBlank() -> {
+            attachment != null -> AttachmentManager.getAttachmentUrl(hostUrl, attachment) ?: when {
+                !attachment.content.isNullOrBlank() -> {
                     try {
                         Base64.decode(attachment.content, Base64.NO_WRAP)
                     } catch (_: Exception) {
@@ -58,6 +64,7 @@ fun MemoImage(
                 }
                 else -> null
             }
+            else -> null
         }
     }
 
@@ -65,7 +72,7 @@ fun MemoImage(
         when {
             uri != Uri.EMPTY -> uri.toString()
             attachment?.name != null -> "${hostUrl}_${attachment.name}"
-            else -> AttachmentManager.getAttachmentUrl(hostUrl, attachment)
+            else -> model?.toString()
         }
     }
     
@@ -75,8 +82,10 @@ fun MemoImage(
 
     // Use cached ratio if available
     LaunchedEffect(cacheKey) {
-        MediaCache.getAspectRatio(cacheKey)?.let {
-            onRatioAvailable(it)
+        if (cacheKey != null) {
+            MediaCache.getAspectRatio(cacheKey)?.let {
+                onRatioAvailable(it)
+            }
         }
     }
 
@@ -95,51 +104,66 @@ fun MemoImage(
             .build()
     }
 
-    var isLoading by remember { mutableStateOf(true) }
+    var isLoading by remember { mutableStateOf(model != null) }
     var isError by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        AsyncImage(
-            model = imageRequest,
-            contentDescription = filename,
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable { onClick() },
-            contentScale = ContentScale.Crop,
-            onLoading = { isLoading = true; isError = false },
-            onSuccess = { state ->
-                android.util.Log.d("MemosDebug", "MemoImage success: $filename")
-                isLoading = false
-                isError = false
-                val size = state.painter.intrinsicSize
-                if (size.width > 0 && size.height > 0) {
-                    val ratio = size.width / size.height
-                    MediaCache.setAspectRatio(cacheKey, ratio)
-                    onRatioAvailable(ratio)
+        if (model != null) {
+            AsyncImage(
+                model = imageRequest,
+                contentDescription = filename,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(if (isRound) Modifier.clip(CircleShape) else Modifier)
+                    .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
+                contentScale = ContentScale.Crop,
+                onLoading = { isLoading = true; isError = false },
+                onSuccess = { state ->
+                    isLoading = false
+                    isError = false
+                    val size = state.painter.intrinsicSize
+                    if (size.width > 0 && size.height > 0) {
+                        val ratio = size.width / size.height
+                        if (cacheKey != null) MediaCache.setAspectRatio(cacheKey, ratio)
+                        onRatioAvailable(ratio)
+                    }
+                },
+                onError = { 
+                    android.util.Log.e("MemosDebug", "MemoImage error: $filename, result=${it.result.throwable}")
+                    isLoading = false; isError = true 
                 }
-            },
-            onError = { 
-                android.util.Log.e("MemosDebug", "MemoImage error: $filename, result=${it.result.throwable}")
-                isLoading = false; isError = true 
-            }
-        )
+            )
+        } else {
+            isError = true
+            isLoading = false
+        }
 
-        if (isLoading) {
+        if (isLoading && !isRound) {
             CircularProgressIndicator(
                 modifier = Modifier.size(24.dp),
                 strokeWidth = 2.dp
             )
         }
-        if (isError) {
-            Icon(
-                imageVector = Icons.Outlined.BrokenImage,
-                contentDescription = stringResource(R.string.attachments_error),
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(32.dp)
-            )
+        
+        if (isError || (isLoading && isRound)) {
+            if (placeholderIcon != null) {
+                Icon(
+                    imageVector = placeholderIcon,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize().padding(if (isRound) 4.dp else 0.dp),
+                    tint = MaterialTheme.colorScheme.outline
+                )
+            } else if (isError) {
+                Icon(
+                    imageVector = Icons.Outlined.BrokenImage,
+                    contentDescription = stringResource(R.string.attachments_error),
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
         }
     }
 }

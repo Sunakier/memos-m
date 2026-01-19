@@ -29,12 +29,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import coil3.compose.AsyncImage
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
 import org.example.memosm.ui.component.item.media.AudioPlayer
@@ -268,17 +275,35 @@ fun AttachmentCard(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        FileThumbnail(
-                            displayType = displayType,
-                            filename = filename,
-                            mode = when {
-                                isWide -> FileThumbnailMode.WIDE
-                                isCompact -> FileThumbnailMode.COMPACT
-                                else -> FileThumbnailMode.NORMAL
-                            },
-                            onClick = { showInfoDialog = true },
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        // Check if it's a profile picture/avatar
+                        val isProfilePicture = remember(displayType) {
+                            displayType.startsWith("avatar/", ignoreCase = true) || filename.contains("profile", ignoreCase = true)
+                        }
+
+                        if (isProfilePicture) {
+                            MemoImage(
+                                attachment = attachment,
+                                token = token,
+                                hostUrl = hostUrl,
+                                uri = uri,
+                                filename = filename,
+                                isRound = true,
+                                modifier = Modifier.fillMaxSize(),
+                                onClick = { showFullScreenImage = true }
+                            )
+                        } else {
+                            FileThumbnail(
+                                displayType = displayType,
+                                filename = filename,
+                                mode = when {
+                                    isWide -> FileThumbnailMode.WIDE
+                                    isCompact -> FileThumbnailMode.COMPACT
+                                    else -> FileThumbnailMode.NORMAL
+                                },
+                                onClick = { showInfoDialog = true },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
 
                     // Floating menu button for compact view

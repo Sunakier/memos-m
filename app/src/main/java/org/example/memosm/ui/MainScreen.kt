@@ -1,5 +1,6 @@
 package org.example.memosm.ui
 
+import android.net.Uri
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
@@ -38,6 +39,8 @@ import org.example.memosm.ui.nav.ProfileScreen
 import org.example.memosm.viewmodel.MemosViewModel
 
 import org.example.memosm.ui.component.resolveResourceUrl
+import org.example.memosm.ui.component.item.media.MemoImage
+import androidx.core.net.toUri
 
 enum class MainDestination(
     val labelRes: Int
@@ -121,47 +124,27 @@ fun MainScreen(
                 val rawAvatarUrl = user?.avatarUrl ?: account?.avatarUrl
                 val hostUrl = uiState.session.hostUrl
 
-                val avatarUrl = resolveResourceUrl(hostUrl, rawAvatarUrl)
-
-                if (avatarUrl != null) {
-                    val context = androidx.compose.ui.platform.LocalContext.current
-                    val token = uiState.session.token
-                    
-                    val imageRequest = remember<coil3.request.ImageRequest>(avatarUrl, token) {
-                        val headers = coil3.network.NetworkHeaders.Builder()
-                            .apply {
-                                if (token.isNotEmpty()) {
-                                    set("Authorization", "Bearer $token")
-                                }
-                            }
-                            .build()
-
-                        coil3.request.ImageRequest.Builder(context)
-                            .data(avatarUrl)
-                            .httpHeaders(headers)
-                            .build()
-                    }
-                    
-                    AsyncImage(
-                        model = imageRequest,
-                        contentDescription = null,
-                        modifier = modifier
-                            .then(
-                                if (isSelected) Modifier.border(
-                                    2.dp, MaterialTheme.colorScheme.primary, CircleShape
-                                ) else Modifier
-                            )
-                            .padding(if (isSelected) 1.dp else 0.dp)
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Icon(
-                        if (isSelected) Icons.Default.Person else Icons.Outlined.Person,
-                        contentDescription = null,
-                        modifier = modifier
-                    )
+                val avatarUri = remember(rawAvatarUrl, hostUrl) {
+                    if (rawAvatarUrl.isNullOrBlank()) Uri.EMPTY
+                    else (resolveResourceUrl(hostUrl, rawAvatarUrl) ?: "").toUri()
                 }
+
+                MemoImage(
+                    attachment = null,
+                    token = uiState.session.token,
+                    hostUrl = hostUrl,
+                    uri = avatarUri,
+                    filename = "avatar",
+                    isRound = true,
+                    placeholderIcon = if (isSelected) Icons.Default.Person else Icons.Outlined.Person,
+                    modifier = modifier
+                        .then(
+                            if (isSelected) Modifier.border(
+                                2.dp, MaterialTheme.colorScheme.primary, CircleShape
+                            ) else Modifier
+                        )
+                        .padding(if (isSelected) 1.dp else 0.dp)
+                )
             }
         }
     }
