@@ -51,6 +51,33 @@
     <string name="profile_remove_account_title">Konto entfernen</string>
     <string name="profile_remove_account_confirm">Bist du sicher, dass du das Konto für \"%1$s\" entfernen möchtest? Du musst dich erneut anmelden, um auf dieses Konto zuzugreifen.</string>
 
+    <string name="profile_edit_account">Profil bearbeiten</string>
+    <string name="profile_username">Benutzername</string>
+    <string name="profile_display_name">Anzeigename</string>
+    <string name="profile_email">E-Mail</string>
+    <string name="profile_avatar_url">Avatar-URL</string>
+    <string name="profile_description">Beschreibung</string>
+    <string name="profile_new_password">Neues Passwort</string>
+    <string name="profile_password_hint">Leer lassen, um das aktuelle Passwort zu behalten</string>
+    <string name="profile_edit_credentials">Login-Info bearbeiten</string>
+    <string name="profile_credential_hint">Änderungen lokal gespeichert. Vorsichtig verwenden – ungültige Anmeldedaten erfordern eine erneute Anmeldung.</string>
+    <string name="profile_about_version_copied">Version in die Zwischenablage kopiert</string>
+
+    <string name="profile_webhooks_add">Webhook hinzufügen</string>
+    <string name="profile_webhooks_edit">Webhook bearbeiten</string>
+    <string name="profile_webhooks_display_name">Anzeigename</string>
+    <string name="profile_webhooks_url">URL</string>
+    <string name="profile_webhooks_delete_title">Webhook löschen</string>
+    <string name="profile_webhooks_delete_confirm">Bist du sicher, dass du diesen Webhook löschen möchtest?</string>
+
+    <string name="profile_shortcuts_delete_title">Kurzbefehl löschen</string>
+    <string name="profile_shortcuts_delete_confirm">Bist du sicher, dass du diesen Kurzbefehl löschen möchtest?</string>
+    <string name="profile_shortcuts_add">Kurzbefehl hinzufügen</string>
+    <string name="profile_shortcuts_edit">Kurzbefehl bearbeiten</string>
+    <string name="profile_shortcuts_title">Titel</string>
+    <string name="profile_shortcuts_filter">Filter</string>
+    <string name="profile_shortcuts_help">Hilfe zur Filtersyntax</string>
+
     <string name="memo_action_edit">Bearbeiten</string>
     <string name="memo_action_delete">Löschen</string>
     <string name="memo_action_more">Mehr</string>
@@ -135,4 +162,14 @@
     <string name="search_sort_title">Sortieren</string>
     <string name="search_sort_newest">Neueste zuerst</string>
     <string name="search_sort_oldest">Älteste zuerst</string>
+
+    <string-array name="profile_about_kaomojis">
+        <item>Yay!|(ﾉ´ з `)ノ</item>
+        <item>Hehe|(o^ ^o)</item>
+        <item>Nicht klicken!|(⁄ ⁄•⁄ω⁄•⁄ ⁄)</item>
+        <item>Hör auf!|(⁄ ⁄&gt;⁄ ▽ ⁄&lt;⁄ ⁄)</item>
+        <item>Du hast mich gefunden!|(￣▽￣*)ゞ</item>
+        <item>Aua!|&gt;_&lt;</item>
+        <item>Bitte hör auf...|m(_ _)m</item>
+    </string-array>
 </resources>

@@ -45,12 +45,39 @@
 
     <string name="profile_about">关于 MemosM</string>
     <string name="profile_about_version">应用版本</string>
+    <string name="profile_about_version_copied">已将版本号复制到剪贴板</string>
     <string name="profile_about_repo">源码仓库</string>
     <string name="profile_about_issues">反馈问题</string>
     <string name="profile_add_account">添加账号</string>
     <string name="profile_accounts">账号管理</string>
     <string name="profile_remove_account_title">移除账号</string>
     <string name="profile_remove_account_confirm">确定要移除 \"%1$s\" 的账号吗？移除后需要重新登录才能访问。</string>
+
+    <string name="profile_edit_account">编辑资料</string>
+    <string name="profile_username">用户名</string>
+    <string name="profile_display_name">显示名称</string>
+    <string name="profile_email">电子邮箱</string>
+    <string name="profile_avatar_url">头像 URL</string>
+    <string name="profile_description">简介</string>
+    <string name="profile_new_password">新密码</string>
+    <string name="profile_password_hint">留空则保持当前密码</string>
+    <string name="profile_edit_credentials">编辑登录信息</string>
+    <string name="profile_credential_hint">更改仅保存在本地。请谨慎操作——无效的凭据将导致需要重新登录。</string>
+
+    <string name="profile_webhooks_add">添加 Webhook</string>
+    <string name="profile_webhooks_edit">编辑 Webhook</string>
+    <string name="profile_webhooks_display_name">显示名称</string>
+    <string name="profile_webhooks_url">URL</string>
+    <string name="profile_webhooks_delete_title">删除 Webhook</string>
+    <string name="profile_webhooks_delete_confirm">确定要删除此 Webhook 吗？</string>
+
+    <string name="profile_shortcuts_delete_title">删除快捷方式</string>
+    <string name="profile_shortcuts_delete_confirm">确定要删除此快捷方式吗？</string>
+    <string name="profile_shortcuts_add">添加快捷方式</string>
+    <string name="profile_shortcuts_edit">编辑快捷方式</string>
+    <string name="profile_shortcuts_title">标题</string>
+    <string name="profile_shortcuts_filter">过滤器</string>
+    <string name="profile_shortcuts_help">过滤器语法帮助</string>
 
     <string name="memo_action_edit">编辑</string>
     <string name="memo_action_delete">删除</string>
@@ -137,4 +164,14 @@
     <string name="search_sort_title">排序</string>
     <string name="search_sort_newest">从新到旧</string>
     <string name="search_sort_oldest">从旧到新</string>
+
+    <string-array name="profile_about_kaomojis">
+        <item>好耶！|(ﾉ´ з `)ノ</item>
+        <item>嘿嘿|(o^ ^o)</item>
+        <item>别点我！|(⁄ ⁄•⁄ω⁄•⁄ ⁄)</item>
+        <item>停下！|(⁄ ⁄&gt;⁄ ▽ ⁄&lt;⁄ ⁄)</item>
+        <item>被你发现啦！|(￣▽￣*)ゞ</item>
+        <item>嗷！|&gt;_&lt;</item>
+        <item>求求了，停下吧...|m(_ _)m</item>
+    </string-array>
 </resources>

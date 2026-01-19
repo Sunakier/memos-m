@@ -51,6 +51,33 @@
     <string name="profile_remove_account_title">계정 삭제</string>
     <string name="profile_remove_account_confirm">\"%1$s\" 계정을 삭제하시겠습니까? 이 계정에 액세스하려면 다시 로그인해야 합니다.</string>
 
+    <string name="profile_edit_account">프로필 편집</string>
+    <string name="profile_username">사용자 이름</string>
+    <string name="profile_display_name">표시 이름</string>
+    <string name="profile_email">이메일</string>
+    <string name="profile_avatar_url">아바타 URL</string>
+    <string name="profile_description">설명</string>
+    <string name="profile_new_password">새 비밀번호</string>
+    <string name="profile_password_hint">현재 비밀번호를 유지하려면 비워두세요</string>
+    <string name="profile_edit_credentials">로그인 정보 편집</string>
+    <string name="profile_credential_hint">변경 사항이 로컬에 저장되었습니다. 주의해서 사용하세요. 유효하지 않은 자격 증명은 다시 로그인이 필요합니다.</string>
+    <string name="profile_about_version_copied">버전이 클립보드에 복사되었습니다</string>
+
+    <string name="profile_webhooks_add">웹훅 추가</string>
+    <string name="profile_webhooks_edit">웹훅 편집</string>
+    <string name="profile_webhooks_display_name">표시 이름</string>
+    <string name="profile_webhooks_url">URL</string>
+    <string name="profile_webhooks_delete_title">웹훅 삭제</string>
+    <string name="profile_webhooks_delete_confirm">이 웹훅을 삭제하시겠습니까?</string>
+
+    <string name="profile_shortcuts_delete_title">단축키 삭제</string>
+    <string name="profile_shortcuts_delete_confirm">이 단축키를 삭제하시겠습니까?</string>
+    <string name="profile_shortcuts_add">단축키 추가</string>
+    <string name="profile_shortcuts_edit">단축키 편집</string>
+    <string name="profile_shortcuts_title">제목</string>
+    <string name="profile_shortcuts_filter">필터</string>
+    <string name="profile_shortcuts_help">필터 구문 도움말</string>
+
     <string name="memo_action_edit">편집</string>
     <string name="memo_action_delete">삭제</string>
     <string name="memo_action_more">더 보기</string>
@@ -135,4 +162,14 @@
     <string name="search_sort_title">정렬</string>
     <string name="search_sort_newest">최신순</string>
     <string name="search_sort_oldest">오래된순</string>
+
+    <string-array name="profile_about_kaomojis">
+        <item>야호!|(ﾉ´ з `)노</item>
+        <item>헤헤|(o^ ^o)</item>
+        <item>누르지 마세요!|(⁄ ⁄•⁄ω⁄•⁄ ⁄)</item>
+        <item>그만해!|(⁄ ⁄&gt;⁄ ▽ ⁄&lt;⁄ ⁄)</item>
+        <item>찾았다!|(￣▽￣*)ゞ</item>
+        <item>아야!|&gt;_&lt;</item>
+        <item>제발 그만해...|m(_ _)m</item>
+    </string-array>
 </resources>

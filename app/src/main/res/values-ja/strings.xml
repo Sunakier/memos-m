@@ -51,6 +51,33 @@
     <string name="profile_remove_account_title">アカウントを削除</string>
     <string name="profile_remove_account_confirm">\"%1$s\" のアカウントを削除してもよろしいですか？このアカウントにアクセスするには、再度ログインする必要があります。</string>
 
+    <string name="profile_edit_account">プロフィールの編集</string>
+    <string name="profile_username">ユーザー名</string>
+    <string name="profile_display_name">表示名</string>
+    <string name="profile_email">メールアドレス</string>
+    <string name="profile_avatar_url">アバターURL</string>
+    <string name="profile_description">自己紹介</string>
+    <string name="profile_new_password">新しいパスワード</string>
+    <string name="profile_password_hint">現在のパスワードを維持する場合は空白のままにしてください</string>
+    <string name="profile_edit_credentials">ログイン情報の編集</string>
+    <string name="profile_credential_hint">変更はローカルに保存されます。無効な認証情報は再ログインが必要になるため、注意して使用してください。</string>
+    <string name="profile_about_version_copied">バージョンをクリップボードにコピーしました</string>
+
+    <string name="profile_webhooks_add">Webhookを追加</string>
+    <string name="profile_webhooks_edit">Webhookを編集</string>
+    <string name="profile_webhooks_display_name">表示名</string>
+    <string name="profile_webhooks_url">URL</string>
+    <string name="profile_webhooks_delete_title">Webhookを削除</string>
+    <string name="profile_webhooks_delete_confirm">このWebhookを削除してもよろしいですか？</string>
+
+    <string name="profile_shortcuts_delete_title">ショートカットを削除</string>
+    <string name="profile_shortcuts_delete_confirm">このショートカットを削除してもよろしいですか？</string>
+    <string name="profile_shortcuts_add">ショートカットを追加</string>
+    <string name="profile_shortcuts_edit">ショートカットを編集</string>
+    <string name="profile_shortcuts_title">タイトル</string>
+    <string name="profile_shortcuts_filter">フィルター</string>
+    <string name="profile_shortcuts_help">フィルター構文のヘルプ</string>
+
     <string name="memo_action_edit">編集</string>
     <string name="memo_action_delete">削除</string>
     <string name="memo_action_more">メニュー</string>
@@ -136,4 +163,14 @@
     <string name="search_sort_title">並び替え</string>
     <string name="search_sort_newest">新しい順</string>
     <string name="search_sort_oldest">古い順</string>
+
+    <string-array name="profile_about_kaomojis">
+        <item>わーい！|(ﾉ´ з `)ノ</item>
+        <item>えへへ|(o^ ^o)</item>
+        <item>押しちゃダメ！|(⁄ ⁄•⁄ω⁄•⁄ ⁄)</item>
+        <item>やめてよ！|(⁄ ⁄&gt;⁄ ▽ ⁄&lt;⁄ ⁄)</item>
+        <item>見つかっちゃった！|(￣▽￣*)ゞ</item>
+        <item>痛っ！|&gt;_&lt;</item>
+        <item>お願い、やめて…|m(_ _)m</item>
+    </string-array>
 </resources>
