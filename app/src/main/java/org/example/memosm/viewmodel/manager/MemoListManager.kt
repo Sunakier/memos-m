@@ -116,7 +116,6 @@ class SearchMemoListManager(
     
     fun updateFilter(filter: String?) {
         currentFilter = filter
-        reset() 
     }
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {

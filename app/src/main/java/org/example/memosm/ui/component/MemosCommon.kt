@@ -71,11 +71,13 @@ fun MemosScaffold(
         focusRequester.requestFocus()
     }
 
+    LaunchedEffect(navigator.currentDestination) {
+        focusManager.clearFocus()
+    }
+
     // Sync selected memo with navigator
     // We add memos and search items as dependencies to ensure selectedMemo is updated if the items in the list change (e.g. after an edit)
     LaunchedEffect(navigator.currentDestination, memos, uiState.searchMemoList.list.items) {
-        focusManager.clearFocus()
-
         val currentMemoKey = navigator.currentDestination?.contentKey
         if (currentMemoKey != null) {
             val selectedId =

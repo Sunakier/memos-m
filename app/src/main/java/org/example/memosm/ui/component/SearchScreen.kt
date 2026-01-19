@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import kotlinx.coroutines.delay
 import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.ui.component.item.MemoItem
@@ -83,6 +84,9 @@ fun MemoSearchBar(
     // Effect to trigger server-side search whenever filters change
     LaunchedEffect(query, searchSelectedTags, startDateMillis, endDateMillis, orderBy, expanded) {
         if (expanded) {
+            // Debounce the search to prevent excessive API calls while typing
+            delay(300)
+
             val filters = mutableListOf<String>()
 
             if (query.isNotBlank()) {
