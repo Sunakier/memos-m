@@ -81,6 +81,8 @@
     <string name="profile_credential_hint">Changes saved locally. Use carefully – invalid credentials will require re-login.</string>
 
     <string name="memo_action_edit">Edit</string>
+    <string name="memo_action_archive">Archive</string>
+    <string name="memo_action_unarchive">Unarchive</string>
     <string name="memo_action_delete">Delete</string>
     <string name="memo_action_more">More</string>
     <string name="memo_action_open_web">Open on Web</string>

@@ -79,6 +79,8 @@
     <string name="profile_shortcuts_help">フィルター構文のヘルプ</string>
 
     <string name="memo_action_edit">編集</string>
+    <string name="memo_action_archive">アーカイブ</string>
+    <string name="memo_action_unarchive">アーカイブ解除</string>
     <string name="memo_action_delete">削除</string>
     <string name="memo_action_more">メニュー</string>
     <string name="memo_action_open_web">Webで開く</string>

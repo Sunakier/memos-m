@@ -18,11 +18,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AddReaction
+import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -67,6 +69,8 @@ fun MemoItem(
     colors: CardColors = CardDefaults.cardColors(),
     onClick: (() -> Unit)? = null,
     onEdit: (() -> Unit)? = null,
+    onArchive: (() -> Unit)? = null,
+    onUnarchive: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
     onUpsertReaction: ((String) -> Unit)? = null,
     onDeleteReaction: ((Reaction) -> Unit)? = null,
@@ -268,6 +272,32 @@ fun MemoItem(
                                     leadingIcon = {
                                         Icon(
                                             Icons.Outlined.Edit, contentDescription = null
+                                        )
+                                    })
+                            }
+                            if (onArchive != null && memo.state == "NORMAL") {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.memo_action_archive)) },
+                                    onClick = {
+                                        showMenu = false
+                                        onArchive()
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Outlined.Archive, contentDescription = null
+                                        )
+                                    })
+                            }
+                            if (onUnarchive != null && memo.state == "ARCHIVED") {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.memo_action_unarchive)) },
+                                    onClick = {
+                                        showMenu = false
+                                        onUnarchive()
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Outlined.Unarchive, contentDescription = null
                                         )
                                     })
                             }
