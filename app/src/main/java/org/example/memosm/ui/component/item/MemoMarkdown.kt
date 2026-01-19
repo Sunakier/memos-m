@@ -10,7 +10,10 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -21,11 +24,13 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
+//import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
 import com.mikepenz.markdown.compose.LocalMarkdownColors
 import com.mikepenz.markdown.compose.LocalMarkdownComponents
 import com.mikepenz.markdown.compose.LocalMarkdownDimens
 import com.mikepenz.markdown.compose.MarkdownElement
 import com.mikepenz.markdown.compose.components.MarkdownComponentModel
+import com.mikepenz.markdown.compose.components.MarkdownComponents
 import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
 import com.mikepenz.markdown.compose.elements.highlightedCodeFence
@@ -58,10 +63,11 @@ fun MemoMarkdown(
     onContentUpdate: ((String) -> Unit)? = null,
     selectable: Boolean = false,
 ) {
+    android.util.Log.d("MemosDebug", "MemoMarkdown: content length=${content.length}, hasImage=${content.contains("![")}")
     val markdownContent: @Composable () -> Unit = {
         Markdown(
         markdownState = markdownState,
-        imageTransformer = Coil3ImageTransformerImpl,
+        imageTransformer = AttachmentCardImageTransformer,
         animations = markdownAnimations(
             animateTextSize = {
                 this
@@ -104,6 +110,7 @@ fun MemoMarkdown(
                 )
             },
             image = { model ->
+                android.util.Log.d("MemosDebug", "MemoMarkdown: image component triggered")
                 MarkdownAttachmentImage(
                     content = model.content,
                     node = model.node,
@@ -113,7 +120,15 @@ fun MemoMarkdown(
             },
             codeBlock = highlightedCodeBlock,
             codeFence = highlightedCodeFence,
-
+            paragraph = { model ->
+                CustomMarkdownParagraph(
+                    content = model.content,
+                    node = model.node,
+                    components = LocalMarkdownComponents.current,
+                    token = token,
+                    hostUrl = hostUrl
+                )
+            }
             ),
             modifier = modifier
         )
@@ -131,7 +146,15 @@ fun MemoMarkdown(
 @Composable
 fun MarkdownAttachmentImage(content: String, node: ASTNode, token: String, hostUrl: String) {
     val link = node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_DESTINATION)
-        ?.getUnescapedTextInNode(content) ?: return
+        ?.getUnescapedTextInNode(content)
+
+    android.util.Log.d("MemosDebug", "MarkdownAttachmentImage: link=$link")
+
+    if (link == null) return
+
+    // Maintain aspect ratio state, distinct from the default "16/9" if unknown
+    // We start with a default but allow it to change.
+    var aspectRatio by remember { mutableFloatStateOf(1.777f) }
 
     AttachmentCard(
         attachment = Attachment(
@@ -145,12 +168,17 @@ fun MarkdownAttachmentImage(content: String, node: ASTNode, token: String, hostU
         modifier = Modifier
             .padding(vertical = 8.dp)
             .fillMaxWidth()
-            .aspectRatio(16f / 9f),
+            .aspectRatio(aspectRatio),
         showInfo = false,
         showActions = false,
         showSize = false,
         showFilename = false,
-        compactMode = AttachmentCompactMode.Never
+        compactMode = AttachmentCompactMode.Never,
+        onRatioAvailable = {
+            if (it > 0) {
+                 aspectRatio = it
+            }
+        }
     )
 }
 
@@ -238,6 +266,56 @@ fun CustomMarkdownBlockQuote(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun CustomMarkdownParagraph(
+    content: String,
+    node: ASTNode,
+    components: MarkdownComponents,
+    token: String,
+    hostUrl: String
+) {
+    // Basic paragraph container, usually a wrapping logic or just a Column/FlowRow depending on implementation.
+    // Since images might need to be full width, we probably use a Column or let them flow.
+    // Standard markdown paragraphs are usually text flows.
+    // However, for AttachmentCard we want it to be a block if it's a standalone image.
+    // If it's mixed with text, it's tricky.
+    // Let's assume for now we iterate and render.
+
+    // Using FlowRow-like behavior or just standard traversal?
+    // The library's default paragraph likely uses a Text composable with Spans.
+    // But since we want to render Composables (AttachmentCard), we can't be inside a Text.
+    // So we must break the paragraph into Composables.
+
+    // A simple approach: Column of elements?
+    // But text should flow.
+    // "Text Image Text" -> "Text" (break) "Image" (break) "Text".
+    // This breaks inline flow but allows AttachmentCard.
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        node.children.forEach { child ->
+             when (child.type) {
+                 MarkdownElementTypes.IMAGE -> {
+                     android.util.Log.d("MemosDebug", "CustomMarkdownParagraph: Found IMAGE node")
+                     MarkdownAttachmentImage(
+                         content = content,
+                         node = child,
+                         token = token,
+                         hostUrl = hostUrl
+                     )
+                 }
+                 else -> {
+                     MarkdownElement(
+                         node = child,
+                         components = components,
+                         content = content,
+                         includeSpacer = false
+                     )
+                 }
+             }
         }
     }
 }

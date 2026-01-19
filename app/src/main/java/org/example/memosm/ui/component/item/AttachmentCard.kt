@@ -166,10 +166,10 @@ fun AttachmentCard(
         }
     }
 
-    LaunchedEffect(attachment, hostUrl) {
+    LaunchedEffect(attachment, hostUrl, uri, displayType) {
         android.util.Log.d(
             "MemosDebug",
-            "AttachmentCard: type=${attachment?.type}, extLink=${attachment?.externalLink}, hostUrl=$hostUrl"
+            "AttachmentCard: type=${attachment?.type}, mimeType=${attachment?.mimeType}, displayType=$displayType, extLink=${attachment?.externalLink}, hostUrl=$hostUrl, uri=$uri, isImage=$isImage"
         )
     }
 
