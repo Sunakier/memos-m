@@ -107,6 +107,7 @@ class DataStoreManager(private val context: Context) {
             @Suppress("SENSELESS_COMPARISON")
             if (account.id == null || account.hostUrl == null || account.accessToken == null) {
                 needsSave = true
+                @Suppress("USELESS_ELVIS")
                 account.copy(
                     id = account.id ?: java.util.UUID.randomUUID().toString(),
                     hostUrl = account.hostUrl ?: "",
