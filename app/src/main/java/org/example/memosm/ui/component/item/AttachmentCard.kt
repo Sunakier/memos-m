@@ -244,12 +244,15 @@ fun AttachmentCard(
                             modifier = Modifier.fillMaxSize(),
                             onRatioAvailable = { intrinsicRatio = it },
                             onClick = { showFullScreenImage = true })
-                    } else if (isVideo && (!attachment?.externalLink.isNullOrBlank() || uri != Uri.EMPTY)) {
+                    } else if (isVideo) {
+                        val videoUrl = if (uri != Uri.EMPTY) uri.toString() else AttachmentManager.getAttachmentUrl(hostUrl, attachment)
+                        if (!videoUrl.isNullOrBlank()) {
                             VideoPlayer(
-                            url = if (uri != Uri.EMPTY) uri.toString() else AttachmentManager.getAttachmentUrl(hostUrl, attachment) ?: "",
-                            token = token,
-                            modifier = Modifier.fillMaxSize(),
-                            onRatioAvailable = { intrinsicRatio = it })
+                                url = videoUrl,
+                                token = token,
+                                modifier = Modifier.fillMaxSize(),
+                                onRatioAvailable = { intrinsicRatio = it })
+                        }
                     } else if (isAudio && !audioUrl.isNullOrBlank()) {
                         AudioPlayer(
                             url = audioUrl,
