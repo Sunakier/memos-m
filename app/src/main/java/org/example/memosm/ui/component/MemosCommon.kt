@@ -356,7 +356,7 @@ fun GenericMemosListPane(
                                 viewModel.upsertMemoReaction(memo, emoji)
                             },
                             onDeleteReaction = { reaction ->
-                                viewModel.deleteMemoReaction(memo, reaction.reactionType)
+                                viewModel.deleteMemoReaction(memo, reaction)
                             },
                             onContentUpdate = if (isOwner) { newContent ->
                                 viewModel.updateMemo(

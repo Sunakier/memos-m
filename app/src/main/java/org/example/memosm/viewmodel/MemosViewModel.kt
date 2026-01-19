@@ -545,6 +545,24 @@ class MemosViewModel(
         }
     }
     
+    private fun updateMemoInState(updatedMemo: Memo) {
+        val transform = { state: PaginatedListState<Memo> ->
+            state.copy(items = state.items.map { if (it.name == updatedMemo.name) updatedMemo else it })
+        }
+        userMemoManager?.updateState(transform)
+        exploreMemoManager?.updateState(transform)
+        archivedMemoManager?.updateState(transform)
+        searchMemoManager?.updateState(transform)
+        commentManager?.updateState(transform)
+
+        // Keep selectedMemo in sync if it's the one that was updated
+        if (_uiState.value.detailPane.selectedMemo?.name == updatedMemo.name) {
+            _uiState.update {
+                it.copy(detailPane = it.detailPane.copy(selectedMemo = updatedMemo))
+            }
+        }
+    }
+
     fun updateMemo(memo: Memo, content: String, visibility: String, attachments: List<Attachment>, location: Location? = null, onSuccess: () -> Unit = {}) {
          viewModelScope.launch {
              try {
@@ -552,22 +570,7 @@ class MemosViewModel(
                  val updated = api?.updateMemo(memo.name!!, update, "content,visibility,attachments,location")
                  if (updated != null) {
                      onSuccess()
-                     // In-place update: replace just this memo in all lists to keep UI consistent
-                     val transform = { state: PaginatedListState<Memo> ->
-                         state.copy(items = state.items.map { if (it.name == memo.name) updated else it })
-                     }
-                     userMemoManager?.updateState(transform)
-                     exploreMemoManager?.updateState(transform)
-                     archivedMemoManager?.updateState(transform)
-                     searchMemoManager?.updateState(transform)
-                     commentManager?.updateState(transform)
-
-                     // Keep selectedMemo in sync
-                     if (_uiState.value.detailPane.selectedMemo?.name == updated.name) {
-                         _uiState.update { 
-                             it.copy(detailPane = it.detailPane.copy(selectedMemo = updated))
-                         }
-                     }
+                     updateMemoInState(updated)
                  }
              } catch (e: Exception) {
                  _uiState.update { it.copy(error = e.message) }
@@ -620,18 +623,27 @@ class MemosViewModel(
                  val reaction = Reaction(contentId = memo.name!!, reactionType = reactionType)
                  val request = UpsertMemoReactionRequest(name = memo.name, reaction = reaction)
                  api?.upsertMemoReaction(memo.name, request)
-                 userMemoManager?.fetch(refresh = true) 
-                 exploreMemoManager?.fetch(refresh = true)
+                 
+                 // Fetch latest memo state to be sure about all reactions and update in-place
+                 val updated = api?.getMemo(memo.name)
+                 if (updated != null) {
+                     updateMemoInState(updated)
+                 }
             } catch (e: Exception) { }
         }
     }
     
-    fun deleteMemoReaction(memo: Memo, reactionType: String) {
+    fun deleteMemoReaction(memo: Memo, reaction: Reaction) {
          viewModelScope.launch {
             try {
-                 api?.deleteMemoReaction(reactionType)
-                 userMemoManager?.fetch(refresh = true) 
-                 exploreMemoManager?.fetch(refresh = true)
+                 val reactionName = reaction.name ?: return@launch
+                 api?.deleteMemoReaction(reactionName)
+                 
+                 // Fetch latest memo state and update in-place
+                 val updated = api?.getMemo(memo.name!!)
+                 if (updated != null) {
+                     updateMemoInState(updated)
+                 }
             } catch (e: Exception) { }
         }
     }

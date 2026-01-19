@@ -157,7 +157,7 @@ fun MemoDetailView(
                                 viewModel.upsertMemoReaction(memo, emoji)
                             },
                             onDeleteReaction = { reaction ->
-                                viewModel.deleteMemoReaction(memo, reaction.reactionType)
+                                viewModel.deleteMemoReaction(memo, reaction)
                             },
                             onContentUpdate = if (isOwner) { newContent ->
                                 viewModel.updateMemo(
@@ -249,7 +249,7 @@ fun MemoDetailView(
                                 viewModel.upsertMemoReaction(comment, emoji)
                             },
                             onDeleteReaction = { reaction ->
-                                viewModel.deleteMemoReaction(comment, reaction.reactionType)
+                                viewModel.deleteMemoReaction(comment, reaction)
                             },
                             onContentUpdate = if (isCommentOwner) { newContent ->
                                 viewModel.updateMemo(
