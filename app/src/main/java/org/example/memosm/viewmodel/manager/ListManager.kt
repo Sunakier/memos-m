@@ -36,23 +36,36 @@ abstract class BaseListManager<T>(
     protected open suspend fun processItem(item: T): T = item
 
     override fun fetch(refresh: Boolean) {
+        android.util.Log.d("MemosListManager", "fetch: refresh=$refresh, currentItems=${_listState.value.items.size}")
         if (refresh) {
             reset()
         }
         
-        // If already loading or if no more pages (and not refreshing), skip
-        if (_listState.value.isLoading) return
-        if (!refresh && _listState.value.items.isNotEmpty() && _listState.value.nextPageToken == null) return
+        // If already loading, skip
+        if (_listState.value.isLoading) {
+            android.util.Log.d("MemosListManager", "fetch: already loading, skipping")
+            return
+        }
+
+        // If not refreshing and we already have items, we don't need to fetch page 1 again.
+        // The user should use loadMore() for the next page.
+        // This prevents resetting the list to page 1 when navigating back to a screen that has data.
+        if (!refresh && _listState.value.items.isNotEmpty()) {
+            android.util.Log.d("MemosListManager", "fetch: items exist and not refreshing, skipping")
+            return
+        }
 
         loadInternal(pageToken = null)
     }
 
     override fun loadMore() {
+        android.util.Log.d("MemosListManager", "loadMore: isLoading=${_listState.value.isLoading}, nextToken=${_listState.value.nextPageToken}")
         if (_listState.value.isLoading || _listState.value.nextPageToken == null) return
         loadInternal(pageToken = _listState.value.nextPageToken)
     }
 
     override fun reset() {
+        android.util.Log.d("MemosListManager", "reset")
         _listState.value = initialState
     }
     
@@ -64,10 +77,13 @@ abstract class BaseListManager<T>(
     private fun loadInternal(pageToken: String?) {
         scope.launch {
             try {
+                android.util.Log.d("MemosListManager", "loadInternal: pageToken=$pageToken")
                 _listState.value = _listState.value.copy(isLoading = true)
 
                 val (newItems, nextToken) = fetchFromApi(pageToken)
                 val processedItems = newItems.map { processItem(it) }
+
+                android.util.Log.d("MemosListManager", "loadInternal: fetched ${newItems.size} items, nextToken=$nextToken")
 
                 _listState.value = _listState.value.copy(
                     items = if (pageToken == null) processedItems else _listState.value.items + processedItems,
@@ -77,6 +93,7 @@ abstract class BaseListManager<T>(
             } catch (e: Exception) {
                 // In a real app we might want to expose the error in the state
                 e.printStackTrace()
+                android.util.Log.e("MemosListManager", "loadInternal error", e)
                 _listState.value = _listState.value.copy(isLoading = false)
             }
         }

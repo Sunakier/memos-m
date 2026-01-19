@@ -43,6 +43,10 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
     var isScrollingDown by remember { mutableStateOf(false) }
     var previousIndex by remember { mutableIntStateOf(0) }
     var previousScrollOffset by remember { mutableIntStateOf(0) }
+    
+    LaunchedEffect(Unit) {
+        viewModel.fetchAttachments(loadMore = false)
+    }
 
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (currentIndex, currentOffset) ->

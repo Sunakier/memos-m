@@ -30,12 +30,15 @@ class AttachmentManager(
     }
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Attachment>, String?> {
+        android.util.Log.d("AttachmentManager", "fetchFromApi: pageToken=$pageToken")
         val response = api.listAttachments(pageSize = ATTACHMENT_PAGE_SIZE, pageToken = pageToken)
+        android.util.Log.d("AttachmentManager", "fetchFromApi: got ${response.attachments?.size ?: 0} attachments, nextToken=${response.nextPageToken}")
         return Pair(response.attachments ?: emptyList(), response.nextPageToken)
     }
     
     suspend fun uploadAttachment(uri: Uri, context: Context): Attachment? {
         try {
+            android.util.Log.d("AttachmentManager", "uploadAttachment: starting upload for uri=$uri")
              val rawFilesDir = File(context.cacheDir, "raw_files")
             if (!rawFilesDir.exists()) rawFilesDir.mkdirs()
 
@@ -51,11 +54,13 @@ class AttachmentManager(
             }
             
             val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
+            android.util.Log.d("AttachmentManager", "uploadAttachment: prepared file $safeFileName, mime=$mimeType")
             
             val requestFile = file.asRequestBody(mimeType.toMediaTypeOrNull())
             val body = MultipartBody.Part.createFormData("file", fileName, requestFile)
             
             val attachment = api.uploadAttachment(body)
+            android.util.Log.d("AttachmentManager", "uploadAttachment: success, id=${attachment.name}")
             
             // Prepend to list locally
             updateState { state ->
