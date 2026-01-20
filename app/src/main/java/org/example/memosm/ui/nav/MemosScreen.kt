@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Shortcut
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -83,7 +82,7 @@ private fun MemosListPane(
         isLoading = uiState.userMemoList.list.isLoading,
         isRefreshing = uiState.isRefreshing,
         nextPageToken = uiState.userMemoList.list.nextPageToken,
-        onLoadMore = { viewModel.loadMore() },
+        onLoadMore = { viewModel.loadMoreUserMemos() },
         onRefresh = { viewModel.refreshAll() },
         onMemoClick = onMemoClick,
         listState = listState,

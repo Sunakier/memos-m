@@ -6,7 +6,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.CreationExtras
 import com.google.gson.Gson
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -376,8 +375,8 @@ class MemosViewModel(
     }
 
     fun toggleShortcutFilter(shortcut: Shortcut) {
-        val currentchk = _uiState.value.userMemoList.selectedShortcut
-        val newSelection = if (currentchk == shortcut) null else shortcut
+        val currShortcut = _uiState.value.userMemoList.selectedShortcut
+        val newSelection = if (currShortcut == shortcut) null else shortcut
 
         _uiState.update {
             it.copy(userMemoList = it.userMemoList.copy(selectedShortcut = newSelection))
@@ -538,7 +537,7 @@ class MemosViewModel(
         }
     }
 
-    fun loadMore() = userMemoManager?.loadMore()
+    fun loadMoreUserMemos() = userMemoManager?.loadMore()
     fun fetchExplore(refresh: Boolean = false) = exploreMemoManager?.fetch(refresh)
     fun loadMoreExplore() = exploreMemoManager?.loadMore()
 
