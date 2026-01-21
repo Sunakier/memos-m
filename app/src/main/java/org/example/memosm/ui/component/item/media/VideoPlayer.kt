@@ -54,10 +54,9 @@ fun VideoPlayer(
     var isReady by remember { mutableStateOf(false) }
 
     // Use cached ratio if available
-    LaunchedEffect(url) {
-        MediaCache.getAspectRatio(url)?.let {
-            onRatioAvailable(it)
-        }
+    val cachedRatio = MediaCache.getAspectRatio(url)
+    if (cachedRatio != null) {
+        onRatioAvailable(cachedRatio)
     }
 
     val exoPlayer = remember(url, token) {

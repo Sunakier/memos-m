@@ -13,6 +13,8 @@ import android.util.Base64
 import android.util.Log
 import android.webkit.MimeTypeMap
 import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -81,34 +83,44 @@ fun AttachmentCard(
     var showFullScreenImage by remember { mutableStateOf(false) }
     var isAudioPlaying by remember { mutableStateOf(false) }
 
-    val formattedDate = remember(attachment?.createTime) {
-        try {
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
-            inputFormat.timeZone = TimeZone.getTimeZone("UTC")
-            val date = inputFormat.parse(attachment?.createTime ?: "")
-            val outputFormat = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault())
-            date?.let { outputFormat.format(it) } ?: ""
-        } catch (e: Exception) {
-            Log.e("AttachmentCard", "Failed to parse date: ${attachment?.createTime}", e)
-            attachment?.createTime ?: ""
+    val formattedDate by produceState(initialValue = "", attachment?.createTime) {
+        if (attachment?.createTime != null) {
+            value = withContext(Dispatchers.Default) {
+                try {
+                    val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+                    inputFormat.timeZone = TimeZone.getTimeZone("UTC")
+                    val date = inputFormat.parse(attachment.createTime)
+                    val outputFormat = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault())
+                    date?.let { outputFormat.format(it) } ?: ""
+                } catch (e: Exception) {
+                    Log.e("AttachmentCard", "Failed to parse date: ${attachment.createTime}", e)
+                    attachment.createTime
+                }
+            }
         }
     }
 
-    val formattedSize = remember(attachment?.size) {
-        val bytes = attachment?.size?.toLongOrNull() ?: return@remember attachment?.size ?: ""
-        Formatter.formatFileSize(context, bytes)
+    val formattedSize by produceState(initialValue = "", attachment?.size) {
+        if (attachment?.size != null) {
+            value = withContext(Dispatchers.Default) {
+                val bytes = attachment.size.toLongOrNull()
+                if (bytes != null) Formatter.formatFileSize(context, bytes) else attachment.size
+            }
+        }
     }
 
-    val displayType = remember(uri, attachment?.displayType) {
-        if (uri != Uri.EMPTY) {
-            val crType = context.contentResolver.getType(uri)
-            if (crType != null) crType
-            else {
-                val ext = MimeTypeMap.getFileExtensionFromUrl(uri.toString()).lowercase()
-                MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: ""
+    val displayType by produceState(initialValue = "", uri, attachment?.displayType) {
+        value = withContext(Dispatchers.IO) {
+            if (uri != Uri.EMPTY) {
+                val crType = context.contentResolver.getType(uri)
+                if (crType != null) crType
+                else {
+                    val ext = MimeTypeMap.getFileExtensionFromUrl(uri.toString()).lowercase()
+                    MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: ""
+                }
+            } else {
+                attachment?.displayType ?: ""
             }
-        } else {
-            attachment?.displayType ?: ""
         }
     }
 
@@ -133,38 +145,43 @@ fun AttachmentCard(
     }
 
     // Audio handling (temp file for base64 if needed)
-    val audioUrl = remember(uri, attachment, displayType, hostUrl) {
-        if (!isAudio) return@remember null
-        when {
-            uri != Uri.EMPTY -> uri.toString()
-            else -> AttachmentManager.getAttachmentUrl(hostUrl, attachment) ?: when {
-                !attachment?.content.isNullOrBlank() -> {
-                    try {
-                        val bytes = Base64.decode(attachment.content, Base64.NO_WRAP)
-                        val ext = when {
-                            displayType.contains("aac") -> "aac"
-                            displayType.contains("mp3") || displayType.contains("mpeg") -> "mp3"
-                            displayType.contains("ogg") -> "ogg"
-                            displayType.contains("wav") -> "wav"
-                            displayType.contains("m4a") -> "m4a"
-                            else -> "aac"
+    val audioUrl = produceState<String?>(initialValue = null, uri, attachment, displayType, hostUrl) {
+        if (!isAudio) {
+            value = null
+        } else {
+            value = withContext(Dispatchers.IO) {
+                when {
+                    uri != Uri.EMPTY -> uri.toString()
+                    else -> AttachmentManager.getAttachmentUrl(hostUrl, attachment) ?: when {
+                        !attachment?.content.isNullOrBlank() -> {
+                            try {
+                                val bytes = Base64.decode(attachment.content, Base64.NO_WRAP)
+                                val ext = when {
+                                    displayType.contains("aac") -> "aac"
+                                    displayType.contains("mp3") || displayType.contains("mpeg") -> "mp3"
+                                    displayType.contains("ogg") -> "ogg"
+                                    displayType.contains("wav") -> "wav"
+                                    displayType.contains("m4a") -> "m4a"
+                                    else -> "aac"
+                                }
+                                val tempFile =
+                                    File(context.cacheDir, "cached_audio_${filename.hashCode()}.$ext")
+                                if (!tempFile.exists() || tempFile.length() != bytes.size.toLong()) {
+                                    tempFile.writeBytes(bytes)
+                                }
+                                tempFile.toUri().toString()
+                            } catch (e: Exception) {
+                                Log.e("AttachmentCard", "Error creating temp audio file", e)
+                                null
+                            }
                         }
-                        val tempFile =
-                            File(context.cacheDir, "cached_audio_${filename.hashCode()}.$ext")
-                        if (!tempFile.exists() || tempFile.length() != bytes.size.toLong()) {
-                            tempFile.writeBytes(bytes)
-                        }
-                        tempFile.toUri().toString()
-                    } catch (e: Exception) {
-                        Log.e("AttachmentCard", "Error creating temp audio file", e)
-                        null
+
+                        else -> null
                     }
                 }
-
-                else -> null
             }
         }
-    }
+    }.value
 
     LaunchedEffect(attachment, hostUrl, uri, displayType) {
         android.util.Log.d(

@@ -2,6 +2,8 @@ package org.example.memosm.ui.component.item.media
 
 import android.net.Uri
 import android.util.Base64
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -51,22 +54,28 @@ fun MemoImage(
     onClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val model = remember(uri, attachment, hostUrl) {
-        when {
-            uri != Uri.EMPTY -> uri
-            attachment != null -> AttachmentManager.getAttachmentUrl(hostUrl, attachment) ?: when {
-                !attachment.content.isNullOrBlank() -> {
-                    try {
-                        Base64.decode(attachment.content, Base64.NO_WRAP)
-                    } catch (_: Exception) {
-                        null
+    val modelState = produceState<Any?>(initialValue = null, uri, attachment, hostUrl) {
+        value = withContext(Dispatchers.IO) {
+            when {
+                uri != Uri.EMPTY -> uri
+                attachment != null -> AttachmentManager.getAttachmentUrl(hostUrl, attachment)
+                    ?: when {
+                        !attachment.content.isNullOrBlank() -> {
+                            try {
+                                Base64.decode(attachment.content, Base64.NO_WRAP)
+                            } catch (_: Exception) {
+                                null
+                            }
+                        }
+
+                        else -> null
                     }
-                }
+
                 else -> null
             }
-            else -> null
         }
     }
+    val model = modelState.value
 
     val cacheKey = remember(uri, attachment, hostUrl) {
         when {
@@ -75,18 +84,17 @@ fun MemoImage(
             else -> model?.toString()
         }
     }
-    
+
     LaunchedEffect(model, token) {
-        android.util.Log.d("MemosDebug", "MemoImage: model=$model, hasToken=${token != null}, hostUrl=$hostUrl")
+        android.util.Log.d(
+            "MemosDebug", "MemoImage: model=$model, hasToken=${token != null}, hostUrl=$hostUrl"
+        )
     }
 
     // Use cached ratio if available
-    LaunchedEffect(cacheKey) {
-        if (cacheKey != null) {
-            MediaCache.getAspectRatio(cacheKey)?.let {
-                onRatioAvailable(it)
-            }
-        }
+    val cachedRatio = cacheKey?.let { MediaCache.getAspectRatio(it) }
+    if (cachedRatio != null) {
+        onRatioAvailable(cachedRatio)
     }
 
     val headers = remember(token) {
@@ -96,20 +104,15 @@ fun MemoImage(
     }
 
     val imageRequest = remember(model, headers) {
-        ImageRequest.Builder(context)
-            .data(model)
-            .httpHeaders(headers)
-            .diskCachePolicy(CachePolicy.ENABLED)
-            .memoryCachePolicy(CachePolicy.ENABLED)
-            .build()
+        ImageRequest.Builder(context).data(model).httpHeaders(headers)
+            .diskCachePolicy(CachePolicy.ENABLED).memoryCachePolicy(CachePolicy.ENABLED).build()
     }
 
     var isLoading by remember { mutableStateOf(model != null) }
     var isError by remember { mutableStateOf(false) }
 
     Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
+        modifier = modifier, contentAlignment = Alignment.Center
     ) {
         if (model != null) {
             AsyncImage(
@@ -131,11 +134,12 @@ fun MemoImage(
                         onRatioAvailable(ratio)
                     }
                 },
-                onError = { 
-                    android.util.Log.e("MemosDebug", "MemoImage error: $filename, result=${it.result.throwable}")
-                    isLoading = false; isError = true 
-                }
-            )
+                onError = {
+                    android.util.Log.e(
+                        "MemosDebug", "MemoImage error: $filename, result=${it.result.throwable}"
+                    )
+                    isLoading = false; isError = true
+                })
         } else {
             isError = true
             isLoading = false
@@ -143,17 +147,18 @@ fun MemoImage(
 
         if (isLoading && !isRound) {
             CircularProgressIndicator(
-                modifier = Modifier.size(24.dp),
-                strokeWidth = 2.dp
+                modifier = Modifier.size(24.dp), strokeWidth = 2.dp
             )
         }
-        
+
         if (isError || (isLoading && isRound)) {
             if (placeholderIcon != null) {
                 Icon(
                     imageVector = placeholderIcon,
                     contentDescription = null,
-                    modifier = Modifier.fillMaxSize().padding(if (isRound) 4.dp else 0.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(if (isRound) 4.dp else 0.dp),
                     tint = MaterialTheme.colorScheme.outline
                 )
             } else if (isError) {

@@ -33,10 +33,12 @@ class AttachmentManager(
     }
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Attachment>, String?> {
-        android.util.Log.d("AttachmentManager", "fetchFromApi: pageToken=$pageToken")
-        val response = api.listAttachments(pageSize = ATTACHMENT_PAGE_SIZE, pageToken = pageToken)
-        android.util.Log.d("AttachmentManager", "fetchFromApi: got ${response.attachments?.size ?: 0} attachments, nextToken=${response.nextPageToken}")
-        return Pair(response.attachments ?: emptyList(), response.nextPageToken)
+        return withContext(Dispatchers.IO) {
+            android.util.Log.d("AttachmentManager", "fetchFromApi: pageToken=$pageToken")
+            val response = api.listAttachments(pageSize = ATTACHMENT_PAGE_SIZE, pageToken = pageToken)
+            android.util.Log.d("AttachmentManager", "fetchFromApi: got ${response.attachments?.size ?: 0} attachments, nextToken=${response.nextPageToken}")
+            Pair(response.attachments ?: emptyList(), response.nextPageToken)
+        }
     }
     
     suspend fun uploadAttachment(uri: Uri, context: Context): Attachment? {
