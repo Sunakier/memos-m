@@ -303,13 +303,20 @@ class MemosViewModel(
                     locale = locale ?: currentSetting.locale,
                     memoVisibility = memoVisibility ?: currentSetting.memoVisibility
                 )
-                api?.updateUserSetting(
-                    user.name!!,
-                    "general",
-                    UserSetting(generalSetting = newSetting),
-                    "general_setting"
-                )
-                fetchUserSettings(user.name!!)
+                val maskParts = mutableListOf<String>()
+                if (locale != null) maskParts.add("locale")
+                if (memoVisibility != null) maskParts.add("memoVisibility")
+                val updateMask = maskParts.joinToString(",")
+
+                if (updateMask.isNotEmpty()) {
+                    api?.updateUserSetting(
+                        user.name!!,
+                        "GENERAL",
+                        UserSetting(generalSetting = newSetting),
+                        updateMask
+                    )
+                    fetchUserSettings(user.name!!)
+                }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }

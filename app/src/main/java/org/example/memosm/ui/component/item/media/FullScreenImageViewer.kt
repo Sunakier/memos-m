@@ -1,9 +1,7 @@
 package org.example.memosm.ui.component.item.media
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VectorConverter
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -46,24 +44,18 @@ import coil3.compose.AsyncImage
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.ImageRequest
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.example.memosm.R
 import kotlin.math.abs
 
 @Composable
 fun FullScreenImageViewer(
-    model: Any,
-    filename: String,
-    token: String?,
-    onDismiss: () -> Unit
+    model: Any, filename: String, token: String?, onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
+        onDismissRequest = onDismiss, properties = DialogProperties(
+            usePlatformDefaultWidth = false, decorFitsSystemWindows = false
         )
     ) {
         val window = (LocalView.current.parent as? DialogWindowProvider)?.window
@@ -102,45 +94,44 @@ fun FullScreenImageViewer(
                     modifier = Modifier
                         .fillMaxSize()
                         .pointerInput(Unit) {
-                            detectTapGestures(
-                                onDoubleTap = {
-                                    coroutineScope.launch {
-                                        if (scale.value > 1.5f) {
-                                            scale.animateTo(1f)
-                                            offset.animateTo(Offset.Zero)
-                                        } else {
-                                            scale.animateTo(2.5f)
-                                        }
+                            detectTapGestures(onDoubleTap = {
+                                coroutineScope.launch {
+                                    if (scale.value > 1.5f) {
+                                        scale.animateTo(1f)
+                                        offset.animateTo(Offset.Zero)
+                                    } else {
+                                        scale.animateTo(2.5f)
                                     }
-                                },
-                                onTap = {
-                                    // Optional: Toggle UI visibility
                                 }
-                            )
+                            }, onTap = {
+                                // Optional: Toggle UI visibility
+                            })
                         }
                         .pointerInput(imageSize) {
                             detectTransformGestures { _, pan, zoom, _ ->
                                 coroutineScope.launch {
                                     // If not zoomed in significantly, vertical drag triggers dismiss gesture
-                                    if ((scale.value <= 1.05f && abs(dismissOffset.value) > 10f) || 
-                                        (scale.value <= 1.05f && abs(pan.y) > abs(pan.x) * 1.5f && !isZooming)) {
+                                    if ((scale.value <= 1.05f && abs(dismissOffset.value) > 10f) || (scale.value <= 1.05f && abs(
+                                            pan.y
+                                        ) > abs(pan.x) * 1.5f && !isZooming)
+                                    ) {
                                         val newDismissOffset = dismissOffset.value + pan.y
                                         dismissOffset.snapTo(newDismissOffset)
                                         scale.snapTo(1f) // Reset zoomed state if starting dismiss
                                     } else {
                                         // Regular pan/zoom
                                         if (zoom != 1f) isZooming = true
-                                        
+
                                         val newScale = (scale.value * zoom).coerceIn(0.8f, 5f)
-                                        
+
                                         // Calculate new offset to keep zoom centered around centroid
                                         val newOffset = if (newScale > 1f) {
                                             val currentOffset = offset.value
-                                            currentOffset + pan 
+                                            currentOffset + pan
                                         } else {
                                             Offset.Zero
                                         }
-                                        
+
                                         scale.snapTo(newScale)
                                         offset.snapTo(newOffset)
                                     }
@@ -148,7 +139,7 @@ fun FullScreenImageViewer(
                             }
                         }
                         .pointerInput(Unit) {
-                             // Detect end of gesture to animate back or dismiss
+                            // Detect end of gesture to animate back or dismiss
                             awaitPointerEventScope {
                                 while (true) {
                                     val event = awaitPointerEvent()
@@ -156,7 +147,7 @@ fun FullScreenImageViewer(
                                     if (event.changes.none { it.pressed }) {
                                         coroutineScope.launch {
                                             isZooming = false
-                                            
+
                                             // Handle Dismiss Logic
                                             if (abs(dismissOffset.value) > 200f) {
                                                 onDismiss()
@@ -171,16 +162,28 @@ fun FullScreenImageViewer(
                                             } else if (scale.value > 1f) {
                                                 // Check bounds logic
                                                 if (imageSize.width > 0 && imageSize.height > 0) {
-                                                     val imageWidth = imageSize.width.toFloat()
-                                                     val imageHeight = imageSize.height.toFloat()
-                                                     val info = calculateScaledSizes(viewWidth, viewHeight, imageWidth, imageHeight, scale.value)
-                                                     val maxX = maxOf(0f, (info.scaledWidth - viewWidth) / 2f)
-                                                     val maxY = maxOf(0f, (info.scaledHeight - viewHeight) / 2f)
-                                                     
-                                                     val targetX = offset.value.x.coerceIn(-maxX, maxX)
-                                                     val targetY = offset.value.y.coerceIn(-maxY, maxY)
-                                                     
-                                                     offset.animateTo(Offset(targetX, targetY))
+                                                    val imageWidth = imageSize.width.toFloat()
+                                                    val imageHeight = imageSize.height.toFloat()
+                                                    val info = calculateScaledSizes(
+                                                        viewWidth,
+                                                        viewHeight,
+                                                        imageWidth,
+                                                        imageHeight,
+                                                        scale.value
+                                                    )
+                                                    val maxX = maxOf(
+                                                        0f, (info.scaledWidth - viewWidth) / 2f
+                                                    )
+                                                    val maxY = maxOf(
+                                                        0f, (info.scaledHeight - viewHeight) / 2f
+                                                    )
+
+                                                    val targetX =
+                                                        offset.value.x.coerceIn(-maxX, maxX)
+                                                    val targetY =
+                                                        offset.value.y.coerceIn(-maxY, maxY)
+
+                                                    offset.animateTo(Offset(targetX, targetY))
                                                 }
                                             }
                                         }
@@ -193,8 +196,7 @@ fun FullScreenImageViewer(
                             scaleY = scale.value * dismissScale
                             translationX = offset.value.x
                             translationY = offset.value.y + dismissOffset.value
-                        },
-                    contentAlignment = Alignment.Center
+                        }, contentAlignment = Alignment.Center
                 ) {
                     val headers = remember(token) {
                         val builder = NetworkHeaders.Builder()
@@ -203,10 +205,7 @@ fun FullScreenImageViewer(
                     }
 
                     val fullImageRequest = remember(model, token) {
-                        ImageRequest.Builder(context)
-                            .data(model)
-                            .httpHeaders(headers)
-                            .build()
+                        ImageRequest.Builder(context).data(model).httpHeaders(headers).build()
                     }
 
                     AsyncImage(
@@ -219,8 +218,7 @@ fun FullScreenImageViewer(
                                 state.painter.intrinsicSize.width.toInt(),
                                 state.painter.intrinsicSize.height.toInt()
                             )
-                        }
-                    )
+                        })
                 }
             }
 
@@ -230,12 +228,10 @@ fun FullScreenImageViewer(
                     .align(Alignment.TopEnd)
                     .padding(16.dp)
                     .statusBarsPadding()
-                    .graphicsLayer { alpha = backgroundAlpha } 
-            ) {
+                    .graphicsLayer { alpha = backgroundAlpha }) {
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                    modifier = Modifier.background(Color.Black.copy(alpha = 0.4f), CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Close,
@@ -250,7 +246,9 @@ fun FullScreenImageViewer(
 
 data class ScaledInfo(val scaledWidth: Float, val scaledHeight: Float)
 
-fun calculateScaledSizes(viewWidth: Float, viewHeight: Float, imageWidth: Float, imageHeight: Float, scale: Float): ScaledInfo {
+fun calculateScaledSizes(
+    viewWidth: Float, viewHeight: Float, imageWidth: Float, imageHeight: Float, scale: Float
+): ScaledInfo {
     val scaleFactor = minOf(viewWidth / imageWidth, viewHeight / imageHeight)
     val fitWidth = imageWidth * scaleFactor
     val fitHeight = imageHeight * scaleFactor
