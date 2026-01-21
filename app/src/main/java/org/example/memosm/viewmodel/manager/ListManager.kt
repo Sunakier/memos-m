@@ -75,6 +75,48 @@ abstract class BaseListManager<T>(
         _listState.value = transform(_listState.value)
     }
 
+    // Insert or update an item. 
+    // isSameItem checks identity (e.g. ID match).
+    // comparator (optional) sorts the list after insertion.
+    fun upsert(
+        item: T, 
+        isSameItem: (T) -> Boolean, 
+        comparator: Comparator<T>? = null
+    ) {
+        updateState { state ->
+            val existingIndex = state.items.indexOfFirst(isSameItem)
+            val newItems = if (existingIndex != -1) {
+                // Replace existing
+                state.items.toMutableList().apply { set(existingIndex, item) }
+            } else {
+                // Add new
+                (state.items + item)
+            }
+            
+            val sortedItems = if (comparator != null) {
+                newItems.sortedWith(comparator)
+            } else {
+                newItems
+            }
+            state.copy(items = sortedItems)
+        }
+    }
+
+    // Replace an item only if it exists.
+    fun replace(item: T, isSameItem: (T) -> Boolean) {
+        updateState { state ->
+            val newItems = state.items.map { if (isSameItem(it)) item else it }
+            state.copy(items = newItems)
+        }
+    }
+
+    // Remove items matching the predicate.
+    fun remove(predicate: (T) -> Boolean) {
+        updateState { state ->
+            state.copy(items = state.items.filterNot(predicate))
+        }
+    }
+
     private fun loadInternal(pageToken: String?) {
         scope.launch {
             try {

@@ -33,16 +33,13 @@ data class MemoListState(
 // --- Attachment List State ---
 
 data class AttachmentListState(
-    val list: PaginatedListState<Attachment> = PaginatedListState(),
-    val cellWidth: Float = 240f
+    val list: PaginatedListState<Attachment> = PaginatedListState(), val cellWidth: Float = 240f
 )
 
 // --- Draft State ---
 
 data class DraftState(
-    val draftMemo: Memo? = null,
-    val isDraftLoaded: Boolean = false,
-    val composerResetToken: Int = 0
+    val draftMemo: Memo? = null, val isDraftLoaded: Boolean = false, val composerResetToken: Int = 0
 )
 
 // --- Detail Pane State ---
@@ -64,10 +61,10 @@ data class MemosUiState(
     val attachmentList: AttachmentListState = AttachmentListState(),
     val draft: DraftState = DraftState(),
     val detailPane: DetailPaneState = DetailPaneState(),
-    
+
     val accounts: List<Account> = emptyList(),
     val users: Map<String, User> = emptyMap(),
-    
+
     val isPosting: Boolean = false,
     val isRefreshing: Boolean = false,
     val refreshTrigger: Long = 0L,
@@ -77,6 +74,5 @@ data class MemosUiState(
 // --- Error Response ---
 
 data class MemosErrorResponse(
-    val code: Int? = null,
-    val message: String? = null
+    val code: Int? = null, val message: String? = null
 )

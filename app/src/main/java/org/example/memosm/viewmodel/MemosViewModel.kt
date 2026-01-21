@@ -619,14 +619,13 @@ class MemosViewModel(
     }
 
     private fun updateMemoInState(updatedMemo: Memo) {
-        val transform = { state: PaginatedListState<Memo> ->
-            state.copy(items = state.items.map { if (it.name == updatedMemo.name) updatedMemo else it })
-        }
-        userMemoManager?.updateState(transform)
-        exploreMemoManager?.updateState(transform)
-        archivedMemoManager?.updateState(transform)
-        searchMemoManager?.updateState(transform)
-        commentManager?.updateState(transform)
+        val isSame = { m: Memo -> m.name == updatedMemo.name }
+
+        userMemoManager?.replace(updatedMemo, isSame)
+        exploreMemoManager?.replace(updatedMemo, isSame)
+        archivedMemoManager?.replace(updatedMemo, isSame)
+        searchMemoManager?.replace(updatedMemo, isSame)
+        commentManager?.replace(updatedMemo, isSame)
 
         // Keep selectedMemo in sync if it's the one that was updated
         if (_uiState.value.detailPane.selectedMemo?.name == updatedMemo.name) {
@@ -660,6 +659,10 @@ class MemosViewModel(
                 }
 
                 val updated = api?.updateMemo(memo.name!!, update, maskParts.joinToString(","))
+                val comparator = Comparator<Memo> { m1, m2 ->
+                    (m2.displayTime ?: "").compareTo(m1.displayTime ?: "")
+                }
+
                 if (updated != null) {
                     onSuccess()
 
@@ -670,31 +673,19 @@ class MemosViewModel(
                     if (oldState != newState) {
                         if (newState == "ARCHIVED") {
                             // Move from User/Explore -> Archived
-                            val removeTransform = { listState: PaginatedListState<Memo> ->
-                                listState.copy(items = listState.items.filter { it.name != memo.name })
-                            }
-                            userMemoManager?.updateState(removeTransform)
-                            exploreMemoManager?.updateState(removeTransform)
+                            val isSame = { m: Memo -> m.name == memo.name }
+                            userMemoManager?.remove(isSame)
+                            exploreMemoManager?.remove(isSame)
 
-                            val addTransform = { listState: PaginatedListState<Memo> ->
-                                val newItems =
-                                    (listState.items + updated).sortedByDescending { it.displayTime }
-                                listState.copy(items = newItems)
-                            }
-                            archivedMemoManager?.updateState(addTransform)
+                            val isSameUpdated = { m: Memo -> m.name == updated.name }
+                            archivedMemoManager?.upsert(updated, isSameUpdated, comparator)
                         } else if (newState == "NORMAL") {
                             // Move from Archived -> User (and maybe Explore if public, but keep simple for now)
-                            val removeTransform = { listState: PaginatedListState<Memo> ->
-                                listState.copy(items = listState.items.filter { it.name != memo.name })
-                            }
-                            archivedMemoManager?.updateState(removeTransform)
+                            val isSame = { m: Memo -> m.name == memo.name }
+                            archivedMemoManager?.remove(isSame)
 
-                            val addTransform = { listState: PaginatedListState<Memo> ->
-                                val newItems =
-                                    (listState.items + updated).sortedByDescending { it.displayTime }
-                                listState.copy(items = newItems)
-                            }
-                            userMemoManager?.updateState(addTransform)
+                            val isSameUpdated = { m: Memo -> m.name == updated.name }
+                            userMemoManager?.upsert(updated, isSameUpdated, comparator)
                         }
                     }
 
@@ -711,16 +702,14 @@ class MemosViewModel(
             try {
                 api?.deleteMemo(memo.name!!)
                 onSuccess()
-                
+
                 // Local update: Remove from all lists
-                val removeTransform = { listState: PaginatedListState<Memo> ->
-                    listState.copy(items = listState.items.filter { it.name != memo.name })
-                }
-                userMemoManager?.updateState(removeTransform)
-                exploreMemoManager?.updateState(removeTransform)
-                archivedMemoManager?.updateState(removeTransform)
-                searchMemoManager?.updateState(removeTransform)
-                commentManager?.updateState(removeTransform)
+                val isSame = { m: Memo -> m.name == memo.name }
+                userMemoManager?.remove(isSame)
+                exploreMemoManager?.remove(isSame)
+                archivedMemoManager?.remove(isSame)
+                searchMemoManager?.remove(isSame)
+                commentManager?.remove(isSame)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
