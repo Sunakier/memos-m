@@ -172,7 +172,7 @@ interface MemosApiV0353 {
         @Path("memo", encoded = true) memo: String, @Body request: UpsertMemoReactionRequest
     ): Reaction
 
-    @DELETE("api/v1/reactions/{reaction}")
+    @DELETE("api/v1/{reaction}")
     suspend fun deleteMemoReaction(
         @Path("reaction", encoded = true) reaction: String
     )
