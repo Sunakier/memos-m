@@ -4,9 +4,12 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import android.webkit.MimeTypeMap
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import org.example.memosm.api.MemosApiV0353
@@ -39,27 +42,32 @@ class AttachmentManager(
     suspend fun uploadAttachment(uri: Uri, context: Context): Attachment? {
         try {
             android.util.Log.d("AttachmentManager", "uploadAttachment: starting upload for uri=$uri")
-             val rawFilesDir = File(context.cacheDir, "raw_files")
-            if (!rawFilesDir.exists()) rawFilesDir.mkdirs()
-
-            val fileName = getFileName(uri, context) ?: "unknown_file"
-            // Simple sanitization
-            val safeFileName = fileName.replace("[^a-zA-Z0-9._-]".toRegex(), "_")
-            val file = File(rawFilesDir, safeFileName)
-
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                FileOutputStream(file).use { outputStream ->
-                    inputStream.copyTo(outputStream)
-                }
+            
+            val contentResolver = context.contentResolver
+            val resolverMimeType = contentResolver.getType(uri)
+            val mimeType = if (resolverMimeType == null || resolverMimeType == "application/octet-stream") {
+                 val ext = MimeTypeMap.getFileExtensionFromUrl(uri.toString()).lowercase()
+                 MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: resolverMimeType ?: "application/octet-stream"
+            } else {
+                resolverMimeType
             }
+            val fileName = getFileName(uri, context) ?: "unknown_file"
             
-            val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
-            android.util.Log.d("AttachmentManager", "uploadAttachment: prepared file $safeFileName, mime=$mimeType")
+            val base64Content = withContext(Dispatchers.IO) {
+                contentResolver.openInputStream(uri)?.use { inputStream ->
+                    val bytes = inputStream.readBytes()
+                    android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                }
+            } ?: return null
+
+            val attachmentToCreate = Attachment(
+                filename = fileName,
+                type = mimeType,
+                content = base64Content
+            )
             
-            val requestFile = file.asRequestBody(mimeType.toMediaTypeOrNull())
-            val body = MultipartBody.Part.createFormData("file", fileName, requestFile)
-            
-            val attachment = api.uploadAttachment(body)
+            android.util.Log.d("AttachmentManager", "uploadAttachment: sending createAttachment request for $fileName")
+            val attachment = api.createAttachment(attachmentToCreate)
             android.util.Log.d("AttachmentManager", "uploadAttachment: success, id=${attachment.name}")
             
             // Prepend to list locally

@@ -42,11 +42,7 @@ interface MemosApiV0353 {
         @Query("updateMask") updateMask: String
     ): Attachment
 
-    @Multipart
-    @POST("api/v1/attachments:upload")
-    suspend fun uploadAttachment(
-        @Part file: MultipartBody.Part
-    ): Attachment
+
 
     // --- AuthService ---
     @GET("api/v1/auth/sessions/current")

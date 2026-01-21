@@ -124,6 +124,26 @@ suspend fun uriToBase64Attachment(uri: Uri, context: Context): Attachment? =
         }
     }
 
+/**
+ * Converts a base64 string (from a draft Attachment) back to a temporary file Uri for uploading.
+ */
+suspend fun base64ToTempUri(
+    base64: String,
+    filename: String,
+    mimeType: String,
+    context: Context
+): Uri? = withContext(Dispatchers.IO) {
+    try {
+        val bytes = Base64.decode(base64, Base64.DEFAULT)
+        val file = File(context.cacheDir, "temp_upload_${System.currentTimeMillis()}_$filename")
+        file.writeBytes(bytes)
+        file.toUri()
+    } catch (e: Exception) {
+        Log.e("MemoComposer", "Error converting base64 to temp Uri", e)
+        null
+    }
+}
+
 @Composable
 fun MemoComposer(
     onPublish: (String, String, List<Attachment>, Location?) -> Unit,
@@ -701,26 +721,52 @@ fun MemoComposer(
                     onClick = {
                         scope.launch {
                             val pendingUploads =
-                                draftAttachments.filter { it.second == null && it.first != Uri.EMPTY }
+                                draftAttachments.filter {
+                                    // Case 1: New local file (Uri is not EMPTY, Attachment is null)
+                                    (it.second == null && it.first != Uri.EMPTY) ||
+                                            // Case 2: Restored draft (Uri is EMPTY, Attachment has content but no name on server)
+                                            (it.second != null && it.second!!.name == null && it.second!!.content != null)
+                                }
                             val uploadedAttachments = mutableListOf<Attachment>()
 
-                            for ((uri, _) in pendingUploads) {
+                            for ((uri, attachment) in pendingUploads) {
                                 isUploadingCount++
-                                uploadingUris = uploadingUris + uri
-                                val attachment = onUploadFile(uri, context)
-                                uploadingUris = uploadingUris - uri
-                                if (attachment != null) {
-                                    uploadedAttachments.add(attachment)
-                                    // Update local draft state immediately as we upload
-                                    draftAttachments = draftAttachments.map {
-                                        if (it.first == uri) uri to attachment else it
+
+                                // If it's a restored draft, we first need to convert it to a temp Uri
+                                val uploadUri = if (uri == Uri.EMPTY && attachment != null) {
+                                    base64ToTempUri(
+                                        attachment.content ?: "",
+                                        attachment.filename,
+                                        attachment.type,
+                                        context
+                                    )
+                                } else {
+                                    uri
+                                }
+
+                                if (uploadUri != null) {
+                                    uploadingUris = uploadingUris + uploadUri
+                                    val uploaded = onUploadFile(uploadUri, context)
+                                    uploadingUris = uploadingUris - uploadUri
+
+                                    if (uploaded != null) {
+                                        uploadedAttachments.add(uploaded)
+                                        // Update local draft state immediately as we upload
+                                        // We match by the ORIGINAL pair to replace it
+                                        draftAttachments = draftAttachments.map {
+                                            if (it == (uri to attachment)) uploadUri to uploaded else it
+                                        }
                                     }
                                 }
                                 isUploadingCount--
                             }
 
-                            val existingAttachments = draftAttachments.mapNotNull { it.second }
-                            val finalAttachments = existingAttachments + uploadedAttachments
+                            // Now collect all valid attachments:
+                            // 1. Items that were already valid (non-null attachment with name)
+                            // 2. Newly uploaded items are already swapped into draftAttachments by the loop above,
+                            //    OR added to uploadedAttachments if we want to be safe, but the loop upates draftAttachments.
+                            // Let's just grab everything from draftAttachments that has a valid server-side attachment (name != null)
+                            val finalAttachments = draftAttachments.mapNotNull { it.second }.filter { it.name != null }
 
                             onPublish(
                                 contentState.text.toString(), visibility, finalAttachments, location
