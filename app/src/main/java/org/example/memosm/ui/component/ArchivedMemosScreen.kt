@@ -53,7 +53,7 @@ fun ArchivedMemosScreen(
                     isLoading = uiState.archivedMemoList.list.isLoading,
                     isRefreshing = uiState.isRefreshing,
                     nextPageToken = uiState.archivedMemoList.list.nextPageToken,
-                    onLoadMore = { viewModel.loadMoreArchived() },
+                    onLoadMore = { viewModel.loadMoreArchivedMemos() },
                     onRefresh = { viewModel.fetchArchivedMemos(refresh = true) },
                     onMemoClick = onMemoClick,
                     listState = listState,

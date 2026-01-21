@@ -223,7 +223,7 @@ private fun ProfileListPane(
 
     PullToRefreshBox(
         isRefreshing = uiState.isRefreshing,
-        onRefresh = { viewModel.refreshAll() },
+        onRefresh = { viewModel.fetchUserMemos(refresh = true) },
         modifier = Modifier.fillMaxSize()
     ) {
         LazyColumn(
@@ -389,7 +389,7 @@ private fun ProfileListPane(
                             ErrorView(
                                 title = stringResource(R.string.common_error_failed_to_load_profile),
                                 message = uiState.error!!,
-                                onRetry = { viewModel.refreshAll() })
+                                onRetry = { viewModel.fetchUserMemos(refresh = true) })
                         }
                     }
                 }
@@ -402,7 +402,7 @@ private fun ProfileListPane(
                     ErrorView(
                         message = uiState.error
                             ?: stringResource(R.string.profile_user_info_not_available),
-                        onRetry = { viewModel.refreshAll() },
+                        onRetry = { viewModel.fetchUserMemos(refresh = true) },
                         modifier = itemModifier.fillParentMaxHeight(0.7f)
                     )
                 }

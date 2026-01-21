@@ -107,7 +107,7 @@ fun MemoSearchBar(
             }
 
             val filterString = if (filters.isEmpty()) null else filters.joinToString(" && ")
-            viewModel.prepareSearch(isExplore, filterString, orderBy)
+            viewModel.searchMemos(isExplore, filterString, orderBy)
         }
     }
 

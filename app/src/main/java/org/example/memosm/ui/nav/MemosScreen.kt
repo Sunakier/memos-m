@@ -83,7 +83,7 @@ private fun MemosListPane(
         isRefreshing = uiState.isRefreshing,
         nextPageToken = uiState.userMemoList.list.nextPageToken,
         onLoadMore = { viewModel.loadMoreUserMemos() },
-        onRefresh = { viewModel.refreshAll() },
+        onRefresh = { viewModel.fetchUserMemos(refresh = true) },
         onMemoClick = onMemoClick,
         listState = listState,
         errorTitle = stringResource(R.string.common_error_failed_to_load_memos),

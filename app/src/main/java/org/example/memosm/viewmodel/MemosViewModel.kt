@@ -528,37 +528,62 @@ class MemosViewModel(
         }
     }
 
-    // --- List Accessors ---
+    fun fetchUserMemos(refresh: Boolean = false) {
+        if (refresh) updateRefreshTrigger()
+        userMemoManager?.fetch(refresh)
+        if (refresh) clearRefreshingState()
+    }
+    fun loadMoreUserMemos() = userMemoManager?.loadMore()
 
-    fun refreshAll() {
+    fun fetchExploreMemos(refresh: Boolean = false) {
+        if (refresh) updateRefreshTrigger()
+        exploreMemoManager?.fetch(refresh)
+        if (refresh) clearRefreshingState()
+    }
+    fun loadMoreExploreMemos() = exploreMemoManager?.loadMore()
+
+    fun fetchArchivedMemos(refresh: Boolean = false) {
+        if (refresh) updateRefreshTrigger()
+        archivedMemoManager?.fetch(refresh)
+        if (refresh) clearRefreshingState()
+    }
+    fun loadMoreArchivedMemos() = archivedMemoManager?.loadMore()
+
+    fun fetchSearchMemos(refresh: Boolean = false) {
+        if (refresh) updateRefreshTrigger()
+        searchMemoManager?.fetch(refresh)
+        if (refresh) clearRefreshingState()
+    }
+    fun loadMoreSearchMemos() = searchMemoManager?.loadMore()
+
+    fun searchMemos(isExplore: Boolean, filter: String?, orderBy: String? = null) {
+        searchMemoManager?.updateFilter(filter)
+        fetchSearchMemos(refresh = true)
+    }
+
+    private fun updateRefreshTrigger() {
         _uiState.update {
             it.copy(
                 isRefreshing = true,
                 refreshTrigger = System.currentTimeMillis()
             )
         }
-        userMemoManager?.fetch(refresh = true)
-        exploreMemoManager?.fetch(refresh = true)
+    }
+
+    private fun clearRefreshingState() {
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = false) }
         }
     }
 
-    fun loadMoreUserMemos() = userMemoManager?.loadMore()
-    fun fetchExplore(refresh: Boolean = false) = exploreMemoManager?.fetch(refresh)
-    fun loadMoreExplore() = exploreMemoManager?.loadMore()
-
-    fun fetchArchivedMemos(refresh: Boolean = false) = archivedMemoManager?.fetch(refresh)
-    fun loadMoreArchived() = archivedMemoManager?.loadMore()
-
-    fun prepareSearch(isExplore: Boolean, filter: String?, orderBy: String? = null) {
-        searchMemoManager?.updateFilter(filter)
-        searchMemoManager?.fetch(refresh = true)
+    fun fetchAttachments(refresh: Boolean = false) {
+        if (refresh) updateRefreshTrigger()
+        attachmentManager?.fetch(refresh = refresh, softRefresh = refresh)
+        if (refresh) clearRefreshingState()
     }
 
-    fun fetchAttachments(loadMore: Boolean = false) {
-        if (loadMore) attachmentManager?.loadMore()
-        else attachmentManager?.fetch(refresh = true)
+    fun loadMoreAttachments() {
+        attachmentManager?.loadMore()
     }
 
     fun updateAttachmentCellWidth(width: Float) {

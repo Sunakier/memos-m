@@ -154,9 +154,9 @@ fun MainScreen(
         val currentTime = System.currentTimeMillis()
         if (currentDestination == destination && currentTime - lastTapTime < 500) {
             when (destination) {
-                MainDestination.MEMOS -> viewModel.refreshAll()
-                MainDestination.EXPLORE -> viewModel.fetchExplore(refresh = true)
-                MainDestination.ATTACHMENTS -> viewModel.fetchAttachments()
+                MainDestination.MEMOS -> viewModel.fetchUserMemos(refresh = true)
+                MainDestination.EXPLORE -> viewModel.fetchExploreMemos(refresh = true)
+                MainDestination.ATTACHMENTS -> viewModel.fetchAttachments(refresh = true)
                 else -> {}
             }
         }

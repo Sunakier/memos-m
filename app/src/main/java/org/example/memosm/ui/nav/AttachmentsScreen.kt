@@ -45,7 +45,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
     var previousScrollOffset by remember { mutableIntStateOf(0) }
     
     LaunchedEffect(Unit) {
-        viewModel.fetchAttachments(loadMore = false)
+        viewModel.fetchAttachments(refresh = false)
     }
 
     LaunchedEffect(listState) {
@@ -95,13 +95,13 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
 
     LaunchedEffect(shouldLoadMore.value) {
         if (shouldLoadMore.value) {
-            viewModel.fetchAttachments(loadMore = true)
+            viewModel.loadMoreAttachments()
         }
     }
 
     PullToRefreshBox(
         isRefreshing = uiState.isRefreshing, onRefresh = {
-            viewModel.fetchAttachments(loadMore = false)
+            viewModel.fetchAttachments(refresh = true)
         }, modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
@@ -148,7 +148,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
                     ErrorView(
                         title = stringResource(R.string.common_error_failed_to_load_attachments),
                         message = uiState.error!!,
-                        onRetry = { viewModel.fetchAttachments(loadMore = false) },
+                        onRetry = { viewModel.fetchAttachments(refresh = false) },
                         modifier = Modifier.align(Alignment.Center)
                     )
                 } else {
