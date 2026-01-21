@@ -9,14 +9,14 @@ import org.example.memosm.viewmodel.PaginatedListState
 
 interface ListManager<T> {
     val listState: StateFlow<PaginatedListState<T>>
-    
+
     // Refresh: true to reload from page 1, false to fetch if empty
     // SoftRefresh: when true, keeps existing items visible during refresh (no reset)
     fun fetch(refresh: Boolean = false, softRefresh: Boolean = false)
-    
+
     // Load next page if available
     fun loadMore()
-    
+
     // Reset the list completely (e.g. on logout)
     fun reset()
 }
@@ -32,16 +32,19 @@ abstract class BaseListManager<T>(
     // Abstract methods to be implemented by specific managers
     // Returns a Pair of (Items, NextPageToken)
     protected abstract suspend fun fetchFromApi(pageToken: String?): Pair<List<T>, String?>
-    
+
     // Optional: Process item before adding to state (e.g. resolve relative URLs)
     protected open suspend fun processItem(item: T): T = item
 
     override fun fetch(refresh: Boolean, softRefresh: Boolean) {
-        android.util.Log.d("MemosListManager", "fetch: refresh=$refresh, softRefresh=$softRefresh, currentItems=${_listState.value.items.size}")
+        android.util.Log.d(
+            "MemosListManager",
+            "fetch: refresh=$refresh, softRefresh=$softRefresh, currentItems=${_listState.value.items.size}"
+        )
         if (refresh && !softRefresh) {
             reset()
         }
-        
+
         // If already loading, skip
         if (_listState.value.isLoading) {
             android.util.Log.d("MemosListManager", "fetch: already loading, skipping")
@@ -52,7 +55,9 @@ abstract class BaseListManager<T>(
         // The user should use loadMore() for the next page.
         // This prevents resetting the list to page 1 when navigating back to a screen that has data.
         if (!refresh && _listState.value.items.isNotEmpty()) {
-            android.util.Log.d("MemosListManager", "fetch: items exist and not refreshing, skipping")
+            android.util.Log.d(
+                "MemosListManager", "fetch: items exist and not refreshing, skipping"
+            )
             return
         }
 
@@ -60,7 +65,10 @@ abstract class BaseListManager<T>(
     }
 
     override fun loadMore() {
-        android.util.Log.d("MemosListManager", "loadMore: isLoading=${_listState.value.isLoading}, nextToken=${_listState.value.nextPageToken}")
+        android.util.Log.d(
+            "MemosListManager",
+            "loadMore: isLoading=${_listState.value.isLoading}, nextToken=${_listState.value.nextPageToken}"
+        )
         if (_listState.value.isLoading || _listState.value.nextPageToken.isNullOrBlank()) return
         loadInternal(pageToken = _listState.value.nextPageToken)
     }
@@ -69,7 +77,7 @@ abstract class BaseListManager<T>(
         android.util.Log.d("MemosListManager", "reset")
         _listState.value = initialState
     }
-    
+
     // Helper to allow external updates (e.g. CRUD operations updating the list locally)
     fun updateState(transform: (PaginatedListState<T>) -> PaginatedListState<T>) {
         _listState.value = transform(_listState.value)
@@ -79,9 +87,7 @@ abstract class BaseListManager<T>(
     // isSameItem checks identity (e.g. ID match).
     // comparator (optional) sorts the list after insertion.
     fun upsert(
-        item: T, 
-        isSameItem: (T) -> Boolean, 
-        comparator: Comparator<T>? = null
+        item: T, isSameItem: (T) -> Boolean, comparator: Comparator<T>? = null
     ) {
         updateState { state ->
             val existingIndex = state.items.indexOfFirst(isSameItem)
@@ -92,7 +98,7 @@ abstract class BaseListManager<T>(
                 // Add new
                 (state.items + item)
             }
-            
+
             val sortedItems = if (comparator != null) {
                 newItems.sortedWith(comparator)
             } else {
@@ -125,10 +131,13 @@ abstract class BaseListManager<T>(
 
                 val (newItems, rawNextToken) = fetchFromApi(pageToken)
                 val nextToken = if (rawNextToken.isNullOrBlank()) null else rawNextToken
-                
+
                 val processedItems = newItems.map { processItem(it) }
 
-                android.util.Log.d("MemosListManager", "loadInternal: fetched ${newItems.size} items, rawToken='$rawNextToken' -> nextToken=$nextToken")
+                android.util.Log.d(
+                    "MemosListManager",
+                    "loadInternal: fetched ${newItems.size} items, rawToken='$rawNextToken' -> nextToken=$nextToken"
+                )
 
                 _listState.value = _listState.value.copy(
                     items = if (pageToken == null) processedItems else _listState.value.items + processedItems,
