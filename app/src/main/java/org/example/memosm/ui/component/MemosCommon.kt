@@ -353,10 +353,28 @@ fun GenericMemosListPane(
                                 { memoToEdit = memo }
                             } else null,
                             onArchive = if (isOwner) {
-                                { viewModel.updateMemoState(memo, "ARCHIVED") }
+                                {
+                                    viewModel.updateMemo(
+                                        memo,
+                                        memo.content,
+                                        memo.visibility,
+                                        memo.attachments ?: emptyList(),
+                                        memo.location,
+                                        "ARCHIVED"
+                                    )
+                                }
                             } else null,
                             onUnarchive = if (isOwner) {
-                                { viewModel.updateMemoState(memo, "NORMAL") }
+                                {
+                                    viewModel.updateMemo(
+                                        memo,
+                                        memo.content,
+                                        memo.visibility,
+                                        memo.attachments ?: emptyList(),
+                                        memo.location,
+                                        "NORMAL"
+                                    )
+                                }
                             } else null,
                             onDelete = if (isOwner) {
                                 { memoToDelete = memo }

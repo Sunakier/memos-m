@@ -73,15 +73,10 @@ class MemosViewModel(
             normalizedBaseUrl = normalizedBaseUrl.removeSuffix("api/v1/")
         }
 
-        val client = OkHttpClient.Builder()
-            .addInterceptor(AuthInterceptor(token))
-            .build()
+        val client = OkHttpClient.Builder().addInterceptor(AuthInterceptor(token)).build()
 
-        val retrofit = Retrofit.Builder()
-            .baseUrl(normalizedBaseUrl)
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
+        val retrofit = Retrofit.Builder().baseUrl(normalizedBaseUrl).client(client)
+            .addConverterFactory(GsonConverterFactory.create()).build()
 
         return retrofit.create(MemosApiV0353::class.java)
     }
@@ -110,14 +105,10 @@ class MemosViewModel(
                 _uiState.update {
                     it.copy(
                         session = SessionState(
-                            token = account.accessToken,
-                            hostUrl = account.hostUrl,
-                            currUser = null
-                        ),
-                        accounts = it.accounts.map { acc ->
+                            token = account.accessToken, hostUrl = account.hostUrl, currUser = null
+                        ), accounts = it.accounts.map { acc ->
                             acc.copy(isActive = acc.id == account.id)
-                        },
-                        users = emptyMap()
+                        }, users = emptyMap()
                     )
                 }
                 pendingUserRequests.clear()
@@ -151,9 +142,7 @@ class MemosViewModel(
                 searchMemoManager = SearchMemoListManager(viewModelScope, currentApi)
                 commentManager = CommentListManager(viewModelScope, currentApi)
                 attachmentManager = AttachmentManager(
-                    viewModelScope,
-                    currentApi,
-                    _uiState.value.attachmentList.cellWidth
+                    viewModelScope, currentApi, _uiState.value.attachmentList.cellWidth
                 )
 
                 startStateCollection()
@@ -175,13 +164,11 @@ class MemosViewModel(
                     userMemoManager!!.listState,
                     exploreMemoManager!!.listState,
                     archivedMemoManager!!.listState
-                ) { u, e, a -> Triple(u, e, a) },
-                combine(
+                ) { u, e, a -> Triple(u, e, a) }, combine(
                     searchMemoManager!!.listState,
                     commentManager!!.listState,
                     attachmentManager!!.listState
-                ) { s, c, at -> Triple(s, c, at) },
-                attachmentManager!!.cellWidth
+                ) { s, c, at -> Triple(s, c, at) }, attachmentManager!!.cellWidth
             ) { (userMemos, exploreMemos, archivedMemos), (searchMemos, comments, attachments), cellWidth ->
                 _uiState.value.copy(
                     userMemoList = _uiState.value.userMemoList.copy(list = userMemos),
@@ -195,12 +182,9 @@ class MemosViewModel(
                 _uiState.value = newState
 
                 // Fetch missing users for all visible lists
-                val allCreators = (newState.userMemoList.list.items +
-                        newState.exploreMemoList.list.items +
-                        newState.searchMemoList.list.items +
-                        newState.archivedMemoList.list.items)
-                    .mapNotNull { it.creator }
-                    .distinct()
+                val allCreators =
+                    (newState.userMemoList.list.items + newState.exploreMemoList.list.items + newState.searchMemoList.list.items + newState.archivedMemoList.list.items).mapNotNull { it.creator }
+                        .distinct()
                 fetchUsers(allCreators)
             }
         }
@@ -310,10 +294,7 @@ class MemosViewModel(
 
                 if (updateMask.isNotEmpty()) {
                     api?.updateUserSetting(
-                        user.name!!,
-                        "GENERAL",
-                        UserSetting(generalSetting = newSetting),
-                        updateMask
+                        user.name!!, "GENERAL", UserSetting(generalSetting = newSetting), updateMask
                     )
                     fetchUserSettings(user.name!!)
                 }
@@ -393,10 +374,7 @@ class MemosViewModel(
     }
 
     fun createShortcut(
-        title: String,
-        filter: String,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
+        title: String, filter: String, onSuccess: () -> Unit, onError: (String) -> Unit
     ) {
         viewModelScope.launch {
             try {
@@ -455,10 +433,7 @@ class MemosViewModel(
     }
 
     fun createWebhook(
-        displayName: String,
-        url: String,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
+        displayName: String, url: String, onSuccess: () -> Unit, onError: (String) -> Unit
     ) {
         viewModelScope.launch {
             try {
@@ -533,6 +508,7 @@ class MemosViewModel(
         userMemoManager?.fetch(refresh)
         if (refresh) clearRefreshingState()
     }
+
     fun loadMoreUserMemos() = userMemoManager?.loadMore()
 
     fun fetchExploreMemos(refresh: Boolean = false) {
@@ -540,6 +516,7 @@ class MemosViewModel(
         exploreMemoManager?.fetch(refresh)
         if (refresh) clearRefreshingState()
     }
+
     fun loadMoreExploreMemos() = exploreMemoManager?.loadMore()
 
     fun fetchArchivedMemos(refresh: Boolean = false) {
@@ -547,6 +524,7 @@ class MemosViewModel(
         archivedMemoManager?.fetch(refresh)
         if (refresh) clearRefreshingState()
     }
+
     fun loadMoreArchivedMemos() = archivedMemoManager?.loadMore()
 
     fun fetchSearchMemos(refresh: Boolean = false) {
@@ -554,6 +532,7 @@ class MemosViewModel(
         searchMemoManager?.fetch(refresh)
         if (refresh) clearRefreshingState()
     }
+
     fun loadMoreSearchMemos() = searchMemoManager?.loadMore()
 
     fun searchMemos(isExplore: Boolean, filter: String?, orderBy: String? = null) {
@@ -564,8 +543,7 @@ class MemosViewModel(
     private fun updateRefreshTrigger() {
         _uiState.update {
             it.copy(
-                isRefreshing = true,
-                refreshTrigger = System.currentTimeMillis()
+                isRefreshing = true, refreshTrigger = System.currentTimeMillis()
             )
         }
     }
@@ -664,6 +642,7 @@ class MemosViewModel(
         visibility: String,
         attachments: List<Attachment>,
         location: Location? = null,
+        state: String? = null,
         onSuccess: () -> Unit = {}
     ) {
         viewModelScope.launch {
@@ -672,31 +651,53 @@ class MemosViewModel(
                     content = content,
                     visibility = visibility,
                     attachments = attachments,
-                    location = location
+                    location = location,
+                    state = state
                 )
-                val updated =
-                    api?.updateMemo(memo.name!!, update, "content,visibility,attachments,location")
-                if (updated != null) {
-                    onSuccess()
-                    updateMemoInState(updated)
+                val maskParts = mutableListOf("content", "visibility", "attachments", "location")
+                if (state != null) {
+                    maskParts.add("state")
                 }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
-            }
-        }
-    }
 
-    fun updateMemoState(memo: Memo, state: String, onSuccess: () -> Unit = {}) {
-        viewModelScope.launch {
-            try {
-                val update = memo.copy(state = state)
-                val updated = api?.updateMemo(memo.name!!, update, "state")
+                val updated = api?.updateMemo(memo.name!!, update, maskParts.joinToString(","))
                 if (updated != null) {
                     onSuccess()
-                    // Remove from current list if it's archived/unarchived and refresh both lists
-                    userMemoManager?.fetch(refresh = true)
-                    archivedMemoManager?.fetch(refresh = true)
-                    exploreMemoManager?.fetch(refresh = true)
+
+                    // Handle local list moves if state changed
+                    val oldState = memo.state ?: "NORMAL"
+                    val newState = updated.state ?: "NORMAL"
+
+                    if (oldState != newState) {
+                        if (newState == "ARCHIVED") {
+                            // Move from User/Explore -> Archived
+                            val removeTransform = { listState: PaginatedListState<Memo> ->
+                                listState.copy(items = listState.items.filter { it.name != memo.name })
+                            }
+                            userMemoManager?.updateState(removeTransform)
+                            exploreMemoManager?.updateState(removeTransform)
+
+                            val addTransform = { listState: PaginatedListState<Memo> ->
+                                val newItems =
+                                    (listState.items + updated).sortedByDescending { it.displayTime }
+                                listState.copy(items = newItems)
+                            }
+                            archivedMemoManager?.updateState(addTransform)
+                        } else if (newState == "NORMAL") {
+                            // Move from Archived -> User (and maybe Explore if public, but keep simple for now)
+                            val removeTransform = { listState: PaginatedListState<Memo> ->
+                                listState.copy(items = listState.items.filter { it.name != memo.name })
+                            }
+                            archivedMemoManager?.updateState(removeTransform)
+
+                            val addTransform = { listState: PaginatedListState<Memo> ->
+                                val newItems =
+                                    (listState.items + updated).sortedByDescending { it.displayTime }
+                                listState.copy(items = newItems)
+                            }
+                            userMemoManager?.updateState(addTransform)
+                        }
+                    }
+
                     updateMemoInState(updated)
                 }
             } catch (e: Exception) {
@@ -794,8 +795,7 @@ class MemosViewModel(
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 if (modelClass.isAssignableFrom(MemosViewModel::class.java)) {
-                    @Suppress("UNCHECKED_CAST")
-                    return MemosViewModel(dataStoreManager) as T
+                    @Suppress("UNCHECKED_CAST") return MemosViewModel(dataStoreManager) as T
                 }
                 throw IllegalArgumentException("Unknown ViewModel class")
             }
@@ -807,8 +807,7 @@ class MemosViewModel(
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(MemosViewModel::class.java)) {
-                @Suppress("UNCHECKED_CAST")
-                return MemosViewModel(dataStoreManager) as T
+                @Suppress("UNCHECKED_CAST") return MemosViewModel(dataStoreManager) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

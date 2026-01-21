@@ -187,7 +187,8 @@ fun MemoSearchBar(
                         newContent,
                         memo.visibility,
                         memo.attachments ?: emptyList(),
-                        memo.location
+                        memo.location,
+                        null
                     )
                 })
         }
