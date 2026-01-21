@@ -1,6 +1,6 @@
 package org.example.memosm.ui.component.item
 
-import FullScreenImageViewer
+import org.example.memosm.ui.component.item.media.FullScreenImageViewer
 import android.app.Activity
 import android.app.DownloadManager
 import android.content.Context
@@ -546,7 +546,7 @@ fun AttachmentCard(
             })
     }
 
-    if (showFullScreenImage && isImage && (uri != Uri.EMPTY || !attachment?.externalLink.isNullOrBlank() || !attachment?.content.isNullOrBlank())) {
+    if (showFullScreenImage && isImage) {
         val model = remember(uri, attachment, hostUrl) {
             when {
                 uri != Uri.EMPTY -> uri
