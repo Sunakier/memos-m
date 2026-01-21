@@ -711,9 +711,16 @@ class MemosViewModel(
             try {
                 api?.deleteMemo(memo.name!!)
                 onSuccess()
-                userMemoManager?.fetch(refresh = true)
-                exploreMemoManager?.fetch(refresh = true)
-                archivedMemoManager?.fetch(refresh = true)
+                
+                // Local update: Remove from all lists
+                val removeTransform = { listState: PaginatedListState<Memo> ->
+                    listState.copy(items = listState.items.filter { it.name != memo.name })
+                }
+                userMemoManager?.updateState(removeTransform)
+                exploreMemoManager?.updateState(removeTransform)
+                archivedMemoManager?.updateState(removeTransform)
+                searchMemoManager?.updateState(removeTransform)
+                commentManager?.updateState(removeTransform)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
