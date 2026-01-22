@@ -2,7 +2,9 @@ package org.example.memosm.ui.component.composer
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.net.Uri
@@ -13,6 +15,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -44,6 +47,9 @@ import com.google.android.gms.tasks.CancellationTokenSource
 import android.provider.OpenableColumns
 import android.util.Base64
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.platform.LocalResources
 import androidx.core.net.toUri
 import kotlinx.coroutines.Dispatchers
@@ -73,6 +79,18 @@ fun getVisibilityIcon(visibility: String, outlined: Boolean = false): ImageVecto
         "PRIVATE" -> if (outlined) Icons.Outlined.Lock else Icons.Default.Lock
         else -> if (outlined) Icons.Outlined.Lock else Icons.Default.Lock
     }
+}
+
+/**
+ * Helper to find the Activity from a Context.
+ */
+fun Context.findActivity(): Activity? {
+    var context = this
+    while (context is ContextWrapper) {
+        if (context is Activity) return context
+        context = context.baseContext
+    }
+    return null
 }
 
 /**
@@ -335,12 +353,68 @@ fun MemoComposer(
         )
     }
 
+    // Drag and Drop state
+    var isDragging by remember { mutableStateOf(false) }
+    val dndTarget = remember {
+        object : DragAndDropTarget {
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                isDragging = false
+                val dragEvent = event.toAndroidDragEvent()
+                
+                // Request drag and drop permissions for cross-app access
+                context.findActivity()?.requestDragAndDropPermissions(dragEvent)
+
+                val clipData = dragEvent.clipData
+                if (clipData != null) {
+                    val uris = mutableListOf<Uri>()
+                    for (i in 0 until clipData.itemCount) {
+                        clipData.getItemAt(i).uri?.let { uris.add(it) }
+                    }
+                    if (uris.isNotEmpty()) {
+                        scope.launch {
+                            val newAttachments = uris.map { uri ->
+                                val base64Attachment = uriToBase64Attachment(uri, context)
+                                uri to base64Attachment
+                            }
+                            draftAttachments = draftAttachments + newAttachments
+                        }
+                        return true
+                    }
+                }
+                return false
+            }
+
+            override fun onEntered(event: DragAndDropEvent) {
+                isDragging = true
+            }
+
+            override fun onExited(event: DragAndDropEvent) {
+                isDragging = false
+            }
+
+            override fun onEnded(event: DragAndDropEvent) {
+                isDragging = false
+            }
+        }
+    }
+
     var componentWidth by remember { mutableStateOf(0.dp) }
 
     Column(
-        modifier = modifier.onSizeChanged {
-            componentWidth = with(density) { it.width.toDp() }
-        }) {
+        modifier = modifier
+            .onSizeChanged {
+                componentWidth = with(density) { it.width.toDp() }
+            }
+            .dragAndDropTarget(
+                shouldStartDragAndDrop = { true },
+                target = dndTarget
+            )
+            .background(
+                if (isDragging) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                else Color.Transparent,
+                RoundedCornerShape(8.dp)
+            )
+    ) {
         val showVisibilityLabel = componentWidth > 480.dp || componentWidth == 0.dp
         val showPublishLabel = componentWidth > 410.dp || componentWidth == 0.dp
         val isCompact = componentWidth < 380.dp && componentWidth != 0.dp
