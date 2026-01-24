@@ -49,6 +49,15 @@ data class Shortcut(
     val name: String? = null, val title: String? = null, val filter: String? = null
 )
 
+data class CreateShortcutRequest(
+    val shortcut: Shortcut
+)
+
+data class UpdateShortcutRequest(
+    val shortcut: Shortcut,
+    val updateMask: String? = null
+)
+
 data class InstanceProfile(
     val owner: String? = null,
     val version: String? = null,
