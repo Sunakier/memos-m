@@ -508,7 +508,10 @@ private fun SearchResultContent(
                 }
             }
         } else {
-            items(filteredMemos, key = { it.name ?: it.content.hashCode() }) { memo ->
+            items(filteredMemos, key = {
+                it.name.takeUnless { n -> n.isNullOrBlank() }
+                    ?: "${it.content.hashCode()}_${it.createTime}"
+            }) { memo ->
                 Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
                     val isOwner = memo.creator == uiState.session.currUser?.name
                     MemoItem(

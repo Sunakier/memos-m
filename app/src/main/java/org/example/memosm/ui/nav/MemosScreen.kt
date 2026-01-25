@@ -158,7 +158,10 @@ private fun MemosListPane(
                             },
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        items(uiState.userMemoList.shortcuts, key = { it.name ?: it.title ?: "" }) { shortcut ->
+                        items(uiState.userMemoList.shortcuts, key = {
+                            it.name.takeUnless { n -> n.isNullOrBlank() }
+                                ?: "${it.title?.hashCode() ?: 0}_${it.filter?.hashCode() ?: 0}"
+                        }) { shortcut ->
                             val isSelected = uiState.userMemoList.selectedShortcut?.name == shortcut.name
                             FilterChip(
                                 selected = isSelected,

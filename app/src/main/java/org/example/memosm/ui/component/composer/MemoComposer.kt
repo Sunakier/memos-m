@@ -441,8 +441,7 @@ fun MemoComposer(
             ) {
                 items(draftAttachments, key = { (uri, attachment) ->
                     if (uri != Uri.EMPTY) uri.toString()
-                    else attachment?.name ?: attachment?.filename ?: attachment?.externalLink
-                    ?: "unknown"
+                    else "${attachment?.name ?: "unknown"}_${attachment?.filename ?: "unknown"}_${attachment?.createTime ?: System.currentTimeMillis()}"
                 }) { (uri, attachment) ->
                     val isUploading = uri in uploadingUris
 

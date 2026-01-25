@@ -464,7 +464,7 @@ fun MemoItem(
                                 }) {
                             items(
                                 attachments,
-                                key = { it.externalLink ?: it.filename }) { attachment ->
+                                key = { "${it.externalLink ?: "link"}_${it.filename}_${it.createTime ?: 0}" }) { attachment ->
                                 AttachmentCard(
                                     attachment = attachment,
                                     token = token,

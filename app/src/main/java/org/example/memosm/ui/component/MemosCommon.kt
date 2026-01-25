@@ -329,7 +329,10 @@ fun GenericMemosListPane(
                     )
                 }
             } else {
-                items(memos, key = { it.name ?: it.content.hashCode() }) { memo ->
+                items(memos, key = {
+                    it.name.takeUnless { n -> n.isNullOrBlank() }
+                        ?: "${it.content.hashCode()}_${it.createTime}"
+                }) { memo ->
                     Box(
                         modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
                     ) {
