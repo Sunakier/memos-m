@@ -464,7 +464,7 @@ class MemosViewModel(
                 fetchWebhooks(user.name!!)
                 onSuccess()
             } catch (e: Exception) {
-                onError(e.message ?: "Unknown error")
+                onError(getErrorResponse(e))
             }
         }
     }
@@ -480,11 +480,13 @@ class MemosViewModel(
             try {
                 val user = _uiState.value.session.currUser ?: return@launch
                 val update = webhook.copy(displayName = displayName, url = url)
-                api?.updateUserWebhook(user.name!!, webhook.name!!, update, "display_name,url")
+                val webhookId = webhook.name?.substringAfterLast("/") ?: ""
+                
+                api?.updateUserWebhook(user.name!!, webhookId, update, "display_name,url")
                 fetchWebhooks(user.name!!)
                 onSuccess()
             } catch (e: Exception) {
-                onError(e.message ?: "Unknown error")
+                onError(getErrorResponse(e))
             }
         }
     }
@@ -493,7 +495,8 @@ class MemosViewModel(
         viewModelScope.launch {
             try {
                 val user = _uiState.value.session.currUser ?: return@launch
-                api?.deleteUserWebhook(user.name!!, webhook.name!!)
+                val webhookId = webhook.name?.substringAfterLast("/") ?: ""
+                api?.deleteUserWebhook(user.name!!, webhookId)
                 fetchWebhooks(user.name!!)
             } catch (e: Exception) {
             }
