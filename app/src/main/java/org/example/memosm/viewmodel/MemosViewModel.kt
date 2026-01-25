@@ -400,7 +400,11 @@ class MemosViewModel(
             try {
                 val user = _uiState.value.session.currUser ?: return@launch
                 val update = shortcut.copy(title = title, filter = filter)
-                api?.updateShortcut(user.name!!, shortcut.name!!, update, "title,filter")
+                // shortcut.name is in format "users/{uid}/shortcuts/{id}"
+                // The API expects just the {id} because the path is defined as "api/v1/{user}/shortcuts/{shortcut}"
+                val shortcutId = shortcut.name?.substringAfterLast("/") ?: ""
+                
+                api?.updateShortcut(user.name!!, shortcutId, update, "title,filter")
                 fetchShortcuts(user.name!!)
                 onSuccess()
             } catch (e: Exception) {
@@ -413,7 +417,8 @@ class MemosViewModel(
         viewModelScope.launch {
             try {
                 val user = _uiState.value.session.currUser ?: return@launch
-                api?.deleteShortcut(user.name!!, shortcut.name!!)
+                val shortcutId = shortcut.name?.substringAfterLast("/") ?: ""
+                api?.deleteShortcut(user.name!!, shortcutId)
                 fetchShortcuts(user.name!!)
             } catch (e: Exception) {
             }
