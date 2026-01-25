@@ -384,7 +384,7 @@ class MemosViewModel(
                 fetchShortcuts(user.name!!)
                 onSuccess()
             } catch (e: Exception) {
-                onError(e.message ?: "Unknown error")
+                onError(getErrorResponse(e))
             }
         }
     }
@@ -408,9 +408,25 @@ class MemosViewModel(
                 fetchShortcuts(user.name!!)
                 onSuccess()
             } catch (e: Exception) {
-                onError(e.message ?: "Unknown error")
+                onError(getErrorResponse(e))
             }
         }
+    }
+
+    private fun getErrorResponse(e: Exception): String {
+        if (e is retrofit2.HttpException) {
+            try {
+                val errorBody = e.response()?.errorBody()?.string()
+                if (!errorBody.isNullOrBlank()) {
+                    val errorObj = Gson().fromJson(errorBody, com.google.gson.JsonObject::class.java)
+                    if (errorObj.has("message")) {
+                        return errorObj.get("message").asString
+                    }
+                }
+            } catch (ignored: Exception) {
+            }
+        }
+        return e.message ?: "Unknown error"
     }
 
     fun deleteShortcut(shortcut: Shortcut) {
