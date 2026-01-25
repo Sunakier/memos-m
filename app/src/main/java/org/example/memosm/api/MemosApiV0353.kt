@@ -290,19 +290,21 @@ interface MemosApiV0353 {
     @POST("api/v1/{user}/shortcuts")
     suspend fun createShortcut(
         @Path("user", encoded = true) user: String,
-        @Body request: CreateShortcutRequest,
+        @Body shortcut: Shortcut,
         @Query("validateOnly") validateOnly: Boolean? = null
     ): Shortcut
 
-    @DELETE("api/v1/{name}")
+    @DELETE("api/v1/{user}/shortcuts/{shortcut}")
     suspend fun deleteShortcut(
-        @Path("name", encoded = true) name: String
+        @Path("user", encoded = true) user: String,
+        @Path("shortcut", encoded = true) shortcut: String
     )
 
-    @PATCH("api/v1/{name}")
+    @PATCH("api/v1/{user}/shortcuts/{shortcut}")
     suspend fun updateShortcut(
-        @Path("name", encoded = true) name: String,
-        @Body request: UpdateShortcutRequest,
+        @Path("user", encoded = true) user: String,
+        @Path("shortcut", encoded = true) shortcut: String,
+        @Body shortcutData: Shortcut,
         @Query("updateMask") updateMask: String? = null
     ): Shortcut
 

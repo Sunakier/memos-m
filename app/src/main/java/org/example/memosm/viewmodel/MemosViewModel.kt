@@ -380,8 +380,7 @@ class MemosViewModel(
             try {
                 val user = _uiState.value.session.currUser ?: return@launch
                 val shortcut = Shortcut(title = title, filter = filter)
-                val request = CreateShortcutRequest(shortcut = shortcut)
-                api?.createShortcut(user.name!!, request)
+                api?.createShortcut(user.name!!, shortcut)
                 fetchShortcuts(user.name!!)
                 onSuccess()
             } catch (e: Exception) {
@@ -400,9 +399,8 @@ class MemosViewModel(
         viewModelScope.launch {
             try {
                 val user = _uiState.value.session.currUser ?: return@launch
-                val updatedShortcut = shortcut.copy(title = title, filter = filter)
-                val request = UpdateShortcutRequest(shortcut = updatedShortcut, updateMask = "title,filter")
-                api?.updateShortcut(shortcut.name!!, request)
+                val update = shortcut.copy(title = title, filter = filter)
+                api?.updateShortcut(user.name!!, shortcut.name!!, update, "title,filter")
                 fetchShortcuts(user.name!!)
                 onSuccess()
             } catch (e: Exception) {
@@ -415,10 +413,9 @@ class MemosViewModel(
         viewModelScope.launch {
             try {
                 val user = _uiState.value.session.currUser ?: return@launch
-                api?.deleteShortcut(shortcut.name!!)
+                api?.deleteShortcut(user.name!!, shortcut.name!!)
                 fetchShortcuts(user.name!!)
             } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error deleting shortcut", e)
             }
         }
     }
