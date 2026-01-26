@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -175,6 +176,15 @@ fun MemoItem(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
+                                if (memo.pinned == true) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.PushPin,
+                                        contentDescription = stringResource(R.string.profile_stats_pinned),
+                                        modifier = Modifier.size(12.dp),
+                                        tint = MaterialTheme.colorScheme.secondary
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                }
                                 Icon(
                                     imageVector = getVisibilityIcon(memo.visibility),
                                     contentDescription = memo.visibility,

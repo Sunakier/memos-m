@@ -21,7 +21,7 @@ class UserMemoListManager(
 
         try {
             val response = api.listMemos(
-                pageSize = PAGE_SIZE, pageToken = pageToken, filter = filter
+                pageSize = PAGE_SIZE, pageToken = pageToken, filter = filter, orderBy = "pinned desc, display_time desc"
             )
             Log.d(TAG, "UserMemoListManager success: count=${response.memos?.size ?: 0}")
             return Pair(response.memos ?: emptyList(), response.nextPageToken)
