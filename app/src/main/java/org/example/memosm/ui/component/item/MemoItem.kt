@@ -204,6 +204,15 @@ fun MemoItem(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.width(4.dp))
+                            if (memo.pinned == true) {
+                                Icon(
+                                    imageVector = Icons.Outlined.PushPin,
+                                    contentDescription = stringResource(R.string.profile_stats_pinned),
+                                    modifier = Modifier.size(12.dp),
+                                    tint = MaterialTheme.colorScheme.secondary
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                            }
                             Icon(
                                 imageVector = getVisibilityIcon(memo.visibility),
                                 contentDescription = memo.visibility,
