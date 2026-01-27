@@ -64,6 +64,7 @@ You can also download from [release](https://github.com/yamada-sexta/memos-m/rel
     - [x] View image
   - Reactions
     - [x] Add/Remove reactions
+    - [ ] Respect server reactions
 - Misc
   - [x] Multi language support: English, Japanese, Chinese, Korean, German
 
