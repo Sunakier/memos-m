@@ -67,7 +67,7 @@ You can also download from [release](https://github.com/yamada-sexta/memos-m/rel
     - [ ] Respect server reactions
 - Misc
   - [x] Multi language support: English, Japanese, Chinese, Korean, German
-  - [ ] System share
+  - [ ] Android share intent
 
 ## Project Scope
 
