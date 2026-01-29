@@ -165,4 +165,27 @@
     <string name="search_sort_title">排序</string>
     <string name="search_sort_newest">從新到舊</string>
     <string name="search_sort_oldest">從舊到新</string>
+    <!-- Drafts -->
+    <string name="drafts_title">草稿</string>
+    <string name="drafts_count">%1$d 個草稿</string>
+    <string name="drafts_empty">無草稿</string>
+    <string name="drafts_no_content">(空白草稿)</string>
+    <string name="drafts_action_edit">編輯</string>
+    <string name="drafts_action_post">發佈</string>
+    <string name="drafts_action_delete">刪除</string>
+    <string name="drafts_delete_confirm_title">刪除草稿</string>
+    <string name="drafts_delete_confirm_message">確定要刪除此草稿嗎？此動作無法復原。</string>
+    <string name="drafts_prompt_title">未儲存的草稿</string>
+    <string name="drafts_prompt_message">您有未儲存的草稿。您想繼續編輯最新的草稿還是重新開始？</string>
+    <string name="drafts_prompt_continue">繼續草稿</string>
+    <string name="drafts_prompt_start_fresh">重新開始</string>
+    <string name="drafts_card_message">您有未儲存的草稿</string>
+
+    <!-- Activity Map -->
+    <string name="profile_activity_map">活動圖</string>
+    <string name="profile_activity_count">%1$d 次活動</string>
+    <string name="profile_activity_less">少</string>
+    <string name="profile_activity_more">多</string>
+    <string name="drafts_delete_all_confirmation_title">刪除所有草稿？</string>
+    <string name="drafts_delete_all_confirmation_message">您確定要刪除所有草稿嗎？此動作無法復原。</string>
 </resources>

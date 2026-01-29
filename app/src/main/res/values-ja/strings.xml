@@ -92,7 +92,7 @@
     <string name="memo_unknown_user">不明</string>
     <string name="memo_unknown_time">不明</string>
     <string name="memo_action_update">更新</string>
-    <string name="memo_action_post">返信</string>
+    <string name="memo_action_post">ポストする</string>
     <string name="memo_action_add_reaction">リアクションを追加</string>
     <string name="memo_action_play">再生</string>
     <string name="memo_action_pause">一時停止</string>
@@ -178,4 +178,27 @@
         <item>痛っ！|&gt;_&lt;</item>
         <item>お願い、やめて…|m(_ _)m</item>
     </string-array>
+    <!-- Drafts -->
+    <string name="drafts_title">下書き</string>
+    <string name="drafts_count">%1$d 件の下書き</string>
+    <string name="drafts_empty">下書きはありません</string>
+    <string name="drafts_no_content">(空白の下書き)</string>
+    <string name="drafts_action_edit">編集</string>
+    <string name="drafts_action_post">ポストする</string>
+    <string name="drafts_action_delete">削除</string>
+    <string name="drafts_delete_confirm_title">下書きを削除</string>
+    <string name="drafts_delete_confirm_message">この下書きを削除してもよろしいですか？この操作は取り消せません。</string>
+    <string name="drafts_prompt_title">未保存の下書き</string>
+    <string name="drafts_prompt_message">未保存の下書きがあります。最新の下書きを続けますか、それとも新規作成しますか？</string>
+    <string name="drafts_prompt_continue">続きから</string>
+    <string name="drafts_prompt_start_fresh">新規作成</string>
+    <string name="drafts_card_message">未保存の下書きがあります</string>
+
+    <!-- Activity Map -->
+    <string name="profile_activity_map">アクティビティマップ</string>
+    <string name="profile_activity_count">%1$d 件のアクティビティ</string>
+    <string name="profile_activity_less">少ない</string>
+    <string name="profile_activity_more">多い</string>
+    <string name="drafts_delete_all_confirmation_title">すべての下書きを削除しますか？</string>
+    <string name="drafts_delete_all_confirmation_message">本当にすべての下書きを削除しますか？この操作は取り消せません。</string>
 </resources>

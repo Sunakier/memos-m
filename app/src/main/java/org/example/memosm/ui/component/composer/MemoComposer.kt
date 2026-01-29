@@ -60,6 +60,7 @@ import org.example.memosm.model.Attachment
 import org.example.memosm.model.Location
 import org.example.memosm.ui.component.item.AttachmentCard
 import org.example.memosm.ui.component.item.AttachmentCompactMode
+import org.example.memosm.ui.component.item.getVisibilityIcon
 import java.io.File
 
 @Composable
@@ -69,15 +70,6 @@ fun getVisibilityLabel(visibility: String): String {
         "PROTECTED" -> stringResource(R.string.memo_visibility_protected)
         "PRIVATE" -> stringResource(R.string.memo_visibility_private)
         else -> visibility
-    }
-}
-
-fun getVisibilityIcon(visibility: String, outlined: Boolean = false): ImageVector {
-    return when (visibility.uppercase()) {
-        "PUBLIC" -> if (outlined) Icons.Outlined.Public else Icons.Default.Public
-        "PROTECTED" -> if (outlined) Icons.Outlined.Group else Icons.Default.Group
-        "PRIVATE" -> if (outlined) Icons.Outlined.Lock else Icons.Default.Lock
-        else -> if (outlined) Icons.Outlined.Lock else Icons.Default.Lock
     }
 }
 
@@ -488,7 +480,7 @@ fun MemoComposer(
                                 .zIndex(1f)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                imageVector = Icons.Outlined.Close,
                                 contentDescription = stringResource(R.string.memo_composer_remove_attachment),
                                 tint = Color.White,
                                 modifier = Modifier.size(16.dp)
@@ -509,14 +501,14 @@ fun MemoComposer(
                 )
             }, trailingIcon = {
                 Icon(
-                    imageVector = Icons.Default.Close,
+                    imageVector = Icons.Outlined.Close,
                     contentDescription = stringResource(R.string.memo_composer_remove_location),
                     modifier = Modifier
                         .size(18.dp)
                         .noRippleClickable { location = null })
             }, leadingIcon = {
                 Icon(
-                    imageVector = Icons.Default.Place,
+                    imageVector = Icons.Outlined.Place,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
@@ -543,7 +535,7 @@ fun MemoComposer(
                             modifier = Modifier.size(actionButtonSize)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.MoreVert,
+                                imageVector = Icons.Outlined.MoreVert,
                                 contentDescription = stringResource(R.string.memo_action_more),
                                 modifier = Modifier.size(actionIconSize)
                             )
@@ -754,7 +746,7 @@ fun MemoComposer(
                         modifier = if (isCompact) Modifier.height(actionButtonSize) else Modifier
                     ) {
                         Icon(
-                            imageVector = getVisibilityIcon(visibility, outlined = true),
+                            imageVector = getVisibilityIcon(visibility),
                             contentDescription = visibility,
                             modifier = Modifier.size(18.dp)
                         )
@@ -772,7 +764,7 @@ fun MemoComposer(
                             DropdownMenuItem(text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        imageVector = getVisibilityIcon(option, outlined = true),
+                                        imageVector = getVisibilityIcon(option),
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp)
                                     )
@@ -790,8 +782,7 @@ fun MemoComposer(
                 val label = submitLabel ?: run {
                     val isEdit = initialContent.isNotEmpty() || initialAttachments.isNotEmpty()
                     if (isEdit) stringResource(R.string.memo_action_update)
-                    else if (autoFocus) stringResource(R.string.memo_action_post)
-                    else stringResource(R.string.memo_publish)
+                    else stringResource(R.string.memo_action_post)
                 }
 
                 Button(

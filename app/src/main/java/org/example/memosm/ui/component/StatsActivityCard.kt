@@ -1,5 +1,6 @@
 package org.example.memosm.ui.component
 
+import android.os.Build
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -189,11 +190,11 @@ private fun StatsGrid(stats: UserStats?, compact: Boolean = false) {
 
 @Composable
 private fun StatItem(
+    modifier: Modifier = Modifier,
     label: String,
     value: String,
     icon: ImageVector,
     compact: Boolean = false,
-    modifier: Modifier = Modifier
 ) {
     val iconSize = if (compact) 18.dp else 22.dp
     val valueStyle = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge

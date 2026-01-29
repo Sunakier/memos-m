@@ -12,10 +12,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Shortcut
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.automirrored.outlined.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -125,7 +123,7 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
                     expanded = isFabExpanded,
                     icon = {
                         Icon(
-                            imageVector = Icons.Default.Add, contentDescription = null
+                            imageVector = Icons.Outlined.Add, contentDescription = null
                         )
                     },
                     text = {
@@ -297,7 +295,7 @@ private fun MemosListPane(
                                 }
                             }
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                imageVector = Icons.Outlined.Close,
                                 contentDescription = stringResource(R.string.common_delete),
                                 modifier = Modifier
                                     .size(24.dp)
@@ -365,7 +363,7 @@ private fun MemosListPane(
                                 trailingIcon = if (isSelected) {
                                     {
                                         Icon(
-                                            imageVector = Icons.Default.Close,
+                                            imageVector = Icons.Outlined.Close,
                                             contentDescription = null,
                                             modifier = Modifier.size(16.dp)
                                         )

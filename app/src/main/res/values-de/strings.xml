@@ -177,4 +177,27 @@
         <item>Aua!|&gt;_&lt;</item>
         <item>Bitte hör auf...|m(_ _)m</item>
     </string-array>
+    <!-- Drafts -->
+    <string name="drafts_title">Entwürfe</string>
+    <string name="drafts_count">%1$d Entwurf/Entwürfe</string>
+    <string name="drafts_empty">Keine Entwürfe</string>
+    <string name="drafts_no_content">(Leerer Entwurf)</string>
+    <string name="drafts_action_edit">Bearbeiten</string>
+    <string name="drafts_action_post">Posten</string>
+    <string name="drafts_action_delete">Löschen</string>
+    <string name="drafts_delete_confirm_title">Entwurf löschen</string>
+    <string name="drafts_delete_confirm_message">Möchtest du diesen Entwurf wirklich löschen? Dies kann nicht rückgängig gemacht werden.</string>
+    <string name="drafts_prompt_title">Ungespeicherte Entwürfe</string>
+    <string name="drafts_prompt_message">Du hast ungespeicherte Entwürfe. Möchtest du deinen letzten Entwurf fortsetzen oder neu beginnen?</string>
+    <string name="drafts_prompt_continue">Entwurf fortsetzen</string>
+    <string name="drafts_prompt_start_fresh">Neu beginnen</string>
+    <string name="drafts_card_message">Du hast ungespeicherte Entwürfe</string>
+
+    <!-- Activity Map -->
+    <string name="profile_activity_map">Aktivitätskarte</string>
+    <string name="profile_activity_count">%1$d Aktivitäten</string>
+    <string name="profile_activity_less">Weniger</string>
+    <string name="profile_activity_more">Mehr</string>
+    <string name="drafts_delete_all_confirmation_title">Alle Entwürfe löschen?</string>
+    <string name="drafts_delete_all_confirmation_message">Sind Sie sicher, dass Sie alle Entwürfe löschen möchten? Dieser Vorgang kann nicht rückgängig gemacht werden.</string>
 </resources>

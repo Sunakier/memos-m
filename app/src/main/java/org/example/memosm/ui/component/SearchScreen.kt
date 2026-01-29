@@ -12,13 +12,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Sort
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.ArrowDownward
-import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material.icons.automirrored.outlined.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -45,11 +40,11 @@ import kotlin.collections.get
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemoSearchBar(
+    modifier: Modifier = Modifier,
     viewModel: MemosViewModel,
     isExplore: Boolean = false,
     onMemoClick: (Memo) -> Unit,
     onExpandedChange: (Boolean) -> Unit = {},
-    modifier: Modifier = Modifier,
     placeholder: String = stringResource(R.string.memo_search_placeholder)
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -138,7 +133,7 @@ fun MemoSearchBar(
                     onExpandedChange(it)
                 },
                 placeholder = { Text(placeholder) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
                 trailingIcon = {
                     if (query.isNotEmpty() || searchSelectedTags.isNotEmpty() || startDateMillis != null || endDateMillis != null) {
                         IconButton(onClick = {
@@ -147,7 +142,7 @@ fun MemoSearchBar(
                             startDateMillis = null
                             endDateMillis = null
                         }) {
-                            Icon(Icons.Default.Clear, contentDescription = null)
+                            Icon(Icons.Outlined.Clear, contentDescription = null)
                         }
                     }
                 },
@@ -353,7 +348,7 @@ private fun SearchResultContent(
                                                 exit = fadeOut() + shrinkHorizontally()
                                             ) {
                                                 Icon(
-                                                    imageVector = Icons.Default.Close,
+                                                    imageVector = Icons.Outlined.Close,
                                                     contentDescription = null,
                                                     modifier = Modifier.size(14.dp)
                                                 )
@@ -579,14 +574,14 @@ private fun DateSelectorCard(
                     onClick = onClear, modifier = Modifier.size(20.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        imageVector = Icons.Outlined.Close,
                         contentDescription = null,
                         modifier = Modifier.size(14.dp)
                     )
                 }
             } else {
                 Icon(
-                    imageVector = Icons.Default.CalendarMonth,
+                    imageVector = Icons.Outlined.CalendarMonth,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
                     modifier = Modifier.size(16.dp)

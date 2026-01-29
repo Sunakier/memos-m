@@ -178,4 +178,27 @@
         <item>嗷！|&gt;_&lt;</item>
         <item>求求了，停下吧...|m(_ _)m</item>
     </string-array>
+    <!-- Drafts -->
+    <string name="drafts_title">草稿</string>
+    <string name="drafts_count">%1$d 个草稿</string>
+    <string name="drafts_empty">无草稿</string>
+    <string name="drafts_no_content">(空草稿)</string>
+    <string name="drafts_action_edit">编辑</string>
+    <string name="drafts_action_post">发布</string>
+    <string name="drafts_action_delete">删除</string>
+    <string name="drafts_delete_confirm_title">删除草稿</string>
+    <string name="drafts_delete_confirm_message">确定要删除此草稿吗？此操作无法撤销。</string>
+    <string name="drafts_prompt_title">未保存的草稿</string>
+    <string name="drafts_prompt_message">您有未保存的草稿。您想继续编辑最新的草稿还是重新开始？</string>
+    <string name="drafts_prompt_continue">继续草稿</string>
+    <string name="drafts_prompt_start_fresh">重新开始</string>
+    <string name="drafts_card_message">您有未保存的草稿</string>
+
+    <!-- Activity Map -->
+    <string name="profile_activity_map">活动图</string>
+    <string name="profile_activity_count">%1$d 次活动</string>
+    <string name="profile_activity_less">少</string>
+    <string name="profile_activity_more">多</string>
+    <string name="drafts_delete_all_confirmation_title">删除所有草稿？</string>
+    <string name="drafts_delete_all_confirmation_message">您确定要删除所有草稿吗？此操作无法撤销。</string>
 </resources>
