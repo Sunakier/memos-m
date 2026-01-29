@@ -29,7 +29,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> U
     val aspectRatios = remember { mutableStateMapOf<String, Float>() }
 
     // Limits for zooming
-    val minCellWidth = 120.dp
+    val minCellWidth = 100.dp
     val maxCellWidth = 600.dp
 
     // Animate the cell width changes for a smoother transition
