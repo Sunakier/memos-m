@@ -236,7 +236,9 @@ fun MemosScaffold(
                                         navigator.navigateBack()
                                     }
                                 },
-                                viewModel = viewModel
+                                viewModel = viewModel,
+                                reactionOptions = uiState.session.instanceSettings?.memoRelatedSetting?.reactions
+                                    ?: emptyList()
                             )
                         } else if (isDualPane) {
                             MemoDetailPlaceholder()
@@ -401,7 +403,10 @@ fun GenericMemosListPane(
                                 )
                             } else null,
                             maxHeight = 400.dp,
-                            modifier = Modifier.widthIn(max = 800.dp))
+                            modifier = Modifier.widthIn(max = 800.dp),
+                            reactionOptions = uiState.session.instanceSettings?.memoRelatedSetting?.reactions
+                                ?: emptyList()
+                        )
 
                     }
                 }

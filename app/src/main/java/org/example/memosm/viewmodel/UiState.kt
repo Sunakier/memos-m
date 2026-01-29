@@ -20,6 +20,7 @@ data class SessionState(
     val userSettings: UserGeneralSetting? = null,
     val webhooks: List<UserWebhook> = emptyList(),
     val instanceProfile: InstanceProfile? = null,
+    val instanceSettings: InstanceSetting? = null,
     val activities: List<Activity> = emptyList()
 )
 

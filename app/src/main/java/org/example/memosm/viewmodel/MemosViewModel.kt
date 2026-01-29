@@ -220,6 +220,7 @@ class MemosViewModel(
                     }
 
                     fetchInstanceProfile()
+                    fetchInstanceSettings()
                 }
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error fetching current user", e)
@@ -235,6 +236,17 @@ class MemosViewModel(
             }
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error fetching instance profile", e)
+        }
+    }
+
+    private suspend fun fetchInstanceSettings() {
+        try {
+            val settings = api?.getInstanceSetting("settings/MEMO_RELATED")
+            if (settings != null) {
+                _uiState.update { it.copy(session = it.session.copy(instanceSettings = settings)) }
+            }
+        } catch (e: Exception) {
+            Log.e("MemosViewModel", "Error fetching instance settings", e)
         }
     }
 

@@ -92,8 +92,8 @@ interface MemosApiV0353 {
     @GET("api/v1/instance/profile")
     suspend fun getInstanceProfile(): InstanceProfile
 
-    @GET("api/v1/instance/{instance}/*")
-    suspend fun getInstanceSetting(@Path("instance") instance: String): InstanceSetting
+    @GET("api/v1/instance/{instance}")
+    suspend fun getInstanceSetting(@Path("instance", encoded = true) instance: String): InstanceSetting
 
     @PATCH("api/v1/instance/{instance}/*")
     suspend fun updateInstanceSetting(

@@ -82,6 +82,7 @@ fun MemoItem(
     onContentUpdate: ((String) -> Unit)? = null,
     maxHeight: Dp = Dp.Unspecified,
     isDetailView: Boolean = false,
+    reactionOptions: List<String> = emptyList(),
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showReactionPicker by remember { mutableStateOf(false) }
@@ -575,6 +576,7 @@ fun MemoItem(
 
     if (showReactionPicker) {
         ReactionPickerDialog(
+            reactionOptions = reactionOptions,
             onDismiss = { showReactionPicker = false },
             onReactionSelected = { emoji ->
                 onUpsertReaction?.invoke(emoji)
@@ -607,10 +609,26 @@ fun MemoItem(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ReactionPickerDialog(
+    reactionOptions: List<String>,
     onDismiss: () -> Unit, onReactionSelected: (String) -> Unit
 ) {
     val commonEmojis =
-        listOf("👍", "👎", "❤️", "🔥", "🥰", "👏", "😄", "🤔", "🥳", "👀", "😕", "😢", "😡", "\uD83D\uDE2D")
+        if (reactionOptions.isNotEmpty()) reactionOptions else listOf(
+            "👍",
+            "👎",
+            "❤️",
+            "🔥",
+            "🥰",
+            "👏",
+            "😄",
+            "🤔",
+            "🥳",
+            "👀",
+            "😕",
+            "😢",
+            "😡",
+            "\uD83D\uDE2D"
+        )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss, dragHandle = { BottomSheetDefaults.DragHandle() }) {

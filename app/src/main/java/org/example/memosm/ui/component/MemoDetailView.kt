@@ -30,6 +30,7 @@ import kotlin.collections.get
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemoDetailView(
+    modifier: Modifier = Modifier,
     memo: Memo,
     comments: PaginatedListState<Memo>,
 
@@ -38,7 +39,7 @@ fun MemoDetailView(
     showBackButton: Boolean,
     onBack: () -> Unit,
     viewModel: MemosViewModel,
-    modifier: Modifier = Modifier
+    reactionOptions: List<String> = emptyList(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showCommentDialog by remember { mutableStateOf(false) }
@@ -52,17 +53,17 @@ fun MemoDetailView(
         var previousIndex = listState.firstVisibleItemIndex
         var previousScrollOffset = listState.firstVisibleItemScrollOffset
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (index, offset) ->
-                isFabExpanded = when {
-                    index == 0 && offset == 0 -> true
-                    index > previousIndex -> false
-                    index < previousIndex -> true
-                    offset > previousScrollOffset + 10 -> false
-                    offset < previousScrollOffset - 10 -> true
-                    else -> isFabExpanded
-                }
-                previousIndex = index
-                previousScrollOffset = offset
+            isFabExpanded = when {
+                index == 0 && offset == 0 -> true
+                index > previousIndex -> false
+                index < previousIndex -> true
+                offset > previousScrollOffset + 10 -> false
+                offset < previousScrollOffset - 10 -> true
+                else -> isFabExpanded
             }
+            previousIndex = index
+            previousScrollOffset = offset
+        }
     }
 
     val isOwner = remember(memo.creator, uiState.session.currUser?.name) {
@@ -171,7 +172,8 @@ fun MemoDetailView(
                                     memo.location
                                 )
                             } else null,
-                            isDetailView = true)
+                            isDetailView = true,
+                            reactionOptions = reactionOptions)
                     }
 
                     // Comments section header
@@ -190,7 +192,9 @@ fun MemoDetailView(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = stringResource(R.string.memo_detail_comments, comments.items.size),
+                                text = stringResource(
+                                    R.string.memo_detail_comments, comments.items.size
+                                ),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -263,7 +267,8 @@ fun MemoDetailView(
                                     comment.location
                                 )
                             } else null,
-                            isDetailView = true)
+                            isDetailView = true,
+                            reactionOptions = reactionOptions)
                     }
                 }
             }
