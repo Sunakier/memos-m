@@ -13,7 +13,6 @@ import androidx.compose.material.icons.automirrored.outlined.Shortcut
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,7 +33,7 @@ import org.example.memosm.ui.component.composer.MemoComposerDialog
 import org.example.memosm.viewmodel.MemosViewModel
 
 @Composable
-fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit = {}) {
+fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? = null) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     var showComposerDialog by remember { mutableStateOf(false) }
@@ -71,7 +70,7 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit = {
         viewModel = viewModel,
         memos = uiState.userMemoList.list.items,
         listState = listState,
-        onToggleNavBar = onToggleNavBar,
+        onToggleNavBar = { onToggleNavBar?.invoke(it) },
         listPane = { onMemoClick ->
             MemosListPane(
                 viewModel = viewModel, listState = listState, onMemoClick = onMemoClick
@@ -92,13 +91,9 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit = {
 
             // FAB for creating new memo
             if (uiState.session.currUser != null) {
-                // Detect if we're on mobile (where bottom nav bar exists)
-                val adaptiveInfo = currentWindowAdaptiveInfo()
-                val isMobile = !adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(600)
-                
-                // Animate FAB position only on mobile (where nav bar visibility changes)
+                // Animate FAB position only if nav bar can be toggled (onToggleNavBar provided)
                 val fabBottomPadding by animateDpAsState(
-                    targetValue = if (isMobile && isFabExpanded) 96.dp else 16.dp,
+                    targetValue = if (onToggleNavBar != null && isFabExpanded) 96.dp else 16.dp,
                     label = "fabBottomPadding"
                 )
                 

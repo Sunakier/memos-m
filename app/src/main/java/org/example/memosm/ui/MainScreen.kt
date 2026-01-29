@@ -80,24 +80,24 @@ fun MainScreen(
     val layoutType = NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(adaptiveInfo)
     val isMobile = layoutType == NavigationSuiteType.NavigationBar
 
+    val toggleNavBar: ((Boolean) -> Unit)? = if (isMobile) {
+        { isNavBarVisible = it }
+    } else null
+
+
     if (isAddingAccount) {
-        LoginDialog(
-            onLoginSuccess = { newBaseUrl, newToken ->
-                scope.launch {
-                    dataStoreManager.addAccount(newBaseUrl, newToken)
-                    viewModel.updateCurrentAccountInList()
-                    isAddingAccount = false
-                }
-            },
-            onDismiss = { isAddingAccount = false }
-        )
+        LoginDialog(onLoginSuccess = { newBaseUrl, newToken ->
+            scope.launch {
+                dataStoreManager.addAccount(newBaseUrl, newToken)
+                viewModel.updateCurrentAccountInList()
+                isAddingAccount = false
+            }
+        }, onDismiss = { isAddingAccount = false })
     }
 
     @Composable
     fun NavigationIcon(
-        destination: MainDestination,
-        isSelected: Boolean,
-        modifier: Modifier = Modifier.size(24.dp)
+        destination: MainDestination, isSelected: Boolean, modifier: Modifier = Modifier.size(24.dp)
     ) {
         when (destination) {
             MainDestination.MEMOS -> Icon(
@@ -165,8 +165,7 @@ fun MainScreen(
     }
 
     Surface(
-        modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
     ) {
         Box(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxSize()) {
@@ -187,17 +186,19 @@ fun MainScreen(
                                 onClick = { handleDestinationClick(destination) },
                                 icon = {
                                     NavigationIcon(
-                                        destination,
-                                        currentDestination == destination
+                                        destination, currentDestination == destination
                                     )
                                 },
-                                label = { Text(stringResource(destination.labelRes)) }
-                            )
+                                label = { Text(stringResource(destination.labelRes)) })
                         }
                     }
                 }
 
-                Box(Modifier.weight(1f).fillMaxHeight()) {
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
                     // Content
                     AnimatedContent(
                         targetState = currentDestination,
@@ -212,25 +213,22 @@ fun MainScreen(
                         saveableStateHolder.SaveableStateProvider(targetDestination) {
                             when (targetDestination) {
                                 MainDestination.MEMOS -> MemosScreen(
-                                    viewModel = viewModel,
-                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
+                                    viewModel = viewModel, onToggleNavBar = toggleNavBar
                                 )
 
                                 MainDestination.EXPLORE -> ExploreScreen(
-                                    viewModel = viewModel,
-                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
+                                    viewModel = viewModel, onToggleNavBar = toggleNavBar
                                 )
 
                                 MainDestination.ATTACHMENTS -> AttachmentsScreen(
-                                    viewModel = viewModel,
-                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
+                                    viewModel = viewModel, onToggleNavBar = toggleNavBar
                                 )
 
                                 MainDestination.PROFILE -> ProfileScreen(
                                     viewModel = viewModel,
                                     onLogout = onLogout,
                                     onAddAccount = { isAddingAccount = true },
-                                    onToggleNavBar = { if (isMobile) isNavBarVisible = it }
+                                    onToggleNavBar = toggleNavBar
                                 )
                             }
                         }
@@ -256,12 +254,10 @@ fun MainScreen(
                                     onClick = { handleDestinationClick(destination) },
                                     icon = {
                                         NavigationIcon(
-                                            destination,
-                                            currentDestination == destination
+                                            destination, currentDestination == destination
                                         )
                                     },
-                                    label = { Text(stringResource(destination.labelRes)) }
-                                )
+                                    label = { Text(stringResource(destination.labelRes)) })
                             }
                         }
                     }

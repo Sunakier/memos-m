@@ -40,7 +40,7 @@ fun ProfileScreen(
     viewModel: MemosViewModel,
     onLogout: () -> Unit,
     onAddAccount: () -> Unit,
-    onToggleNavBar: (Boolean) -> Unit
+    onToggleNavBar: ((Boolean) -> Unit)? = null
 ) {
     var isArchivedVisible by rememberSaveable { mutableStateOf(false) }
 
@@ -104,7 +104,7 @@ private fun ProfileListPane(
     onShowArchived: () -> Unit,
     animatedVisibilityScope: AnimatedVisibilityScope,
     sharedTransitionScope: SharedTransitionScope,
-    onToggleNavBar: (Boolean) -> Unit
+    onToggleNavBar: ((Boolean) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val user = uiState.session.currUser
@@ -134,7 +134,7 @@ private fun ProfileListPane(
                 isScrollingDown = false
             }
 
-            onToggleNavBar(!isScrollingDown || currentIndex == 0)
+            onToggleNavBar?.invoke(!isScrollingDown || currentIndex == 0)
 
             previousIndex = currentIndex
             previousScrollOffset = currentOffset

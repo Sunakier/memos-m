@@ -18,7 +18,7 @@ fun ArchivedMemosScreen(
     modifier: Modifier = Modifier,
     viewModel: MemosViewModel,
     onBack: () -> Unit,
-    onToggleNavBar: (Boolean) -> Unit = {},
+    onToggleNavBar: ((Boolean) -> Unit)? = null,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
@@ -33,7 +33,7 @@ fun ArchivedMemosScreen(
             viewModel = viewModel,
             memos = uiState.archivedMemoList.list.items,
             listState = listState,
-            onToggleNavBar = onToggleNavBar,
+            onToggleNavBar = { onToggleNavBar?.invoke(it) },
             topBar = { isDetailVisible, isDualPane ->
                 if (!isDetailVisible || isDualPane) {
                     TopAppBar(

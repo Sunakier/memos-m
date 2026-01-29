@@ -23,7 +23,7 @@ import org.example.memosm.viewmodel.MemosViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit = {}) {
+fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? = null) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyStaggeredGridState()
     val aspectRatios = remember { mutableStateMapOf<String, Float>() }
@@ -62,7 +62,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Un
             }
 
             if (wasScrollingDown != isScrollingDown) {
-                onToggleNavBar(!isScrollingDown)
+                onToggleNavBar?.invoke(!isScrollingDown)
             }
 
             previousIndex = currentIndex

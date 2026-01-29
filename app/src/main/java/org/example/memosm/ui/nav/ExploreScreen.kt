@@ -15,7 +15,7 @@ import org.example.memosm.viewmodel.MemosViewModel
 import kotlin.collections.get
 
 @Composable
-fun ExploreScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit = {}) {
+fun ExploreScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? = null) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
 
@@ -32,7 +32,7 @@ fun ExploreScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit =
         viewModel = viewModel,
         memos = uiState.exploreMemoList.list.items,
         listState = listState,
-        onToggleNavBar = onToggleNavBar,
+        onToggleNavBar = { onToggleNavBar?.invoke(it) },
         listPane = { onMemoClick ->
             GenericMemosListPane(
                 viewModel = viewModel,
