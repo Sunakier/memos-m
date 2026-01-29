@@ -2,7 +2,6 @@ package org.example.memosm.ui.nav
 
 import AccountsList
 import SettingsCard
-import StatsCard
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
@@ -32,7 +31,7 @@ import org.example.memosm.ui.component.setting.AccountEditDialog
 import org.example.memosm.ui.component.setting.ShortcutsCard
 import org.example.memosm.ui.component.setting.WebhooksCard
 import org.example.memosm.ui.component.LoginDialog
-import org.example.memosm.ui.component.ActivityMapCard
+import org.example.memosm.ui.component.StatsActivityCard
 import org.example.memosm.ui.component.ProfileHeader
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -288,13 +287,7 @@ private fun ProfileListPane(
             if (user != null || accounts.any { it.isActive }) {
                 item {
                     Box(itemModifier) {
-                        StatsCard(stats)
-                    }
-                }
-
-                item {
-                    Box(itemModifier) {
-                        ActivityMapCard(userStats = stats)
+                        StatsActivityCard(userStats = stats)
                     }
                 }
 
