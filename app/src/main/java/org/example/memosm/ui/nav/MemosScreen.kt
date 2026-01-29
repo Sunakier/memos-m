@@ -2,6 +2,7 @@ package org.example.memosm.ui.nav
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
@@ -206,7 +207,18 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
     }
 
     // Drafts screen (full-screen)
-    if (showDraftsScreen) {
+    // Drafts screen (full-screen)
+    AnimatedVisibility(
+        visible = showDraftsScreen,
+        enter = slideInVertically(
+            animationSpec = tween(300),
+            initialOffsetY = { it }
+        ) + fadeIn(animationSpec = tween(300)),
+        exit = slideOutVertically(
+            animationSpec = tween(250),
+            targetOffsetY = { it }
+        ) + fadeOut(animationSpec = tween(250))
+    ) {
         DraftsScreen(
             viewModel = viewModel,
             onDismiss = { showDraftsScreen = false }

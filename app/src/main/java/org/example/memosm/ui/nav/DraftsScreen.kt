@@ -1,5 +1,12 @@
 package org.example.memosm.ui.nav
 
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.flow.collectLatest
+import kotlin.coroutines.cancellation.CancellationException
+
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -44,7 +51,30 @@ fun DraftsScreen(
     
     val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
 
+    // Predictive Back Animation State
+    val scale = remember { Animatable(1f) }
+    
+    PredictiveBackHandler { progress ->
+        try {
+            progress.collect { backEvent ->
+                // Shrink slightly as user swipes back (simulating the "particle" effect intent)
+                scale.snapTo(1f - backEvent.progress * 0.1f)
+            }
+            // Commit back gesture
+            onDismiss()
+        } catch (e: CancellationException) {
+            // Revert animation if gesture cancelled
+            scale.animateTo(1f)
+        }
+    }
+
     Scaffold(
+        modifier = Modifier.graphicsLayer {
+            scaleX = scale.value
+            scaleY = scale.value
+            shape = RoundedCornerShape(28.dp)
+            clip = true
+        },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.drafts_title)) },
