@@ -20,7 +20,7 @@
     <string name="profile_statistics">統計</string>
     <string name="profile_stats_memos">メモ</string>
     <string name="profile_stats_tags">タグ</string>
-    <string name="profile_stats_pinned">固定済み</string>
+    <string name="profile_stats_pinned">固定</string>
     <string name="profile_stats_links">リンク</string>
     <string name="profile_stats_code">コード</string>
     <string name="profile_stats_todo">ToDo</string>
