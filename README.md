@@ -8,7 +8,7 @@
 
 ----
 
-**MemosM** is an Android client designed for modern [Memos](https://usememos.com/) (v0.25+). It focuses on providing a native experience, speed, and full support for the latest features of the Memos ecosystem.
+**MemosM** is an Android client designed for modern [Memos](https://usememos.com/) (v0.25.3). It focuses on providing a native experience, speed, and full support for the latest features of the Memos ecosystem.
 
 
 ## Screenshots
