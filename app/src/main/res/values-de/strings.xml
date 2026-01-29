@@ -81,6 +81,8 @@
     <string name="memo_action_edit">Bearbeiten</string>
     <string name="memo_action_archive">Archivieren</string>
     <string name="memo_action_unarchive">Dearchivieren</string>
+    <string name="memo_action_pin">Anheften</string>
+    <string name="memo_action_unpin">Anheften aufheben</string>
     <string name="memo_action_delete">Löschen</string>
     <string name="memo_action_more">Mehr</string>
     <string name="memo_action_open_web">Im Web öffnen</string>
