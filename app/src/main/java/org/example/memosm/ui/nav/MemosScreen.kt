@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.outlined.Shortcut
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -91,9 +92,13 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit = {
 
             // FAB for creating new memo
             if (uiState.session.currUser != null) {
-                // Animate FAB position based on nav bar visibility (tied to scroll direction)
+                // Detect if we're on mobile (where bottom nav bar exists)
+                val adaptiveInfo = currentWindowAdaptiveInfo()
+                val isMobile = !adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(600)
+                
+                // Animate FAB position only on mobile (where nav bar visibility changes)
                 val fabBottomPadding by animateDpAsState(
-                    targetValue = if (isFabExpanded) 96.dp else 16.dp,
+                    targetValue = if (isMobile && isFabExpanded) 96.dp else 16.dp,
                     label = "fabBottomPadding"
                 )
                 
