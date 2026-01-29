@@ -271,8 +271,7 @@ private fun MemosListPane(
             if (hasDrafts || hasShortcuts) {
                 item(key = "header_section") {
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         // Drafts Card (shown when drafts exist)
                         AnimatedVisibility(

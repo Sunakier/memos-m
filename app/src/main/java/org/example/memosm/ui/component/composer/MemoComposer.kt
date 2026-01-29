@@ -2,9 +2,7 @@ package org.example.memosm.ui.component.composer
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Context
-import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.media.MediaRecorder
 import android.net.Uri

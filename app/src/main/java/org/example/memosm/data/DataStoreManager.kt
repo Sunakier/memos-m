@@ -23,8 +23,6 @@ class DataStoreManager(private val context: Context) {
     companion object {
         val HOST_URL = stringPreferencesKey("host_url")
         val ACCESS_TOKEN = stringPreferencesKey("access_token")
-        val ATTACHMENT_CELL_WIDTH = floatPreferencesKey("attachment_cell_width")
-        val MEMO_DRAFT_JSON = stringPreferencesKey("memo_draft_json")
         val ACCOUNTS_JSON = stringPreferencesKey("accounts_json")
     }
 
@@ -49,14 +47,6 @@ class DataStoreManager(private val context: Context) {
                 emptyList()
             }
         }
-    }
-
-    val attachmentCellWidth: Flow<Float?> = context.dataStore.data.map { preferences ->
-        preferences[ATTACHMENT_CELL_WIDTH]
-    }
-
-    val memoDraftJson: Flow<String?> = context.dataStore.data.map { preferences ->
-        preferences[MEMO_DRAFT_JSON]
     }
 
     suspend fun saveCredentials(url: String, token: String) {
@@ -196,36 +186,10 @@ class DataStoreManager(private val context: Context) {
         saveAccounts(updated)
     }
 
-    // --- Other Settings ---
-
-    suspend fun saveAttachmentCellWidth(width: Float) {
-        context.dataStore.edit { preferences ->
-            preferences[ATTACHMENT_CELL_WIDTH] = width
-        }
-    }
-
-    suspend fun saveMemoDraft(json: String) {
-        context.dataStore.edit { preferences ->
-            preferences[MEMO_DRAFT_JSON] = json
-        }
-    }
-
-    suspend fun clearMemoDraft() {
-        context.dataStore.edit { preferences ->
-            preferences.remove(MEMO_DRAFT_JSON)
-        }
-    }
-
     suspend fun clearCredentials() {
         context.dataStore.edit { preferences ->
             preferences.remove(HOST_URL)
             preferences.remove(ACCESS_TOKEN)
-        }
-    }
-
-    suspend fun clearAll() {
-        context.dataStore.edit { preferences ->
-            preferences.clear()
         }
     }
 }
