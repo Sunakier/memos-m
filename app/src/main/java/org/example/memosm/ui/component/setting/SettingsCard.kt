@@ -34,7 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.model.UserGeneralSetting
-import org.example.memosm.ui.component.composer.getVisibilityLabel
+import org.example.memosm.ui.getVisibilityLabel
 
 val LANGUAGE_NAMES = mapOf(
     "ar" to "العربية",

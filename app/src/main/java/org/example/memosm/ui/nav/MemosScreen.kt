@@ -267,130 +267,136 @@ private fun MemosListPane(
         listState = listState,
         errorTitle = stringResource(R.string.common_error_failed_to_load_memos),
         header = {
-            // Drafts Card (shown when drafts exist)
-            item(key = "drafts_card") {
-                AnimatedVisibility(
-                    visible = hasDrafts,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp)
-                            .clickable(onClick = onDraftsCardClick),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
-                        )
+            val hasShortcuts = uiState.userMemoList.shortcuts.isNotEmpty()
+            if (hasDrafts || hasShortcuts) {
+                item(key = "header_section") {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                        // Drafts Card (shown when drafts exist)
+                        AnimatedVisibility(
+                            visible = hasDrafts,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Edit,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                                Column {
-                                    Text(
-                                        text = stringResource(R.string.drafts_card_message),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.drafts_count, draftCount),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
-                                            alpha = 0.7f
-                                        )
-                                    )
-                                }
-                            }
-                            Icon(
-                                imageVector = Icons.Outlined.Close,
-                                contentDescription = stringResource(R.string.common_delete),
+                            Card(
                                 modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable { showDeleteAllDialog = true }
-                                    .padding(4.dp),
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f))
-                        }
-                    }
-                }
-            }
-
-            // Horizontal Shortcut Row
-            item(key = "shortcut_row") {
-                AnimatedVisibility(
-                    visible = uiState.userMemoList.shortcuts.isNotEmpty(),
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    LazyRow(
-                        state = shortcutListState,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .graphicsLayer {
-                                compositingStrategy = CompositingStrategy.Offscreen
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp)
+                                    .clickable(onClick = onDraftsCardClick),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Edit,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
+                                        Column {
+                                            Text(
+                                                text = stringResource(R.string.drafts_card_message),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.drafts_count, draftCount),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
+                                                    alpha = 0.7f
+                                                )
+                                            )
+                                        }
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Outlined.Close,
+                                        contentDescription = stringResource(R.string.common_delete),
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .clickable { showDeleteAllDialog = true }
+                                            .padding(4.dp),
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f))
+                                }
                             }
-                            .drawWithContent {
-                                drawContent()
-                                val startGradient = Brush.horizontalGradient(
-                                    0f to Color.Transparent, 0.15f to Color.Black
-                                )
-                                val endGradient = Brush.horizontalGradient(
-                                    0.85f to Color.Black, 1f to Color.Transparent
-                                )
-                                if (shortcutListState.canScrollBackward) {
-                                    drawRect(brush = startGradient, blendMode = BlendMode.DstIn)
-                                }
-                                if (shortcutListState.canScrollForward) {
-                                    drawRect(brush = endGradient, blendMode = BlendMode.DstIn)
-                                }
-                            },
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        items(uiState.userMemoList.shortcuts, key = {
-                            it.name.takeUnless { n -> n.isNullOrBlank() }
-                                ?: "${it.title?.hashCode() ?: 0}_${it.filter?.hashCode() ?: 0}"
-                        }) { shortcut ->
-                            val isSelected =
-                                uiState.userMemoList.selectedShortcut?.name == shortcut.name
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { viewModel.toggleShortcutFilter(shortcut) },
-                                label = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Outlined.Shortcut,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(shortcut.title ?: "")
+                        }
+
+                        // Horizontal Shortcut Row
+                        AnimatedVisibility(
+                            visible = hasShortcuts,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            LazyRow(
+                                state = shortcutListState,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .graphicsLayer {
+                                        compositingStrategy = CompositingStrategy.Offscreen
                                     }
-                                },
-                                shape = RoundedCornerShape(16.dp),
-                                trailingIcon = if (isSelected) {
-                                    {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Close,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
+                                    .drawWithContent {
+                                        drawContent()
+                                        val startGradient = Brush.horizontalGradient(
+                                            0f to Color.Transparent, 0.15f to Color.Black
                                         )
-                                    }
-                                } else null)
+                                        val endGradient = Brush.horizontalGradient(
+                                            0.85f to Color.Black, 1f to Color.Transparent
+                                        )
+                                        if (shortcutListState.canScrollBackward) {
+                                            drawRect(brush = startGradient, blendMode = BlendMode.DstIn)
+                                        }
+                                        if (shortcutListState.canScrollForward) {
+                                            drawRect(brush = endGradient, blendMode = BlendMode.DstIn)
+                                        }
+                                    },
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                items(uiState.userMemoList.shortcuts, key = {
+                                    it.name.takeUnless { n -> n.isNullOrBlank() }
+                                        ?: "${it.title?.hashCode() ?: 0}_${it.filter?.hashCode() ?: 0}"
+                                }) { shortcut ->
+                                    val isSelected =
+                                        uiState.userMemoList.selectedShortcut?.name == shortcut.name
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = { viewModel.toggleShortcutFilter(shortcut) },
+                                        label = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Outlined.Shortcut,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(shortcut.title ?: "")
+                                            }
+                                        },
+                                        shape = RoundedCornerShape(16.dp),
+                                        trailingIcon = if (isSelected) {
+                                            {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Close,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        } else null)
+                                }
+                            }
                         }
                     }
                 }

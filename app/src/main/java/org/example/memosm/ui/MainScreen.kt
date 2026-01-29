@@ -57,8 +57,6 @@ enum class MainDestination(
 
 @Composable
 fun MainScreen(
-    baseUrl: String,
-    token: String,
     dataStoreManager: DataStoreManager,
     draftManager: DraftManager,
     onLogout: () -> Unit,

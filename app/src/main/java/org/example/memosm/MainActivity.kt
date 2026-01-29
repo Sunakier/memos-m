@@ -80,8 +80,8 @@ class MainActivity : ComponentActivity() {
                     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                         if (activeAccount != null) {
                             MainScreen(
-                                baseUrl = activeAccount.hostUrl,
-                                token = activeAccount.accessToken,
+//                                baseUrl = activeAccount.hostUrl,
+//                                token = activeAccount.accessToken,
                                 dataStoreManager = dataStoreManager,
                                 draftManager = draftManager,
                                 onLogout = {
