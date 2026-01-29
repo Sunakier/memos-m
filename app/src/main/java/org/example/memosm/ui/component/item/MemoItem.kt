@@ -15,20 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.AddReaction
-import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Group
-import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Place
-import androidx.compose.material.icons.outlined.Public
-import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material.icons.outlined.Unarchive
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,7 +27,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -58,6 +44,7 @@ import org.example.memosm.model.Reaction
 import org.example.memosm.model.User
 import org.example.memosm.ui.component.item.markdown.MemoMarkdown
 import org.example.memosm.ui.component.resolveResourceUrl
+import org.example.memosm.ui.getVisibilityIcon
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -141,10 +128,10 @@ fun MemoItem(
                         if (avatarUrl != null) {
                             val imageRequest = remember(avatarUrl, token) {
                                 val headers = coil3.network.NetworkHeaders.Builder().apply {
-                                        if (token.isNotEmpty()) {
-                                            set("Authorization", "Bearer $token")
-                                        }
-                                    }.build()
+                                    if (token.isNotEmpty()) {
+                                        set("Authorization", "Bearer $token")
+                                    }
+                                }.build()
 
                                 coil3.request.ImageRequest.Builder(context).data(avatarUrl)
                                     .httpHeaders(headers).build()
@@ -609,26 +596,13 @@ fun MemoItem(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ReactionPickerDialog(
-    reactionOptions: List<String>,
-    onDismiss: () -> Unit, onReactionSelected: (String) -> Unit
+    reactionOptions: List<String>, onDismiss: () -> Unit, onReactionSelected: (String) -> Unit
 ) {
-    val commonEmojis =
-        if (reactionOptions.isNotEmpty()) reactionOptions else listOf(
-            "👍",
-            "👎",
-            "❤️",
-            "🔥",
-            "🥰",
-            "👏",
-            "😄",
-            "🤔",
-            "🥳",
-            "👀",
-            "😕",
-            "😢",
-            "😡",
+    val commonEmojis = reactionOptions.ifEmpty {
+        listOf(
             "\uD83D\uDE2D"
         )
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss, dragHandle = { BottomSheetDefaults.DragHandle() }) {
@@ -663,14 +637,5 @@ fun ReactionPickerDialog(
                 }
             }
         }
-    }
-}
-
-fun getVisibilityIcon(visibility: String): ImageVector {
-    return when (visibility.uppercase()) {
-        "PUBLIC" -> Icons.Outlined.Public
-        "PROTECTED" -> Icons.Outlined.Group
-        "PRIVATE" -> Icons.Outlined.Lock
-        else -> Icons.Outlined.Lock
     }
 }

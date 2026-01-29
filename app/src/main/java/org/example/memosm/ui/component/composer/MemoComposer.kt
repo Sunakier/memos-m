@@ -54,8 +54,8 @@ import org.example.memosm.model.Attachment
 import org.example.memosm.model.Location
 import org.example.memosm.ui.component.item.AttachmentCard
 import org.example.memosm.ui.component.item.AttachmentCompactMode
-import org.example.memosm.ui.component.item.getVisibilityIcon
 import org.example.memosm.ui.findActivity
+import org.example.memosm.ui.getVisibilityIcon
 import org.example.memosm.ui.getVisibilityLabel
 import java.io.File
 

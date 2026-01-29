@@ -3,7 +3,10 @@ package org.example.memosm.ui
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import org.example.memosm.R
 
@@ -17,6 +20,17 @@ fun getVisibilityLabel(visibility: String): String {
         else -> visibility
     }
 }
+
+
+fun getVisibilityIcon(visibility: String): ImageVector {
+    return when (visibility.uppercase()) {
+        "PUBLIC" -> Icons.Outlined.Public
+        "PROTECTED" -> Icons.Outlined.Group
+        "PRIVATE" -> Icons.Outlined.Lock
+        else -> Icons.Outlined.Lock
+    }
+}
+
 
 /**
  * Helper to find the Activity from a Context.
