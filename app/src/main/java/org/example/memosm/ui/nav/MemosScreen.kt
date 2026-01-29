@@ -114,6 +114,8 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
                         if (uiState.draft.drafts.isNotEmpty()) {
                             showDraftPrompt = true
                         } else {
+                            // Start fresh with a new draft session ID
+                            viewModel.initializeNewDraftSession()
                             startFresh = true
                             showComposerDialog = true
                         }
@@ -163,8 +165,9 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
                 TextButton(
                     onClick = {
                         showDraftPrompt = false
+                        // Start fresh with a new draft session ID
+                        viewModel.initializeNewDraftSession()
                         startFresh = true
-                        viewModel.setCurrentEditingDraft(null)
                         showComposerDialog = true
                     }
                 ) {

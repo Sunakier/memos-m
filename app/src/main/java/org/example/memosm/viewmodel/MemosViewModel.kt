@@ -823,6 +823,17 @@ class MemosViewModel(
         }
     }
 
+    /**
+     * Initialize a new draft session with a fresh ID.
+     * Call this when starting a new memo composition to ensure all saves
+     * during this session update the same draft.
+     */
+    fun initializeNewDraftSession(): String {
+        val newDraftId = java.util.UUID.randomUUID().toString()
+        setCurrentEditingDraft(newDraftId)
+        return newDraftId
+    }
+
     fun getLatestDraft(): Draft? {
         return _uiState.value.draft.drafts.maxByOrNull { it.updatedAt }
     }

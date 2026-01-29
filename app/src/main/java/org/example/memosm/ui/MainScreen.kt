@@ -117,9 +117,11 @@ fun MainScreen(
             shareVisibility = latestDraft?.visibility
             shareLocation = latestDraft?.location
 
-            // Set the draft as current editing draft if exists
+            // Set the draft as current editing draft if exists, otherwise initialize new session
             if (latestDraft != null) {
                 viewModel.setCurrentEditingDraft(latestDraft.id)
+            } else {
+                viewModel.initializeNewDraftSession()
             }
 
             processedShareData = shareIntentData
