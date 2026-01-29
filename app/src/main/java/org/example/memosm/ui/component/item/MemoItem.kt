@@ -72,6 +72,7 @@ fun MemoItem(
     onEdit: (() -> Unit)? = null,
     onArchive: (() -> Unit)? = null,
     onUnarchive: (() -> Unit)? = null,
+    onPin: ((Boolean) -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
     onUpsertReaction: ((String) -> Unit)? = null,
     onDeleteReaction: ((Reaction) -> Unit)? = null,
@@ -291,6 +292,20 @@ fun MemoItem(
                                     leadingIcon = {
                                         Icon(
                                             Icons.Outlined.Edit, contentDescription = null
+                                        )
+                                    })
+                            }
+                            if (onPin != null && memo.state == "NORMAL") {
+                                val isPinned = memo.pinned == true
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(if (isPinned) R.string.memo_action_unpin else R.string.memo_action_pin)) },
+                                    onClick = {
+                                        showMenu = false
+                                        onPin(!isPinned)
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Outlined.PushPin, contentDescription = null
                                         )
                                     })
                             }

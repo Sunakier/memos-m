@@ -150,6 +150,9 @@ fun MemoDetailView(
                             onEdit = if (isOwner) {
                                 { memoToEdit = memo }
                             } else null,
+                            onPin = if (isOwner) { pinned ->
+                                viewModel.updateMemoPinned(memo, pinned)
+                            } else null,
                             onDelete = if (isOwner) {
                                 { memoToDelete = memo }
                             } else null,

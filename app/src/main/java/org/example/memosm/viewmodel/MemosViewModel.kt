@@ -740,6 +740,21 @@ class MemosViewModel(
         }
     }
 
+    fun updateMemoPinned(memo: Memo, pinned: Boolean, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val update = memo.copy(pinned = pinned)
+                val updated = api?.updateMemo(memo.name!!, update, "pinned")
+                if (updated != null) {
+                    onSuccess()
+                    updateMemoInState(updated)
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
+            }
+        }
+    }
+
     fun createComment(parentMemo: Memo, content: String, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             try {
