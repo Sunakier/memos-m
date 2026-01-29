@@ -216,6 +216,7 @@ class MemosViewModel(
                         launch { fetchUserSettings(resourceName) }
                         launch { fetchWebhooks(resourceName) }
                         launch { fetchUserStats(resourceName) }
+                        launch { fetchActivities() }
                     }
 
                     fetchInstanceProfile()
@@ -245,6 +246,26 @@ class MemosViewModel(
             }
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error fetching user stats", e)
+        }
+    }
+
+    private suspend fun fetchActivities() {
+        try {
+            val hostUrl = _uiState.value.session.hostUrl
+            Log.d("MemosViewModel", "fetchActivities: Fetching from $hostUrl/api/v1/activities?pageSize=1000")
+            Log.d("MemosViewModel", "fetchActivities: Starting to fetch activities")
+            val response = api?.listActivities(pageSize = 1000)
+            Log.d("MemosViewModel", "fetchActivities: Response received, activities count: ${response?.activities?.size ?: 0}")
+            val activities = response?.activities ?: emptyList()
+            if (activities.isNotEmpty()) {
+                Log.d("MemosViewModel", "fetchActivities: First activity: ${activities.first()}")
+                Log.d("MemosViewModel", "fetchActivities: First activity createTime: ${activities.first().createTime}")
+                Log.d("MemosViewModel", "fetchActivities: Last activity createTime: ${activities.last().createTime}")
+            }
+            _uiState.update { it.copy(session = it.session.copy(activities = activities)) }
+            Log.d("MemosViewModel", "fetchActivities: Updated UI state with ${activities.size} activities")
+        } catch (e: Exception) {
+            Log.e("MemosViewModel", "Error fetching activities", e)
         }
     }
 

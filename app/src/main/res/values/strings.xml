@@ -196,4 +196,10 @@
     <string name="drafts_prompt_continue">Continue Draft</string>
     <string name="drafts_prompt_start_fresh">Start Fresh</string>
     <string name="drafts_card_message">You have unsaved drafts</string>
+
+    <!-- Activity Map -->
+    <string name="profile_activity_map">Activity Map</string>
+    <string name="profile_activity_count">%1$d activities</string>
+    <string name="profile_activity_less">Less</string>
+    <string name="profile_activity_more">More</string>
 </resources>
