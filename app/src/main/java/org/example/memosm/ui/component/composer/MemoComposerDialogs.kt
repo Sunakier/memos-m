@@ -122,6 +122,8 @@ fun MemoComposerDialog(
                             viewModel.saveDraft(content, visibility, attachments, location)
                         }
                     } else null,
+                    // Reset composer state when initial content/attachments change
+                    resetToken = Triple(effectiveInitialContent, initialAttachments, initialUris),
                 )
             }
         }

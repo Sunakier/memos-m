@@ -44,7 +44,7 @@
 
     <string name="profile_about">MemosMについて</string>
     <string name="profile_about_version">アプリバージョン</string>
-    <string name="profile_about_version_copied">バージョンをクリップボードにコピーしました</string>
+    <string name="profile_about_version_copied">バージョンをコピーしました</string>
     <string name="profile_about_repo">ソースコード</string>
     <string name="profile_about_issues">問題を報告</string>
     <string name="profile_add_account">アカウントを追加</string>
