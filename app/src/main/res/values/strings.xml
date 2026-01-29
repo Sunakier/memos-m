@@ -113,6 +113,7 @@
     <string name="memo_composer_error_stop_recording">Failed to stop recording</string>
     <string name="memo_composer_error_start_recording">Failed to start recording: %1$s</string>
     <string name="memo_composer_error_microphone_permission">Microphone permission required</string>
+    <string name="memo_composer_fab_new_memo">New Memo</string>
 
     <string name="attachments_none_found">No attachments found</string>
     <string name="attachments_error">Error</string>

@@ -1,6 +1,7 @@
 package org.example.memosm.ui.nav
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -9,6 +10,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Shortcut
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,15 +27,35 @@ import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.ui.component.GenericMemosListPane
-import org.example.memosm.ui.component.composer.MemoComposer
 import org.example.memosm.ui.component.MemoSearchBar
 import org.example.memosm.ui.component.MemosScaffold
+import org.example.memosm.ui.component.composer.MemoComposerDialog
 import org.example.memosm.viewmodel.MemosViewModel
 
 @Composable
 fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit = {}) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
+    var showComposerDialog by remember { mutableStateOf(false) }
+    var isFabExpanded by remember { mutableStateOf(true) }
+
+    // FAB expansion based on scroll direction
+    LaunchedEffect(listState) {
+        var previousIndex = listState.firstVisibleItemIndex
+        var previousScrollOffset = listState.firstVisibleItemScrollOffset
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (index, offset) ->
+            isFabExpanded = when {
+                index == 0 && offset == 0 -> true
+                index > previousIndex -> false
+                index < previousIndex -> true
+                offset > previousScrollOffset + 10 -> false
+                offset < previousScrollOffset - 10 -> true
+                else -> isFabExpanded
+            }
+            previousIndex = index
+            previousScrollOffset = offset
+        }
+    }
 
     // Double tap refresh logic: scroll to top
     var lastProcessedTrigger by remember { mutableLongStateOf(uiState.refreshTrigger) }
@@ -66,7 +88,44 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: (Boolean) -> Unit = {
                     onExpandedChange = onSearchExpandedChange
                 )
             }
+
+            // FAB for creating new memo
+            if (uiState.session.currUser != null) {
+                // Animate FAB position based on nav bar visibility (tied to scroll direction)
+                val fabBottomPadding by animateDpAsState(
+                    targetValue = if (isFabExpanded) 96.dp else 16.dp,
+                    label = "fabBottomPadding"
+                )
+                
+                ExtendedFloatingActionButton(
+                    onClick = { showComposerDialog = true },
+                    expanded = isFabExpanded,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null
+                        )
+                    },
+                    text = {
+                        Text(text = stringResource(R.string.memo_composer_fab_new_memo))
+                    },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 16.dp, bottom = fabBottomPadding)
+                )
+            }
         })
+
+    if (showComposerDialog) {
+        MemoComposerDialog(
+            onDismiss = { showComposerDialog = false },
+            viewModel = viewModel,
+            hostUrl = uiState.session.hostUrl,
+            title = stringResource(R.string.memo_composer_fab_new_memo)
+        )
+    }
 }
 
 @Composable
@@ -88,45 +147,6 @@ private fun MemosListPane(
         listState = listState,
         errorTitle = stringResource(R.string.common_error_failed_to_load_memos),
         header = {
-            // Top input card
-            item {
-                if (uiState.draft.isDraftLoaded) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
-                    ) {
-                        Card(modifier = Modifier.widthIn(max = 800.dp)) {
-                            MemoComposer(
-                                onPublish = { content, visibility, attachments, location ->
-                                viewModel.createMemo(
-                                    content, visibility, attachments, location
-                                )
-                            },
-                                onUploadFile = { uri, context ->
-                                    viewModel.uploadAttachment(uri, context)
-                                },
-                                onDraftChanged = { content, visibility, attachments, location ->
-                                    viewModel.saveDraft(
-                                        content, visibility, attachments, location
-                                    )
-                                },
-                                availableTags = uiState.session.userStats?.tagCount?.keys ?: emptySet(),
-                                token = uiState.session.token,
-                                hostUrl = uiState.session.hostUrl,
-                                modifier = Modifier.padding(16.dp),
-                                isPosting = uiState.isPosting,
-                                initialContent = uiState.draft.draftMemo?.content ?: "",
-                                initialAttachments = uiState.draft.draftMemo?.attachments ?: emptyList(),
-                                initialVisibility = uiState.draft.draftMemo?.visibility
-                                    ?: uiState.session.userSettings?.memoVisibility ?: "PRIVATE",
-                                initialLocation = uiState.draft.draftMemo?.location,
-                                submitLabel = stringResource(R.string.memo_publish),
-                                resetToken = uiState.draft.composerResetToken
-                            )
-                        }
-                    }
-                }
-            }
-
             // Horizontal Shortcut Row
             item(key = "shortcut_row") {
                 AnimatedVisibility(
