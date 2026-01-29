@@ -174,6 +174,7 @@ fun MemoComposer(
     initialContent: String = "",
     initialVisibility: String = "PRIVATE",
     initialAttachments: List<Attachment> = emptyList(),
+    initialUris: List<Uri> = emptyList(),
     initialLocation: Location? = null,
     placeholder: String = stringResource(R.string.memo_composer_placeholder),
     autoFocus: Boolean = false,
@@ -190,9 +191,12 @@ fun MemoComposer(
     var location by remember(resetToken) { mutableStateOf(initialLocation) }
 
     val draftAttachmentsState = remember(resetToken) {
-        val initial: List<Pair<Uri, Attachment?>> =
+        // Combine existing attachments (from editing) with new URIs (from share intent)
+        val fromAttachments: List<Pair<Uri, Attachment?>> =
             initialAttachments.map { Uri.EMPTY to (it as Attachment?) }
-        mutableStateOf(initial)
+        val fromUris: List<Pair<Uri, Attachment?>> =
+            initialUris.map { it to null }
+        mutableStateOf(fromAttachments + fromUris)
     }
     var draftAttachments by draftAttachmentsState
 

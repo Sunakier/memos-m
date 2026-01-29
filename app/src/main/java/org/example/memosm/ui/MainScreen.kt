@@ -31,6 +31,7 @@ import coil3.network.httpHeaders
 import kotlinx.coroutines.launch
 import org.example.memosm.R
 import org.example.memosm.data.DataStoreManager
+import org.example.memosm.model.ShareIntentData
 import org.example.memosm.ui.component.LoginDialog
 import org.example.memosm.ui.nav.AttachmentsScreen
 import org.example.memosm.ui.nav.ExploreScreen
@@ -41,6 +42,7 @@ import org.example.memosm.viewmodel.MemosViewModel
 import org.example.memosm.ui.component.resolveResourceUrl
 import org.example.memosm.ui.component.item.media.MemoImage
 import androidx.core.net.toUri
+import org.example.memosm.ui.component.composer.MemoComposerDialog
 
 enum class MainDestination(
     val labelRes: Int
@@ -56,7 +58,9 @@ fun MainScreen(
     token: String,
     dataStoreManager: DataStoreManager,
     onLogout: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    shareIntentData: ShareIntentData? = null,
+    onShareIntentConsumed: () -> Unit = {}
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(MainDestination.MEMOS) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
@@ -70,6 +74,21 @@ fun MainScreen(
 
     var isNavBarVisible by remember { mutableStateOf(true) }
     var isAddingAccount by remember { mutableStateOf(false) }
+    
+    // Share intent composer dialog state
+    var showShareComposerDialog by remember { mutableStateOf(false) }
+    var shareText by remember { mutableStateOf<String?>(null) }
+    var shareUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    
+    // Trigger composer when share data is received
+    LaunchedEffect(shareIntentData) {
+        if (shareIntentData != null && !shareIntentData.isEmpty) {
+            shareText = shareIntentData.text
+            shareUris = shareIntentData.uris
+            showShareComposerDialog = true
+            onShareIntentConsumed()
+        }
+    }
 
     DisposableEffect(currentDestination) {
         focusManager.clearFocus()
@@ -93,6 +112,22 @@ fun MainScreen(
                 isAddingAccount = false
             }
         }, onDismiss = { isAddingAccount = false })
+    }
+    
+    // Share intent composer dialog
+    if (showShareComposerDialog && uiState.session.currUser != null) {
+        MemoComposerDialog(
+            onDismiss = {
+                showShareComposerDialog = false
+                shareText = null
+                shareUris = emptyList()
+            },
+            viewModel = viewModel,
+            hostUrl = uiState.session.hostUrl,
+            title = stringResource(R.string.memo_composer_fab_new_memo),
+            initialContent = shareText ?: "",
+            initialUris = shareUris
+        )
     }
 
     @Composable

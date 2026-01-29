@@ -1,5 +1,6 @@
 package org.example.memosm.ui.component.composer
 
+import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -23,7 +24,9 @@ fun MemoComposerDialog(
     title: String,
     initialMemo: Memo? = null,
     parentMemo: Memo? = null, // If provided, it's a comment
-    placeholder: String = stringResource(R.string.memo_composer_placeholder)
+    placeholder: String = stringResource(R.string.memo_composer_placeholder),
+    initialContent: String = "",
+    initialUris: List<Uri> = emptyList()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val adaptiveInfo = currentWindowAdaptiveInfo()
@@ -67,6 +70,9 @@ fun MemoComposerDialog(
                     .weight(1f, fill = false)
                     .verticalScroll(rememberScrollState())
             ) {
+                // Determine initial content: use initialMemo content if editing, else use passed initialContent
+                val effectiveInitialContent = initialMemo?.content ?: initialContent
+                
                 MemoComposer(
                     onPublish = { content, visibility, attachments, location ->
                         when {
@@ -97,10 +103,11 @@ fun MemoComposerDialog(
                     token = uiState.session.token,
                     hostUrl = hostUrl,
                     isPosting = uiState.isPosting,
-                    initialContent = initialMemo?.content ?: "",
+                    initialContent = effectiveInitialContent,
                     initialVisibility = initialMemo?.visibility ?: parentMemo?.visibility
                     ?: uiState.session.userSettings?.memoVisibility ?: "PRIVATE",
                     initialAttachments = initialMemo?.attachments ?: emptyList(),
+                    initialUris = if (initialMemo == null) initialUris else emptyList(),
                     initialLocation = initialMemo?.location,
                     placeholder = placeholder,
                     autoFocus = true,
