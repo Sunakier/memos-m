@@ -15,15 +15,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AddReaction
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Place
+import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material3.*
@@ -419,7 +422,7 @@ fun MemoItem(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Place,
+                                imageVector = Icons.Outlined.Place,
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp)
                             )
@@ -647,9 +650,9 @@ fun ReactionPickerDialog(
 
 fun getVisibilityIcon(visibility: String): ImageVector {
     return when (visibility.uppercase()) {
-        "PUBLIC" -> Icons.Default.Public
-        "PROTECTED" -> Icons.Default.Group
-        "PRIVATE" -> Icons.Default.Lock
-        else -> Icons.Default.Lock
+        "PUBLIC" -> Icons.Outlined.Public
+        "PROTECTED" -> Icons.Outlined.Group
+        "PRIVATE" -> Icons.Outlined.Lock
+        else -> Icons.Outlined.Lock
     }
 }
