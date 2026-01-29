@@ -18,13 +18,15 @@ import okhttp3.OkHttpClient
 import org.example.memosm.api.AuthInterceptor
 import org.example.memosm.api.MemosApiV0353
 import org.example.memosm.data.DataStoreManager
+import org.example.memosm.data.DraftManager
 import org.example.memosm.model.*
 import org.example.memosm.viewmodel.manager.*
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 class MemosViewModel(
-    private val dataStoreManager: DataStoreManager
+    private val dataStoreManager: DataStoreManager,
+    private val draftManager: DraftManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MemosUiState())
@@ -45,26 +47,6 @@ class MemosViewModel(
 
     init {
         updateCurrentAccountInList()
-
-        // Restore Draft
-        viewModelScope.launch {
-            dataStoreManager.memoDraftJson.collect { json ->
-                if (!json.isNullOrBlank()) {
-                    try {
-                        val draft = Gson().fromJson(json, Memo::class.java)
-                        _uiState.update {
-                            it.copy(draft = it.draft.copy(draftMemo = draft, isDraftLoaded = true))
-                        }
-                    } catch (e: Exception) {
-                        Log.e("MemosViewModel", "Error loading draft", e)
-                    }
-                } else {
-                    _uiState.update {
-                        it.copy(draft = it.draft.copy(isDraftLoaded = true))
-                    }
-                }
-            }
-        }
     }
 
     private fun createApi(baseUrl: String, token: String): MemosApiV0353 {
@@ -148,6 +130,7 @@ class MemosViewModel(
                 startStateCollection()
                 fetchCurrentUser()
                 exploreMemoManager?.fetch()
+                loadDraftsForAccount(account.id)
 
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error switching account", e)
@@ -625,7 +608,8 @@ class MemosViewModel(
                 if (created != null) {
                     onSuccess()
                     userMemoManager?.fetch(refresh = true)
-                    saveDraft("", "PRIVATE", emptyList(), null)
+                    // Delete the draft that was just published
+                    clearCurrentEditingDraft()
                     _uiState.update {
                         it.copy(
                             draft = it.draft.copy(
@@ -771,24 +755,95 @@ class MemosViewModel(
         return attachmentManager?.uploadAttachment(uri, context)
     }
 
+    // --- Draft Management ---
+
+    private fun getActiveAccountId(): String? {
+        return _uiState.value.accounts.find { it.isActive }?.id
+    }
+
+    private fun loadDraftsForAccount(accountId: String) {
+        viewModelScope.launch {
+            try {
+                val drafts = draftManager.getDrafts(accountId)
+                _uiState.update {
+                    it.copy(draft = it.draft.copy(drafts = drafts, isDraftLoaded = true))
+                }
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error loading drafts for account $accountId", e)
+                _uiState.update { it.copy(draft = it.draft.copy(isDraftLoaded = true)) }
+            }
+        }
+    }
+
     fun saveDraft(
         content: String,
         visibility: String,
         attachments: List<Attachment>,
-        location: Location? = null
+        location: Location? = null,
+        draftId: String? = null
     ) {
-        val draftMemo = Memo(
+        val accountId = getActiveAccountId() ?: return
+        val existingDraftId = draftId ?: _uiState.value.draft.currentEditingDraftId
+
+        val draft = Draft(
+            id = existingDraftId ?: java.util.UUID.randomUUID().toString(),
             content = content,
             visibility = visibility,
             attachments = attachments,
-            location = location
+            location = location,
+            createdAt = if (existingDraftId != null) {
+                _uiState.value.draft.drafts.find { it.id == existingDraftId }?.createdAt
+                    ?: System.currentTimeMillis()
+            } else {
+                System.currentTimeMillis()
+            },
+            updatedAt = System.currentTimeMillis()
         )
-        _uiState.update {
-            it.copy(draft = it.draft.copy(draftMemo = draftMemo))
-        }
+
+        // Only save if there's actual content
+        if (!draft.hasContent()) return
+
         viewModelScope.launch {
-            dataStoreManager.saveMemoDraft(Gson().toJson(draftMemo))
+            draftManager.saveDraft(accountId, draft)
+            loadDraftsForAccount(accountId)
         }
+    }
+
+    fun deleteDraft(draftId: String) {
+        val accountId = getActiveAccountId() ?: return
+        viewModelScope.launch {
+            draftManager.deleteDraft(accountId, draftId)
+            loadDraftsForAccount(accountId)
+        }
+    }
+
+    fun setCurrentEditingDraft(draftId: String?) {
+        _uiState.update {
+            it.copy(draft = it.draft.copy(currentEditingDraftId = draftId))
+        }
+    }
+
+    /**
+     * Initialize a new draft session with a fresh ID.
+     * Call this when starting a new memo composition to ensure all saves
+     * during this session update the same draft.
+     */
+    fun initializeNewDraftSession(): String {
+        val newDraftId = java.util.UUID.randomUUID().toString()
+        setCurrentEditingDraft(newDraftId)
+        return newDraftId
+    }
+
+    fun getLatestDraft(): Draft? {
+        return _uiState.value.draft.drafts.maxByOrNull { it.updatedAt }
+    }
+
+    fun clearCurrentEditingDraft() {
+        val draftId = _uiState.value.draft.currentEditingDraftId
+        if (draftId != null) {
+            deleteDraft(draftId)
+        }
+        setCurrentEditingDraft(null)
     }
 
     fun upsertMemoReaction(memo: Memo, reactionType: String) {
@@ -826,11 +881,12 @@ class MemosViewModel(
 
     companion object {
         fun provideFactory(
-            dataStoreManager: DataStoreManager
+            dataStoreManager: DataStoreManager,
+            draftManager: DraftManager
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 if (modelClass.isAssignableFrom(MemosViewModel::class.java)) {
-                    @Suppress("UNCHECKED_CAST") return MemosViewModel(dataStoreManager) as T
+                    @Suppress("UNCHECKED_CAST") return MemosViewModel(dataStoreManager, draftManager) as T
                 }
                 throw IllegalArgumentException("Unknown ViewModel class")
             }
@@ -838,11 +894,12 @@ class MemosViewModel(
     }
 
     class Factory(
-        private val dataStoreManager: DataStoreManager
+        private val dataStoreManager: DataStoreManager,
+        private val draftManager: DraftManager
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(MemosViewModel::class.java)) {
-                @Suppress("UNCHECKED_CAST") return MemosViewModel(dataStoreManager) as T
+                @Suppress("UNCHECKED_CAST") return MemosViewModel(dataStoreManager, draftManager) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

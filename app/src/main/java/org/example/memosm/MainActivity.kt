@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.example.memosm.data.DataStoreManager
+import org.example.memosm.data.DraftManager
 import org.example.memosm.model.ShareIntentData
 import org.example.memosm.ui.component.LoginScreen
 import org.example.memosm.ui.MainScreen
@@ -40,6 +41,7 @@ class MainActivity : ComponentActivity() {
             MemosMTheme {
                 val context = LocalContext.current
                 val dataStoreManager = remember { DataStoreManager(context) }
+                val draftManager = remember { DraftManager(context) }
                 val scope = rememberCoroutineScope()
 
                 // Observe accounts instead of single credentials
@@ -71,6 +73,7 @@ class MainActivity : ComponentActivity() {
                                 baseUrl = activeAccount.hostUrl,
                                 token = activeAccount.accessToken,
                                 dataStoreManager = dataStoreManager,
+                                draftManager = draftManager,
                                 onLogout = {
                                     scope.launch {
                                         dataStoreManager.deleteAccount(activeAccount.id)

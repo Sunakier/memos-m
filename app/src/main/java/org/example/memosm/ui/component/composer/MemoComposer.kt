@@ -179,18 +179,16 @@ fun MemoComposer(
     placeholder: String = stringResource(R.string.memo_composer_placeholder),
     autoFocus: Boolean = false,
     onDraftChanged: ((String, String, List<Attachment>, Location?) -> Unit)? = null,
-    submitLabel: String? = null,
-    resetToken: Any? = null
+    submitLabel: String? = null
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
 
-    // We use resetToken to reset the internal state when necessary (e.g. after post or when changing which memo to edit)
-    val contentState = remember(resetToken) { TextFieldState(initialContent) }
-    var visibility by remember(resetToken) { mutableStateOf(initialVisibility) }
-    var location by remember(resetToken) { mutableStateOf(initialLocation) }
+    val contentState = remember { TextFieldState(initialContent) }
+    var visibility by remember { mutableStateOf(initialVisibility) }
+    var location by remember { mutableStateOf(initialLocation) }
 
-    val draftAttachmentsState = remember(resetToken) {
+    val draftAttachmentsState = remember {
         // Combine existing attachments (from editing) with new URIs (from share intent)
         val fromAttachments: List<Pair<Uri, Attachment?>> =
             initialAttachments.map { Uri.EMPTY to (it as Attachment?) }

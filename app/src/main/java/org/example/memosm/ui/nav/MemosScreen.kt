@@ -2,6 +2,7 @@ package org.example.memosm.ui.nav
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -12,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Shortcut
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.model.Memo
@@ -37,7 +40,12 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     var showComposerDialog by remember { mutableStateOf(false) }
+    var showDraftsScreen by remember { mutableStateOf(false) }
+    var showDraftPrompt by remember { mutableStateOf(false) }
     var isFabExpanded by remember { mutableStateOf(true) }
+    
+    // Track if we should start fresh (skip draft loading)
+    var startFresh by remember { mutableStateOf(false) }
 
     // FAB expansion based on scroll direction
     LaunchedEffect(listState) {
@@ -73,7 +81,10 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
         onToggleNavBar = { onToggleNavBar?.invoke(it) },
         listPane = { onMemoClick ->
             MemosListPane(
-                viewModel = viewModel, listState = listState, onMemoClick = onMemoClick
+                viewModel = viewModel, 
+                listState = listState, 
+                onMemoClick = onMemoClick,
+                onDraftsCardClick = { showDraftsScreen = true }
             )
         },
         overlay = { onMemoClick, showSearchBar, isSearchExpanded, onSearchExpandedChange, isDualPane, isDetailVisible ->
@@ -98,7 +109,17 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
                 )
                 
                 ExtendedFloatingActionButton(
-                    onClick = { showComposerDialog = true },
+                    onClick = { 
+                        // If drafts exist, show prompt; otherwise show composer directly
+                        if (uiState.draft.drafts.isNotEmpty()) {
+                            showDraftPrompt = true
+                        } else {
+                            // Start fresh with a new draft session ID
+                            viewModel.initializeNewDraftSession()
+                            startFresh = true
+                            showComposerDialog = true
+                        }
+                    },
                     expanded = isFabExpanded,
                     icon = {
                         Icon(
@@ -118,28 +139,92 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
             }
         })
 
+    // Draft prompt dialog
+    if (showDraftPrompt) {
+        AlertDialog(
+            onDismissRequest = { showDraftPrompt = false },
+            title = { Text(stringResource(R.string.drafts_prompt_title)) },
+            text = { Text(stringResource(R.string.drafts_prompt_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDraftPrompt = false
+                        // Load latest draft
+                        val latestDraft = viewModel.getLatestDraft()
+                        if (latestDraft != null) {
+                            viewModel.setCurrentEditingDraft(latestDraft.id)
+                        }
+                        startFresh = false
+                        showComposerDialog = true
+                    }
+                ) {
+                    Text(stringResource(R.string.drafts_prompt_continue))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDraftPrompt = false
+                        // Start fresh with a new draft session ID
+                        viewModel.initializeNewDraftSession()
+                        startFresh = true
+                        showComposerDialog = true
+                    }
+                ) {
+                    Text(stringResource(R.string.drafts_prompt_start_fresh))
+                }
+            }
+        )
+    }
+
+    // Composer dialog
     if (showComposerDialog) {
-        val draftMemo = uiState.draft.draftMemo
+        val latestDraft = if (!startFresh) viewModel.getLatestDraft() else null
+        val currentDraftId = uiState.draft.currentEditingDraftId
+        val draftToLoad = if (!startFresh && currentDraftId != null) {
+            uiState.draft.drafts.find { it.id == currentDraftId }
+        } else if (!startFresh) {
+            latestDraft
+        } else {
+            null
+        }
+        
         MemoComposerDialog(
-            onDismiss = { showComposerDialog = false },
+            onDismiss = { 
+                showComposerDialog = false 
+                startFresh = false
+            },
             viewModel = viewModel,
             hostUrl = uiState.session.hostUrl,
             title = stringResource(R.string.memo_composer_fab_new_memo),
             // Pre-populate with saved draft if available
-            initialContent = draftMemo?.content ?: "",
-            initialAttachments = draftMemo?.attachments ?: emptyList(),
-            initialVisibility = draftMemo?.visibility,
-            initialLocation = draftMemo?.location
+            initialContent = draftToLoad?.content ?: "",
+            initialAttachments = draftToLoad?.attachments ?: emptyList(),
+            initialVisibility = draftToLoad?.visibility,
+            initialLocation = draftToLoad?.location
+        )
+    }
+
+    // Drafts screen (full-screen)
+    if (showDraftsScreen) {
+        DraftsScreen(
+            viewModel = viewModel,
+            onDismiss = { showDraftsScreen = false }
         )
     }
 }
 
 @Composable
 private fun MemosListPane(
-    viewModel: MemosViewModel, listState: LazyListState, onMemoClick: (Memo) -> Unit
+    viewModel: MemosViewModel, 
+    listState: LazyListState, 
+    onMemoClick: (Memo) -> Unit,
+    onDraftsCardClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val shortcutListState = rememberLazyListState()
+    val hasDrafts = uiState.draft.drafts.isNotEmpty()
+    val draftCount = uiState.draft.drafts.size
 
     GenericMemosListPane(
         viewModel = viewModel,
@@ -153,6 +238,64 @@ private fun MemosListPane(
         listState = listState,
         errorTitle = stringResource(R.string.common_error_failed_to_load_memos),
         header = {
+            // Drafts Card (shown when drafts exist)
+            item(key = "drafts_card") {
+                AnimatedVisibility(
+                    visible = hasDrafts,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                            .clickable(onClick = onDraftsCardClick),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Edit,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.drafts_card_message),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.drafts_count, draftCount),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                }
+            }
+
             // Horizontal Shortcut Row
             item(key = "shortcut_row") {
                 AnimatedVisibility(
@@ -219,3 +362,4 @@ private fun MemosListPane(
             }
         })
 }
+
