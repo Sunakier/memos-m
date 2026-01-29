@@ -63,10 +63,12 @@ You can also download from [release](https://github.com/yamada-sexta/memos-m/rel
     - [x] Audio playback
     - [x] View image
   - Reactions
+    - [x] View reactions
     - [x] Add/Remove reactions
-    - [ ] Respect server reactions
+    - [ ] Respect server reaction list
 - Misc
   - [x] Multi language support: English, Japanese, Chinese, Korean, German
+  - [ ] Android share intent
 
 ## Project Scope
 
