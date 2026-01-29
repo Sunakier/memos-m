@@ -32,6 +32,7 @@ import org.example.memosm.ui.component.setting.AccountEditDialog
 import org.example.memosm.ui.component.setting.ShortcutsCard
 import org.example.memosm.ui.component.setting.WebhooksCard
 import org.example.memosm.ui.component.LoginDialog
+import org.example.memosm.ui.component.ActivityMapCard
 import org.example.memosm.ui.component.ProfileHeader
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -288,6 +289,12 @@ private fun ProfileListPane(
                 item {
                     Box(itemModifier) {
                         StatsCard(stats)
+                    }
+                }
+
+                item {
+                    Box(itemModifier) {
+                        ActivityMapCard(userStats = stats)
                     }
                 }
 

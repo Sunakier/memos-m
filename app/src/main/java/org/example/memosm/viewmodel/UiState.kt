@@ -19,7 +19,8 @@ data class SessionState(
     val userStats: UserStats? = null,
     val userSettings: UserGeneralSetting? = null,
     val webhooks: List<UserWebhook> = emptyList(),
-    val instanceProfile: InstanceProfile? = null
+    val instanceProfile: InstanceProfile? = null,
+    val activities: List<Activity> = emptyList()
 )
 
 // --- Memo List State ---
