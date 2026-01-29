@@ -70,6 +70,7 @@ You can also download from [release](https://github.com/yamada-sexta/memos-m/rel
 - Misc
   - [x] Multi language support: English, Japanese, Chinese, Korean, German
   - [x] Sharing intent support
+  - [ ] Local cache
 
 ## Project Scope
 
