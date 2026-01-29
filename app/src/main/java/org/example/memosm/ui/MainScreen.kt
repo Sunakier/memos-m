@@ -31,6 +31,7 @@ import coil3.network.httpHeaders
 import kotlinx.coroutines.launch
 import org.example.memosm.R
 import org.example.memosm.data.DataStoreManager
+import org.example.memosm.data.DraftManager
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Location
 import org.example.memosm.model.ShareIntentData
@@ -59,6 +60,7 @@ fun MainScreen(
     baseUrl: String,
     token: String,
     dataStoreManager: DataStoreManager,
+    draftManager: DraftManager,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
     shareIntentData: ShareIntentData? = null,
@@ -67,7 +69,7 @@ fun MainScreen(
     var currentDestination by rememberSaveable { mutableStateOf(MainDestination.MEMOS) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
     val viewModel: MemosViewModel =
-        viewModel(factory = MemosViewModel.provideFactory(dataStoreManager))
+        viewModel(factory = MemosViewModel.provideFactory(dataStoreManager, draftManager))
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
@@ -94,13 +96,14 @@ fun MainScreen(
     LaunchedEffect(shareIntentData, isDraftLoaded) {
         // Only process if:
         // 1. We have share data
-        // 2. Draft has been loaded from DataStore
+        // 2. Draft has been loaded
         // 3. We haven't already processed this exact share data
         if (shareIntentData != null && !shareIntentData.isEmpty && isDraftLoaded && processedShareData != shareIntentData) {
-            val draftMemo = uiState.draft.draftMemo
+            // Use the latest draft if available
+            val latestDraft = uiState.draft.drafts.maxByOrNull { it.updatedAt }
 
             // Append shared text to existing draft content
-            val existingContent = draftMemo?.content ?: ""
+            val existingContent = latestDraft?.content ?: ""
             val sharedText = shareIntentData.text ?: ""
             shareText = if (existingContent.isNotBlank() && sharedText.isNotBlank()) {
                 "$existingContent\n\n$sharedText"
@@ -110,9 +113,14 @@ fun MainScreen(
 
             // Combine shared URIs with existing draft attachments
             shareUris = shareIntentData.uris
-            shareAttachments = draftMemo?.attachments ?: emptyList()
-            shareVisibility = draftMemo?.visibility
-            shareLocation = draftMemo?.location
+            shareAttachments = latestDraft?.attachments ?: emptyList()
+            shareVisibility = latestDraft?.visibility
+            shareLocation = latestDraft?.location
+
+            // Set the draft as current editing draft if exists
+            if (latestDraft != null) {
+                viewModel.setCurrentEditingDraft(latestDraft.id)
+            }
 
             processedShareData = shareIntentData
             showShareComposerDialog = true

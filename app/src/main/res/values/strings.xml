@@ -180,4 +180,20 @@
         <item>Ouch!|&gt;_&lt;</item>
         <item>Please stop...|m(_ _)m</item>
     </string-array>
+
+    <!-- Drafts -->
+    <string name="drafts_title">Drafts</string>
+    <string name="drafts_count">%1$d draft(s)</string>
+    <string name="drafts_empty">No drafts</string>
+    <string name="drafts_no_content">(Empty draft)</string>
+    <string name="drafts_action_edit">Edit</string>
+    <string name="drafts_action_post">Post</string>
+    <string name="drafts_action_delete">Delete</string>
+    <string name="drafts_delete_confirm_title">Delete Draft</string>
+    <string name="drafts_delete_confirm_message">Are you sure you want to delete this draft? This cannot be undone.</string>
+    <string name="drafts_prompt_title">Unsaved Drafts</string>
+    <string name="drafts_prompt_message">You have unsaved drafts. Would you like to continue your latest draft or start fresh?</string>
+    <string name="drafts_prompt_continue">Continue Draft</string>
+    <string name="drafts_prompt_start_fresh">Start Fresh</string>
+    <string name="drafts_card_message">You have unsaved drafts</string>
 </resources>

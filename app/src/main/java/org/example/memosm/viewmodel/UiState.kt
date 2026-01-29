@@ -39,7 +39,10 @@ data class AttachmentListState(
 // --- Draft State ---
 
 data class DraftState(
-    val draftMemo: Memo? = null, val isDraftLoaded: Boolean = false, val composerResetToken: Int = 0
+    val drafts: List<org.example.memosm.model.Draft> = emptyList(),
+    val isDraftLoaded: Boolean = false,
+    val composerResetToken: Int = 0,
+    val currentEditingDraftId: String? = null // Track which draft is being edited
 )
 
 // --- Detail Pane State ---
