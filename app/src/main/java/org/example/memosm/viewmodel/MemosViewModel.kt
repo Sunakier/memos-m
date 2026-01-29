@@ -838,6 +838,16 @@ class MemosViewModel(
         }
     }
 
+    fun deleteAllDrafts() {
+        val accountId = getActiveAccountId() ?: return
+        viewModelScope.launch {
+            draftManager.clearDrafts(accountId)
+            loadDraftsForAccount(accountId)
+            // If the current editing draft was one of them, clear it
+            setCurrentEditingDraft(null)
+        }
+    }
+
     fun setCurrentEditingDraft(draftId: String?) {
         _uiState.update {
             it.copy(draft = it.draft.copy(currentEditingDraftId = draftId))

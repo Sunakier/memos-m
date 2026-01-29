@@ -20,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -45,7 +46,7 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
     var showDraftsScreen by remember { mutableStateOf(false) }
     var showDraftPrompt by remember { mutableStateOf(false) }
     var isFabExpanded by remember { mutableStateOf(true) }
-    
+
     // Track if we should start fresh (skip draft loading)
     var startFresh by remember { mutableStateOf(false) }
 
@@ -83,11 +84,10 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
         onToggleNavBar = { onToggleNavBar?.invoke(it) },
         listPane = { onMemoClick ->
             MemosListPane(
-                viewModel = viewModel, 
-                listState = listState, 
+                viewModel = viewModel,
+                listState = listState,
                 onMemoClick = onMemoClick,
-                onDraftsCardClick = { showDraftsScreen = true }
-            )
+                onDraftsCardClick = { showDraftsScreen = true })
         },
         overlay = { onMemoClick, showSearchBar, isSearchExpanded, onSearchExpandedChange, isDualPane, isDetailVisible ->
             AnimatedVisibility(
@@ -109,9 +109,9 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
                     targetValue = if (onToggleNavBar != null && isFabExpanded) 96.dp else 16.dp,
                     label = "fabBottomPadding"
                 )
-                
+
                 ExtendedFloatingActionButton(
-                    onClick = { 
+                    onClick = {
                         // If drafts exist, show prompt; otherwise show composer directly
                         if (uiState.draft.drafts.isNotEmpty()) {
                             showDraftPrompt = true
@@ -125,8 +125,7 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
                     expanded = isFabExpanded,
                     icon = {
                         Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null
+                            imageVector = Icons.Default.Add, contentDescription = null
                         )
                     },
                     text = {
@@ -158,8 +157,7 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
                         }
                         startFresh = false
                         showComposerDialog = true
-                    }
-                ) {
+                    }) {
                     Text(stringResource(R.string.drafts_prompt_continue))
                 }
             },
@@ -171,12 +169,10 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
                         viewModel.initializeNewDraftSession()
                         startFresh = true
                         showComposerDialog = true
-                    }
-                ) {
+                    }) {
                     Text(stringResource(R.string.drafts_prompt_start_fresh))
                 }
-            }
-        )
+            })
     }
 
     // Composer dialog
@@ -190,10 +186,10 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
         } else {
             null
         }
-        
+
         MemoComposerDialog(
-            onDismiss = { 
-                showComposerDialog = false 
+            onDismiss = {
+                showComposerDialog = false
                 startFresh = false
             },
             viewModel = viewModel,
@@ -214,34 +210,30 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
     val exitEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
 
     AnimatedVisibility(
-        visible = showDraftsScreen,
-        enter = slideInVertically(
-            animationSpec = tween(400, easing = enterEasing),
-            initialOffsetY = { it }
-        ) + fadeIn(animationSpec = tween(400, easing = enterEasing)),
-        exit = slideOutVertically(
-            animationSpec = tween(200, easing = exitEasing),
-            targetOffsetY = { it }
-        ) + fadeOut(animationSpec = tween(200, easing = exitEasing))
-    ) {
+        visible = showDraftsScreen, enter = slideInVertically(
+            animationSpec = tween(400, easing = enterEasing), initialOffsetY = { it }) + fadeIn(
+            animationSpec = tween(400, easing = enterEasing)
+        ), exit = slideOutVertically(
+            animationSpec = tween(200, easing = exitEasing), targetOffsetY = { it }) + fadeOut(
+            animationSpec = tween(200, easing = exitEasing)
+        )) {
         DraftsScreen(
-            viewModel = viewModel,
-            onDismiss = { showDraftsScreen = false }
-        )
+            viewModel = viewModel, onDismiss = { showDraftsScreen = false })
     }
 }
 
 @Composable
 private fun MemosListPane(
-    viewModel: MemosViewModel, 
-    listState: LazyListState, 
+    viewModel: MemosViewModel,
+    listState: LazyListState,
     onMemoClick: (Memo) -> Unit,
     onDraftsCardClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val shortcutListState = rememberLazyListState()
     val hasDrafts = uiState.draft.drafts.isNotEmpty()
+    val shortcutListState = rememberLazyListState()
     val draftCount = uiState.draft.drafts.size
+    var showDeleteAllDialog by remember { mutableStateOf(false) }
 
     GenericMemosListPane(
         viewModel = viewModel,
@@ -298,16 +290,21 @@ private fun MemosListPane(
                                     Text(
                                         text = stringResource(R.string.drafts_count, draftCount),
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
+                                            alpha = 0.7f
+                                        )
                                     )
                                 }
                             }
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f)
-                            )
+                                contentDescription = stringResource(R.string.common_delete),
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { showDeleteAllDialog = true }
+                                    .padding(4.dp),
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f))
                         }
                     }
                 }
@@ -348,7 +345,8 @@ private fun MemosListPane(
                             it.name.takeUnless { n -> n.isNullOrBlank() }
                                 ?: "${it.title?.hashCode() ?: 0}_${it.filter?.hashCode() ?: 0}"
                         }) { shortcut ->
-                            val isSelected = uiState.userMemoList.selectedShortcut?.name == shortcut.name
+                            val isSelected =
+                                uiState.userMemoList.selectedShortcut?.name == shortcut.name
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { viewModel.toggleShortcutFilter(shortcut) },
@@ -378,5 +376,29 @@ private fun MemosListPane(
                 }
             }
         })
+
+    if (showDeleteAllDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteAllDialog = false },
+            title = { Text(stringResource(R.string.drafts_delete_all_confirmation_title)) },
+            text = { Text(stringResource(R.string.drafts_delete_all_confirmation_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteAllDrafts()
+                        showDeleteAllDialog = false
+                    }, colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(stringResource(R.string.common_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteAllDialog = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            })
+    }
 }
 

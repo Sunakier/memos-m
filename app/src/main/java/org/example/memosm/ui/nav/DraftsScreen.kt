@@ -14,10 +14,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Attachment
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material3.*
@@ -81,7 +81,7 @@ fun DraftsScreen(
                 navigationIcon = {
                     IconButton(onClick = onDismiss) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                             contentDescription = stringResource(R.string.memo_detail_back)
                         )
                     }
@@ -285,7 +285,7 @@ private fun DraftCard(
                 // Delete button
                 IconButton(onClick = onDelete) {
                     Icon(
-                        imageVector = Icons.Default.Delete,
+                        imageVector = Icons.Outlined.Delete,
                         contentDescription = stringResource(R.string.drafts_action_delete),
                         tint = MaterialTheme.colorScheme.error
                     )
@@ -294,7 +294,7 @@ private fun DraftCard(
                 // Edit button
                 IconButton(onClick = onEdit) {
                     Icon(
-                        imageVector = Icons.Default.Edit,
+                        imageVector = Icons.Outlined.Edit,
                         contentDescription = stringResource(R.string.drafts_action_edit),
                         tint = MaterialTheme.colorScheme.primary
                     )
@@ -308,7 +308,7 @@ private fun DraftCard(
                     )
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Send,
+                        imageVector = Icons.AutoMirrored.Outlined.Send,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
