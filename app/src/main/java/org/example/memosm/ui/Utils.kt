@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -22,12 +23,12 @@ fun getVisibilityLabel(visibility: String): String {
 }
 
 
-fun getVisibilityIcon(visibility: String): ImageVector {
+fun getVisibilityIcon(visibility: String, outlined: Boolean = true): ImageVector {
     return when (visibility.uppercase()) {
-        "PUBLIC" -> Icons.Outlined.Public
-        "PROTECTED" -> Icons.Outlined.Group
-        "PRIVATE" -> Icons.Outlined.Lock
-        else -> Icons.Outlined.Lock
+        "PUBLIC" -> if (outlined) Icons.Outlined.Public else Icons.Filled.Public
+        "PROTECTED" -> if (outlined) Icons.Outlined.Lock else Icons.Filled.Lock
+        "PRIVATE" -> if (outlined) Icons.Outlined.Lock else Icons.Filled.Lock
+        else -> if (outlined) Icons.Outlined.Error else Icons.Filled.Error
     }
 }
 
