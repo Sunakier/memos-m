@@ -1,6 +1,7 @@
 package org.example.memosm.ui.nav
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
@@ -208,16 +209,20 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
 
     // Drafts screen (full-screen)
     // Drafts screen (full-screen)
+    // Material Expressive easing
+    val enterEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
+    val exitEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
+
     AnimatedVisibility(
         visible = showDraftsScreen,
         enter = slideInVertically(
-            animationSpec = tween(300),
+            animationSpec = tween(400, easing = enterEasing),
             initialOffsetY = { it }
-        ) + fadeIn(animationSpec = tween(300)),
+        ) + fadeIn(animationSpec = tween(400, easing = enterEasing)),
         exit = slideOutVertically(
-            animationSpec = tween(250),
+            animationSpec = tween(200, easing = exitEasing),
             targetOffsetY = { it }
-        ) + fadeOut(animationSpec = tween(250))
+        ) + fadeOut(animationSpec = tween(200, easing = exitEasing))
     ) {
         DraftsScreen(
             viewModel = viewModel,
