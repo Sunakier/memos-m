@@ -44,6 +44,7 @@
 
     <string name="profile_about">MemosMについて</string>
     <string name="profile_about_version">アプリバージョン</string>
+    <string name="profile_about_version_copied">バージョンをクリップボードにコピーしました</string>
     <string name="profile_about_repo">ソースコード</string>
     <string name="profile_about_issues">問題を報告</string>
     <string name="profile_add_account">アカウントを追加</string>
@@ -61,7 +62,6 @@
     <string name="profile_password_hint">現在のパスワードを維持する場合は空白のままにしてください</string>
     <string name="profile_edit_credentials">ログイン情報の編集</string>
     <string name="profile_credential_hint">変更はローカルに保存されます。無効な認証情報は再ログインが必要になるため、注意して使用してください。</string>
-    <string name="profile_about_version_copied">バージョンをクリップボードにコピーしました</string>
 
     <string name="profile_webhooks_add">Webhookを追加</string>
     <string name="profile_webhooks_edit">Webhookを編集</string>
@@ -81,6 +81,8 @@
     <string name="memo_action_edit">編集</string>
     <string name="memo_action_archive">アーカイブ</string>
     <string name="memo_action_unarchive">アーカイブ解除</string>
+    <string name="memo_action_pin">固定</string>
+    <string name="memo_action_unpin">固定解除</string>
     <string name="memo_action_delete">削除</string>
     <string name="memo_action_more">メニュー</string>
     <string name="memo_action_open_web">Webで開く</string>
@@ -109,6 +111,7 @@
     <string name="memo_composer_error_stop_recording">録音の停止に失敗しました</string>
     <string name="memo_composer_error_start_recording">録音の開始に失敗しました: %1$s</string>
     <string name="memo_composer_error_microphone_permission">マイクの権限が必要です</string>
+    <string name="memo_composer_fab_new_memo">メモを作成</string>
 
     <string name="attachments_none_found">添付ファイルが見つかりません</string>
     <string name="attachments_error">エラー</string>

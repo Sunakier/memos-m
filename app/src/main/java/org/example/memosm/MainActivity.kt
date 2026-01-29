@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.model.ShareIntentData
@@ -24,12 +25,16 @@ import org.example.memosm.ui.MainScreen
 import org.example.memosm.ui.theme.MemosMTheme
 
 class MainActivity : ComponentActivity() {
+    
+    // StateFlow to hold pending share data, observable by Compose
+    private val pendingShareDataFlow = MutableStateFlow<ShareIntentData?>(null)
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
-        // Parse share intent data
-        val shareIntentData = parseShareIntent(intent)
+        // Parse share intent data from initial launch
+        pendingShareDataFlow.value = parseShareIntent(intent)
         
         setContent {
             MemosMTheme {
@@ -43,8 +48,8 @@ class MainActivity : ComponentActivity() {
                 // Wait for DataStore to emit initial values
                 var isCheckingSession by remember { mutableStateOf(true) }
                 
-                // Track share data that needs to be consumed
-                var pendingShareData by remember { mutableStateOf(shareIntentData) }
+                // Collect pending share data from the flow
+                val pendingShareData by pendingShareDataFlow.collectAsState()
 
                 LaunchedEffect(accounts) {
                     if (accounts != null) {
@@ -72,7 +77,7 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 shareIntentData = pendingShareData,
-                                onShareIntentConsumed = { pendingShareData = null }
+                                onShareIntentConsumed = { pendingShareDataFlow.value = null }
                             )
                         } else {
                             // If no active account, show login
@@ -87,6 +92,21 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+    
+    /**
+     * Called when the activity is already running and receives a new intent (e.g., share).
+     * With launchMode="singleTask", share intents will come here instead of onCreate.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent) // Update the current intent
+        
+        // Parse and emit the new share data
+        val shareData = parseShareIntent(intent)
+        if (shareData != null) {
+            pendingShareDataFlow.value = shareData
         }
     }
     

@@ -109,6 +109,7 @@
     <string name="memo_composer_error_stop_recording">Aufnahme konnte nicht gestoppt werden</string>
     <string name="memo_composer_error_start_recording">Aufnahme konnte nicht gestartet werden: %1$s</string>
     <string name="memo_composer_error_microphone_permission">Mikrofonberechtigung erforderlich</string>
+    <string name="memo_composer_fab_new_memo">Neues Memo</string>
 
     <string name="attachments_none_found">Keine Anhänge gefunden</string>
     <string name="attachments_error">Fehler</string>

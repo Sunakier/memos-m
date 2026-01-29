@@ -119,11 +119,17 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
         })
 
     if (showComposerDialog) {
+        val draftMemo = uiState.draft.draftMemo
         MemoComposerDialog(
             onDismiss = { showComposerDialog = false },
             viewModel = viewModel,
             hostUrl = uiState.session.hostUrl,
-            title = stringResource(R.string.memo_composer_fab_new_memo)
+            title = stringResource(R.string.memo_composer_fab_new_memo),
+            // Pre-populate with saved draft if available
+            initialContent = draftMemo?.content ?: "",
+            initialAttachments = draftMemo?.attachments ?: emptyList(),
+            initialVisibility = draftMemo?.visibility,
+            initialLocation = draftMemo?.location
         )
     }
 }

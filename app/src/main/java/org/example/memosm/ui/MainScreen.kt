@@ -31,6 +31,8 @@ import coil3.network.httpHeaders
 import kotlinx.coroutines.launch
 import org.example.memosm.R
 import org.example.memosm.data.DataStoreManager
+import org.example.memosm.model.Attachment
+import org.example.memosm.model.Location
 import org.example.memosm.model.ShareIntentData
 import org.example.memosm.ui.component.LoginDialog
 import org.example.memosm.ui.nav.AttachmentsScreen
@@ -74,17 +76,45 @@ fun MainScreen(
 
     var isNavBarVisible by remember { mutableStateOf(true) }
     var isAddingAccount by remember { mutableStateOf(false) }
-    
+
     // Share intent composer dialog state
     var showShareComposerDialog by remember { mutableStateOf(false) }
     var shareText by remember { mutableStateOf<String?>(null) }
     var shareUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var shareAttachments by remember { mutableStateOf<List<Attachment>>(emptyList()) }
+    var shareVisibility by remember { mutableStateOf<String?>(null) }
+    var shareLocation by remember { mutableStateOf<Location?>(null) }
     
-    // Trigger composer when share data is received
-    LaunchedEffect(shareIntentData) {
-        if (shareIntentData != null && !shareIntentData.isEmpty) {
-            shareText = shareIntentData.text
+    // Track if we've already processed the current share intent
+    var processedShareData by remember { mutableStateOf<ShareIntentData?>(null) }
+
+    // Trigger composer when share data is received - APPEND to existing draft
+    // Wait for draft to be loaded before processing to avoid race condition
+    val isDraftLoaded = uiState.draft.isDraftLoaded
+    LaunchedEffect(shareIntentData, isDraftLoaded) {
+        // Only process if:
+        // 1. We have share data
+        // 2. Draft has been loaded from DataStore
+        // 3. We haven't already processed this exact share data
+        if (shareIntentData != null && !shareIntentData.isEmpty && isDraftLoaded && processedShareData != shareIntentData) {
+            val draftMemo = uiState.draft.draftMemo
+
+            // Append shared text to existing draft content
+            val existingContent = draftMemo?.content ?: ""
+            val sharedText = shareIntentData.text ?: ""
+            shareText = if (existingContent.isNotBlank() && sharedText.isNotBlank()) {
+                "$existingContent\n\n$sharedText"
+            } else {
+                existingContent + sharedText
+            }
+
+            // Combine shared URIs with existing draft attachments
             shareUris = shareIntentData.uris
+            shareAttachments = draftMemo?.attachments ?: emptyList()
+            shareVisibility = draftMemo?.visibility
+            shareLocation = draftMemo?.location
+
+            processedShareData = shareIntentData
             showShareComposerDialog = true
             onShareIntentConsumed()
         }
@@ -113,7 +143,7 @@ fun MainScreen(
             }
         }, onDismiss = { isAddingAccount = false })
     }
-    
+
     // Share intent composer dialog
     if (showShareComposerDialog && uiState.session.currUser != null) {
         MemoComposerDialog(
@@ -121,12 +151,18 @@ fun MainScreen(
                 showShareComposerDialog = false
                 shareText = null
                 shareUris = emptyList()
+                shareAttachments = emptyList()
+                shareVisibility = null
+                shareLocation = null
             },
             viewModel = viewModel,
             hostUrl = uiState.session.hostUrl,
             title = stringResource(R.string.memo_composer_fab_new_memo),
             initialContent = shareText ?: "",
-            initialUris = shareUris
+            initialUris = shareUris,
+            initialAttachments = shareAttachments,
+            initialVisibility = shareVisibility,
+            initialLocation = shareLocation
         )
     }
 

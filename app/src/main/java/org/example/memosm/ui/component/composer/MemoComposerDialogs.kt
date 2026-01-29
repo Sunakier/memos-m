@@ -12,6 +12,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
+import org.example.memosm.model.Attachment
+import org.example.memosm.model.Location
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
 
@@ -26,7 +28,10 @@ fun MemoComposerDialog(
     parentMemo: Memo? = null, // If provided, it's a comment
     placeholder: String = stringResource(R.string.memo_composer_placeholder),
     initialContent: String = "",
-    initialUris: List<Uri> = emptyList()
+    initialUris: List<Uri> = emptyList(),
+    initialAttachments: List<Attachment> = emptyList(),
+    initialVisibility: String? = null,
+    initialLocation: Location? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val adaptiveInfo = currentWindowAdaptiveInfo()
@@ -104,13 +109,19 @@ fun MemoComposerDialog(
                     hostUrl = hostUrl,
                     isPosting = uiState.isPosting,
                     initialContent = effectiveInitialContent,
-                    initialVisibility = initialMemo?.visibility ?: parentMemo?.visibility
+                    initialVisibility = initialMemo?.visibility ?: initialVisibility ?: parentMemo?.visibility
                     ?: uiState.session.userSettings?.memoVisibility ?: "PRIVATE",
-                    initialAttachments = initialMemo?.attachments ?: emptyList(),
+                    initialAttachments = initialMemo?.attachments ?: initialAttachments,
                     initialUris = if (initialMemo == null) initialUris else emptyList(),
-                    initialLocation = initialMemo?.location,
+                    initialLocation = initialMemo?.location ?: initialLocation,
                     placeholder = placeholder,
                     autoFocus = true,
+                    // Save drafts only for new memos (not editing or commenting)
+                    onDraftChanged = if (initialMemo == null && parentMemo == null) {
+                        { content, visibility, attachments, location ->
+                            viewModel.saveDraft(content, visibility, attachments, location)
+                        }
+                    } else null,
                 )
             }
         }

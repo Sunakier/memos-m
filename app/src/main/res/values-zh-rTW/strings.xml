@@ -80,6 +80,7 @@
     <string name="memo_composer_error_stop_recording">停止錄音失敗</string>
     <string name="memo_composer_error_start_recording">開始錄音失敗: %1$s</string>
     <string name="memo_composer_error_microphone_permission">需要麥克風權限</string>
+    <string name="memo_composer_fab_new_memo">新增筆記</string>
 
     <string name="attachments_none_found">暫無資源</string>
     <string name="attachments_error">錯誤</string>
