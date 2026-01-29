@@ -37,7 +37,12 @@ import org.example.memosm.ui.component.composer.MemoComposerDialog
 import org.example.memosm.viewmodel.MemosViewModel
 
 @Composable
-fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? = null) {
+fun MemosScreen(
+    viewModel: MemosViewModel,
+    onToggleNavBar: ((Boolean) -> Unit)? = null,
+    openComposer: Boolean = false,
+    onComposerOpened: () -> Unit = {}
+) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     var showComposerDialog by remember { mutableStateOf(false) }
@@ -65,6 +70,23 @@ fun MemosScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? 
             previousScrollOffset = offset
         }
     }
+
+    // Handle external composer open request (e.g. from widget)
+    LaunchedEffect(openComposer) {
+        if (openComposer) {
+            // Same logic as FAB click
+            if (uiState.draft.drafts.isNotEmpty()) {
+                showDraftPrompt = true
+            } else {
+                viewModel.initializeNewDraftSession()
+                startFresh = true
+                showComposerDialog = true
+            }
+            onComposerOpened()
+        }
+    }
+    
+    // Double tap refresh logic: scroll to top
 
     // Double tap refresh logic: scroll to top
     var lastProcessedTrigger by remember { mutableLongStateOf(uiState.refreshTrigger) }

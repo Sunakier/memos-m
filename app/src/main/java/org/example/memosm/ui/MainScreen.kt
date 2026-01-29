@@ -64,7 +64,9 @@ fun MainScreen(
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
     shareIntentData: ShareIntentData? = null,
-    onShareIntentConsumed: () -> Unit = {}
+    onShareIntentConsumed: () -> Unit = {},
+    shouldOpenComposer: Boolean = false,
+    onComposerOpened: () -> Unit = {}
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(MainDestination.MEMOS) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
@@ -93,6 +95,14 @@ fun MainScreen(
     // Trigger composer when share data is received - APPEND to existing draft
     // Wait for draft to be loaded before processing to avoid race condition
     val isDraftLoaded = uiState.draft.isDraftLoaded
+    
+    // Switch to Memos tab if widget triggered composer
+    LaunchedEffect(shouldOpenComposer) {
+        if (shouldOpenComposer) {
+            currentDestination = MainDestination.MEMOS
+        }
+    }
+    
     LaunchedEffect(shareIntentData, isDraftLoaded) {
         // Only process if:
         // 1. We have share data
@@ -294,7 +304,10 @@ fun MainScreen(
                         saveableStateHolder.SaveableStateProvider(targetDestination) {
                             when (targetDestination) {
                                 MainDestination.MEMOS -> MemosScreen(
-                                    viewModel = viewModel, onToggleNavBar = toggleNavBar
+                                    viewModel = viewModel, 
+                                    onToggleNavBar = toggleNavBar,
+                                    openComposer = shouldOpenComposer,
+                                    onComposerOpened = onComposerOpened
                                 )
 
                                 MainDestination.EXPLORE -> ExploreScreen(

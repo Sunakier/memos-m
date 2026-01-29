@@ -8,4 +8,6 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="ic_launcher_background">#263238</color>
+    <color name="widget_background_color">@color/ic_launcher_background</color>
+    <color name="widget_content_color">@android:color/white</color>
 </resources>

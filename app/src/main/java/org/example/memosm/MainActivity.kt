@@ -24,11 +24,15 @@ import org.example.memosm.model.ShareIntentData
 import org.example.memosm.ui.component.LoginScreen
 import org.example.memosm.ui.MainScreen
 import org.example.memosm.ui.theme.MemosMTheme
+import org.example.memosm.widget.DraftWidget
 
 class MainActivity : ComponentActivity() {
     
     // StateFlow to hold pending share data, observable by Compose
     private val pendingShareDataFlow = MutableStateFlow<ShareIntentData?>(null)
+    
+    // StateFlow to trigger composer opening from widget
+    private val shouldOpenComposerFlow = MutableStateFlow(false)
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +40,11 @@ class MainActivity : ComponentActivity() {
         
         // Parse share intent data from initial launch
         pendingShareDataFlow.value = parseShareIntent(intent)
+        
+        // Check if launched from widget
+        if (intent.action == DraftWidget.ACTION_OPEN_COMPOSER) {
+            shouldOpenComposerFlow.value = true
+        }
         
         setContent {
             MemosMTheme {
@@ -52,6 +61,7 @@ class MainActivity : ComponentActivity() {
                 
                 // Collect pending share data from the flow
                 val pendingShareData by pendingShareDataFlow.collectAsState()
+                val shouldOpenComposer by shouldOpenComposerFlow.collectAsState()
 
                 LaunchedEffect(accounts) {
                     if (accounts != null) {
@@ -80,7 +90,9 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 shareIntentData = pendingShareData,
-                                onShareIntentConsumed = { pendingShareDataFlow.value = null }
+                                onShareIntentConsumed = { pendingShareDataFlow.value = null },
+                                shouldOpenComposer = shouldOpenComposer,
+                                onComposerOpened = { shouldOpenComposerFlow.value = false }
                             )
                         } else {
                             // If no active account, show login
@@ -110,6 +122,10 @@ class MainActivity : ComponentActivity() {
         val shareData = parseShareIntent(intent)
         if (shareData != null) {
             pendingShareDataFlow.value = shareData
+        }
+        
+        if (intent.action == DraftWidget.ACTION_OPEN_COMPOSER) {
+            shouldOpenComposerFlow.value = true
         }
     }
     
