@@ -37,6 +37,7 @@ import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import org.example.memosm.ui.findActivity
 
@@ -53,10 +54,12 @@ fun VideoPlayer(
     var isFullscreen by remember { mutableStateOf(false) }
     var isReady by remember { mutableStateOf(false) }
 
-    // Use cached ratio if available
+    // Use cached ratio if available - must use LaunchedEffect to avoid calling during composition
     val cachedRatio = MediaCache.getAspectRatio(url)
-    if (cachedRatio != null) {
-        onRatioAvailable(cachedRatio)
+    LaunchedEffect(url, cachedRatio) {
+        if (cachedRatio != null) {
+            onRatioAvailable(cachedRatio)
+        }
     }
 
     val exoPlayer = remember(url, token) {
@@ -107,6 +110,7 @@ fun VideoPlayer(
             PlayerView(ctx).apply {
                 player = exoPlayer
                 useController = true
+                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
                 setFullscreenButtonClickListener { isFullscreen = true }
@@ -143,10 +147,16 @@ fun VideoPlayer(
             }
 
             val activity = context.findActivity()
+            val videoSize = exoPlayer.videoSize
+            val isVertical = videoSize.height > 0 && videoSize.width > 0 && videoSize.width < videoSize.height
             DisposableEffect(Unit) {
                 val originalOrientation =
                     activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                activity?.requestedOrientation = if (isVertical) {
+                    ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                } else {
+                    ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                }
                 onDispose { activity?.requestedOrientation = originalOrientation }
             }
             Box(
@@ -158,6 +168,7 @@ fun VideoPlayer(
                     PlayerView(ctx).apply {
                         player = exoPlayer
                         useController = true
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                         setBackgroundColor(android.graphics.Color.BLACK)
                         setFullscreenButtonClickListener { isFullscreen = false }
                         layoutParams = ViewGroup.LayoutParams(
