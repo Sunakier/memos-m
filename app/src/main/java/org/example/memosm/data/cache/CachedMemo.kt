@@ -25,17 +25,19 @@ data class CachedMemo(
     val accountId: String,      // Account this memo belongs to
     val listType: String,       // CacheListType.name() for Room compatibility
     val memoJson: String,       // Serialized Memo object
+    val displayOrder: Int,      // Order in the list (0 = first)
     val cachedAt: Long          // Timestamp when cached
 ) {
     companion object {
         private val gson = Gson()
 
-        fun fromMemo(memo: Memo, accountId: String, listType: CacheListType): CachedMemo {
+        fun fromMemo(memo: Memo, accountId: String, listType: CacheListType, order: Int): CachedMemo {
             return CachedMemo(
                 name = memo.name ?: "",
                 accountId = accountId,
                 listType = listType.name,
                 memoJson = gson.toJson(memo),
+                displayOrder = order,
                 cachedAt = System.currentTimeMillis()
             )
         }

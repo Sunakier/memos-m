@@ -266,6 +266,8 @@ private fun MemosListPane(
         onMemoClick = onMemoClick,
         listState = listState,
         errorTitle = stringResource(R.string.common_error_failed_to_load_memos),
+        isOffline = uiState.userMemoList.list.isOffline,
+        errorMessage = uiState.userMemoList.list.errorMessage,
         header = {
             val hasShortcuts = uiState.userMemoList.shortcuts.isNotEmpty()
             if (hasDrafts || hasShortcuts) {

@@ -19,9 +19,9 @@ interface MemoDao {
 
     /**
      * Get all cached memos for a specific account and list type.
-     * Ordered by cachedAt descending to maintain approximate order.
+     * Ordered by displayOrder to maintain original server order.
      */
-    @Query("SELECT * FROM cached_memos WHERE accountId = :accountId AND listType = :listType ORDER BY cachedAt DESC")
+    @Query("SELECT * FROM cached_memos WHERE accountId = :accountId AND listType = :listType ORDER BY displayOrder ASC")
     suspend fun getMemos(accountId: String, listType: String): List<CachedMemo>
 
     /**

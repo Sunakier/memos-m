@@ -19,10 +19,10 @@ class MemoCacheRepository(private val memoDao: MemoDao) {
             // Clear existing cache for this list type first
             memoDao.deleteMemos(accountId, listType.name)
 
-            // Cache non-null-named memos
+            // Cache non-null-named memos with their order preserved
             val cachedMemos = memos
                 .filter { it.name != null }
-                .map { CachedMemo.fromMemo(it, accountId, listType) }
+                .mapIndexed { index, memo -> CachedMemo.fromMemo(memo, accountId, listType, index) }
 
             if (cachedMemos.isNotEmpty()) {
                 memoDao.insertMemos(cachedMemos)

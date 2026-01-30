@@ -163,7 +163,8 @@ abstract class BaseListManager<T>(
                     items = updatedItems,
                     nextPageToken = nextToken,
                     isLoading = false,
-                    isOffline = false
+                    isOffline = false,
+                    errorMessage = null  // Clear any previous error on success
                 )
 
                 // Cache the data on successful fetch (only for initial page to avoid partial caches)
@@ -179,6 +180,9 @@ abstract class BaseListManager<T>(
                 e.printStackTrace()
                 android.util.Log.e("MemosListManager", "loadInternal error", e)
 
+                // Extract a user-friendly error message
+                val errorMessage = e.message ?: e.toString()
+
                 // On failure, try to load from cache (only for initial fetch)
                 if (pageToken == null && cacheCallbacks != null) {
                     try {
@@ -188,7 +192,8 @@ abstract class BaseListManager<T>(
                             _listState.value = _listState.value.copy(
                                 items = cachedItems,
                                 isLoading = false,
-                                isOffline = true  // Mark as offline/cached data
+                                isOffline = true,  // Mark as offline/cached data
+                                errorMessage = errorMessage
                             )
                             return@launch
                         }
@@ -197,7 +202,7 @@ abstract class BaseListManager<T>(
                     }
                 }
 
-                _listState.value = _listState.value.copy(isLoading = false)
+                _listState.value = _listState.value.copy(isLoading = false, errorMessage = errorMessage)
             }
         }
     }

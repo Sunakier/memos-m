@@ -8,7 +8,8 @@ data class PaginatedListState<T>(
     val items: List<T> = emptyList(),
     val isLoading: Boolean = false,
     val nextPageToken: String? = null,
-    val isOffline: Boolean = false  // True when displaying cached data due to network failure
+    val isOffline: Boolean = false,  // True when displaying cached data due to network failure
+    val errorMessage: String? = null // Error message from last failed fetch (shown with cached data)
 )
 
 // --- Session State (Auth & User) ---

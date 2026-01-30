@@ -267,7 +267,9 @@ fun GenericMemosListPane(
     contentPadding: PaddingValues = PaddingValues(
         start = 16.dp, top = 88.dp, end = 16.dp, bottom = 80.dp
     ),
-    errorTitle: String = stringResource(R.string.common_error_failed_to_load)
+    errorTitle: String = stringResource(R.string.common_error_failed_to_load),
+    isOffline: Boolean = false,
+    errorMessage: String? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
@@ -311,6 +313,19 @@ fun GenericMemosListPane(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Show offline indicator card at the top when displaying cached data
+            if (isOffline) {
+                item(key = "offline_indicator") {
+                    NetworkErrorCard(
+                        onRetry = onRefresh,
+                        errorMessage = errorMessage,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                    )
+                }
+            }
+
             header?.invoke(this)
 
             if (isLoading && memos.isEmpty() && !isRefreshing) {

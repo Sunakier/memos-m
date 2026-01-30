@@ -58,7 +58,9 @@ fun ArchivedMemosScreen(
                     onMemoClick = onMemoClick,
                     listState = listState,
                     userProvider = { uiState.session.currUser },
-                    contentPadding = PaddingValues(16.dp)
+                    contentPadding = PaddingValues(16.dp),
+                    isOffline = uiState.archivedMemoList.list.isOffline,
+                    errorMessage = uiState.archivedMemoList.list.errorMessage
                 )
             })
     }
