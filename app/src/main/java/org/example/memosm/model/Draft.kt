@@ -9,7 +9,7 @@ import java.util.UUID
 data class Draft(
     val id: String = UUID.randomUUID().toString(),
     val content: String = "",
-    val visibility: String = "PRIVATE",
+    val visibility: Visibility = Visibility.PRIVATE,
     val attachments: List<Attachment> = emptyList(),
     val location: Location? = null,
     val createdAt: Long = System.currentTimeMillis(),

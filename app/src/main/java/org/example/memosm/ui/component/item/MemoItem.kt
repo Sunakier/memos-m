@@ -45,6 +45,7 @@ import org.example.memosm.model.User
 import org.example.memosm.ui.component.item.markdown.MemoMarkdown
 import org.example.memosm.ui.component.resolveResourceUrl
 import org.example.memosm.ui.getVisibilityIcon
+import org.example.memosm.ui.getVisibilityLabel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -179,7 +180,7 @@ fun MemoItem(
                                 }
                                 Icon(
                                     imageVector = getVisibilityIcon(memo.visibility),
-                                    contentDescription = memo.visibility,
+                                    contentDescription = getVisibilityLabel(memo.visibility),
                                     modifier = Modifier.size(10.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 )
@@ -207,7 +208,7 @@ fun MemoItem(
                             }
                             Icon(
                                 imageVector = getVisibilityIcon(memo.visibility),
-                                contentDescription = memo.visibility,
+                                contentDescription = getVisibilityLabel(memo.visibility),
                                 modifier = Modifier.size(10.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
@@ -356,21 +357,24 @@ fun MemoItem(
                         .fillMaxWidth()
                         .then(
                             if (maxHeight != Dp.Unspecified) {
-                            Modifier.heightIn(max = maxHeight).graphicsLayer {
-                                    compositingStrategy = CompositingStrategy.Offscreen
-                                }.drawWithContent {
-                                    drawContent()
-                                    if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
-                                        drawRect(
-                                            brush = Brush.verticalGradient(
-                                                0.7f to Color.Black, 1.0f to Color.Transparent
-                                            ), blendMode = BlendMode.DstIn
-                                        )
+                                Modifier
+                                    .heightIn(max = maxHeight)
+                                    .graphicsLayer {
+                                        compositingStrategy = CompositingStrategy.Offscreen
                                     }
-                                }
-                        } else {
-                            Modifier
-                        })) {
+                                    .drawWithContent {
+                                        drawContent()
+                                        if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
+                                            drawRect(
+                                                brush = Brush.verticalGradient(
+                                                    0.7f to Color.Black, 1.0f to Color.Transparent
+                                                ), blendMode = BlendMode.DstIn
+                                            )
+                                        }
+                                    }
+                            } else {
+                                Modifier
+                            })) {
                     MemoMarkdown(
                         content = memo.content,
                         markdownState = markdownState,

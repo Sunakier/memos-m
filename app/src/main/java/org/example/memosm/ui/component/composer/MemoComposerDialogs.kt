@@ -15,6 +15,7 @@ import org.example.memosm.R
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Location
 import org.example.memosm.model.Memo
+import org.example.memosm.model.Visibility
 import org.example.memosm.viewmodel.MemosViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,7 +31,7 @@ fun MemoComposerDialog(
     initialContent: String = "",
     initialUris: List<Uri> = emptyList(),
     initialAttachments: List<Attachment> = emptyList(),
-    initialVisibility: String? = null,
+    initialVisibility: Visibility? = null,
     initialLocation: Location? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -77,7 +78,7 @@ fun MemoComposerDialog(
             ) {
                 // Determine initial content: use initialMemo content if editing, else use passed initialContent
                 val effectiveInitialContent = initialMemo?.content ?: initialContent
-                
+
                 MemoComposer(
                     onPublish = { content, visibility, attachments, location ->
                         when {
@@ -109,8 +110,9 @@ fun MemoComposerDialog(
                     hostUrl = hostUrl,
                     isPosting = uiState.isPosting,
                     initialContent = effectiveInitialContent,
-                    initialVisibility = initialMemo?.visibility ?: initialVisibility ?: parentMemo?.visibility
-                    ?: uiState.session.userSettings?.memoVisibility ?: "PRIVATE",
+                    initialVisibility = initialMemo?.visibility ?: initialVisibility
+                    ?: parentMemo?.visibility
+                    ?: uiState.session.userSettings?.memoVisibility ?: Visibility.PRIVATE,
                     initialAttachments = initialMemo?.attachments ?: initialAttachments,
                     initialUris = if (initialMemo == null) initialUris else emptyList(),
                     initialLocation = initialMemo?.location ?: initialLocation,

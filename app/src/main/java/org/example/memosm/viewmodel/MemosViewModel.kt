@@ -294,7 +294,7 @@ class MemosViewModel(
         }
     }
 
-    fun updateUserGeneralSetting(locale: String? = null, memoVisibility: String? = null) {
+    fun updateUserGeneralSetting(locale: String? = null, memoVisibility: Visibility? = null) {
         viewModelScope.launch {
             try {
                 val user = _uiState.value.session.currUser ?: return@launch
@@ -623,7 +623,7 @@ class MemosViewModel(
 
     fun createMemo(
         content: String,
-        visibility: String,
+        visibility: Visibility,
         attachments: List<Attachment>? = null,
         location: Location? = null,
         onSuccess: () -> Unit = {}
@@ -679,7 +679,7 @@ class MemosViewModel(
     fun updateMemo(
         memo: Memo,
         content: String,
-        visibility: String,
+        visibility: Visibility,
         attachments: List<Attachment>,
         location: Location? = null,
         state: String? = null,
@@ -810,7 +810,7 @@ class MemosViewModel(
 
     fun saveDraft(
         content: String,
-        visibility: String,
+        visibility: Visibility,
         attachments: List<Attachment>,
         location: Location? = null,
         draftId: String? = null

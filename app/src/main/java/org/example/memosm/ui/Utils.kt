@@ -6,32 +6,51 @@ import android.content.ContextWrapper
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import org.example.memosm.R
+import org.example.memosm.model.Visibility
 
 
 @Composable
-fun getVisibilityLabel(visibility: String): String {
-    return when (visibility.uppercase()) {
-        "PUBLIC" -> stringResource(R.string.memo_visibility_public)
-        "PROTECTED" -> stringResource(R.string.memo_visibility_protected)
-        "PRIVATE" -> stringResource(R.string.memo_visibility_private)
-        else -> visibility
+fun getVisibilityLabel(visibility: Visibility): String {
+    return when (visibility) {
+        Visibility.PUBLIC -> stringResource(R.string.memo_visibility_public)
+        Visibility.PROTECTED -> stringResource(R.string.memo_visibility_protected)
+        Visibility.PRIVATE -> stringResource(R.string.memo_visibility_private)
     }
 }
 
-
-fun getVisibilityIcon(visibility: String, outlined: Boolean = true): ImageVector {
-    return when (visibility.uppercase()) {
-        "PUBLIC" -> if (outlined) Icons.Outlined.Public else Icons.Filled.Public
-        "PROTECTED" -> if (outlined) Icons.Outlined.Lock else Icons.Filled.Lock
-        "PRIVATE" -> if (outlined) Icons.Outlined.Lock else Icons.Filled.Lock
-        else -> if (outlined) Icons.Outlined.Error else Icons.Filled.Error
+fun getVisibilityIcon(visibility: Visibility, outlined: Boolean = true): ImageVector {
+    return when (visibility) {
+        Visibility.PUBLIC -> if (outlined) Icons.Outlined.Public else Icons.Filled.Public
+        Visibility.PROTECTED -> if (outlined) Icons.Outlined.People else Icons.Filled.People
+        Visibility.PRIVATE -> if (outlined) Icons.Outlined.Lock else Icons.Filled.Lock
     }
 }
+@Composable
+fun VisibilityIcon(
+    modifier: Modifier = Modifier,
+    visibility: Visibility,
+    outlined: Boolean = true,
+    tint: Color = LocalContentColor.current
+) {
+    // Centralized logic for icon and description
+    val icon = getVisibilityIcon(visibility, outlined)
+    val label = getVisibilityLabel(visibility)
 
+    Icon(
+        imageVector = icon,
+        contentDescription = label,
+        modifier = modifier,
+        tint = tint
+    )
+}
 
 /**
  * Helper to find the Activity from a Context.

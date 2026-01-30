@@ -1,6 +1,7 @@
 package org.example.memosm.model
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 data class ListMemosResponse(
     val memos: List<Memo>?, val nextPageToken: String?
@@ -10,6 +11,18 @@ data class ListAttachmentsResponse(
     val attachments: List<Attachment>?, val nextPageToken: String?, val totalSize: Int?
 )
 
+@Serializable
+enum class Visibility {
+    @SerialName("PUBLIC")
+    PUBLIC,
+
+    @SerialName("PROTECTED")
+    PROTECTED,
+
+    @SerialName("PRIVATE")
+    PRIVATE,
+}
+
 data class Memo(
     val name: String? = null,
     val state: String? = null,
@@ -18,7 +31,7 @@ data class Memo(
     val updateTime: String? = null,
     val displayTime: String? = null,
     val content: String,
-    val visibility: String,
+    val visibility: Visibility = Visibility.PRIVATE,
     val tags: List<String>? = null,
     val pinned: Boolean? = null,
     val attachments: List<Attachment>? = null,

@@ -2,10 +2,6 @@ package org.example.memosm.model
 
 import com.google.gson.annotations.SerializedName
 
-data class UserResponse(
-    val user: User?
-)
-
 data class CurrentSessionResponse(
     val user: User?
 )
@@ -67,8 +63,6 @@ data class RefreshTokenResponse(
 )
 
 data class SignInRequest(
-//    @SerializedName("passwordCredentials") val passwordCredentials: PasswordCredentials? = null,
-//    val ssoCredentials: SSOCredentials? = null
     val username: String, val password: String
 )
 
@@ -229,7 +223,7 @@ data class UserGeneralSetting(
     @SerializedName(
         "memoVisibility",
         alternate = ["memo_visibility"]
-    ) val memoVisibility: String? = null,
+    ) val memoVisibility: Visibility? = null,
     val theme: String? = null
 )
 

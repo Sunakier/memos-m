@@ -46,12 +46,16 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.platform.LocalResources
 import androidx.core.net.toUri
+import com.google.protobuf.option
 import kotlinx.coroutines.launch
+import memos.api.v1.MemoServiceOuterClass
 import org.example.memosm.R
 import org.example.memosm.data.base64ToTempUri
 import org.example.memosm.data.uriToBase64Attachment
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Location
+import org.example.memosm.model.Visibility
+import org.example.memosm.ui.VisibilityIcon
 import org.example.memosm.ui.component.item.AttachmentCard
 import org.example.memosm.ui.component.item.AttachmentCompactMode
 import org.example.memosm.ui.findActivity
@@ -62,7 +66,7 @@ import java.io.File
 
 @Composable
 fun MemoComposer(
-    onPublish: (String, String, List<Attachment>, Location?) -> Unit,
+    onPublish: (String, Visibility, List<Attachment>, Location?) -> Unit,
     onUploadFile: suspend (Uri, Context) -> Attachment?,
     availableTags: Set<String>,
     token: String,
@@ -70,13 +74,13 @@ fun MemoComposer(
     modifier: Modifier = Modifier,
     isPosting: Boolean = false,
     initialContent: String = "",
-    initialVisibility: String = "PRIVATE",
+    initialVisibility: Visibility = Visibility.PRIVATE,
     initialAttachments: List<Attachment> = emptyList(),
     initialUris: List<Uri> = emptyList(),
     initialLocation: Location? = null,
     placeholder: String = stringResource(R.string.memo_composer_placeholder),
     autoFocus: Boolean = false,
-    onDraftChanged: ((String, String, List<Attachment>, Location?) -> Unit)? = null,
+    onDraftChanged: ((String, Visibility, List<Attachment>, Location?) -> Unit)? = null,
     submitLabel: String? = null
 ) {
     val context = LocalContext.current
@@ -648,11 +652,12 @@ fun MemoComposer(
                         contentPadding = if (isCompact) PaddingValues(horizontal = 8.dp) else ButtonDefaults.TextButtonContentPadding,
                         modifier = if (isCompact) Modifier.height(actionButtonSize) else Modifier
                     ) {
-                        Icon(
-                            imageVector = getVisibilityIcon(visibility),
-                            contentDescription = visibility,
-                            modifier = Modifier.size(18.dp)
-                        )
+//                        Icon(
+//                            imageVector = getVisibilityIcon(visibility),
+//                            contentDescription = visibility,
+//                            modifier = Modifier.size(18.dp)
+//                        )
+                        VisibilityIcon(visibility = visibility, modifier = Modifier.size(18.dp))
                         if (showVisibilityLabel) {
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(getVisibilityLabel(visibility))
@@ -663,19 +668,23 @@ fun MemoComposer(
                         }
                     }
                     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                        listOf("PRIVATE", "PROTECTED", "PUBLIC").forEach { option ->
+                        Visibility.entries.forEach { option ->
                             DropdownMenuItem(text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = getVisibilityIcon(option),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
+                                    // Now uses your new VisibilityIcon component!
+                                    VisibilityIcon(
+                                        visibility = option,
+                                        modifier = Modifier.size(18.dp),
+                                        outlined = true // Optional: force specific style for menu
                                     )
+
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(getVisibilityLabel(option))
+
+                                    // option is now type Visibility, so this works automatically
+                                    Text(text = getVisibilityLabel(option))
                                 }
                             }, onClick = {
-                                visibility = option
+                                visibility = option // Type-safe assignment
                                 expanded = false
                             })
                         }

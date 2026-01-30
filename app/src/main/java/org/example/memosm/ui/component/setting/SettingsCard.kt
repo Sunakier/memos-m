@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.model.UserGeneralSetting
+import org.example.memosm.model.Visibility
 import org.example.memosm.ui.getVisibilityLabel
 
 val LANGUAGE_NAMES = mapOf(
@@ -73,7 +74,7 @@ val LANGUAGE_NAMES = mapOf(
 )
 
 @Composable
-fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> Unit) {
+fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, Visibility?) -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(vertical = 16.dp)) {
             Text(
@@ -90,8 +91,7 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
                 currentValue = settings.locale ?: "en",
                 options = LANGUAGE_NAMES.keys.toList(),
                 labelProvider = { LANGUAGE_NAMES[it] ?: it },
-                onSelect = { onUpdate(it, null) }
-            )
+                onSelect = { onUpdate(it, null) })
 
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -102,11 +102,10 @@ fun SettingsCard(settings: UserGeneralSetting, onUpdate: (String?, String?) -> U
             // Memo Visibility
             SettingsSelectionItem(
                 label = stringResource(R.string.profile_settings_visibility),
-                currentValue = if (settings.memoVisibility.isNullOrBlank()) "PRIVATE" else settings.memoVisibility,
+                currentValue = if (settings.memoVisibility == null) "PRIVATE" else settings.memoVisibility.toString(),
                 options = listOf("PRIVATE", "PROTECTED", "PUBLIC"),
-                labelProvider = { getVisibilityLabel(it) },
-                onSelect = { onUpdate(null, it) }
-            )
+                labelProvider = { getVisibilityLabel(visibility = Visibility.valueOf(it)) },
+                onSelect = { onUpdate(null, Visibility.valueOf(it)) })
         }
     }
 }
@@ -148,35 +147,32 @@ private fun SettingsSelectionItem(
                         val isSelected = option == currentValue
                         ListItem(
                             headlineContent = {
-                                Text(
-                                    labelProvider(option),
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            Text(
+                                labelProvider(option),
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }, leadingContent = {
+                            if (isSelected) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
-                            },
-                            leadingContent = {
-                                if (isSelected) {
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                } else {
-                                    Spacer(modifier = Modifier.width(24.dp))
-                                }
-                            },
-                            modifier = Modifier
+                            } else {
+                                Spacer(modifier = Modifier.width(24.dp))
+                            }
+                        }, modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
                                 .clickable {
                                     onSelect(option)
                                     showDialog = false
-                                },
-                            colors = ListItemDefaults.colors(
-                                containerColor = if (isSelected)
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                                else
-                                    Color.Transparent
+                                }, colors = ListItemDefaults.colors(
+                            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(
+                                alpha = 0.3f
                             )
+                            else Color.Transparent
+                        )
                         )
                     }
                 }
@@ -185,7 +181,6 @@ private fun SettingsSelectionItem(
                 TextButton(onClick = { showDialog = false }) {
                     Text(stringResource(R.string.common_cancel))
                 }
-            }
-        )
+            })
     }
 }

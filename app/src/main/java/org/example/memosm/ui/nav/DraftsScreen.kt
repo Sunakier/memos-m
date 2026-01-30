@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.model.Draft
 import org.example.memosm.ui.component.composer.MemoComposerDialog
+import org.example.memosm.ui.getVisibilityLabel
 import org.example.memosm.viewmodel.MemosViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -238,7 +239,7 @@ private fun DraftCard(
                     onClick = {},
                     label = {
                         Text(
-                            text = draft.visibility,
+                            text = getVisibilityLabel(draft.visibility),
                             style = MaterialTheme.typography.labelSmall
                         )
                     },

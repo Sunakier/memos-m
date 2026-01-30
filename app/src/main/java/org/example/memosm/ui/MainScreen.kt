@@ -45,6 +45,7 @@ import org.example.memosm.viewmodel.MemosViewModel
 import org.example.memosm.ui.component.resolveResourceUrl
 import org.example.memosm.ui.component.item.media.MemoImage
 import androidx.core.net.toUri
+import org.example.memosm.model.Visibility
 import org.example.memosm.ui.component.composer.MemoComposerDialog
 
 enum class MainDestination(
@@ -84,7 +85,7 @@ fun MainScreen(
     var shareText by remember { mutableStateOf<String?>(null) }
     var shareUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var shareAttachments by remember { mutableStateOf<List<Attachment>>(emptyList()) }
-    var shareVisibility by remember { mutableStateOf<String?>(null) }
+    var shareVisibility by remember { mutableStateOf<Visibility?>(null) }
     var shareLocation by remember { mutableStateOf<Location?>(null) }
     
     // Track if we've already processed the current share intent
