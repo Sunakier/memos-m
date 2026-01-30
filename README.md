@@ -3,7 +3,7 @@
 
   # MemosM
   
-  A lightweight, feature-rich Android client for Memos.
+  A feature-rich Android client for Memos.
 </div>
 
 ----
