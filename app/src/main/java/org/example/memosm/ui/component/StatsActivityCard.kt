@@ -60,7 +60,7 @@ fun StatsActivityCard(
     }
 
     Card(modifier = modifier.fillMaxWidth()) {
-        BoxWithConstraints(modifier = Modifier.padding(16.dp)) {
+        @Suppress("COMPOSE_APPLIER_CALL_MISMATCH") BoxWithConstraints(modifier = Modifier.padding(16.dp)) {
             val isWide = maxWidth > 500.dp
 
             if (isWide) {
@@ -197,8 +197,10 @@ private fun StatItem(
     compact: Boolean = false,
 ) {
     val iconSize = if (compact) 18.dp else 22.dp
-    val valueStyle = if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge
-    val labelStyle = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium
+    val valueStyle =
+        if (compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge
+    val labelStyle =
+        if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium
     val verticalPadding = if (compact) 2.dp else 4.dp
     val iconSpacing = if (compact) 2.dp else 4.dp
 
@@ -283,7 +285,9 @@ private fun CalendarMonthView(
 
         for (week in 0 until numWeeks) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 1.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 for (dayOfWeek in 0..6) {
@@ -291,7 +295,10 @@ private fun CalendarMonthView(
                     val dayOfMonth = cellIndex - firstDayOfWeek + 1
 
                     Box(
-                        modifier = Modifier.weight(1f).aspectRatio(1f).padding(1.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(1f)
+                            .padding(1.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         if (dayOfMonth in 1..daysInMonth) {
@@ -313,7 +320,8 @@ private fun CalendarMonthView(
                             }
 
                             Box(
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier
+                                    .fillMaxSize()
                                     .clip(RoundedCornerShape(4.dp))
                                     .background(cellColor)
                                     .then(
@@ -360,11 +368,12 @@ private fun calculateActivityDataFromTimestamps(timestamps: List<String>): Map<L
             activityCounts[date] = (activityCounts[date] ?: 0) + 1
         } catch (e: DateTimeParseException) {
             try {
-                val date = LocalDate.parse(timestamp.substring(0, 10))
+                val date = LocalDate.parse(timestamp.take(10))
                 activityCounts[date] = (activityCounts[date] ?: 0) + 1
             } catch (e2: Exception) {
-                Log.w("StatsActivityCard", "Failed to parse timestamp: $timestamp")
+                Log.w("StatsActivityCard", "Failed to parse timestamp e2: $timestamp, $e2")
             }
+            Log.w("StatsActivityCard", "Failed to parse timestamp e: $timestamp, $e")
         }
     }
 
