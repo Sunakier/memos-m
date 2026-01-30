@@ -94,7 +94,7 @@ class MemosViewModel(
                 _uiState.update {
                     it.copy(
                         session = SessionState(
-                            token = account.accessToken, hostUrl = account.hostUrl, currUser = null
+                            token = account.accessToken, hostUrl = account.hostUrl, currUser = account.user
                         ), accounts = it.accounts.map { acc ->
                             acc.copy(isActive = acc.id == account.id)
                         }, users = emptyMap()
@@ -167,6 +167,9 @@ class MemosViewModel(
                 startStateCollection()
                 fetchCurrentUser()
                 exploreMemoManager?.fetch()
+                if (account.user != null) {
+                    userMemoManager?.fetch()
+                }
                 loadDraftsForAccount(account.id)
 
             } catch (e: Exception) {
@@ -242,6 +245,12 @@ class MemosViewModel(
                     _uiState.update {
                         Log.d("MemosViewModel", "Updating session with user: ${user.name}")
                         it.copy(session = it.session.copy(currUser = user))
+                    }
+
+                    // Store user in local account for offline access
+                    val activeAccount = _uiState.value.accounts.find { it.isActive }
+                    if (activeAccount != null) {
+                        dataStoreManager.updateAccountUser(activeAccount.id, user)
                     }
 
                     // Force refresh user memos now that we have the numeric userId

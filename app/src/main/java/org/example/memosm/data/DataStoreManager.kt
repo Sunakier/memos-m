@@ -192,4 +192,12 @@ class DataStoreManager(private val context: Context) {
             preferences.remove(ACCESS_TOKEN)
         }
     }
+
+    suspend fun updateAccountUser(id: String, user: org.example.memosm.model.User) {
+        val current = getAccounts()
+        val updated = current.map {
+            if (it.id == id) it.copy(user = user) else it
+        }
+        saveAccounts(updated)
+    }
 }
