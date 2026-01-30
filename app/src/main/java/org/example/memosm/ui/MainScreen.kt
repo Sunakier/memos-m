@@ -45,6 +45,7 @@ import org.example.memosm.viewmodel.MemosViewModel
 import org.example.memosm.ui.component.resolveResourceUrl
 import org.example.memosm.ui.component.item.media.MemoImage
 import androidx.core.net.toUri
+import org.example.memosm.MemosApplication
 import org.example.memosm.model.Visibility
 import org.example.memosm.ui.component.composer.MemoComposerDialog
 
@@ -70,7 +71,11 @@ fun MainScreen(
     var currentDestination by rememberSaveable { mutableStateOf(MainDestination.MEMOS) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
     val viewModel: MemosViewModel =
-        viewModel(factory = MemosViewModel.provideFactory(dataStoreManager, draftManager))
+        viewModel(factory = MemosViewModel.provideFactory(
+            dataStoreManager, 
+            draftManager,
+            MemosApplication.instance.memoCacheRepository
+        ))
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()

@@ -8,8 +8,23 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
+import org.example.memosm.data.cache.MemoCacheDatabase
+import org.example.memosm.data.cache.MemoCacheRepository
 
 class MemosApplication : Application(), SingletonImageLoader.Factory {
+
+    lateinit var memoCacheRepository: MemoCacheRepository
+        private set
+
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+
+        // Initialize Room database and cache repository
+        val database = MemoCacheDatabase.getInstance(this)
+        memoCacheRepository = MemoCacheRepository(database.memoDao())
+    }
+
     override fun newImageLoader(context: PlatformContext): ImageLoader {
         val dispatcher = Dispatcher().apply {
             maxRequests = 5
@@ -26,5 +41,10 @@ class MemosApplication : Application(), SingletonImageLoader.Factory {
             }
             .crossfade(true)
             .build()
+    }
+
+    companion object {
+        lateinit var instance: MemosApplication
+            private set
     }
 }

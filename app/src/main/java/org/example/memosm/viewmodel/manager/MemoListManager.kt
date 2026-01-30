@@ -12,8 +12,11 @@ private const val PAGE_SIZE = 10
 private const val TAG = "MemoListManager"
 
 class UserMemoListManager(
-    scope: CoroutineScope, private val api: MemosApiV0353, private val filterProvider: () -> String?
-) : BaseListManager<Memo>(scope) {
+    scope: CoroutineScope,
+    private val api: MemosApiV0353,
+    private val filterProvider: () -> String?,
+    cacheCallbacks: CacheCallbacks<Memo>? = null
+) : BaseListManager<Memo>(scope, cacheCallbacks = cacheCallbacks) {
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
         val filter = filterProvider()
@@ -37,8 +40,10 @@ class UserMemoListManager(
 }
 
 class ExploreMemoListManager(
-    scope: CoroutineScope, private val api: MemosApiV0353
-) : BaseListManager<Memo>(scope) {
+    scope: CoroutineScope,
+    private val api: MemosApiV0353,
+    cacheCallbacks: CacheCallbacks<Memo>? = null
+) : BaseListManager<Memo>(scope, cacheCallbacks = cacheCallbacks) {
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
         val filter = "visibility in ['PUBLIC', 'PROTECTED']"
@@ -64,8 +69,9 @@ class ExploreMemoListManager(
 class ArchivedMemoListManager(
     scope: CoroutineScope,
     private val api: MemosApiV0353,
-    private val currentUserProvider: () -> User?
-) : BaseListManager<Memo>(scope) {
+    private val currentUserProvider: () -> User?,
+    cacheCallbacks: CacheCallbacks<Memo>? = null
+) : BaseListManager<Memo>(scope, cacheCallbacks = cacheCallbacks) {
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
         val user = currentUserProvider() ?: return Pair(emptyList(), null)
@@ -98,7 +104,8 @@ class ArchivedMemoListManager(
 }
 
 class SearchMemoListManager(
-    scope: CoroutineScope, private val api: MemosApiV0353
+    scope: CoroutineScope,
+    private val api: MemosApiV0353
 ) : BaseListManager<Memo>(scope) {
 
     private var currentFilter: String? = null
@@ -127,3 +134,4 @@ class SearchMemoListManager(
         }
     }
 }
+

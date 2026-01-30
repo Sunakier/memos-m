@@ -107,6 +107,11 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     dependsOn("bufGenerate")
 }
 
+// KSP tasks also need to depend on bufGenerate since Room processes sources
+tasks.matching { it.name.startsWith("ksp") && it.name.endsWith("Kotlin") }.configureEach {
+    dependsOn("bufGenerate")
+}
+
 dependencies {
     coreLibraryDesugaring(libs.android.desugarJdkLibs)
 

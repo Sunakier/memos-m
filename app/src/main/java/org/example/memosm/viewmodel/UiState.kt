@@ -7,7 +7,8 @@ import org.example.memosm.model.*
 data class PaginatedListState<T>(
     val items: List<T> = emptyList(),
     val isLoading: Boolean = false,
-    val nextPageToken: String? = null
+    val nextPageToken: String? = null,
+    val isOffline: Boolean = false  // True when displaying cached data due to network failure
 )
 
 // --- Session State (Auth & User) ---

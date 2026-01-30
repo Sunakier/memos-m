@@ -21,9 +21,27 @@ interface ListManager<T> {
     fun reset()
 }
 
+/**
+ * Cache callbacks for offline support.
+ */
+data class CacheCallbacks<T>(
+    /**
+     * Called on successful fetch with the full list of items.
+     * Implementation should save these to local cache.
+     */
+    val onFetchSuccess: suspend (List<T>) -> Unit = {},
+
+    /**
+     * Called on fetch failure to retrieve cached data.
+     * Implementation should return cached items or empty list.
+     */
+    val getCachedData: suspend () -> List<T> = { emptyList() }
+)
+
 abstract class BaseListManager<T>(
     private val scope: CoroutineScope,
-    private val initialState: PaginatedListState<T> = PaginatedListState()
+    private val initialState: PaginatedListState<T> = PaginatedListState(),
+    private val cacheCallbacks: CacheCallbacks<T>? = null
 ) : ListManager<T> {
 
     protected val _listState = MutableStateFlow(initialState)
@@ -127,7 +145,7 @@ abstract class BaseListManager<T>(
         scope.launch {
             try {
                 android.util.Log.d("MemosListManager", "loadInternal: pageToken=$pageToken")
-                _listState.value = _listState.value.copy(isLoading = true)
+                _listState.value = _listState.value.copy(isLoading = true, isOffline = false)
 
                 val (newItems, rawNextToken) = fetchFromApi(pageToken)
                 val nextToken = if (rawNextToken.isNullOrBlank()) null else rawNextToken
@@ -139,15 +157,46 @@ abstract class BaseListManager<T>(
                     "loadInternal: fetched ${newItems.size} items, rawToken='$rawNextToken' -> nextToken=$nextToken"
                 )
 
+                val updatedItems = if (pageToken == null) processedItems else _listState.value.items + processedItems
+
                 _listState.value = _listState.value.copy(
-                    items = if (pageToken == null) processedItems else _listState.value.items + processedItems,
+                    items = updatedItems,
                     nextPageToken = nextToken,
-                    isLoading = false
+                    isLoading = false,
+                    isOffline = false
                 )
+
+                // Cache the data on successful fetch (only for initial page to avoid partial caches)
+                if (pageToken == null && cacheCallbacks != null) {
+                    try {
+                        cacheCallbacks.onFetchSuccess(updatedItems)
+                    } catch (e: Exception) {
+                        android.util.Log.e("MemosListManager", "Error caching data", e)
+                    }
+                }
+
             } catch (e: Exception) {
-                // In a real app we might want to expose the error in the state
                 e.printStackTrace()
                 android.util.Log.e("MemosListManager", "loadInternal error", e)
+
+                // On failure, try to load from cache (only for initial fetch)
+                if (pageToken == null && cacheCallbacks != null) {
+                    try {
+                        val cachedItems = cacheCallbacks.getCachedData()
+                        if (cachedItems.isNotEmpty()) {
+                            android.util.Log.d("MemosListManager", "Loaded ${cachedItems.size} items from cache")
+                            _listState.value = _listState.value.copy(
+                                items = cachedItems,
+                                isLoading = false,
+                                isOffline = true  // Mark as offline/cached data
+                            )
+                            return@launch
+                        }
+                    } catch (cacheError: Exception) {
+                        android.util.Log.e("MemosListManager", "Error loading from cache", cacheError)
+                    }
+                }
+
                 _listState.value = _listState.value.copy(isLoading = false)
             }
         }

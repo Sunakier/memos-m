@@ -19,6 +19,8 @@ import org.example.memosm.api.AuthInterceptor
 import org.example.memosm.api.MemosApiV0353
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.data.DraftManager
+import org.example.memosm.data.cache.CacheListType
+import org.example.memosm.data.cache.MemoCacheRepository
 import org.example.memosm.model.*
 import org.example.memosm.viewmodel.manager.*
 import retrofit2.Retrofit
@@ -26,7 +28,8 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 class MemosViewModel(
     private val dataStoreManager: DataStoreManager,
-    private val draftManager: DraftManager
+    private val draftManager: DraftManager,
+    private val memoCacheRepository: MemoCacheRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MemosUiState())
@@ -98,29 +101,54 @@ class MemosViewModel(
                 api = createApi(account.hostUrl, account.accessToken)
                 val currentApi = api!!
 
-                // Initialize Managers
-                userMemoManager = UserMemoListManager(viewModelScope, currentApi) {
-                    val user = _uiState.value.session.currUser
-                    val userId = user?.name?.substringAfterLast("/") ?: ""
+                // Initialize Managers with cache callbacks
+                val accountId = account.id
 
-                    // Use creator_id and row_status
-                    val base = if (userId.isNotEmpty()) {
-                        "creator_id == $userId"
-                    } else {
-                        ""
-                    }
+                userMemoManager = UserMemoListManager(
+                    scope = viewModelScope,
+                    api = currentApi,
+                    filterProvider = {
+                        val user = _uiState.value.session.currUser
+                        val userId = user?.name?.substringAfterLast("/") ?: ""
 
-                    val shortcut = _uiState.value.userMemoList.selectedShortcut
-                    if (shortcut != null && !shortcut.filter.isNullOrBlank()) {
-                        "$base && ${shortcut.filter}"
-                    } else {
-                        base
-                    }
-                }
-                exploreMemoManager = ExploreMemoListManager(viewModelScope, currentApi)
-                archivedMemoManager = ArchivedMemoListManager(viewModelScope, currentApi) {
-                    _uiState.value.session.currUser
-                }
+                        // Use creator_id and row_status
+                        val base = if (userId.isNotEmpty()) {
+                            "creator_id == $userId"
+                        } else {
+                            ""
+                        }
+
+                        val shortcut = _uiState.value.userMemoList.selectedShortcut
+                        if (shortcut != null && !shortcut.filter.isNullOrBlank()) {
+                            "$base && ${shortcut.filter}"
+                        } else {
+                            base
+                        }
+                    },
+                    cacheCallbacks = CacheCallbacks(
+                        onFetchSuccess = { memos -> memoCacheRepository.cacheMemos(accountId, CacheListType.USER, memos) },
+                        getCachedData = { memoCacheRepository.getCachedMemos(accountId, CacheListType.USER) }
+                    )
+                )
+
+                exploreMemoManager = ExploreMemoListManager(
+                    scope = viewModelScope,
+                    api = currentApi,
+                    cacheCallbacks = CacheCallbacks(
+                        onFetchSuccess = { memos -> memoCacheRepository.cacheMemos(accountId, CacheListType.EXPLORE, memos) },
+                        getCachedData = { memoCacheRepository.getCachedMemos(accountId, CacheListType.EXPLORE) }
+                    )
+                )
+
+                archivedMemoManager = ArchivedMemoListManager(
+                    scope = viewModelScope,
+                    api = currentApi,
+                    currentUserProvider = { _uiState.value.session.currUser },
+                    cacheCallbacks = CacheCallbacks(
+                        onFetchSuccess = { memos -> memoCacheRepository.cacheMemos(accountId, CacheListType.ARCHIVED, memos) },
+                        getCachedData = { memoCacheRepository.getCachedMemos(accountId, CacheListType.ARCHIVED) }
+                    )
+                )
                 searchMemoManager = SearchMemoListManager(viewModelScope, currentApi)
                 commentManager = CommentListManager(viewModelScope, currentApi)
                 attachmentManager = AttachmentManager(
@@ -925,11 +953,12 @@ class MemosViewModel(
     companion object {
         fun provideFactory(
             dataStoreManager: DataStoreManager,
-            draftManager: DraftManager
+            draftManager: DraftManager,
+            memoCacheRepository: MemoCacheRepository
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 if (modelClass.isAssignableFrom(MemosViewModel::class.java)) {
-                    @Suppress("UNCHECKED_CAST") return MemosViewModel(dataStoreManager, draftManager) as T
+                    @Suppress("UNCHECKED_CAST") return MemosViewModel(dataStoreManager, draftManager, memoCacheRepository) as T
                 }
                 throw IllegalArgumentException("Unknown ViewModel class")
             }
@@ -938,11 +967,12 @@ class MemosViewModel(
 
     class Factory(
         private val dataStoreManager: DataStoreManager,
-        private val draftManager: DraftManager
+        private val draftManager: DraftManager,
+        private val memoCacheRepository: MemoCacheRepository
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(MemosViewModel::class.java)) {
-                @Suppress("UNCHECKED_CAST") return MemosViewModel(dataStoreManager, draftManager) as T
+                @Suppress("UNCHECKED_CAST") return MemosViewModel(dataStoreManager, draftManager, memoCacheRepository) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
