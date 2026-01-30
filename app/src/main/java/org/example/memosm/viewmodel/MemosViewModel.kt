@@ -94,7 +94,9 @@ class MemosViewModel(
                 _uiState.update {
                     it.copy(
                         session = SessionState(
-                            token = account.accessToken, hostUrl = account.hostUrl, currUser = account.user
+                            token = account.accessToken,
+                            hostUrl = account.hostUrl,
+                            currUser = account.user
                         ), accounts = it.accounts.map { acc ->
                             acc.copy(isActive = acc.id == account.id)
                         }, users = emptyMap()
@@ -108,10 +110,8 @@ class MemosViewModel(
                 // Initialize Managers with cache callbacks
                 val accountId = account.id
 
-                userMemoManager = UserMemoListManager(
-                    scope = viewModelScope,
-                    api = currentApi,
-                    filterProvider = {
+                userMemoManager =
+                    UserMemoListManager(scope = viewModelScope, api = currentApi, filterProvider = {
                         val user = _uiState.value.session.currUser
                         val userId = user?.name?.substringAfterLast("/") ?: ""
 
@@ -128,38 +128,49 @@ class MemosViewModel(
                         } else {
                             base
                         }
-                    },
-                    cacheCallbacks = CacheCallbacks(
-                        onFetchSuccess = { memos -> memoCacheRepository.cacheMemos(accountId, CacheListType.USER, memos) },
-                        getCachedData = { memoCacheRepository.getCachedMemos(accountId, CacheListType.USER) }
-                    )
-                )
+                    }, cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
+                        memoCacheRepository.cacheMemos(
+                            accountId, CacheListType.USER, memos
+                        )
+                    }, getCachedData = {
+                        memoCacheRepository.getCachedMemos(
+                            accountId, CacheListType.USER
+                        )
+                    }))
 
                 exploreMemoManager = ExploreMemoListManager(
                     scope = viewModelScope,
                     api = currentApi,
-                    cacheCallbacks = CacheCallbacks(
-                        onFetchSuccess = { memos -> memoCacheRepository.cacheMemos(accountId, CacheListType.EXPLORE, memos) },
-                        getCachedData = { memoCacheRepository.getCachedMemos(accountId, CacheListType.EXPLORE) }
-                    )
-                )
+                    cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
+                        memoCacheRepository.cacheMemos(
+                            accountId, CacheListType.EXPLORE, memos
+                        )
+                    }, getCachedData = {
+                        memoCacheRepository.getCachedMemos(
+                            accountId, CacheListType.EXPLORE
+                        )
+                    }))
 
                 archivedMemoManager = ArchivedMemoListManager(
                     scope = viewModelScope,
                     api = currentApi,
                     currentUserProvider = { _uiState.value.session.currUser },
-                    cacheCallbacks = CacheCallbacks(
-                        onFetchSuccess = { memos -> memoCacheRepository.cacheMemos(accountId, CacheListType.ARCHIVED, memos) },
-                        getCachedData = { memoCacheRepository.getCachedMemos(accountId, CacheListType.ARCHIVED) }
-                    )
-                )
+                    cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
+                        memoCacheRepository.cacheMemos(
+                            accountId, CacheListType.ARCHIVED, memos
+                        )
+                    }, getCachedData = {
+                        memoCacheRepository.getCachedMemos(
+                            accountId, CacheListType.ARCHIVED
+                        )
+                    }))
                 searchMemoManager = SearchMemoListManager(viewModelScope, currentApi)
                 commentManager = CommentListManager(viewModelScope, currentApi)
                 attachmentManager = AttachmentManager(
                     scope = viewModelScope,
                     api = currentApi,
-                    streamingApi = currentHttpClient?.let { 
-                        StreamingAttachmentApi(it, currentBaseUrl ?: "") 
+                    streamingApi = currentHttpClient?.let {
+                        StreamingAttachmentApi(it, currentBaseUrl ?: "")
                     },
                     initialCellWidth = _uiState.value.attachmentList.cellWidth
                 )
@@ -310,18 +321,33 @@ class MemosViewModel(
     private suspend fun fetchActivities() {
         try {
             val hostUrl = _uiState.value.session.hostUrl
-            Log.d("MemosViewModel", "fetchActivities: Fetching from $hostUrl/api/v1/activities?pageSize=1000")
+            Log.d(
+                "MemosViewModel",
+                "fetchActivities: Fetching from $hostUrl/api/v1/activities?pageSize=1000"
+            )
             Log.d("MemosViewModel", "fetchActivities: Starting to fetch activities")
             val response = api?.listActivities(pageSize = 1000)
-            Log.d("MemosViewModel", "fetchActivities: Response received, activities count: ${response?.activities?.size ?: 0}")
+            Log.d(
+                "MemosViewModel",
+                "fetchActivities: Response received, activities count: ${response?.activities?.size ?: 0}"
+            )
             val activities = response?.activities ?: emptyList()
             if (activities.isNotEmpty()) {
                 Log.d("MemosViewModel", "fetchActivities: First activity: ${activities.first()}")
-                Log.d("MemosViewModel", "fetchActivities: First activity createTime: ${activities.first().createTime}")
-                Log.d("MemosViewModel", "fetchActivities: Last activity createTime: ${activities.last().createTime}")
+                Log.d(
+                    "MemosViewModel",
+                    "fetchActivities: First activity createTime: ${activities.first().createTime}"
+                )
+                Log.d(
+                    "MemosViewModel",
+                    "fetchActivities: Last activity createTime: ${activities.last().createTime}"
+                )
             }
             _uiState.update { it.copy(session = it.session.copy(activities = activities)) }
-            Log.d("MemosViewModel", "fetchActivities: Updated UI state with ${activities.size} activities")
+            Log.d(
+                "MemosViewModel",
+                "fetchActivities: Updated UI state with ${activities.size} activities"
+            )
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error fetching activities", e)
         }
@@ -465,7 +491,7 @@ class MemosViewModel(
                 // shortcut.name is in format "users/{uid}/shortcuts/{id}"
                 // The API expects just the {id} because the path is defined as "api/v1/{user}/shortcuts/{shortcut}"
                 val shortcutId = shortcut.name?.substringAfterLast("/") ?: ""
-                
+
                 api?.updateShortcut(user.name!!, shortcutId, update, "title,filter")
                 fetchShortcuts(user.name!!)
                 onSuccess()
@@ -480,7 +506,8 @@ class MemosViewModel(
             try {
                 val errorBody = e.response()?.errorBody()?.string()
                 if (!errorBody.isNullOrBlank()) {
-                    val errorObj = Gson().fromJson(errorBody, com.google.gson.JsonObject::class.java)
+                    val errorObj =
+                        Gson().fromJson(errorBody, com.google.gson.JsonObject::class.java)
                     if (errorObj.has("message")) {
                         return errorObj.get("message").asString
                     }
@@ -543,7 +570,7 @@ class MemosViewModel(
                 val user = _uiState.value.session.currUser ?: return@launch
                 val update = webhook.copy(displayName = displayName, url = url)
                 val webhookId = webhook.name?.substringAfterLast("/") ?: ""
-                
+
                 api?.updateUserWebhook(user.name!!, webhookId, update, "display_name,url")
                 fetchWebhooks(user.name!!)
                 onSuccess()
@@ -976,7 +1003,9 @@ class MemosViewModel(
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 if (modelClass.isAssignableFrom(MemosViewModel::class.java)) {
-                    @Suppress("UNCHECKED_CAST") return MemosViewModel(dataStoreManager, draftManager, memoCacheRepository) as T
+                    @Suppress("UNCHECKED_CAST") return MemosViewModel(
+                        dataStoreManager, draftManager, memoCacheRepository
+                    ) as T
                 }
                 throw IllegalArgumentException("Unknown ViewModel class")
             }
@@ -990,7 +1019,9 @@ class MemosViewModel(
     ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(MemosViewModel::class.java)) {
-                @Suppress("UNCHECKED_CAST") return MemosViewModel(dataStoreManager, draftManager, memoCacheRepository) as T
+                @Suppress("UNCHECKED_CAST") return MemosViewModel(
+                    dataStoreManager, draftManager, memoCacheRepository
+                ) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
