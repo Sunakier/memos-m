@@ -59,7 +59,7 @@ You can also download from [release](https://github.com/yamada-sexta/memos-m/rel
   - Attachment
     - [x] View attachments
     - [ ] Edit attachments
-    - [ ] Large attachment handle
+    - [x] Large attachment handle (blocking)
     - [x] Video playback
     - [x] Audio playback
     - [x] View image
