@@ -102,3 +102,7 @@ Contributions are welcome in the form of code, bug reports, or feature suggestio
 
 * **Official Memos Project:** [usememos.com](https://usememos.com/)
 * **MoeMemos Android:** [github.com/mudkipme/MoeMemosAndroid](https://github.com/mudkipme/MoeMemosAndroid)
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=yamada-sexta/memos-m&type=date&legend=top-left)](https://www.star-history.com/#yamada-sexta/memos-m&type=date&legend=top-left)
