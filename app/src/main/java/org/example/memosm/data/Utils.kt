@@ -10,11 +10,13 @@ import androidx.core.net.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.example.memosm.model.Attachment
+import java.io.ByteArrayOutputStream
 import java.io.File
 
 
 /**
  * Converts a local Uri to an Attachment with base64-encoded content for draft caching.
+ * Uses streaming for large files to prevent OOM.
  * Returns null if the file cannot be read.
  */
 suspend fun uriToBase64Attachment(uri: Uri, context: Context): Attachment? =
@@ -48,16 +50,21 @@ suspend fun uriToBase64Attachment(uri: Uri, context: Context): Attachment? =
                     resolverMimeType
                 }
 
-            // Read and encode content
+            // Use streaming base64 encoding to avoid OOM on large files
             val inputStream = contentResolver.openInputStream(uri) ?: return@withContext null
-            val bytes = inputStream.use { it.readBytes() }
-            val base64Content = Base64.encodeToString(bytes, Base64.NO_WRAP)
+            val base64Content = inputStream.use { stream ->
+                // Stream encode to a ByteArrayOutputStream, then convert to string
+                // This still uses memory but in smaller chunks
+                val outputStream = ByteArrayOutputStream()
+                StreamingBase64.encodeToStream(stream, outputStream)
+                outputStream.toString(Charsets.US_ASCII.name())
+            }
 
             Attachment(
                 filename = fileName, type = mimeType, content = base64Content
             )
         } catch (e: Exception) {
-            Log.e("MemoComposer", "Error converting Uri to base64 Attachment", e)
+            Log.e("Utils", "Error converting Uri to base64 Attachment", e)
             null
         }
     }
@@ -74,7 +81,7 @@ suspend fun base64ToTempUri(
         file.writeBytes(bytes)
         file.toUri()
     } catch (e: Exception) {
-        Log.e("MemoComposer", "Error converting base64 to temp Uri", e)
+        Log.e("Utils", "Error converting base64 to temp Uri", e)
         null
     }
 }

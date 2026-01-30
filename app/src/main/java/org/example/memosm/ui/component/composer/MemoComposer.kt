@@ -46,7 +46,10 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.platform.LocalResources
 import androidx.core.net.toUri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.example.memosm.R
 import org.example.memosm.data.base64ToTempUri
 import org.example.memosm.data.uriToBase64Attachment
@@ -141,15 +144,21 @@ fun MemoComposer(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
         if (uris.isNotEmpty()) {
+            // Add URIs immediately for display, then convert to base64 in background
+            val newUris = uris.map { it to null as Attachment? }
+            draftAttachments = draftAttachments + newUris
+            
+            // Convert to base64 in background for each URI
             uris.forEach { uri ->
-                val size = getFileSize(context, uri)
-                // if (size > 10 * 1024 * 1024) {
-                //     Toast.makeText(context, "File size exceeds 10MB limit", Toast.LENGTH_SHORT)
-                //         .show()
-                // } else {
-                //     draftAttachments = draftAttachments + (uri to null)
-                // }
-                draftAttachments = draftAttachments + (uri to null)
+                scope.launch {
+                    val attachment = uriToBase64Attachment(uri, context)
+                    if (attachment != null) {
+                        // Update the draft attachments with the converted attachment
+                        draftAttachments = draftAttachments.map { (u, a) ->
+                            if (u == uri && a == null) uri to attachment else u to a
+                        }
+                    }
+                }
             }
         }
     }
@@ -197,7 +206,17 @@ fun MemoComposer(
 
             currentRecordFile?.let { file ->
                 val uri = file.toUri()
+                // Add immediately for display
                 draftAttachments = draftAttachments + (uri to null)
+                // Convert to base64 in background
+                scope.launch {
+                    val attachment = uriToBase64Attachment(uri, context)
+                    if (attachment != null) {
+                        draftAttachments = draftAttachments.map { (u, a) ->
+                            if (u == uri && a == null) uri to attachment else u to a
+                        }
+                    }
+                }
             }
         } catch (e: Exception) {
             Log.e("MemoComposer", "Error stopping recording", e)
@@ -262,22 +281,20 @@ fun MemoComposer(
     }
 
     // TRIGGER CACHE UPDATE when local changes occur
-    // Convert local Uri attachments to base64 for caching
+    // Debounced to avoid blocking UI on every keystroke
+    // Only saves attachments that have already been converted to base64 (non-null)
     LaunchedEffect(contentState.text, visibility, draftAttachments, location) {
         if (onDraftChanged == null) return@LaunchedEffect
 
-        val allAttachments = draftAttachments.mapNotNull { (uri, existingAttachment) ->
-            // Already have an Attachment (either uploaded or previously cached)
-            existingAttachment ?: if (uri != Uri.EMPTY) {
-                // Local file - convert to base64 for caching
-                uriToBase64Attachment(uri, context)
-            } else {
-                null
-            }
-        }
+        // Debounce: wait 500ms before saving draft
+        delay(500)
+
+        // Only save attachments that have been converted (non-null Attachment)
+        // Attachments still being converted in background will be saved on next trigger
+        val convertedAttachments = draftAttachments.mapNotNull { (_, attachment) -> attachment }
 
         onDraftChanged.invoke(
-            contentState.text.toString(), visibility, allAttachments, location
+            contentState.text.toString(), visibility, convertedAttachments, location
         )
     }
 
