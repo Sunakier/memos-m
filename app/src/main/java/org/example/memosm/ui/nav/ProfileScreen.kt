@@ -33,6 +33,8 @@ import org.example.memosm.ui.component.setting.WebhooksCard
 import org.example.memosm.ui.component.LoginDialog
 import org.example.memosm.ui.component.StatsActivityCard
 import org.example.memosm.ui.component.ProfileHeader
+import org.example.memosm.ui.component.rememberScrollContext
+import androidx.compose.animation.core.animateDpAsState
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -40,7 +42,8 @@ fun ProfileScreen(
     viewModel: MemosViewModel,
     onLogout: () -> Unit,
     onAddAccount: () -> Unit,
-    onToggleNavBar: ((Boolean) -> Unit)? = null
+    onToggleNavBar: ((Boolean) -> Unit)? = null,
+    isNavBarVisible: Boolean = true
 ) {
     var isArchivedVisible by rememberSaveable { mutableStateOf(false) }
 
@@ -88,7 +91,8 @@ fun ProfileScreen(
                     onShowArchived = { isArchivedVisible = true },
                     animatedVisibilityScope = this@AnimatedContent,
                     sharedTransitionScope = this@SharedTransitionLayout,
-                    onToggleNavBar = onToggleNavBar
+                    onToggleNavBar = onToggleNavBar,
+                    isNavBarVisible = isNavBarVisible
                 )
             }
         }
@@ -104,7 +108,8 @@ private fun ProfileListPane(
     onShowArchived: () -> Unit,
     animatedVisibilityScope: AnimatedVisibilityScope,
     sharedTransitionScope: SharedTransitionScope,
-    onToggleNavBar: ((Boolean) -> Unit)? = null
+    onToggleNavBar: ((Boolean) -> Unit)? = null,
+    isNavBarVisible: Boolean = true
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val user = uiState.session.currUser
@@ -118,28 +123,15 @@ private fun ProfileListPane(
     val listState = rememberLazyListState()
 
     // Scroll direction tracking for nav bar visibility
-    var isScrollingDown by remember { mutableStateOf(false) }
-    var previousIndex by remember { mutableIntStateOf(0) }
-    var previousScrollOffset by remember { mutableIntStateOf(0) }
+    val scrollContext = rememberScrollContext(
+        listState = listState,
+        onScrollDown = { onToggleNavBar?.invoke(false) },
+        onScrollUp = { onToggleNavBar?.invoke(true) })
 
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (currentIndex, currentOffset) ->
-            if (currentIndex > previousIndex) {
-                isScrollingDown = true
-            } else if (currentIndex < previousIndex) {
-                isScrollingDown = false
-            } else if (currentOffset > previousScrollOffset + 10) {
-                isScrollingDown = true
-            } else if (currentOffset < previousScrollOffset - 10) {
-                isScrollingDown = false
-            }
-
-            onToggleNavBar?.invoke(!isScrollingDown || currentIndex == 0)
-
-            previousIndex = currentIndex
-            previousScrollOffset = currentOffset
-        }
-    }
+    val bottomPadding by animateDpAsState(
+        targetValue = if (isNavBarVisible) 96.dp else 16.dp, // Profile has more bottom internal padding?
+        label = "BottomPadding"
+    )
 
     // Double tap refresh logic: scroll to top
     var lastProcessedTrigger by rememberSaveable { mutableLongStateOf(uiState.refreshTrigger) }
@@ -187,13 +179,11 @@ private fun ProfileListPane(
     accountToEditCredentials?.let { account ->
         LoginDialog(
             onLoginSuccess = { baseUrl, token ->
-                // Update the account with new credentials
-                viewModel.updateAccountCredentials(account, baseUrl, token)
-                accountToEditCredentials = null
-                showAccountSwitcher = false
-            },
-            onDismiss = { accountToEditCredentials = null },
-            editAccount = account
+            // Update the account with new credentials
+            viewModel.updateAccountCredentials(account, baseUrl, token)
+            accountToEditCredentials = null
+            showAccountSwitcher = false
+        }, onDismiss = { accountToEditCredentials = null }, editAccount = account
         )
     }
 
@@ -203,20 +193,15 @@ private fun ProfileListPane(
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ) {
             AccountsList(
-                accounts = accounts, 
-                onSwitchAccount = {
-                    viewModel.switchAccount(it)
-                    showAccountSwitcher = false
-                }, 
-                onLogoutAccount = { viewModel.removeAccount(it) },
-                onEditAccount = { account ->
-                    accountToEditCredentials = account
-                },
-                onAddAccount = {
-                    onAddAccount()
-                    showAccountSwitcher = false
-                }, 
-                modifier = Modifier.padding(bottom = 32.dp)
+                accounts = accounts, onSwitchAccount = {
+                viewModel.switchAccount(it)
+                showAccountSwitcher = false
+            }, onLogoutAccount = { viewModel.removeAccount(it) }, onEditAccount = { account ->
+                accountToEditCredentials = account
+            }, onAddAccount = {
+                onAddAccount()
+                showAccountSwitcher = false
+            }, modifier = Modifier.padding(bottom = 32.dp)
             )
         }
     }
@@ -233,7 +218,8 @@ private fun ProfileListPane(
                 start = 16.dp,
                 top = 16.dp + WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
                 end = 16.dp,
-                bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                bottom = bottomPadding + WindowInsets.navigationBars.asPaddingValues()
+                    .calculateBottomPadding()
             ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -247,29 +233,31 @@ private fun ProfileListPane(
                     val hostUrl = uiState.session.hostUrl
                     if (user != null) {
                         val rawAvatarUrl = user.avatarUrl
-                        val avatarUrl = org.example.memosm.ui.component.resolveResourceUrl(hostUrl, rawAvatarUrl)
+                        val avatarUrl = org.example.memosm.ui.component.resolveResourceUrl(
+                            hostUrl, rawAvatarUrl
+                        )
 
                         ProfileHeader(
                             user = user.copy(avatarUrl = avatarUrl, token = uiState.session.token),
                             onClick = { showAccountSwitcher = true },
-                            onEditClick = { showEditDialog = true }
-                        )
+                            onEditClick = { showEditDialog = true })
                     } else {
                         if (activeAccount != null) {
                             val rawAvatarUrl = activeAccount.avatarUrl
-                            val avatarUrl = org.example.memosm.ui.component.resolveResourceUrl(hostUrl, rawAvatarUrl)
+                            val avatarUrl = org.example.memosm.ui.component.resolveResourceUrl(
+                                hostUrl, rawAvatarUrl
+                            )
 
                             ProfileHeader(
                                 user = User(
-                                    name = activeAccount.name?.let { "users/$it" },
-                                    username = activeAccount.name ?: "",
-                                    displayName = activeAccount.displayName,
-                                    avatarUrl = avatarUrl,
-                                    token = uiState.session.token
-                                ),
+                                name = activeAccount.name?.let { "users/$it" },
+                                username = activeAccount.name ?: "",
+                                displayName = activeAccount.displayName,
+                                avatarUrl = avatarUrl,
+                                token = uiState.session.token
+                            ),
                                 onClick = { showAccountSwitcher = true },
-                                onEditClick = { showEditDialog = true }
-                            )
+                                onEditClick = { showEditDialog = true })
                         } else if (uiState.userMemoList.list.isLoading) {
                             Box(
                                 modifier = Modifier
@@ -342,15 +330,10 @@ private fun ProfileListPane(
                             },
                             onUpdate = { shortcut, title, filter, onSuccess, onError ->
                                 viewModel.updateShortcut(
-                                    shortcut,
-                                    title,
-                                    filter,
-                                    onSuccess,
-                                    onError
+                                    shortcut, title, filter, onSuccess, onError
                                 )
                             },
-                            onDelete = { shortcut -> viewModel.deleteShortcut(shortcut) }
-                        )
+                            onDelete = { shortcut -> viewModel.deleteShortcut(shortcut) })
                     }
                 }
 
@@ -362,10 +345,11 @@ private fun ProfileListPane(
                                 viewModel.createWebhook(displayName, url, onSuccess, onError)
                             },
                             onUpdate = { webhook, displayName, url, onSuccess, onError ->
-                                viewModel.updateWebhook(webhook, displayName, url, onSuccess, onError)
+                                viewModel.updateWebhook(
+                                    webhook, displayName, url, onSuccess, onError
+                                )
                             },
-                            onDelete = { webhook -> viewModel.deleteWebhook(webhook) }
-                        )
+                            onDelete = { webhook -> viewModel.deleteWebhook(webhook) })
                     }
                 }
 
@@ -410,7 +394,6 @@ private fun ProfileListPane(
         }
     }
 }
-
 
 
 @Composable

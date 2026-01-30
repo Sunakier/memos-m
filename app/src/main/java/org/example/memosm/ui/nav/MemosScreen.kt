@@ -34,12 +34,14 @@ import org.example.memosm.ui.component.GenericMemosListPane
 import org.example.memosm.ui.component.MemoSearchBar
 import org.example.memosm.ui.component.MemosScaffold
 import org.example.memosm.ui.component.composer.MemoComposerDialog
+import org.example.memosm.ui.component.rememberScrollContext
 import org.example.memosm.viewmodel.MemosViewModel
 
 @Composable
 fun MemosScreen(
     viewModel: MemosViewModel,
     onToggleNavBar: ((Boolean) -> Unit)? = null,
+    isNavBarVisible: Boolean = true,
     openComposer: Boolean = false,
     onComposerOpened: () -> Unit = {}
 ) {
@@ -54,22 +56,26 @@ fun MemosScreen(
     var startFresh by remember { mutableStateOf(false) }
 
     // FAB expansion based on scroll direction
-    LaunchedEffect(listState) {
-        var previousIndex = listState.firstVisibleItemIndex
-        var previousScrollOffset = listState.firstVisibleItemScrollOffset
-        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (index, offset) ->
-            isFabExpanded = when {
-                index == 0 && offset == 0 -> true
-                index > previousIndex -> false
-                index < previousIndex -> true
-                offset > previousScrollOffset + 10 -> false
-                offset < previousScrollOffset - 10 -> true
-                else -> isFabExpanded
-            }
-            previousIndex = index
-            previousScrollOffset = offset
+    val scrollContext = rememberScrollContext(listState = listState, onScrollDown = {
+        onToggleNavBar?.invoke(false)
+        isFabExpanded = false
+    }, onScrollUp = {
+        onToggleNavBar?.invoke(true)
+        isFabExpanded = true
+    })
+
+    // Explicitly handle initial state or non-scroll updates if needed
+    LaunchedEffect(scrollContext.isScrollingDown) {
+        if (scrollContext.isScrollingDown) {
+            isFabExpanded = false
+        } else {
+            isFabExpanded = true
         }
     }
+
+    val bottomPadding by animateDpAsState(
+        targetValue = if (isNavBarVisible) 80.dp else 16.dp, label = "BottomPadding"
+    )
 
     // Handle external composer open request (e.g. from widget)
     LaunchedEffect(openComposer) {
@@ -85,7 +91,7 @@ fun MemosScreen(
             onComposerOpened()
         }
     }
-    
+
     // Double tap refresh logic: scroll to top
 
     // Double tap refresh logic: scroll to top
@@ -102,11 +108,15 @@ fun MemosScreen(
         memos = uiState.userMemoList.list.items,
         listState = listState,
         onToggleNavBar = { onToggleNavBar?.invoke(it) },
+        isNavBarVisible = isNavBarVisible,
         listPane = { onMemoClick ->
             MemosListPane(
                 viewModel = viewModel,
                 listState = listState,
                 onMemoClick = onMemoClick,
+                contentPadding = PaddingValues(
+                    start = 16.dp, top = 88.dp, end = 16.dp, bottom = bottomPadding
+                ),
                 onDraftsCardClick = { showDraftsScreen = true })
         },
         overlay = { onMemoClick, showSearchBar, isSearchExpanded, onSearchExpandedChange, isDualPane, isDetailVisible ->
@@ -132,16 +142,16 @@ fun MemosScreen(
 
                 ExtendedFloatingActionButton(
                     onClick = {
-                        // If drafts exist, show prompt; otherwise show composer directly
-                        if (uiState.draft.drafts.isNotEmpty()) {
-                            showDraftPrompt = true
-                        } else {
-                            // Start fresh with a new draft session ID
-                            viewModel.initializeNewDraftSession()
-                            startFresh = true
-                            showComposerDialog = true
-                        }
-                    },
+                    // If drafts exist, show prompt; otherwise show composer directly
+                    if (uiState.draft.drafts.isNotEmpty()) {
+                        showDraftPrompt = true
+                    } else {
+                        // Start fresh with a new draft session ID
+                        viewModel.initializeNewDraftSession()
+                        startFresh = true
+                        showComposerDialog = true
+                    }
+                },
                     expanded = isFabExpanded,
                     icon = {
                         Icon(
@@ -236,7 +246,8 @@ fun MemosScreen(
         ), exit = slideOutVertically(
             animationSpec = tween(200, easing = exitEasing), targetOffsetY = { it }) + fadeOut(
             animationSpec = tween(200, easing = exitEasing)
-        )) {
+        )
+    ) {
         DraftsScreen(
             viewModel = viewModel, onDismiss = { showDraftsScreen = false })
     }
@@ -247,6 +258,7 @@ private fun MemosListPane(
     viewModel: MemosViewModel,
     listState: LazyListState,
     onMemoClick: (Memo) -> Unit,
+    contentPadding: PaddingValues,
     onDraftsCardClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -265,6 +277,7 @@ private fun MemosListPane(
         onRefresh = { viewModel.fetchUserMemos(refresh = true) },
         onMemoClick = onMemoClick,
         listState = listState,
+        contentPadding = contentPadding,
         errorTitle = stringResource(R.string.common_error_failed_to_load_memos),
         isOffline = uiState.userMemoList.list.isOffline,
         errorMessage = uiState.userMemoList.list.errorMessage,
@@ -315,7 +328,9 @@ private fun MemosListPane(
                                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                                             )
                                             Text(
-                                                text = stringResource(R.string.drafts_count, draftCount),
+                                                text = stringResource(
+                                                    R.string.drafts_count, draftCount
+                                                ),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
                                                     alpha = 0.7f
@@ -331,7 +346,9 @@ private fun MemosListPane(
                                             .clip(RoundedCornerShape(12.dp))
                                             .clickable { showDeleteAllDialog = true }
                                             .padding(4.dp),
-                                        tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f))
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(
+                                            alpha = 0.5f
+                                        ))
                                 }
                             }
                         }
@@ -358,10 +375,14 @@ private fun MemosListPane(
                                             0.85f to Color.Black, 1f to Color.Transparent
                                         )
                                         if (shortcutListState.canScrollBackward) {
-                                            drawRect(brush = startGradient, blendMode = BlendMode.DstIn)
+                                            drawRect(
+                                                brush = startGradient, blendMode = BlendMode.DstIn
+                                            )
                                         }
                                         if (shortcutListState.canScrollForward) {
-                                            drawRect(brush = endGradient, blendMode = BlendMode.DstIn)
+                                            drawRect(
+                                                brush = endGradient, blendMode = BlendMode.DstIn
+                                            )
                                         }
                                     },
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),

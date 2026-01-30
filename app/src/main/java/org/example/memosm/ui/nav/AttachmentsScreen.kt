@@ -19,11 +19,16 @@ import org.example.memosm.R
 import org.example.memosm.ui.component.ErrorView
 import org.example.memosm.ui.component.item.AttachmentCard
 import org.example.memosm.ui.component.item.AttachmentCompactMode
+import org.example.memosm.ui.component.rememberStaggeredGridScrollContext
 import org.example.memosm.viewmodel.MemosViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? = null) {
+fun AttachmentsScreen(
+    viewModel: MemosViewModel,
+    onToggleNavBar: ((Boolean) -> Unit)? = null,
+    isNavBarVisible: Boolean = true
+) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyStaggeredGridState()
     val aspectRatios = remember { mutableStateMapOf<String, Float>() }
@@ -40,34 +45,17 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> U
     )
 
     // Scroll direction tracking for nav bar visibility
-    var isScrollingDown by remember { mutableStateOf(false) }
-    var previousIndex by remember { mutableIntStateOf(0) }
-    var previousScrollOffset by remember { mutableIntStateOf(0) }
-    
+    val scrollContext = rememberStaggeredGridScrollContext(
+        listState = listState,
+        onScrollDown = { onToggleNavBar?.invoke(false) },
+        onScrollUp = { onToggleNavBar?.invoke(true) })
+
+    val bottomPadding by animateDpAsState(
+        targetValue = if (isNavBarVisible) 80.dp else 16.dp, label = "BottomPadding"
+    )
+
     LaunchedEffect(Unit) {
         viewModel.fetchAttachments(refresh = false)
-    }
-
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (currentIndex, currentOffset) ->
-            val wasScrollingDown = isScrollingDown
-            if (currentIndex > previousIndex) {
-                isScrollingDown = true
-            } else if (currentIndex < previousIndex) {
-                isScrollingDown = false
-            } else if (currentOffset > previousScrollOffset + 10) {
-                isScrollingDown = true
-            } else if (currentOffset < previousScrollOffset - 10) {
-                isScrollingDown = false
-            }
-
-            if (wasScrollingDown != isScrollingDown) {
-                onToggleNavBar?.invoke(!isScrollingDown)
-            }
-
-            previousIndex = currentIndex
-            previousScrollOffset = currentOffset
-        }
     }
 
     // Double tap refresh logic: scroll to top
@@ -162,7 +150,7 @@ fun AttachmentsScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> U
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
-                        start = 12.dp, top = 12.dp, end = 12.dp, bottom = 80.dp
+                        start = 12.dp, top = 12.dp, end = 12.dp, bottom = bottomPadding
                     ),
                     verticalItemSpacing = 12.dp,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)

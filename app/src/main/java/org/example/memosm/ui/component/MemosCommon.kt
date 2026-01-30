@@ -51,7 +51,8 @@ fun MemosScaffold(
     listPane: @Composable BoxScope.(onMemoClick: (Memo) -> Unit) -> Unit,
     topBar: @Composable (isDetailVisible: Boolean, isDualPane: Boolean) -> Unit = { _, _ -> },
     overlay: @Composable BoxScope.(onMemoClick: (Memo) -> Unit, showSearchBar: Boolean, isSearchExpanded: Boolean, onSearchExpandedChange: (Boolean) -> Unit, isDualPane: Boolean, isDetailVisible: Boolean) -> Unit = { _, _, _, _, _, _ -> },
-    onToggleNavBar: (Boolean) -> Unit = {}
+    onToggleNavBar: (Boolean) -> Unit = {},
+    isNavBarVisible: Boolean = true
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusRequester = remember { FocusRequester() }
@@ -83,7 +84,8 @@ fun MemosScaffold(
             val selectedId =
                 uiState.detailPane.selectedMemo?.let { it.name ?: it.content.hashCode().toString() }
             if (currentMemoKey.id != selectedId || uiState.detailPane.selectedMemo == null) {
-                val pool = if (currentMemoKey.fromSearch) uiState.searchMemoList.list.items else memos
+                val pool =
+                    if (currentMemoKey.fromSearch) uiState.searchMemoList.list.items else memos
                 val memo = pool.find {
                     (it.name ?: it.content.hashCode().toString()) == currentMemoKey.id
                 }
@@ -97,26 +99,9 @@ fun MemosScaffold(
     }
 
     // Scroll direction tracking for search bar visibility
-    var isScrollingDown by remember { mutableStateOf(false) }
-    var previousIndex by remember { mutableIntStateOf(0) }
-    var previousScrollOffset by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (currentIndex, currentOffset) ->
-            if (currentIndex > previousIndex) {
-                isScrollingDown = true
-            } else if (currentIndex < previousIndex) {
-                isScrollingDown = false
-            } else if (currentOffset > previousScrollOffset + 10) {
-                isScrollingDown = true
-            } else if (currentOffset < previousScrollOffset - 10) {
-                isScrollingDown = false
-            }
-
-            previousIndex = currentIndex
-            previousScrollOffset = currentOffset
-        }
-    }
+    val scrollContext = rememberScrollContext(
+        listState = listState
+    )
 
     val isDetailVisible =
         navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
@@ -126,9 +111,8 @@ fun MemosScaffold(
 
     var isSearchExpanded by remember { mutableStateOf(false) }
 
-    // Determine if the nav bar should be shown based on scroll state
     val showNavBarByScroll by remember {
-        derivedStateOf { !isScrollingDown || listState.firstVisibleItemIndex == 0 }
+        derivedStateOf { !scrollContext.isScrollingDown || listState.firstVisibleItemIndex == 0 }
     }
 
     LaunchedEffect(showNavBarByScroll, isDetailVisible, isDualPane, isSearchExpanded) {
@@ -216,7 +200,8 @@ fun MemosScaffold(
                     ) { memoKey ->
                         val memo = remember(memoKey, memos, uiState.searchMemoList.list.items) {
                             memoKey?.let { key ->
-                                val pool = if (key.fromSearch) uiState.searchMemoList.list.items else memos
+                                val pool =
+                                    if (key.fromSearch) uiState.searchMemoList.list.items else memos
                                 pool.find {
                                     (it.name ?: it.content.hashCode().toString()) == key.id
                                 }
@@ -420,8 +405,7 @@ fun GenericMemosListPane(
                             maxHeight = 400.dp,
                             modifier = Modifier.widthIn(max = 800.dp),
                             reactionOptions = uiState.session.instanceSettings?.memoRelatedSetting?.reactions
-                                ?: emptyList()
-                        )
+                                ?: emptyList())
 
                     }
                 }
@@ -477,11 +461,13 @@ fun GenericMemosListPane(
 fun resolveResourceUrl(hostUrl: String, relativeUrl: String?): String? {
     if (relativeUrl.isNullOrBlank()) return null
     if (relativeUrl.startsWith("http")) return relativeUrl
-    
+
     val cleanHost = hostUrl.trimEnd('/')
     val cleanRelative = relativeUrl.trimStart('/')
-    
+
     val result = "$cleanHost/$cleanRelative"
-    android.util.Log.d("MemosDebug", "resolveResourceUrl: host=$hostUrl, relative=$relativeUrl -> $result")
+    android.util.Log.d(
+        "MemosDebug", "resolveResourceUrl: host=$hostUrl, relative=$relativeUrl -> $result"
+    )
     return result
 }

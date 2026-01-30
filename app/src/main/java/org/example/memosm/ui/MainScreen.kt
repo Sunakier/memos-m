@@ -310,23 +310,29 @@ fun MainScreen(
                                 MainDestination.MEMOS -> MemosScreen(
                                     viewModel = viewModel, 
                                     onToggleNavBar = toggleNavBar,
+                                    isNavBarVisible = isNavBarVisible,
                                     openComposer = shouldOpenComposer,
                                     onComposerOpened = onComposerOpened
                                 )
 
                                 MainDestination.EXPLORE -> ExploreScreen(
-                                    viewModel = viewModel, onToggleNavBar = toggleNavBar
+                                    viewModel = viewModel, 
+                                    onToggleNavBar = toggleNavBar,
+                                    isNavBarVisible = isNavBarVisible
                                 )
 
                                 MainDestination.ATTACHMENTS -> AttachmentsScreen(
-                                    viewModel = viewModel, onToggleNavBar = toggleNavBar
+                                    viewModel = viewModel, 
+                                    onToggleNavBar = toggleNavBar,
+                                    isNavBarVisible = isNavBarVisible
                                 )
 
                                 MainDestination.PROFILE -> ProfileScreen(
                                     viewModel = viewModel,
                                     onLogout = onLogout,
                                     onAddAccount = { isAddingAccount = true },
-                                    onToggleNavBar = toggleNavBar
+                                    onToggleNavBar = toggleNavBar,
+                                    isNavBarVisible = isNavBarVisible
                                 )
                             }
                         }

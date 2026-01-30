@@ -1,12 +1,14 @@
 package org.example.memosm.ui.nav
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.ui.component.GenericMemosListPane
 import org.example.memosm.ui.component.MemoSearchBar
@@ -15,9 +17,17 @@ import org.example.memosm.viewmodel.MemosViewModel
 import kotlin.collections.get
 
 @Composable
-fun ExploreScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)? = null) {
+fun ExploreScreen(
+    viewModel: MemosViewModel,
+    onToggleNavBar: ((Boolean) -> Unit)? = null,
+    isNavBarVisible: Boolean = true
+) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
+
+    val bottomPadding by animateDpAsState(
+        targetValue = if (isNavBarVisible) 80.dp else 16.dp, label = "BottomPadding"
+    )
 
     // Double tap refresh logic: scroll to top
     var lastProcessedTrigger by rememberSaveable { mutableLongStateOf(uiState.refreshTrigger) }
@@ -33,6 +43,7 @@ fun ExploreScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)
         memos = uiState.exploreMemoList.list.items,
         listState = listState,
         onToggleNavBar = { onToggleNavBar?.invoke(it) },
+        isNavBarVisible = isNavBarVisible,
         listPane = { onMemoClick ->
             GenericMemosListPane(
                 viewModel = viewModel,
@@ -44,6 +55,9 @@ fun ExploreScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)
                 onRefresh = { viewModel.fetchExploreMemos(refresh = true) },
                 onMemoClick = onMemoClick,
                 listState = listState,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    start = 16.dp, top = 88.dp, end = 16.dp, bottom = bottomPadding
+                ),
                 userProvider = { memo -> uiState.users[memo.creator] },
                 errorTitle = stringResource(R.string.common_error_failed_to_load_explore),
                 isOffline = uiState.exploreMemoList.list.isOffline,
@@ -55,8 +69,7 @@ fun ExploreScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)
                 visible = showSearchBar && (!isSearchExpanded || isDualPane || !isDetailVisible),
                 enter = slideInVertically { -it } + fadeIn(),
                 exit = slideOutVertically { -it } + fadeOut(),
-                modifier = Modifier.align(Alignment.TopCenter)
-            ) {
+                modifier = Modifier.align(Alignment.TopCenter)) {
                 MemoSearchBar(
                     viewModel = viewModel,
                     isExplore = true,
@@ -65,6 +78,5 @@ fun ExploreScreen(viewModel: MemosViewModel, onToggleNavBar: ((Boolean) -> Unit)
                     placeholder = stringResource(R.string.memo_search_explore_placeholder)
                 )
             }
-        }
-    )
+        })
 }

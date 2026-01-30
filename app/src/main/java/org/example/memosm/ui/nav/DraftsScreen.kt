@@ -40,21 +40,20 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DraftsScreen(
-    viewModel: MemosViewModel,
-    onDismiss: () -> Unit
+    viewModel: MemosViewModel, onDismiss: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val drafts = uiState.draft.drafts
-    
+
     var draftToEdit by remember { mutableStateOf<Draft?>(null) }
     var draftToDelete by remember { mutableStateOf<Draft?>(null) }
     var draftToPost by remember { mutableStateOf<Draft?>(null) }
-    
+
     val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
 
     // Predictive Back Animation State
     val scale = remember { Animatable(1f) }
-    
+
     PredictiveBackHandler { progress ->
         try {
             progress.collect { backEvent ->
@@ -69,27 +68,21 @@ fun DraftsScreen(
         }
     }
 
-    Scaffold(
-        modifier = Modifier.graphicsLayer {
-            scaleX = scale.value
-            scaleY = scale.value
-            shape = RoundedCornerShape(28.dp)
-            clip = true
-        },
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.drafts_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = stringResource(R.string.memo_detail_back)
-                        )
-                    }
-                }
-            )
-        }
-    ) { padding ->
+    Scaffold(modifier = Modifier.graphicsLayer {
+        scaleX = scale.value
+        scaleY = scale.value
+        shape = RoundedCornerShape(28.dp)
+        clip = true
+    }, topBar = {
+        TopAppBar(title = { Text(stringResource(R.string.drafts_title)) }, navigationIcon = {
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                    contentDescription = stringResource(R.string.memo_detail_back)
+                )
+            }
+        })
+    }) { padding ->
         if (drafts.isEmpty()) {
             Box(
                 modifier = Modifier
@@ -117,8 +110,7 @@ fun DraftsScreen(
                         dateFormat = dateFormat,
                         onEdit = { draftToEdit = draft },
                         onPost = { draftToPost = draft },
-                        onDelete = { draftToDelete = draft }
-                    )
+                        onDelete = { draftToDelete = draft })
                 }
             }
         }
@@ -169,8 +161,7 @@ fun DraftsScreen(
                     onClick = {
                         viewModel.deleteDraft(draftToDelete!!.id)
                         draftToDelete = null
-                    },
-                    colors = ButtonDefaults.textButtonColors(
+                    }, colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
@@ -181,8 +172,7 @@ fun DraftsScreen(
                 TextButton(onClick = { draftToDelete = null }) {
                     Text(stringResource(R.string.common_cancel))
                 }
-            }
-        )
+            })
     }
 }
 
@@ -213,14 +203,12 @@ private fun DraftCard(
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
-                color = if (draft.content.isBlank()) 
-                    MaterialTheme.colorScheme.onSurfaceVariant 
-                else 
-                    MaterialTheme.colorScheme.onSurface
+                color = if (draft.content.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant
+                else MaterialTheme.colorScheme.onSurface
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             // Metadata row: timestamp, visibility, attachments, location
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -233,19 +221,17 @@ private fun DraftCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
+
                 // Visibility
                 AssistChip(
-                    onClick = {},
-                    label = {
-                        Text(
-                            text = getVisibilityLabel(draft.visibility),
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    },
-                    modifier = Modifier.height(24.dp)
+                    onClick = {}, label = {
+                    Text(
+                        text = getVisibilityLabel(draft.visibility),
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }, modifier = Modifier.height(24.dp)
                 )
-                
+
                 // Attachments count
                 if (draft.attachments.isNotEmpty()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -263,7 +249,7 @@ private fun DraftCard(
                         )
                     }
                 }
-                
+
                 // Location indicator
                 if (draft.location != null) {
                     Icon(
@@ -274,9 +260,9 @@ private fun DraftCard(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // Action buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -291,7 +277,7 @@ private fun DraftCard(
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
-                
+
                 // Edit button
                 IconButton(onClick = onEdit) {
                     Icon(
@@ -300,11 +286,10 @@ private fun DraftCard(
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
-                
+
                 // Post button
                 FilledTonalButton(
-                    onClick = onPost,
-                    colors = ButtonDefaults.filledTonalButtonColors(
+                    onClick = onPost, colors = ButtonDefaults.filledTonalButtonColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer
                     )
                 ) {
