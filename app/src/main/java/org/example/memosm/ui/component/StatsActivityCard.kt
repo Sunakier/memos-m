@@ -1,6 +1,7 @@
 package org.example.memosm.ui.component
 
 import android.os.Build
+import android.text.format.DateFormat
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -236,14 +237,16 @@ private fun CalendarMonthView(
     val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
 
+    val monthYearText = remember(yearMonth) {
+        val pattern = DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMM yyyy")
+        val formatter = DateTimeFormatter.ofPattern(pattern, Locale.getDefault())
+        yearMonth.format(formatter)
+    }
+
     Column(modifier = modifier) {
         // Month and year header
         Text(
-            text = "${
-                yearMonth.month.getDisplayName(
-                    TextStyle.FULL, Locale.getDefault()
-                )
-            } ${yearMonth.year}",
+            text = monthYearText,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium,
             color = onSurfaceVariant,
