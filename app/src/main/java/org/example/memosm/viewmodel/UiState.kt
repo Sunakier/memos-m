@@ -75,8 +75,14 @@ data class MemosUiState(
     val isPosting: Boolean = false,
     val isRefreshing: Boolean = false,
     val refreshTrigger: Long = 0L,
+    val refreshSource: RefreshSource = RefreshSource.Manual,
     val error: String? = null
 )
+
+enum class RefreshSource {
+    Manual, // Pull-to-refresh or explicit user action
+    USerMemos, ExploreMemos, ArchivedMemos, SearchMemos, Attachments
+}
 
 // --- Error Response ---
 

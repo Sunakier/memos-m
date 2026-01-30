@@ -8,6 +8,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -35,6 +36,7 @@ import org.example.memosm.ui.component.StatsActivityCard
 import org.example.memosm.ui.component.ProfileHeader
 import org.example.memosm.ui.component.rememberScrollContext
 import androidx.compose.animation.core.animateDpAsState
+import org.example.memosm.viewmodel.RefreshSource
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -46,6 +48,7 @@ fun ProfileScreen(
     isNavBarVisible: Boolean = true
 ) {
     var isArchivedVisible by rememberSaveable { mutableStateOf(false) }
+    val listState = rememberLazyListState()
 
     BackHandler(enabled = isArchivedVisible) {
         isArchivedVisible = false
@@ -92,7 +95,8 @@ fun ProfileScreen(
                     animatedVisibilityScope = this@AnimatedContent,
                     sharedTransitionScope = this@SharedTransitionLayout,
                     onToggleNavBar = onToggleNavBar,
-                    isNavBarVisible = isNavBarVisible
+                    isNavBarVisible = isNavBarVisible,
+                    listState = listState
                 )
             }
         }
@@ -109,7 +113,8 @@ private fun ProfileListPane(
     animatedVisibilityScope: AnimatedVisibilityScope,
     sharedTransitionScope: SharedTransitionScope,
     onToggleNavBar: ((Boolean) -> Unit)? = null,
-    isNavBarVisible: Boolean = true
+    isNavBarVisible: Boolean = true,
+    listState: LazyListState
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val user = uiState.session.currUser
@@ -119,8 +124,6 @@ private fun ProfileListPane(
     val instance = uiState.session.instanceProfile
     val userSettings = uiState.session.userSettings
     val accounts = uiState.accounts
-
-    val listState = rememberLazyListState()
 
     // Scroll direction tracking for nav bar visibility
     val scrollContext = rememberScrollContext(
@@ -137,7 +140,9 @@ private fun ProfileListPane(
     var lastProcessedTrigger by rememberSaveable { mutableLongStateOf(uiState.refreshTrigger) }
     LaunchedEffect(uiState.refreshTrigger) {
         if (uiState.refreshTrigger > lastProcessedTrigger) {
-            listState.animateScrollToItem(0)
+            if (uiState.refreshSource == RefreshSource.USerMemos || uiState.refreshSource == RefreshSource.Manual) {
+                listState.animateScrollToItem(0)
+            }
         }
         lastProcessedTrigger = uiState.refreshTrigger
     }

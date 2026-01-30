@@ -617,7 +617,7 @@ class MemosViewModel(
     }
 
     fun fetchUserMemos(refresh: Boolean = false) {
-        if (refresh) updateRefreshTrigger()
+        if (refresh) updateRefreshTrigger(RefreshSource.USerMemos)
         userMemoManager?.fetch(refresh)
         if (refresh) clearRefreshingState()
     }
@@ -625,7 +625,7 @@ class MemosViewModel(
     fun loadMoreUserMemos() = userMemoManager?.loadMore()
 
     fun fetchExploreMemos(refresh: Boolean = false) {
-        if (refresh) updateRefreshTrigger()
+        if (refresh) updateRefreshTrigger(RefreshSource.ExploreMemos)
         exploreMemoManager?.fetch(refresh)
         if (refresh) clearRefreshingState()
     }
@@ -633,7 +633,7 @@ class MemosViewModel(
     fun loadMoreExploreMemos() = exploreMemoManager?.loadMore()
 
     fun fetchArchivedMemos(refresh: Boolean = false) {
-        if (refresh) updateRefreshTrigger()
+        if (refresh) updateRefreshTrigger(RefreshSource.ArchivedMemos)
         archivedMemoManager?.fetch(refresh)
         if (refresh) clearRefreshingState()
     }
@@ -641,7 +641,7 @@ class MemosViewModel(
     fun loadMoreArchivedMemos() = archivedMemoManager?.loadMore()
 
     fun fetchSearchMemos(refresh: Boolean = false) {
-        if (refresh) updateRefreshTrigger()
+        if (refresh) updateRefreshTrigger(RefreshSource.SearchMemos)
         searchMemoManager?.fetch(refresh)
         if (refresh) clearRefreshingState()
     }
@@ -653,10 +653,10 @@ class MemosViewModel(
         fetchSearchMemos(refresh = true)
     }
 
-    private fun updateRefreshTrigger() {
+    private fun updateRefreshTrigger(source: RefreshSource = RefreshSource.Manual) {
         _uiState.update {
             it.copy(
-                isRefreshing = true, refreshTrigger = System.currentTimeMillis()
+                isRefreshing = true, refreshTrigger = System.currentTimeMillis(), refreshSource = source
             )
         }
     }
@@ -668,7 +668,7 @@ class MemosViewModel(
     }
 
     fun fetchAttachments(refresh: Boolean = false) {
-        if (refresh) updateRefreshTrigger()
+        if (refresh) updateRefreshTrigger(RefreshSource.Attachments)
         attachmentManager?.fetch(refresh = refresh, softRefresh = refresh)
         if (refresh) clearRefreshingState()
     }
