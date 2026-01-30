@@ -156,6 +156,10 @@
     <string name="common_error_failed_to_load_explore">Entdecken konnte nicht geladen werden</string>
     <string name="common_error_failed_to_load_profile">Profil konnte nicht geladen werden</string>
     <string name="common_error_failed_to_load_attachments">Anhänge konnten nicht geladen werden</string>
+
+    <string name="offline_title">Offline</string>
+    <string name="offline_cached_data_message">Zwischengespeicherte Daten werden angezeigt. Zum Aktualisieren ziehen.</string>
+
     <string name="memo_input_add_tag">Tag hinzufügen</string>
     <string name="memo_search_placeholder">Memos durchsuchen...</string>
     <string name="memo_search_explore_placeholder">Entdecken durchsuchen...</string>

@@ -156,6 +156,10 @@
     <string name="common_error_failed_to_load_explore">无法加载探索</string>
     <string name="common_error_failed_to_load_profile">无法加载个人资料</string>
     <string name="common_error_failed_to_load_attachments">无法加载附件</string>
+
+    <string name="offline_title">离线</string>
+    <string name="offline_cached_data_message">正在显示缓存数据。下拉刷新。</string>
+
     <string name="memo_input_add_tag">添加标签</string>
 
     <string name="memo_search_placeholder">搜索笔记...</string>

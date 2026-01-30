@@ -156,6 +156,10 @@
     <string name="common_error_failed_to_load_explore">둘러보기를 로드할 수 없습니다</string>
     <string name="common_error_failed_to_load_profile">프로필을 로드할 수 없습니다</string>
     <string name="common_error_failed_to_load_attachments">첨부 파일을 로드할 수 없습니다</string>
+
+    <string name="offline_title">오프라인</string>
+    <string name="offline_cached_data_message">캐시된 데이터를 표시 중입니다. 당겨서 새로고침하세요.</string>
+
     <string name="memo_input_add_tag">태그 추가</string>
     <string name="memo_search_placeholder">메모 검색...</string>
     <string name="memo_search_explore_placeholder">둘러보기 검색...</string>
