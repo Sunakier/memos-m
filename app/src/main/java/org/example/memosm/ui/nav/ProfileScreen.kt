@@ -2,8 +2,9 @@ package org.example.memosm.ui.nav
 
 import AccountsList
 import org.example.memosm.ui.component.setting.SettingsCard
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.*
+import androidx.compose.animation.core.SeekableTransitionState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.*
@@ -36,7 +37,10 @@ import org.example.memosm.ui.component.StatsActivityCard
 import org.example.memosm.ui.component.ProfileHeader
 import org.example.memosm.ui.component.rememberScrollContext
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.rememberTransition
+import androidx.compose.animation.core.tween
 import org.example.memosm.viewmodel.RefreshSource
+import kotlinx.coroutines.CancellationException
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -49,17 +53,34 @@ fun ProfileScreen(
 ) {
     var isArchivedVisible by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    
+    val transitionState = remember { SeekableTransitionState(isArchivedVisible) }
 
-    BackHandler(enabled = isArchivedVisible) {
-        isArchivedVisible = false
+    LaunchedEffect(isArchivedVisible) {
+        if (isArchivedVisible != transitionState.targetState) {
+            transitionState.animateTo(isArchivedVisible)
+        }
+    }
+
+    PredictiveBackHandler(enabled = isArchivedVisible) { progress ->
+        try {
+            progress.collect { backEvent ->
+                transitionState.seekTo(backEvent.progress, targetState = false)
+            }
+            transitionState.animateTo(false)
+            isArchivedVisible = false
+        } catch (e: CancellationException) {
+            transitionState.animateTo(true)
+        }
     }
 
     SharedTransitionLayout {
-        AnimatedContent(
-            targetState = isArchivedVisible, transitionSpec = {
+        val transition = rememberTransition(transitionState, label = "ProfileArchiveTransition")
+        transition.AnimatedContent(
+             transitionSpec = {
                 if (targetState) {
                     (fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + scaleIn(
-                        initialScale = 0.92f, animationSpec = spring(
+                        initialScale = 0.97f, animationSpec = spring(
                             dampingRatio = Spring.DampingRatioLowBouncy,
                             stiffness = Spring.StiffnessMediumLow
                         )
@@ -67,18 +88,19 @@ fun ProfileScreen(
                 } else {
                     fadeIn(spring(stiffness = Spring.StiffnessMediumLow)).togetherWith(
                         fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) + scaleOut(
-                            targetScale = 0.92f,
+                            targetScale = 0.97f,
                             animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
                         )
                     )
                 }
-            }, label = "ProfileArchiveTransition"
+            }
         ) { showArchived ->
             if (showArchived) {
                 ArchivedMemosScreen(
                     viewModel = viewModel,
                     onBack = { isArchivedVisible = false },
                     onToggleNavBar = onToggleNavBar,
+                    animatedVisibilityScope = this@AnimatedContent,
                     modifier = Modifier.sharedBounds(
                         rememberSharedContentState(key = "archived_container"),
                         animatedVisibilityScope = this@AnimatedContent,
@@ -298,7 +320,18 @@ private fun ProfileListPane(
                                         }), onClick = onShowArchived
                             ) {
                                 ListItem(
-                                    headlineContent = { Text(stringResource(R.string.profile_archived)) },
+                                    headlineContent = {
+                                        Text(
+                                            stringResource(R.string.profile_archived),
+                                            modifier = Modifier.sharedBounds(
+                                                rememberSharedContentState(key = "archive_text"),
+                                                animatedVisibilityScope = animatedVisibilityScope,
+                                                boundsTransform = { _, _ ->
+                                                    tween(durationMillis = 300)
+                                                }
+                                            )
+                                        )
+                                    },
                                     leadingContent = {
                                         Icon(
                                             Icons.Outlined.Archive, contentDescription = null

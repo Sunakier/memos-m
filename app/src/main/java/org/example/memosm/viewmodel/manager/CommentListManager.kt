@@ -24,16 +24,10 @@ class CommentListManager(
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
         val parent = currentMemoName ?: return Pair(emptyList(), null)
 
-        // Comments are just memos that point to a parent
-        // Filter: local path to parent
-        // Note: The filter format depends on the API. 
-        // Standard Memos API: `parent == 'memos/{id}'` (if name is full path)
-        val filter = "parent == '$parent'"
-
-        val response = api.listMemos(
+        val response = api.listMemoComments(
+            memo = parent,
             pageSize = COMMENT_PAGE_SIZE,
-            pageToken = pageToken,
-            filter = filter
+            pageToken = pageToken
         )
 
         // Sort comments by display_time asc (oldest first) usually

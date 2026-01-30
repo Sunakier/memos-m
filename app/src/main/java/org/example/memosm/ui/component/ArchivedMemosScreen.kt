@@ -1,5 +1,9 @@
 package org.example.memosm.ui.component
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -12,13 +16,14 @@ import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.viewmodel.MemosViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun ArchivedMemosScreen(
+fun SharedTransitionScope.ArchivedMemosScreen(
     modifier: Modifier = Modifier,
     viewModel: MemosViewModel,
     onBack: () -> Unit,
     onToggleNavBar: ((Boolean) -> Unit)? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
@@ -37,7 +42,18 @@ fun ArchivedMemosScreen(
             topBar = { isDetailVisible, isDualPane ->
                 if (!isDetailVisible || isDualPane) {
                     TopAppBar(
-                        title = { Text(stringResource(R.string.profile_archived)) },
+                        title = {
+                            Text(
+                                stringResource(R.string.profile_archived),
+                                modifier = Modifier.sharedBounds(
+                                    rememberSharedContentState(key = "archive_text"),
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    boundsTransform = { _, _ ->
+                                        tween(durationMillis = 300)
+                                    }
+                                )
+                            )
+                        },
                         navigationIcon = {
                             IconButton(onClick = onBack) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
