@@ -29,8 +29,6 @@ fun MemoMarkdown(
     modifier: Modifier = Modifier,
     content: String,
     markdownState: MarkdownState,
-    token: String,
-    hostUrl: String,
     onContentUpdate: ((String) -> Unit)? = null,
     selectable: Boolean = false,
 ) {

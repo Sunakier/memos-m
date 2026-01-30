@@ -42,10 +42,9 @@ import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.model.Reaction
 import org.example.memosm.model.User
+import org.example.memosm.ui.VisibilityIcon
 import org.example.memosm.ui.component.item.markdown.MemoMarkdown
 import org.example.memosm.ui.component.resolveResourceUrl
-import org.example.memosm.ui.getVisibilityIcon
-import org.example.memosm.ui.getVisibilityLabel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -178,9 +177,8 @@ fun MemoItem(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                 }
-                                Icon(
-                                    imageVector = getVisibilityIcon(memo.visibility),
-                                    contentDescription = getVisibilityLabel(memo.visibility),
+                                VisibilityIcon(
+                                    visibility = memo.visibility,
                                     modifier = Modifier.size(10.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 )
@@ -206,10 +204,9 @@ fun MemoItem(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                             }
-                            Icon(
-                                imageVector = getVisibilityIcon(memo.visibility),
-                                contentDescription = getVisibilityLabel(memo.visibility),
-                                modifier = Modifier.size(10.dp),
+                            VisibilityIcon(
+                                visibility = memo.visibility,
+                                modifier = Modifier.size(12.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
                         }
@@ -357,30 +354,25 @@ fun MemoItem(
                         .fillMaxWidth()
                         .then(
                             if (maxHeight != Dp.Unspecified) {
-                                Modifier
-                                    .heightIn(max = maxHeight)
-                                    .graphicsLayer {
-                                        compositingStrategy = CompositingStrategy.Offscreen
+                            Modifier.heightIn(max = maxHeight).graphicsLayer {
+                                    compositingStrategy = CompositingStrategy.Offscreen
+                                }.drawWithContent {
+                                    drawContent()
+                                    if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
+                                        drawRect(
+                                            brush = Brush.verticalGradient(
+                                                0.7f to Color.Black, 1.0f to Color.Transparent
+                                            ), blendMode = BlendMode.DstIn
+                                        )
                                     }
-                                    .drawWithContent {
-                                        drawContent()
-                                        if (size.height >= maxHeight.toPx() - 1.dp.toPx()) {
-                                            drawRect(
-                                                brush = Brush.verticalGradient(
-                                                    0.7f to Color.Black, 1.0f to Color.Transparent
-                                                ), blendMode = BlendMode.DstIn
-                                            )
-                                        }
-                                    }
-                            } else {
-                                Modifier
-                            })) {
+                                }
+                        } else {
+                            Modifier
+                        })) {
                     MemoMarkdown(
                         content = memo.content,
                         markdownState = markdownState,
                         onContentUpdate = onContentUpdate,
-                        token = token,
-                        hostUrl = hostUrl,
                         selectable = isDetailView,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -597,49 +589,4 @@ fun MemoItem(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-fun ReactionPickerDialog(
-    reactionOptions: List<String>, onDismiss: () -> Unit, onReactionSelected: (String) -> Unit
-) {
-    val commonEmojis = reactionOptions.ifEmpty {
-        listOf(
-            "\uD83D\uDE2D"
-        )
-    }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss, dragHandle = { BottomSheetDefaults.DragHandle() }) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 32.dp, start = 16.dp, end = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = stringResource(R.string.memo_action_add_reaction),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                commonEmojis.forEach { emoji ->
-                    Surface(
-                        onClick = { onReactionSelected(emoji) },
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.size(56.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(text = emoji, style = MaterialTheme.typography.headlineMedium)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}

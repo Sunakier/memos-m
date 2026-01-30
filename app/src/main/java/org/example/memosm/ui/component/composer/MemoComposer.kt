@@ -46,9 +46,7 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.platform.LocalResources
 import androidx.core.net.toUri
-import com.google.protobuf.option
 import kotlinx.coroutines.launch
-import memos.api.v1.MemoServiceOuterClass
 import org.example.memosm.R
 import org.example.memosm.data.base64ToTempUri
 import org.example.memosm.data.uriToBase64Attachment
@@ -59,7 +57,6 @@ import org.example.memosm.ui.VisibilityIcon
 import org.example.memosm.ui.component.item.AttachmentCard
 import org.example.memosm.ui.component.item.AttachmentCompactMode
 import org.example.memosm.ui.findActivity
-import org.example.memosm.ui.getVisibilityIcon
 import org.example.memosm.ui.getVisibilityLabel
 import java.io.File
 
@@ -240,10 +237,8 @@ fun MemoComposer(
         if (onDraftChanged == null) return@LaunchedEffect
 
         val allAttachments = draftAttachments.mapNotNull { (uri, existingAttachment) ->
-            if (existingAttachment != null) {
-                // Already have an Attachment (either uploaded or previously cached)
-                existingAttachment
-            } else if (uri != Uri.EMPTY) {
+            // Already have an Attachment (either uploaded or previously cached)
+            existingAttachment ?: if (uri != Uri.EMPTY) {
                 // Local file - convert to base64 for caching
                 uriToBase64Attachment(uri, context)
             } else {
@@ -652,11 +647,6 @@ fun MemoComposer(
                         contentPadding = if (isCompact) PaddingValues(horizontal = 8.dp) else ButtonDefaults.TextButtonContentPadding,
                         modifier = if (isCompact) Modifier.height(actionButtonSize) else Modifier
                     ) {
-//                        Icon(
-//                            imageVector = getVisibilityIcon(visibility),
-//                            contentDescription = visibility,
-//                            modifier = Modifier.size(18.dp)
-//                        )
                         VisibilityIcon(visibility = visibility, modifier = Modifier.size(18.dp))
                         if (showVisibilityLabel) {
                             Spacer(modifier = Modifier.width(4.dp))
