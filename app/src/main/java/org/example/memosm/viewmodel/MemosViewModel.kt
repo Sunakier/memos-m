@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import org.example.memosm.api.AuthInterceptor
 import org.example.memosm.api.MemosApiV0353
+import org.example.memosm.api.StreamingAttachmentApi
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.data.DraftManager
 import org.example.memosm.data.cache.CacheListType
@@ -36,6 +37,8 @@ class MemosViewModel(
     val uiState: StateFlow<MemosUiState> = _uiState.asStateFlow()
 
     private var api: MemosApiV0353? = null
+    private var currentHttpClient: OkHttpClient? = null
+    private var currentBaseUrl: String? = null
 
     // Managers
     private var userMemoManager: UserMemoListManager? = null
@@ -58,9 +61,10 @@ class MemosViewModel(
             normalizedBaseUrl = normalizedBaseUrl.removeSuffix("api/v1/")
         }
 
-        val client = OkHttpClient.Builder().addInterceptor(AuthInterceptor(token)).build()
+        currentHttpClient = OkHttpClient.Builder().addInterceptor(AuthInterceptor(token)).build()
+        currentBaseUrl = normalizedBaseUrl
 
-        val retrofit = Retrofit.Builder().baseUrl(normalizedBaseUrl).client(client)
+        val retrofit = Retrofit.Builder().baseUrl(normalizedBaseUrl).client(currentHttpClient!!)
             .addConverterFactory(GsonConverterFactory.create()).build()
 
         return retrofit.create(MemosApiV0353::class.java)
@@ -152,7 +156,12 @@ class MemosViewModel(
                 searchMemoManager = SearchMemoListManager(viewModelScope, currentApi)
                 commentManager = CommentListManager(viewModelScope, currentApi)
                 attachmentManager = AttachmentManager(
-                    viewModelScope, currentApi, _uiState.value.attachmentList.cellWidth
+                    scope = viewModelScope,
+                    api = currentApi,
+                    streamingApi = currentHttpClient?.let { 
+                        StreamingAttachmentApi(it, currentBaseUrl ?: "") 
+                    },
+                    initialCellWidth = _uiState.value.attachmentList.cellWidth
                 )
 
                 startStateCollection()

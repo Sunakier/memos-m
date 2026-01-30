@@ -94,10 +94,13 @@ fun MemoComposer(
             initialAttachments.map { Uri.EMPTY to (it as Attachment?) }
 
         // Filter initial URIs for size limit
-        val validInitialUris = initialUris.filter { uri ->
-            val size = getFileSize(context, uri)
-            size <= 10 * 1024 * 1024
-        }
+        // val validInitialUris = initialUris.filter { uri ->
+        //     val size = getFileSize(context, uri)
+        //     size <= 10 * 1024 * 1024
+        // }
+
+        val validInitialUris = initialUris
+    
 
         val fromUris: List<Pair<Uri, Attachment?>> = validInitialUris.map { it to null }
         mutableStateOf(fromAttachments + fromUris)
@@ -105,14 +108,14 @@ fun MemoComposer(
 
     // Warn if some initial URIs were dropped
     LaunchedEffect(initialUris) {
-        val hasLargeFiles = initialUris.any { getFileSize(context, it) > 10 * 1024 * 1024 }
-        if (hasLargeFiles) {
-            Toast.makeText(
-                context,
-                "Some shared attachments were too large (>10MB) and were skipped",
-                Toast.LENGTH_LONG
-            ).show()
-        }
+        // val hasLargeFiles = initialUris.any { getFileSize(context, it) > 10 * 1024 * 1024 }
+        // if (hasLargeFiles) {
+        //     Toast.makeText(
+        //         context,
+        //         "Some shared attachments were too large (>10MB) and were skipped",
+        //         Toast.LENGTH_LONG
+        //     ).show()
+        // }
     }
     var draftAttachments by draftAttachmentsState
 
@@ -140,12 +143,13 @@ fun MemoComposer(
         if (uris.isNotEmpty()) {
             uris.forEach { uri ->
                 val size = getFileSize(context, uri)
-                if (size > 10 * 1024 * 1024) {
-                    Toast.makeText(context, "File size exceeds 10MB limit", Toast.LENGTH_SHORT)
-                        .show()
-                } else {
-                    draftAttachments = draftAttachments + (uri to null)
-                }
+                // if (size > 10 * 1024 * 1024) {
+                //     Toast.makeText(context, "File size exceeds 10MB limit", Toast.LENGTH_SHORT)
+                //         .show()
+                // } else {
+                //     draftAttachments = draftAttachments + (uri to null)
+                // }
+                draftAttachments = draftAttachments + (uri to null)
             }
         }
     }

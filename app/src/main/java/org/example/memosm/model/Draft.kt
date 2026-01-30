@@ -20,3 +20,4 @@ data class Draft(
      */
     fun hasContent(): Boolean = content.isNotBlank() || attachments.isNotEmpty() || location != null
 }
+
