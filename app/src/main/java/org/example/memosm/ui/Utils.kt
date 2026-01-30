@@ -33,6 +33,7 @@ fun getVisibilityIcon(visibility: Visibility, outlined: Boolean = true): ImageVe
         Visibility.PRIVATE -> if (outlined) Icons.Outlined.Lock else Icons.Filled.Lock
     }
 }
+
 @Composable
 fun VisibilityIcon(
     modifier: Modifier = Modifier,
@@ -45,10 +46,7 @@ fun VisibilityIcon(
     val label = getVisibilityLabel(visibility)
 
     Icon(
-        imageVector = icon,
-        contentDescription = label,
-        modifier = modifier,
-        tint = tint
+        imageVector = icon, contentDescription = label, modifier = modifier, tint = tint
     )
 }
 
@@ -62,4 +60,20 @@ fun Context.findActivity(): Activity? {
         context = context.baseContext
     }
     return null
+}
+
+fun getFileSize(context: Context, uri: android.net.Uri): Long {
+    val cursor = context.contentResolver.query(uri, null, null, null, null)
+    return cursor?.use {
+        val sizeIndex = it.getColumnIndex(android.provider.OpenableColumns.SIZE)
+        if (it.moveToFirst()) {
+            if (!it.isNull(sizeIndex)) {
+                it.getLong(sizeIndex)
+            } else {
+                0L
+            }
+        } else {
+            0L
+        }
+    } ?: 0L
 }

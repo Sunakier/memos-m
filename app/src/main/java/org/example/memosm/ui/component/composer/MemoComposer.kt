@@ -58,6 +58,7 @@ import org.example.memosm.ui.component.item.AttachmentCard
 import org.example.memosm.ui.component.item.AttachmentCompactMode
 import org.example.memosm.ui.findActivity
 import org.example.memosm.ui.getVisibilityLabel
+import org.example.memosm.ui.getFileSize
 import java.io.File
 
 
@@ -91,8 +92,27 @@ fun MemoComposer(
         // Combine existing attachments (from editing) with new URIs (from share intent)
         val fromAttachments: List<Pair<Uri, Attachment?>> =
             initialAttachments.map { Uri.EMPTY to (it as Attachment?) }
-        val fromUris: List<Pair<Uri, Attachment?>> = initialUris.map { it to null }
+
+        // Filter initial URIs for size limit
+        val validInitialUris = initialUris.filter { uri ->
+            val size = getFileSize(context, uri)
+            size <= 10 * 1024 * 1024
+        }
+
+        val fromUris: List<Pair<Uri, Attachment?>> = validInitialUris.map { it to null }
         mutableStateOf(fromAttachments + fromUris)
+    }
+
+    // Warn if some initial URIs were dropped
+    LaunchedEffect(initialUris) {
+        val hasLargeFiles = initialUris.any { getFileSize(context, it) > 10 * 1024 * 1024 }
+        if (hasLargeFiles) {
+            Toast.makeText(
+                context,
+                "Some shared attachments were too large (>10MB) and were skipped",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
     var draftAttachments by draftAttachmentsState
 
@@ -119,7 +139,13 @@ fun MemoComposer(
     ) { uris ->
         if (uris.isNotEmpty()) {
             uris.forEach { uri ->
-                draftAttachments = draftAttachments + (uri to null)
+                val size = getFileSize(context, uri)
+                if (size > 10 * 1024 * 1024) {
+                    Toast.makeText(context, "File size exceeds 10MB limit", Toast.LENGTH_SHORT)
+                        .show()
+                } else {
+                    draftAttachments = draftAttachments + (uri to null)
+                }
             }
         }
     }
@@ -272,7 +298,19 @@ fun MemoComposer(
                     }
                     if (uris.isNotEmpty()) {
                         scope.launch {
-                            val newAttachments = uris.map { uri ->
+                            val validUris = uris.filter { uri ->
+                                val size = getFileSize(context, uri)
+                                if (size > 10 * 1024 * 1024) {
+                                    Toast.makeText(
+                                        context, "File size exceeds 10MB limit", Toast.LENGTH_SHORT
+                                    ).show()
+                                    false
+                                } else {
+                                    true
+                                }
+                            }
+
+                            val newAttachments = validUris.map { uri ->
                                 val base64Attachment = uriToBase64Attachment(uri, context)
                                 uri to base64Attachment
                             }
