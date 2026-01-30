@@ -1,3 +1,5 @@
+package org.example.memosm.ui.component.setting
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -37,7 +39,7 @@ import org.example.memosm.model.UserGeneralSetting
 import org.example.memosm.model.Visibility
 import org.example.memosm.ui.getVisibilityLabel
 
-val LANGUAGE_NAMES = mapOf(
+private val LANGUAGE_NAMES = mapOf(
     "ar" to "العربية",
     "ca" to "Català",
     "cs" to "Čeština",

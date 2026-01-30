@@ -1,7 +1,7 @@
 package org.example.memosm.ui.nav
 
 import AccountsList
-import SettingsCard
+import org.example.memosm.ui.component.setting.SettingsCard
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
