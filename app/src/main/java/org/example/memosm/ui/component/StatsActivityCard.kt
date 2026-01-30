@@ -1,6 +1,5 @@
 package org.example.memosm.ui.component
 
-import android.os.Build
 import android.text.format.DateFormat
 import android.util.Log
 import androidx.compose.foundation.background

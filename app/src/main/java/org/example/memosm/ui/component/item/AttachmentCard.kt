@@ -1,10 +1,8 @@
 package org.example.memosm.ui.component.item
 
 import org.example.memosm.ui.component.item.media.FullScreenImageViewer
-import android.app.Activity
 import android.app.DownloadManager
 import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import android.os.Environment
@@ -31,19 +29,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import coil3.compose.AsyncImage
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
-import coil3.request.CachePolicy
-import coil3.request.ImageRequest
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
 import org.example.memosm.ui.component.item.media.AudioPlayer
@@ -210,6 +201,7 @@ fun AttachmentCard(
         modifier = modifier.clip(RoundedCornerShape(12.dp)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
+        @Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val isCompact = when (compactMode) {
                 AttachmentCompactMode.Always -> true

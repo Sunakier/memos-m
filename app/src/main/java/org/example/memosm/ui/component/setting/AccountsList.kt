@@ -72,12 +72,12 @@ enum class SwipeState {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountsList(
+    modifier: Modifier = Modifier,
     accounts: List<Account>,
     onSwitchAccount: (Account) -> Unit,
     onLogoutAccount: (Account) -> Unit,
     onEditAccount: ((Account) -> Unit)? = null,
     onAddAccount: () -> Unit,
-    modifier: Modifier = Modifier
 ) {
     var accountToRemove by remember { mutableStateOf<Account?>(null) }
     val scope = rememberCoroutineScope()
