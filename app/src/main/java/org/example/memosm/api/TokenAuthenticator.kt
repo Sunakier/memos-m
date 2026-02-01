@@ -42,8 +42,13 @@ class TokenAuthenticator(
         }
 
         // Use a separate client for the refresh request to avoid interceptor recursion
-        // but verify it shares the cookie jar
+        // but verify it shares the cookie jar.
+        // IMPORTANT: Add GrpcMetadataCookieInterceptor to copy Cookie -> Grpc-Metadata-Cookie
+        // for the gRPC-Gateway to read it.
+        // It must be a Network Interceptor to see the cookies added by the CookieJar (BridgeInterceptor)
         val refreshClient = OkHttpClient.Builder()
+            .addNetworkInterceptor(GrpcMetadataCookieInterceptor())
+            .addNetworkInterceptor(GrpcCookieInterceptor())
             .cookieJar(cookieJar)
             .build()
 
@@ -53,43 +58,9 @@ class TokenAuthenticator(
         // Empty body as per user spec
         val requestBody = "{}".toRequestBody("application/json".toMediaType())
 
-        // val refreshRequest = Request.Builder()
-        //     .url(refreshUrl)
-        //     .post(requestBody)
-        //     .build()
-        // 2. FETCH AND FORMAT COOKIES MANUALLY
-        val refreshHttpUrl = refreshUrl.toHttpUrlOrNull() ?: return null
-        val cookies = cookieJar.loadForRequest(refreshHttpUrl)
-        // val cookieHeaderValue = cookies.joinToString(separator = "; ") { "${it.name}=${it.value}" }
-        val cookieHeader = StringBuilder()
-        for (cookie in cookies) {
-            if (cookieHeader.isNotEmpty()) {
-                cookieHeader.append("; ")
-            }
-            cookieHeader.append(cookie.name).append("=").append(cookie.value)
-        }
-
-        Log.d("TokenAuthenticator", "Manually attaching cookies: $cookieHeader")
-
-        // 3. Build request with explicit Cookie header
-        // OkHttp's BridgeInterceptor will skip auto-attaching cookies if the header is already present,
-        // which prevents duplication.
-        // 
-        // IMPORTANT: For gRPC-Gateway (REST API), we also need to send cookies via the 
-        // "Grpc-Metadata-Cookie" header. gRPC-Gateway converts headers with this prefix 
-        // into gRPC metadata that the server can read via metadata.FromIncomingContext().
-        // The server's RefreshToken endpoint reads cookies from gRPC metadata, not HTTP headers.
         val refreshRequest = Request.Builder()
             .url(refreshUrl)
             .post(requestBody)
-            .apply {
-                if (cookieHeader.isNotEmpty()) {
-                    addHeader("Cookie", cookieHeader.toString())
-                    // gRPC-Gateway requires cookies to be passed via Grpc-Metadata-Cookie header
-                    // for the server to receive them in gRPC metadata context
-                    addHeader("Grpc-Metadata-Cookie", cookieHeader.toString())
-                }
-            }   
             .build()
 
         return try {

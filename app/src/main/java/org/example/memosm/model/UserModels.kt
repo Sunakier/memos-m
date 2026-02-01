@@ -81,9 +81,9 @@ data class RefreshTokenRequest(
 )
 
 data class RefreshTokenResponse(
-    @SerializedName("access_token")
+    // @SerializedName("access_token")
     val accessToken: String,
-    @SerializedName("expires_at")
+    // @SerializedName("expires_at")
     val expiresAt: String? = null
 )
 
