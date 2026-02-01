@@ -6,84 +6,79 @@ import okhttp3.Response
 class GrpcCookieInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalResponse = chain.proceed(chain.request())
+        val isAuthFailure = originalResponse.code == 401
         
         // Memos v0.26+ (gRPC-Gateway) might return cookies in this header
         val grpcCookies = originalResponse.headers("grpc-metadata-set-cookie")
         
+        val builder = originalResponse.newBuilder()
+        var modified = false
+
         if (grpcCookies.isNotEmpty()) {
             android.util.Log.d("GrpcCookieInterceptor", "Found ${grpcCookies.size} grpc cookies: $grpcCookies")
-            val builder = originalResponse.newBuilder()
             
             grpcCookies.forEach { headerValue ->
-                // gRPC-Gateway might merge multiple Set-Cookie headers into one comma-separated string.
-                // We need to split them, but be careful about commas in "Expires" dates.
-                // A safe heuristic is to split by ", " where the preceding part doesn't look like a weekday.
-                // But simplified: split by "memos_" if we know the prefixes? No.
-                
-                // Let's try a regex split or basic split, but for now, just adding them as is usually works 
-                // UNLESS they are merged.
-                
-                // If the string contains multiple "name=value", we might need to split.
-                // Example: "c1=v1; Path=/, c2=v2; Path=/"
-                
                 val potentialCookies = splitMergedCookies(headerValue)
                 potentialCookies.forEach { cookie ->
-                     builder.addHeader("Set-Cookie", cookie)
+                    if (isAuthFailure && isClearingRefreshCookie(cookie)) {
+                        android.util.Log.i("GrpcCookieInterceptor", "Skipping clearing refresh cookie on 401: $cookie")
+                    } else {
+                        builder.addHeader("Set-Cookie", cookie)
+                        modified = true
+                    }
                 }
             }
-            return builder.build()
         }
         
-        return originalResponse
+        // Also protect regular Set-Cookie headers from clearing the refresh token on 401.
+        // This prevents the CookieJar from losing the refresh token just when we need it for Authenticator.
+        if (isAuthFailure) {
+            val setCookies = originalResponse.headers("Set-Cookie")
+            if (setCookies.any { isClearingRefreshCookie(it) }) {
+                builder.removeHeader("Set-Cookie")
+                setCookies.forEach { cookie ->
+                    if (isClearingRefreshCookie(cookie)) {
+                        android.util.Log.i("GrpcCookieInterceptor", "Filtering out regular Set-Cookie clearing refresh cookie on 401: $cookie")
+                    } else {
+                        builder.addHeader("Set-Cookie", cookie)
+                    }
+                }
+                modified = true
+            }
+        }
+        
+        return if (modified) builder.build() else originalResponse
+    }
+
+    private fun isClearingRefreshCookie(cookie: String): Boolean {
+        val trimmed = cookie.trim()
+        if (!trimmed.startsWith("memos_refresh=")) return false
+        
+        // Check for common clear-cookie patterns
+        // 1. Empty value
+        if (trimmed.startsWith("memos_refresh=;") || trimmed.startsWith("memos_refresh= ")) return true
+        
+        // 2. Expired date
+        if (trimmed.contains("Expires=Thu, 01 Jan 1970")) return true
+        
+        // 3. Max-Age=0 or -1
+        if (trimmed.contains("Max-Age=0") || trimmed.contains("Max-Age=-1")) return true
+        
+        return false
     }
     
     // Helper to split merged headers (e.g. from gRPC-Gateway or proxy)
     // Tries to split on ", " but ignores commas inside Date strings.
     private fun splitMergedCookies(header: String): List<String> {
         val result = mutableListOf<String>()
-        var start = 0
-        var inDate = false
-        
-        for (i in 0 until header.length) {
-            val c = header[i]
-            // Check if we are potentially in a date string (e.g. "Expires=Wed, ...")
-            // This is a naive check but might suffice for standard cookie formats.
-            if (i > 0 && header[i-1] == '=' && (i+3 < header.length)) {
-                // Check if likely a day of week?
-                // Too complex.
-                // Alternative: Split by ", " and check if the segment looks like a Date or a new Cookie start?
-            }
-            
-            // Simpler approach: Split by ", "
-            // If the chunk ended with "Expires=Wed", then we shouldn't have split.
-            if (c == ',' && i + 1 < header.length && header[i+1] == ' ') {
-                 // Check if it's a date delimiter?
-                 // Most dates in cookies are "Expires=Day, DD-Mon-YYYY..."
-                 // So "Expires=Dyn, "
-                 
-                 // If the part before comma ends with "="? No.
-                 
-                 // Let's rely on the fact the user sees "one for user_session and the other for refresh".
-                 // Memos cookies usually don't set long-term Expires for session?
-                 // Refresh token might.
-            }
-        }
-        
-        // Regex approach:
-        // Split by comma that is immediately followed by a non-space, or a key-value pair?
-        // Let's assume naive split for now, but handle the specific case of user_session and refresh.
-        // If we see "memos_" or "user_" after the comma, it's a new cookie.
-        
         val parts = header.split(", ")
         val buffer = StringBuilder()
         
         parts.forEach { part ->
             if (buffer.isNotEmpty()) {
-                // Heuristic: If this part contains "=" and doesn't look like a year/time, 
-                // and the previous part didn't look like "Expires=Wdy", maybe it's a new cookie.
-                
-                // But easier: check known prefixes for Memos?
-                if (part.startsWith("memos") || part.startsWith("user")) {
+                // Heuristic: If this part looks like a new cookie (has '=' and not a known attribute),
+                // then start a new cookie string. Otherwise, it's likely a continuation of a date.
+                if (isNewCookie(part)) {
                      result.add(buffer.toString())
                      buffer.clear()
                      buffer.append(part)
@@ -95,10 +90,16 @@ class GrpcCookieInterceptor : Interceptor {
             }
         }
         if (buffer.isNotEmpty()) result.add(buffer.toString())
-        
-        if (result.size > 1) {
-            android.util.Log.d("GrpcCookieInterceptor", "Split header into ${result.size} cookies")
-        }
         return result
+    }
+
+    private fun isNewCookie(part: String): Boolean {
+        val eqIndex = part.indexOf('=')
+        if (eqIndex == -1) return false
+        
+        val name = part.substring(0, eqIndex).trim().lowercase()
+        // Common cookie attributes that are NOT new cookies
+        val attributes = setOf("path", "domain", "expires", "max-age", "secure", "httponly", "samesite")
+        return name !in attributes
     }
 }
