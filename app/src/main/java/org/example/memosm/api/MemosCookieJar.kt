@@ -20,7 +20,8 @@ class MemosCookieJar(
     private val delegate = JavaNetCookieJar(cookieManager)
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-        val cookiesToSave = cookies.filter { it.name != "memos_refresh" || it.value.trim().isNotEmpty() }
+        val cookiesToSave =
+            cookies.filter { it.name != "memos_refresh" || it.value.trim().isNotEmpty() }
         if (cookiesToSave.isNotEmpty()) {
             Log.d("MemosCookieJar", "Saving ${cookiesToSave.size} cookies for $url: $cookiesToSave")
             for (cookie in cookiesToSave) {
@@ -29,25 +30,34 @@ class MemosCookieJar(
         }
 
         delegate.saveFromResponse(url, cookiesToSave)
-        
+
         // Convert to simple map for persistence (lossy, but matching existing DataStore)
         // Ideally we should persist full objects, but for now specific session cookies rely on name=value
         val simpleCookies = mutableMapOf<String, String>()
         cookieManager.cookieStore.cookies.forEach { httpCookie ->
             simpleCookies[httpCookie.name] = httpCookie.value
         }
-        
+
         if (simpleCookies.isNotEmpty()) {
             Log.d("MemosCookieJar", "Persisting ${simpleCookies.size} cookies to callback")
+            for (cookie in simpleCookies) {
+                Log.d("MemosCookieJar", "Cookie: ${cookie.key}=${cookie.value.take(10)}...")
+            }
         }
-        
+
         onCookiesUpdated?.invoke(simpleCookies)
     }
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
         val cookies = delegate.loadForRequest(url)
         if (cookies.isNotEmpty()) {
-            Log.d("MemosCookieJar", "Loaded ${cookies.size} cookies for $url: ${cookies.map { it.name }}")
+            Log.d(
+                "MemosCookieJar",
+                "Loaded ${cookies.size} cookies for $url: ${cookies.map { it.name }}"
+            )
+            for (cookie in cookies) {
+                Log.d("MemosCookieJar", "Cookie: ${cookie.name}=${cookie.value.take(10)}...")
+            }
         }
         return cookies
     }
@@ -67,11 +77,11 @@ class MemosCookieJar(
             cookie.domain = domain
             cookie.path = "/"
             cookie.version = 0
-            
+
             cookieManager.cookieStore.add(uri, cookie)
         }
     }
-    
+
     fun get(name: String): String? {
         return cookieManager.cookieStore.cookies.find { it.name == name }?.value
     }

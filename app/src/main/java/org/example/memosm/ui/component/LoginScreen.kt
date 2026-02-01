@@ -157,8 +157,6 @@ fun LoginContent(
                 }.apply {
                     level = HttpLoggingInterceptor.Level.BASIC
                 }
-
-
                 
                 // Use MemosCookieJar to capture cookies using standard JavaNetCookieJar
                 val capturedCookies = mutableMapOf<String, String>()
@@ -209,7 +207,6 @@ fun LoginContent(
                             "Invalid token: ${e.localizedMessage ?: "Verification failed"}"
                     }
                 } else {
-                    // Password login via Connect RPC
                     if (username.isBlank() || password.isBlank()) {
                         errorMessage = "Username and password cannot be empty"
                         isLoading = false
@@ -217,10 +214,10 @@ fun LoginContent(
                     }
 
                     try {
-                        // Use REST API signIn
                         val response = api.signIn(SignInRequest(username = username.trim(), password = password))
                         
                         Log.d("MemosLogin", "Login successful! Token: ${response.accessToken}")
+                        Log.d("MemosLogin", "Login successful! Response: ${response}")
 
                         onLoginSuccess(baseUrl, response.accessToken, capturedCookies)
 
