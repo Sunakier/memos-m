@@ -23,9 +23,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.example.memosm.R
 import org.example.memosm.api.MemosApiFactory
-import org.example.memosm.api.SessionCookieJar
 import org.example.memosm.api.GrpcCookieInterceptor
-import org.example.memosm.api.loginAndCreateToken
 import org.example.memosm.model.Account
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.example.memosm.model.SignInRequest
@@ -160,9 +158,12 @@ fun LoginContent(
                     level = HttpLoggingInterceptor.Level.BASIC
                 }
 
+
+                
+                // Use MemosCookieJar to capture cookies using standard JavaNetCookieJar
                 val capturedCookies = mutableMapOf<String, String>()
-                val cookieJar = SessionCookieJar { cookies ->
-                    capturedCookies.putAll(cookies)
+                val cookieJar = org.example.memosm.api.MemosCookieJar { newCookies ->
+                    capturedCookies.putAll(newCookies)
                 }
 
                 val client = OkHttpClient.Builder()

@@ -19,9 +19,9 @@ import okhttp3.OkHttpClient
 import org.example.memosm.api.AuthInterceptor
 import org.example.memosm.api.MemosApi
 import org.example.memosm.api.MemosApiFactory
-import org.example.memosm.api.SessionCookieJar
 import org.example.memosm.api.TokenAuthenticator
 import org.example.memosm.api.GrpcCookieInterceptor
+import org.example.memosm.api.MemosCookieJar
 import org.example.memosm.api.StreamingAttachmentApi
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.data.DraftManager
@@ -61,9 +61,9 @@ class MemosViewModel(
     }
 
     private suspend fun createApi(baseUrl: String, token: String, cookies: Map<String, String> = emptyMap(), accountId: String? = null): MemosApi {
-        // Create cookie jar with initial cookies if any
-        // And set callback to save new cookies
-        val cookieJar = SessionCookieJar { newCookies ->
+        // Create cookie jar using official JavaNetCookieJar via MemosCookieJar wrapper
+        // And set callback to save new cookies to DataStore
+        val cookieJar = MemosCookieJar { newCookies ->
             if (accountId != null) {
                 viewModelScope.launch {
                     dataStoreManager.updateAccountCookies(accountId, newCookies)
@@ -74,7 +74,7 @@ class MemosViewModel(
         if (cookies.isNotEmpty()) {
             val httpUrl = baseUrl.toHttpUrlOrNull()
             if (httpUrl != null) {
-                cookieJar.restoreCookies(httpUrl, cookies)
+                cookieJar.restore(httpUrl, cookies)
             }
         }
     
@@ -98,9 +98,8 @@ class MemosViewModel(
             .cookieJar(cookieJar)
             .build()
             
-        currentBaseUrl = baseUrl // factory will normalize it, but we store it here
+        currentBaseUrl = baseUrl 
         
-        // Factory creates Retrofit and the API
         return MemosApiFactory.create(baseUrl, currentHttpClient!!)
     }
 
@@ -653,6 +652,7 @@ class MemosViewModel(
     fun addAccount(hostUrl: String, token: String, cookies: Map<String, String> = emptyMap()) {
        viewModelScope.launch {
             try {
+                Log.d("MemosViewModel", "Adding account for $hostUrl with ${cookies.size} cookies: $cookies")
                 dataStoreManager.addAccount(hostUrl, token, cookies)
                 updateCurrentAccountInList()
             } catch (e: Exception) {

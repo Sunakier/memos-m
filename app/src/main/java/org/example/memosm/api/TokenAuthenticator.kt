@@ -53,26 +53,23 @@ class TokenAuthenticator(
             Log.d("TokenAuthenticator", "Refresh response code: ${refreshResponse.code}")
             
             if (refreshResponse.isSuccessful) {
-                val bodyString = refreshResponse.body?.string()
-                if (bodyString != null) {
+                val bodyString = refreshResponse.body.string()
+                run {
                     val tokenResponse = Gson().fromJson(bodyString, RefreshTokenResponse::class.java)
                     val newToken = tokenResponse.accessToken
-                    
+
                     Log.i("TokenAuthenticator", "Token refresh successful")
-                    
+
                     // Notify the app to update storage and interceptor
                     onTokenRefreshed(newToken)
-                    
+
                     // Retry original request with new token
                     response.request.newBuilder()
                         .header("Authorization", "Bearer $newToken")
                         .build()
-                } else {
-                    Log.e("TokenAuthenticator", "Refresh response body was null")
-                    null
                 }
             } else {
-                val errorBody = refreshResponse.body?.string() ?: "No error body"
+                val errorBody = refreshResponse.body.string()
                 Log.e("TokenAuthenticator", "Refresh failed with code ${refreshResponse.code}, body: $errorBody")
                 null
             }
