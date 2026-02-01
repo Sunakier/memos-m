@@ -20,7 +20,7 @@ class MemosCookieJar(
     private val delegate = JavaNetCookieJar(cookieManager)
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-        val cookiesToSave = cookies.filter { it.name != "memos_refresh" || it.value.isNotEmpty() }
+        val cookiesToSave = cookies.filter { it.name != "memos_refresh" || it.value.trim().isNotEmpty() }
         if (cookiesToSave.isNotEmpty()) {
             Log.d("MemosCookieJar", "Saving ${cookiesToSave.size} cookies for $url: $cookiesToSave")
             for (cookie in cookiesToSave) {
