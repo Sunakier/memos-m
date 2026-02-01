@@ -53,7 +53,7 @@ fun ProfileScreen(
 ) {
     var isArchivedVisible by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
-    
+
     val transitionState = remember { SeekableTransitionState(isArchivedVisible) }
 
     LaunchedEffect(isArchivedVisible) {
@@ -77,7 +77,7 @@ fun ProfileScreen(
     SharedTransitionLayout {
         val transition = rememberTransition(transitionState, label = "ProfileArchiveTransition")
         transition.AnimatedContent(
-             transitionSpec = {
+            transitionSpec = {
                 if (targetState) {
                     (fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + scaleIn(
                         initialScale = 0.97f, animationSpec = spring(
@@ -93,8 +93,7 @@ fun ProfileScreen(
                         )
                     )
                 }
-            }
-        ) { showArchived ->
+            }) { showArchived ->
             if (showArchived) {
                 ArchivedMemosScreen(
                     viewModel = viewModel,
@@ -205,12 +204,12 @@ private fun ProfileListPane(
     // Credential Edit Dialog (local login info)
     accountToEditCredentials?.let { account ->
         LoginDialog(
-            onLoginSuccess = { baseUrl, token ->
-            // Update the account with new credentials
-            viewModel.updateAccountCredentials(account, baseUrl, token)
-            accountToEditCredentials = null
-            showAccountSwitcher = false
-        }, onDismiss = { accountToEditCredentials = null }, editAccount = account
+            onLoginSuccess = { baseUrl, token, cookies ->
+                // Update the account with new credentials
+                viewModel.updateAccountCredentials(account, baseUrl, token, cookies)
+                accountToEditCredentials = null
+                showAccountSwitcher = false
+            }, onDismiss = { accountToEditCredentials = null }, editAccount = account
         )
     }
 
@@ -221,14 +220,14 @@ private fun ProfileListPane(
         ) {
             AccountsList(
                 accounts = accounts, onSwitchAccount = {
-                viewModel.switchAccount(it)
-                showAccountSwitcher = false
-            }, onLogoutAccount = { viewModel.removeAccount(it) }, onEditAccount = { account ->
-                accountToEditCredentials = account
-            }, onAddAccount = {
-                onAddAccount()
-                showAccountSwitcher = false
-            }, modifier = Modifier.padding(bottom = 32.dp)
+                    viewModel.switchAccount(it)
+                    showAccountSwitcher = false
+                }, onLogoutAccount = { viewModel.removeAccount(it) }, onEditAccount = { account ->
+                    accountToEditCredentials = account
+                }, onAddAccount = {
+                    onAddAccount()
+                    showAccountSwitcher = false
+                }, modifier = Modifier.padding(bottom = 32.dp)
             )
         }
     }
@@ -277,12 +276,12 @@ private fun ProfileListPane(
 
                             ProfileHeader(
                                 user = User(
-                                name = activeAccount.name?.let { "users/$it" },
-                                username = activeAccount.name ?: "",
-                                displayName = activeAccount.displayName,
-                                avatarUrl = avatarUrl,
-                                token = uiState.session.token
-                            ),
+                                    name = activeAccount.name?.let { "users/$it" },
+                                    username = activeAccount.name ?: "",
+                                    displayName = activeAccount.displayName,
+                                    avatarUrl = avatarUrl,
+                                    token = uiState.session.token
+                                ),
                                 onClick = { showAccountSwitcher = true },
                                 onEditClick = { showEditDialog = true })
                         } else if (uiState.userMemoList.list.isLoading) {
@@ -328,9 +327,7 @@ private fun ProfileListPane(
                                                 animatedVisibilityScope = animatedVisibilityScope,
                                                 boundsTransform = { _, _ ->
                                                     tween(durationMillis = 300)
-                                                }
-                                            )
-                                        )
+                                                }))
                                     },
                                     leadingContent = {
                                         Icon(

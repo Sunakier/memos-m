@@ -23,9 +23,11 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.example.memosm.R
 import org.example.memosm.api.MemosApiFactory
+import org.example.memosm.api.SessionCookieJar
 import org.example.memosm.api.loginAndCreateToken
 import org.example.memosm.model.Account
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import org.example.memosm.model.SignInRequest
 
 enum class LoginMode {
     PASSWORD, TOKEN
@@ -33,7 +35,7 @@ enum class LoginMode {
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (String, String) -> Unit, modifier: Modifier = Modifier
+    onLoginSuccess: (String, String, Map<String, String>) -> Unit, modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
@@ -62,7 +64,7 @@ fun LoginScreen(
  */
 @Composable
 fun LoginDialog(
-    onLoginSuccess: (String, String) -> Unit,
+    onLoginSuccess: (String, String, Map<String, String>) -> Unit,
     onDismiss: () -> Unit,
     editAccount: Account? = null
 ) {
@@ -106,7 +108,7 @@ fun LoginDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginContent(
-    onLoginSuccess: (String, String) -> Unit,
+    onLoginSuccess: (String, String, Map<String, String>) -> Unit,
     modifier: Modifier = Modifier,
     editAccount: Account? = null
 ) {
@@ -157,7 +159,15 @@ fun LoginContent(
                     level = HttpLoggingInterceptor.Level.BODY
                 }
 
-                val client = OkHttpClient.Builder().addInterceptor(logging).build()
+                val capturedCookies = mutableMapOf<String, String>()
+                val cookieJar = SessionCookieJar { cookies ->
+                    capturedCookies.putAll(cookies)
+                }
+
+                val client = OkHttpClient.Builder()
+                    .addInterceptor(logging)
+                    .cookieJar(cookieJar)
+                    .build()
 
                 val api = MemosApiFactory.create(baseUrl, client)
 
@@ -190,7 +200,7 @@ fun LoginContent(
 
                     try {
                         authApi.getCurrentSession()
-                        onLoginSuccess(baseUrl, trimmedToken)
+                        onLoginSuccess(baseUrl, trimmedToken, capturedCookies)
                     } catch (e: Exception) {
                         errorMessage =
                             "Invalid token: ${e.localizedMessage ?: "Verification failed"}"
@@ -204,15 +214,12 @@ fun LoginContent(
                     }
 
                     try {
-                        // Login via Connect RPC and create access token
-                        val accessToken = loginAndCreateToken(
-                            baseUrl, username.trim(), password
-                        )
+                        // Use REST API signIn
+                        val response = api.signIn(SignInRequest(username = username.trim(), password = password))
+                        
+                        Log.d("MemosLogin", "Login successful! Token: ${response.accessToken}")
 
-                        // Log the token for testing
-                        Log.d("MemosLogin", "Login successful! Token: $accessToken")
-
-                        onLoginSuccess(baseUrl, accessToken)
+                        onLoginSuccess(baseUrl, response.accessToken, capturedCookies)
 
                     } catch (e: Exception) {
                         Log.e("MemosLogin", "Login failed", e)

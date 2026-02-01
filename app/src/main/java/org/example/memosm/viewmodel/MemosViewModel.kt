@@ -14,10 +14,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import org.example.memosm.api.AuthInterceptor
 import org.example.memosm.api.MemosApi
 import org.example.memosm.api.MemosApiFactory
+import org.example.memosm.api.SessionCookieJar
 import org.example.memosm.api.StreamingAttachmentApi
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.data.DraftManager
@@ -56,8 +58,29 @@ class MemosViewModel(
         updateCurrentAccountInList()
     }
 
-    private suspend fun createApi(baseUrl: String, token: String): MemosApi {
-        currentHttpClient = OkHttpClient.Builder().addInterceptor(AuthInterceptor(token)).build()
+    private suspend fun createApi(baseUrl: String, token: String, cookies: Map<String, String> = emptyMap(), accountId: String? = null): MemosApi {
+        // Create cookie jar with initial cookies if any
+        // And set callback to save new cookies
+        val cookieJar = SessionCookieJar { newCookies ->
+            if (accountId != null) {
+                viewModelScope.launch {
+                    dataStoreManager.updateAccountCookies(accountId, newCookies)
+                }
+            }
+        }
+        
+        if (cookies.isNotEmpty()) {
+            val httpUrl = baseUrl.toHttpUrlOrNull()
+            if (httpUrl != null) {
+                cookieJar.restoreCookies(httpUrl, cookies)
+            }
+        }
+    
+        currentHttpClient = OkHttpClient.Builder()
+            .addInterceptor(AuthInterceptor(token))
+            .cookieJar(cookieJar)
+            .build()
+            
         currentBaseUrl = baseUrl // factory will normalize it, but we store it here
         
         // Factory creates Retrofit and the API
@@ -98,7 +121,7 @@ class MemosViewModel(
                 }
                 pendingUserRequests.clear()
 
-                api = createApi(account.hostUrl, account.accessToken)
+                api = createApi(account.hostUrl, account.accessToken, account.cookies, account.id)
                 val currentApi = api!!
 
                 // Initialize Managers with cache callbacks
@@ -599,15 +622,26 @@ class MemosViewModel(
         }
     }
 
-    fun updateAccountCredentials(account: Account, hostUrl: String, token: String) {
+    fun updateAccountCredentials(account: Account, hostUrl: String, token: String, cookies: Map<String, String> = emptyMap()) {
         viewModelScope.launch {
             try {
-                dataStoreManager.updateAccount(account.id, hostUrl, token)
+                dataStoreManager.updateAccount(account.id, hostUrl, token, cookies)
                 updateCurrentAccountInList()
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error updating credentials", e)
             }
         }
+    }
+
+    fun addAccount(hostUrl: String, token: String, cookies: Map<String, String> = emptyMap()) {
+       viewModelScope.launch {
+            try {
+                dataStoreManager.addAccount(hostUrl, token, cookies)
+                updateCurrentAccountInList()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
+            }
+       }
     }
 
     fun fetchUserMemos(refresh: Boolean = false) {

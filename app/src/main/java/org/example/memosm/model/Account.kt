@@ -11,5 +11,6 @@ data class Account(
     val isActive: Boolean = false,
     val id: String = java.util.UUID.randomUUID().toString(),
     val lastUsed: Long = 0,
-    val user: User? = null
+    val user: User? = null,
+    val cookies: Map<String, String> = emptyMap()
 )

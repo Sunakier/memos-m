@@ -13,11 +13,8 @@ object MemosApiFactory {
             normalizedBaseUrl = normalizedBaseUrl.removeSuffix("api/v1/")
         }
 
-        val retrofit = Retrofit.Builder()
-            .baseUrl(normalizedBaseUrl)
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
+        val retrofit = Retrofit.Builder().baseUrl(normalizedBaseUrl).client(client)
+            .addConverterFactory(GsonConverterFactory.create()).build()
 
         // Create the standard V1 implementation
         val v1Api = retrofit.create(MemosApiV0353::class.java)
@@ -27,17 +24,17 @@ object MemosApiFactory {
             val profile = v1Api.getInstanceProfile()
             val version = profile.version ?: "Unknown"
             Log.i("MemosApiFactory", "Detected Memos server version: $version")
-            
-            // In the future, we can switch on version here.
-            // For now, we only have one implementation.
-            MemosApiImpl(v1Api)
+
+            if (version.startsWith("0.26")) {
+                Log.i("MemosApiFactory", "Using v0.26.0 API implementation")
+                val v0260Api = retrofit.create(MemosApiV0260::class.java)
+                MemosApiV0260Impl(v0260Api)
+            } else {
+                // Default to V1/0.3.53
+                MemosApiImpl(v1Api)
+            }
         } catch (e: Exception) {
             Log.w("MemosApiFactory", "Failed to probe version, defaulting to V1 implementation", e)
-            // Fallback to V1 impl even if probe failed (maybe network error, but let caller handle it when they make actual calls)
-            // Or should we fail here? If probe fails, likely subsequent calls fail too.
-            // But strict failure might block offline usage if we aggressively probe.
-            // Ideally, we shouldn't probe if offline. 
-            // However, this factory is usually called when switching accounts (which implies online) or app startup.
             MemosApiImpl(v1Api)
         }
     }

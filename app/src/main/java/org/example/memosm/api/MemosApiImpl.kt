@@ -2,8 +2,8 @@ package org.example.memosm.api
 
 import org.example.memosm.model.*
 
-class MemosApiImpl(
-    private val api: MemosApiV0353
+open class MemosApiImpl(
+    protected val api: MemosApiV0353
 ) : MemosApi {
 
     override suspend fun listActivities(pageSize: Int?, pageToken: String?): ListActivitiesResponse {

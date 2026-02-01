@@ -80,8 +80,6 @@ class MainActivity : ComponentActivity() {
                     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                         if (activeAccount != null) {
                             MainScreen(
-//                                baseUrl = activeAccount.hostUrl,
-//                                token = activeAccount.accessToken,
                                 dataStoreManager = dataStoreManager,
                                 draftManager = draftManager,
                                 onLogout = {
@@ -98,9 +96,9 @@ class MainActivity : ComponentActivity() {
                             // If no active account, show login
                             LoginScreen(
                                 modifier = Modifier.padding(innerPadding),
-                                onLoginSuccess = { baseUrl, token ->
+                                onLoginSuccess = { baseUrl, token, cookies ->
                                     scope.launch {
-                                        dataStoreManager.addAccount(baseUrl, token)
+                                        dataStoreManager.addAccount(baseUrl, token, cookies)
                                     }
                                 })
                         }

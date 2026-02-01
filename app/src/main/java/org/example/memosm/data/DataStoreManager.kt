@@ -120,7 +120,7 @@ class DataStoreManager(private val context: Context) {
         return final
     }
 
-    suspend fun addAccount(hostUrl: String, accessToken: String) {
+    suspend fun addAccount(hostUrl: String, accessToken: String, cookies: Map<String, String> = emptyMap()) {
         val current = getAccounts().toMutableList()
         // Check if account already exists to avoid duplicates
         val existingIndex =
@@ -132,7 +132,7 @@ class DataStoreManager(private val context: Context) {
         } else {
             // Deactivate others
             val updated = current.map { it.copy(isActive = false) }.toMutableList()
-            updated.add(Account(hostUrl = hostUrl, accessToken = accessToken, isActive = true))
+            updated.add(Account(hostUrl = hostUrl, accessToken = accessToken, isActive = true, cookies = cookies))
             saveAccounts(updated)
         }
 
@@ -174,11 +174,11 @@ class DataStoreManager(private val context: Context) {
         }
     }
 
-    suspend fun updateAccount(id: String, hostUrl: String, token: String) {
+    suspend fun updateAccount(id: String, hostUrl: String, token: String, cookies: Map<String, String> = emptyMap()) {
         val current = getAccounts()
         val updated = current.map {
             if (it.id == id) {
-                val newAcc = it.copy(hostUrl = hostUrl, accessToken = token)
+                val newAcc = it.copy(hostUrl = hostUrl, accessToken = token, cookies = cookies)
                 if (newAcc.isActive) saveCredentials(hostUrl, token)
                 newAcc
             } else it
@@ -197,6 +197,14 @@ class DataStoreManager(private val context: Context) {
         val current = getAccounts()
         val updated = current.map {
             if (it.id == id) it.copy(user = user) else it
+        }
+        saveAccounts(updated)
+    }
+
+    suspend fun updateAccountCookies(id: String, cookies: Map<String, String>) {
+        val current = getAccounts()
+        val updated = current.map {
+            if (it.id == id) it.copy(cookies = cookies) else it
         }
         saveAccounts(updated)
     }
