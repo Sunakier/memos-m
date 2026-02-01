@@ -351,17 +351,37 @@ fun AccountsList(
                         ),
                         onClick = { if (!account.isActive) onSwitchAccount(account) }
                     ) {
+                        val avatarUrl = account.avatarUrl
+                        val fullAvatarUrl = if (!avatarUrl.isNullOrBlank() && !avatarUrl.startsWith("http")) {
+                            "${account.hostUrl.trimEnd('/')}$avatarUrl"
+                        } else avatarUrl
+
                         ListItem(
                             headlineContent = {
+                                val displayName = account.displayName
+                                val name = account.name
+                                val text = when {
+                                    !displayName.isNullOrBlank() -> displayName
+                                    !name.isNullOrBlank() -> "@$name"
+                                    else -> stringResource(R.string.memo_unknown_user)
+                                }
                                 Text(
-                                    "@" + account.name,
+                                    text,
                                     fontWeight = if (account.isActive) FontWeight.Bold else FontWeight.Normal
                                 )
                             },
-                            supportingContent = { Text(account.hostUrl) },
+                            supportingContent = {
+                                val name = account.name
+                                val text = if (!account.displayName.isNullOrBlank() && !name.isNullOrBlank()) {
+                                    "@$name • ${account.hostUrl}"
+                                } else {
+                                    account.hostUrl
+                                }
+                                Text(text)
+                            },
                             leadingContent = {
                                 AsyncImage(
-                                    model = account.avatarUrl,
+                                    model = fullAvatarUrl,
                                     contentDescription = null,
                                     modifier = Modifier
                                         .size(40.dp)

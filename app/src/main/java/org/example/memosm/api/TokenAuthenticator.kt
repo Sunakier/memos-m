@@ -72,7 +72,8 @@ class TokenAuthenticator(
                     null
                 }
             } else {
-                Log.e("TokenAuthenticator", "Refresh failed with code ${refreshResponse.code}")
+                val errorBody = refreshResponse.body?.string() ?: "No error body"
+                Log.e("TokenAuthenticator", "Refresh failed with code ${refreshResponse.code}, body: $errorBody")
                 null
             }
         } catch (e: Exception) {

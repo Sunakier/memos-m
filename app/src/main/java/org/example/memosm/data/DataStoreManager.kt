@@ -196,7 +196,16 @@ class DataStoreManager(private val context: Context) {
     suspend fun updateAccountUser(id: String, user: org.example.memosm.model.User) {
         val current = getAccounts()
         val updated = current.map {
-            if (it.id == id) it.copy(user = user) else it
+            if (it.id == id) {
+                it.copy(
+                    user = user,
+                    name = user.username,
+                    displayName = user.displayName,
+                    avatarUrl = user.avatarUrl,
+                    email = user.email,
+                    description = user.description
+                )
+            } else it
         }
         saveAccounts(updated)
     }
