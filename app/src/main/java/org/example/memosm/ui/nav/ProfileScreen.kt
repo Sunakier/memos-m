@@ -445,8 +445,17 @@ fun InstanceCard(instance: InstanceProfile) {
             InfoRow(
                 stringResource(R.string.profile_instance_version), instance.version ?: unknown
             )
+            
+            val modeLabel = if (instance.mode != null) {
+                instance.mode
+            } else if (instance.demo == true) {
+                "demo" // Or a localized string if available, but "demo" is standard
+            } else {
+                "prod" // Default assumption if not demo and no mode
+            }
+            
             InfoRow(
-                stringResource(R.string.profile_instance_mode), instance.mode ?: unknown
+                stringResource(R.string.profile_instance_mode), modeLabel ?: unknown
             )
             InfoRow(
                 stringResource(R.string.profile_instance_url), instance.instanceUrl ?: unknown
