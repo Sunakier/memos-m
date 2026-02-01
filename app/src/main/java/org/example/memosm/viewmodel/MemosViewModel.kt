@@ -21,6 +21,7 @@ import org.example.memosm.api.MemosApi
 import org.example.memosm.api.MemosApiFactory
 import org.example.memosm.api.SessionCookieJar
 import org.example.memosm.api.TokenAuthenticator
+import org.example.memosm.api.GrpcCookieInterceptor
 import org.example.memosm.api.StreamingAttachmentApi
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.data.DraftManager
@@ -92,6 +93,7 @@ class MemosViewModel(
 
         currentHttpClient = OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
+            .addNetworkInterceptor(GrpcCookieInterceptor())
             .authenticator(authenticator)
             .cookieJar(cookieJar)
             .build()

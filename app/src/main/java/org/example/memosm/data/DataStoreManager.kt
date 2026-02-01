@@ -201,10 +201,17 @@ class DataStoreManager(private val context: Context) {
         saveAccounts(updated)
     }
 
-    suspend fun updateAccountCookies(id: String, cookies: Map<String, String>) {
+    suspend fun updateAccountCookies(id: String, newCookies: Map<String, String>) {
         val current = getAccounts()
-        val updated = current.map {
-            if (it.id == id) it.copy(cookies = cookies) else it
+        val updated = current.map { account ->
+            if (account.id == id) {
+                // Merge existing cookies with new cookies
+                val mergedCookies = account.cookies.toMutableMap()
+                mergedCookies.putAll(newCookies)
+                account.copy(cookies = mergedCookies)
+            } else {
+                account
+            }
         }
         saveAccounts(updated)
     }

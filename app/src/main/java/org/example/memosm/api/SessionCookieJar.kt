@@ -35,6 +35,8 @@ open class SessionCookieJar(
         val host = url.host
         val cookieMap = cookieStore.getOrPut(host) { mutableMapOf() }
         
+        Log.d("SessionCookieJar", "Restoring ${savedCookies.size} cookies for $host")
+        
         savedCookies.forEach { (name, value) ->
              val cookie = Cookie.Builder()
                  .name(name)
@@ -61,12 +63,18 @@ open class SessionCookieJar(
         if (changed) {
             val flattened = cookieMap.values.associate { it.name to it.value }
             onCookiesUpdated?.invoke(flattened)
-            Log.d("SessionCookieJar", "Cookies updated for $host: $flattened")
+            Log.d("SessionCookieJar", "Cookies updated for $host: ${cookieMap.keys}")
         }
     }
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
         val host = url.host
-        return cookieStore[host]?.values?.toList() ?: emptyList()
+        val cookies = cookieStore[host]?.values?.toList() ?: emptyList()
+        if (cookies.isNotEmpty()) {
+            Log.d("SessionCookieJar", "Loading ${cookies.size} cookies for $host: ${cookies.map { "${it.name}=...${it.value.takeLast(4)}" }}")
+        } else {
+            Log.d("SessionCookieJar", "No cookies found for $host")
+        }
+        return cookies
     }
 }

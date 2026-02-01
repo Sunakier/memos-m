@@ -6,6 +6,26 @@ data class CurrentSessionResponse(
     val user: User?
 )
 
+enum class UseState {
+    @SerializedName("NORMAL")
+    NORMAL,
+
+    @SerializedName("DELETED")
+    DELETED,
+
+    @SerializedName("BANNED")
+    BANNED
+}
+
+enum class UseRole {
+    @SerializedName("ADMIN")
+    ADMIN,
+
+    @SerializedName("USER")
+    USER
+}
+
+
 data class User(
     val name: String? = null,
     val role: String? = null,

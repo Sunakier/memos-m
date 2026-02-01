@@ -24,6 +24,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import org.example.memosm.R
 import org.example.memosm.api.MemosApiFactory
 import org.example.memosm.api.SessionCookieJar
+import org.example.memosm.api.GrpcCookieInterceptor
 import org.example.memosm.api.loginAndCreateToken
 import org.example.memosm.model.Account
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -156,7 +157,7 @@ fun LoginContent(
                 val logging = HttpLoggingInterceptor { message ->
                     Log.d("MemosApi", message)
                 }.apply {
-                    level = HttpLoggingInterceptor.Level.BODY
+                    level = HttpLoggingInterceptor.Level.BASIC
                 }
 
                 val capturedCookies = mutableMapOf<String, String>()
@@ -166,6 +167,7 @@ fun LoginContent(
 
                 val client = OkHttpClient.Builder()
                     .addInterceptor(logging)
+                    .addNetworkInterceptor(GrpcCookieInterceptor())
                     .cookieJar(cookieJar)
                     .build()
 
