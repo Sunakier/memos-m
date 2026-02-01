@@ -26,6 +26,7 @@ import org.example.memosm.api.MemosApiFactory
 import org.example.memosm.api.GrpcCookieInterceptor
 import org.example.memosm.model.Account
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import org.example.memosm.api.loginAndCreateToken
 import org.example.memosm.model.SignInRequest
 
 enum class LoginMode {
@@ -56,7 +57,7 @@ fun LoginScreen(
 
 /**
  * Login dialog that can also be used for editing existing account credentials.
- * 
+ *
  * @param onLoginSuccess Callback with (baseUrl, token) on successful login/save
  * @param onDismiss Callback when dialog is dismissed
  * @param editAccount Optional - if provided, the dialog is in "edit mode" with pre-filled values
@@ -157,7 +158,7 @@ fun LoginContent(
                 }.apply {
                     level = HttpLoggingInterceptor.Level.BASIC
                 }
-                
+
                 // Use MemosCookieJar to capture cookies using standard JavaNetCookieJar
                 val capturedCookies = mutableMapOf<String, String>()
                 val cookieJar = org.example.memosm.api.MemosCookieJar { newCookies ->
@@ -214,21 +215,23 @@ fun LoginContent(
                     }
 
                     try {
-                        val response = api.signIn(SignInRequest(username = username.trim(), password = password))
-                        
-                        Log.d("MemosLogin", "Login successful! Token: ${response.accessToken}")
-                        Log.d("MemosLogin", "Login successful! Response: ${response}")
-                        Log.d("MemosLogin", "Captured cookies: $capturedCookies")
-                        
-                        if (capturedCookies.isEmpty()) {
-                            Log.w("MemosLogin", "WARNING: No cookies captured during login!")
-                        } else {
-                            capturedCookies.forEach { (name, value) ->
-                                Log.d("MemosLogin", "Cookie captured: $name=${value.take(20)}...")
-                            }
-                        }
-
-                        onLoginSuccess(baseUrl, response.accessToken, capturedCookies)
+//                        val response = api.signIn(SignInRequest(username = username.trim(), password = password))
+//
+//                        Log.d("MemosLogin", "Login successful! Token: ${response.accessToken}")
+//                        Log.d("MemosLogin", "Login successful! Response: ${response}")
+//                        Log.d("MemosLogin", "Captured cookies: $capturedCookies")
+//
+//                        if (capturedCookies.isEmpty()) {
+//                            Log.w("MemosLogin", "WARNING: No cookies captured during login!")
+//                        } else {
+//                            capturedCookies.forEach { (name, value) ->
+//                                Log.d("MemosLogin", "Cookie captured: $name=${value.take(20)}...")
+//                            }
+//                        }
+                        val token = loginAndCreateToken(
+                            api, baseUrl, username.trim(), password
+                        )
+                        onLoginSuccess(baseUrl, token, capturedCookies)
 
                     } catch (e: Exception) {
                         Log.e("MemosLogin", "Login failed", e)
@@ -254,7 +257,9 @@ fun LoginContent(
         verticalArrangement = Arrangement.Top
     ) {
         Text(
-            text = if (isEditMode) stringResource(R.string.profile_edit_credentials) else stringResource(R.string.login_title),
+            text = if (isEditMode) stringResource(R.string.profile_edit_credentials) else stringResource(
+                R.string.login_title
+            ),
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(bottom = 32.dp)
         )
