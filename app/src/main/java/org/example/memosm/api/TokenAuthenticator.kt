@@ -17,7 +17,8 @@ import org.example.memosm.model.RefreshTokenResponse
 class TokenAuthenticator(
     private val baseUrl: String,
     private val cookieJar: CookieJar,
-    private val onTokenRefreshed: (String) -> Unit
+    private val onTokenRefreshed: (String) -> Unit,
+    private val onSessionInvalidated: (() -> Unit)? = null
 ) : Authenticator {
 
     override fun authenticate(route: Route?, response: Response): Request? {
@@ -28,6 +29,15 @@ class TokenAuthenticator(
             response.request.url.pathSegments.contains("refresh")
         ) {
             Log.w("TokenAuthenticator", "Refresh token request failed with 401, aborting")
+            // Notify that session is invalid and user needs to re-login
+            onSessionInvalidated?.invoke()
+            return null
+        }
+
+        // Also check if this is a refresh path in the segments
+        if (response.request.url.encodedPath.contains("/auth/refresh")) {
+            Log.w("TokenAuthenticator", "Refresh endpoint returned 401, session invalidated")
+            onSessionInvalidated?.invoke()
             return null
         }
 
@@ -88,12 +98,18 @@ class TokenAuthenticator(
 
             if (refreshResponse.isSuccessful) {
                 val bodyString = refreshResponse.body.string()
+                Log.d("TokenAuthenticator", "Refresh response body: $bodyString")
                 run {
                     val tokenResponse =
                         Gson().fromJson(bodyString, RefreshTokenResponse::class.java)
                     val newToken = tokenResponse.accessToken
+                    
+                    if (newToken.isNullOrBlank()) {
+                        Log.e("TokenAuthenticator", "Parsed accessToken is null or blank!")
+                        return null
+                    }
 
-                    Log.i("TokenAuthenticator", "Token refresh successful")
+                    Log.i("TokenAuthenticator", "Token refresh successful, new token: ${newToken.take(20)}...")
 
                     // Notify the app to update storage and interceptor
                     onTokenRefreshed(newToken)
@@ -109,6 +125,11 @@ class TokenAuthenticator(
                     "TokenAuthenticator",
                     "Refresh failed with code ${refreshResponse.code}, body: $errorBody"
                 )
+                // If refresh fails with 401, the session is invalid
+                if (refreshResponse.code == 401) {
+                    Log.w("TokenAuthenticator", "Refresh token rejected, session invalidated")
+                    onSessionInvalidated?.invoke()
+                }
                 null
             }
         } catch (e: Exception) {

@@ -61,7 +61,12 @@ class MemosViewModel(
         updateCurrentAccountInList()
     }
 
-    private suspend fun createApi(baseUrl: String, token: String, cookies: Map<String, String> = emptyMap(), accountId: String? = null): MemosApi {
+    private suspend fun createApi(
+        baseUrl: String,
+        token: String,
+        cookies: Map<String, String> = emptyMap(),
+        accountId: String? = null
+    ): MemosApi {
         // Create cookie jar using official JavaNetCookieJar via MemosCookieJar wrapper
         // And set callback to save new cookies to DataStore
         val cookieJar = MemosCookieJar { newCookies ->
@@ -71,37 +76,53 @@ class MemosViewModel(
                 }
             }
         }
-        
+
         if (cookies.isNotEmpty()) {
             val httpUrl = baseUrl.toHttpUrlOrNull()
             if (httpUrl != null) {
                 cookieJar.restore(httpUrl, cookies)
             }
         }
-    
+
         val authInterceptor = AuthInterceptor(token)
 
-        val authenticator = TokenAuthenticator(baseUrl, cookieJar) { newToken ->
-            Log.d("MemosViewModel", "Token refreshed, updating state")
-            authInterceptor.updateToken(newToken)
-            viewModelScope.launch {
-                _uiState.update { it.copy(session = it.session.copy(token = newToken)) }
-                if (accountId != null) {
-                    dataStoreManager.updateAccountToken(accountId, newToken)
+        val authenticator = TokenAuthenticator(
+            baseUrl = baseUrl,
+            cookieJar = cookieJar,
+            onTokenRefreshed = { newToken ->
+                Log.d("MemosViewModel", "Token refreshed, updating state")
+                authInterceptor.updateToken(newToken)
+                viewModelScope.launch {
+                    _uiState.update { it.copy(session = it.session.copy(token = newToken)) }
+                    if (accountId != null) {
+                        dataStoreManager.updateAccountToken(accountId, newToken)
+                    }
                 }
-            }
-        }
+            },
+            onSessionInvalidated = {
+                Log.w("MemosViewModel", "Session invalidated, clearing session state")
+                viewModelScope.launch {
+                    // Clear the session state to trigger re-login prompt
+                    _uiState.update {
+                        it.copy(
+                            session = SessionState(token = "", currUser = null),
+                            error = "Session expired. Please sign in again."
+                        )
+                    }
+                    // Optionally clear the stored token for this account
+                    if (accountId != null) {
+                        dataStoreManager.updateAccountToken(accountId, "")
+                    }
+                }
+            })
 
-        currentHttpClient = OkHttpClient.Builder()
-            .addInterceptor(authInterceptor)
+        currentHttpClient = OkHttpClient.Builder().addInterceptor(authInterceptor)
             .addInterceptor(GrpcMetadataCookieInterceptor())  // Add gRPC metadata cookie header for gRPC-Gateway
-            .addNetworkInterceptor(GrpcCookieInterceptor())
-            .authenticator(authenticator)
-            .cookieJar(cookieJar)
-            .build()
-            
-        currentBaseUrl = baseUrl 
-        
+            .addNetworkInterceptor(GrpcCookieInterceptor()).authenticator(authenticator)
+            .cookieJar(cookieJar).build()
+
+        currentBaseUrl = baseUrl
+
         return MemosApiFactory.create(baseUrl, currentHttpClient!!)
     }
 
@@ -184,7 +205,8 @@ class MemosViewModel(
                         memoCacheRepository.getCachedMemos(
                             accountId, CacheListType.EXPLORE
                         )
-                    }))
+                    })
+                )
 
                 archivedMemoManager = ArchivedMemoListManager(
                     scope = viewModelScope,
@@ -198,7 +220,8 @@ class MemosViewModel(
                         memoCacheRepository.getCachedMemos(
                             accountId, CacheListType.ARCHIVED
                         )
-                    }))
+                    })
+                )
                 searchMemoManager = SearchMemoListManager(viewModelScope, currentApi)
                 commentManager = CommentListManager(viewModelScope, currentApi)
                 attachmentManager = AttachmentManager(
@@ -640,7 +663,9 @@ class MemosViewModel(
         }
     }
 
-    fun updateAccountCredentials(account: Account, hostUrl: String, token: String, cookies: Map<String, String> = emptyMap()) {
+    fun updateAccountCredentials(
+        account: Account, hostUrl: String, token: String, cookies: Map<String, String> = emptyMap()
+    ) {
         viewModelScope.launch {
             try {
                 dataStoreManager.updateAccount(account.id, hostUrl, token, cookies)
@@ -652,15 +677,18 @@ class MemosViewModel(
     }
 
     fun addAccount(hostUrl: String, token: String, cookies: Map<String, String> = emptyMap()) {
-       viewModelScope.launch {
+        viewModelScope.launch {
             try {
-                Log.d("MemosViewModel", "Adding account for $hostUrl with ${cookies.size} cookies: $cookies")
+                Log.d(
+                    "MemosViewModel",
+                    "Adding account for $hostUrl with ${cookies.size} cookies: $cookies"
+                )
                 dataStoreManager.addAccount(hostUrl, token, cookies)
                 updateCurrentAccountInList()
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
-       }
+        }
     }
 
     fun fetchUserMemos(refresh: Boolean = false) {
@@ -703,7 +731,9 @@ class MemosViewModel(
     private fun updateRefreshTrigger(source: RefreshSource = RefreshSource.Manual) {
         _uiState.update {
             it.copy(
-                isRefreshing = true, refreshTrigger = System.currentTimeMillis(), refreshSource = source
+                isRefreshing = true,
+                refreshTrigger = System.currentTimeMillis(),
+                refreshSource = source
             )
         }
     }

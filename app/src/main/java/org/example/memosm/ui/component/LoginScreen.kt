@@ -218,6 +218,15 @@ fun LoginContent(
                         
                         Log.d("MemosLogin", "Login successful! Token: ${response.accessToken}")
                         Log.d("MemosLogin", "Login successful! Response: ${response}")
+                        Log.d("MemosLogin", "Captured cookies: $capturedCookies")
+                        
+                        if (capturedCookies.isEmpty()) {
+                            Log.w("MemosLogin", "WARNING: No cookies captured during login!")
+                        } else {
+                            capturedCookies.forEach { (name, value) ->
+                                Log.d("MemosLogin", "Cookie captured: $name=${value.take(20)}...")
+                            }
+                        }
 
                         onLoginSuccess(baseUrl, response.accessToken, capturedCookies)
 
