@@ -8,7 +8,9 @@
 
 ----
 
-**MemosM** is an Android client designed for modern [Memos](https://usememos.com/) (v0.25.3). It focuses on providing a native experience, speed, and full support for the latest features of the Memos ecosystem.
+**MemosM** is an Android client designed for the latest stable release of [Memos](https://usememos.com/) (currently v0.26.0). 
+
+It focuses on providing a native experience, speed, and full support for the latest features of the Memos ecosystem.
 
 
 ## Screenshots
@@ -77,7 +79,7 @@ You can also download from [release](https://github.com/yamada-sexta/memos-m/rel
 
 ### Non-goals
 
-* **Indefinite Backward Compatibility:** We prioritize compatibility with the latest Memos API (0.25+) to leverage modern features.
+* **Indefinite Backward Compatibility:** We prioritize compatibility with the latest Memos API to leverage modern features. Older versions of Memos will not be supported for long.
 * **Multiplatform Support:** MemosM is built exclusively for Android to ensure a high-quality, native experience.
 
 ## Why MemosM?
