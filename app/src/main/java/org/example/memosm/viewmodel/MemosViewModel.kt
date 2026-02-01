@@ -21,6 +21,7 @@ import org.example.memosm.api.MemosApi
 import org.example.memosm.api.MemosApiFactory
 import org.example.memosm.api.TokenAuthenticator
 import org.example.memosm.api.GrpcCookieInterceptor
+import org.example.memosm.api.GrpcMetadataCookieInterceptor
 import org.example.memosm.api.MemosCookieJar
 import org.example.memosm.api.StreamingAttachmentApi
 import org.example.memosm.data.DataStoreManager
@@ -93,6 +94,7 @@ class MemosViewModel(
 
         currentHttpClient = OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
+            .addInterceptor(GrpcMetadataCookieInterceptor())  // Add gRPC metadata cookie header for gRPC-Gateway
             .addNetworkInterceptor(GrpcCookieInterceptor())
             .authenticator(authenticator)
             .cookieJar(cookieJar)

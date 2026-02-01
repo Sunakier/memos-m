@@ -64,12 +64,20 @@ class TokenAuthenticator(
         // 3. Build request with explicit Cookie header
         // OkHttp's BridgeInterceptor will skip auto-attaching cookies if the header is already present,
         // which prevents duplication.
+        // 
+        // IMPORTANT: For gRPC-Gateway (REST API), we also need to send cookies via the 
+        // "Grpc-Metadata-Cookie" header. gRPC-Gateway converts headers with this prefix 
+        // into gRPC metadata that the server can read via metadata.FromIncomingContext().
+        // The server's RefreshToken endpoint reads cookies from gRPC metadata, not HTTP headers.
         val refreshRequest = Request.Builder()
             .url(refreshUrl)
             .post(requestBody)
             .apply {
                 if (cookieHeader.isNotEmpty()) {
                     addHeader("Cookie", cookieHeader.toString())
+                    // gRPC-Gateway requires cookies to be passed via Grpc-Metadata-Cookie header
+                    // for the server to receive them in gRPC metadata context
+                    addHeader("Grpc-Metadata-Cookie", cookieHeader.toString())
                 }
             }   
             .build()
