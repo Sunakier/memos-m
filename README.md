@@ -8,7 +8,7 @@
 
 ----
 
-**MemosM** is an Android client designed for the latest stable releast of [Memos](https://usememos.com/) (currently v0.26.0). 
+**MemosM** is an Android client designed for the latest stable release of [Memos](https://usememos.com/) (currently v0.26.0). 
 
 It focuses on providing a native experience, speed, and full support for the latest features of the Memos ecosystem.
 
