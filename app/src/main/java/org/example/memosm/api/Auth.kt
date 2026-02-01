@@ -6,6 +6,8 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.example.memosm.model.SignInRequest
 
+const val TAG = "MemosLogin"
+
 /**
  * Authenticates a user and creates an access token for the app.
  * Uses a CookieJar to persist session cookies between CreateSession and CreateUserAccessToken calls.
@@ -31,7 +33,7 @@ suspend fun loginAndCreateToken(
     try {
         val logInRes = api.signIn(SignInRequest(username = username.trim(), password = password))
 
-        Log.d("MemosLogin", "Login successful! Response: $logInRes")
+        Log.d(TAG, "Login successful! Response: $logInRes")
 
 // Verify token validity by fetching current user
         val authClient = OkHttpClient.Builder().addInterceptor(logging).addInterceptor { chain ->
@@ -44,7 +46,7 @@ suspend fun loginAndCreateToken(
 
         val userRes = authApi.getCurrentSession()
 
-        Log.d("MemosLogin", "Current user: ${userRes.user}")
+        Log.d(TAG, "Current user: ${userRes.user}")
 
         // Token name generated with the current time
         val tokenName = "MemosM" + System.currentTimeMillis()
@@ -56,7 +58,7 @@ suspend fun loginAndCreateToken(
                 userId, tokenName, 0
             )
         )
-        Log.d("MemosLogin", "Access token Res: $accessTokenRes")
+        Log.d(TAG, "Access token Res: $accessTokenRes")
         return accessTokenRes.token
     } catch (e: Exception) {
         throw Exception("Failed to create personal access token: ${e.message}", e)
