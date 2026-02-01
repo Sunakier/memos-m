@@ -19,6 +19,9 @@ class MemosCookieJar(
     private val delegate = JavaNetCookieJar(cookieManager)
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
+        if (cookies.isNotEmpty()) {
+            android.util.Log.d("MemosCookieJar", "Saving ${cookies.size} cookies for $url: $cookies")
+        }
         delegate.saveFromResponse(url, cookies)
         
         // Convert to simple map for persistence (lossy, but matching existing DataStore)
@@ -28,14 +31,25 @@ class MemosCookieJar(
             simpleCookies[httpCookie.name] = httpCookie.value
         }
         
+        if (simpleCookies.isNotEmpty()) {
+             android.util.Log.d("MemosCookieJar", "Persisting ${simpleCookies.size} cookies to callback")
+        }
+        
         onCookiesUpdated?.invoke(simpleCookies)
     }
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
-        return delegate.loadForRequest(url)
+        val cookies = delegate.loadForRequest(url)
+        if (cookies.isNotEmpty()) {
+            android.util.Log.d("MemosCookieJar", "Loaded ${cookies.size} cookies for $url: ${cookies.map { it.name }}")
+        }
+        return cookies
     }
 
     fun restore(url: HttpUrl, cookies: Map<String, String>) {
+        if (cookies.isNotEmpty()) {
+            android.util.Log.d("MemosCookieJar", "Restoring ${cookies.size} cookies for $url")
+        }
         // We have to guess the domain/path if relying on generic Map
         // Standard Memos cookies are usually for root path
         val domain = url.host
