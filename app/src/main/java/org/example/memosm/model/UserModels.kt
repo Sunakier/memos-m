@@ -48,8 +48,10 @@ data class Shortcut(
 data class InstanceProfile(
     val owner: String? = null,
     val version: String? = null,
-    val mode: String? = null,
-    val instanceUrl: String? = null
+    val mode: String? = null, // Deprecated in v0.26.0
+    val instanceUrl: String? = null,
+    val demo: Boolean? = null, // Added in v0.26.0
+    val admin: User? = null // Added in v0.26.0
 )
 
 // --- Auth Models ---
