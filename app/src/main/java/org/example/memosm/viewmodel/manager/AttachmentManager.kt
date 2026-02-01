@@ -10,7 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import org.example.memosm.api.MemosApiV0353
+import org.example.memosm.api.MemosApi
 import org.example.memosm.api.StreamingAttachmentApi
 import org.example.memosm.model.Attachment
 
@@ -25,7 +25,7 @@ private const val TAG = "AttachmentManager"
 
 class AttachmentManager(
     private val scope: CoroutineScope,
-    private val api: MemosApiV0353,
+    private val api: MemosApi,
     private val streamingApi: StreamingAttachmentApi?,
     initialCellWidth: Float = 120f
 ) : BaseListManager<Attachment>(scope) {

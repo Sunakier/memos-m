@@ -2,7 +2,7 @@ package org.example.memosm.viewmodel.manager
 
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
-import org.example.memosm.api.MemosApiV0353
+import org.example.memosm.api.MemosApi
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User
 import org.example.memosm.viewmodel.PaginatedListState
@@ -13,7 +13,7 @@ private const val TAG = "MemoListManager"
 
 class UserMemoListManager(
     scope: CoroutineScope,
-    private val api: MemosApiV0353,
+    private val api: MemosApi,
     private val filterProvider: () -> String?,
     cacheCallbacks: CacheCallbacks<Memo>? = null
 ) : BaseListManager<Memo>(scope, cacheCallbacks = cacheCallbacks) {
@@ -41,7 +41,7 @@ class UserMemoListManager(
 
 class ExploreMemoListManager(
     scope: CoroutineScope,
-    private val api: MemosApiV0353,
+    private val api: MemosApi,
     cacheCallbacks: CacheCallbacks<Memo>? = null
 ) : BaseListManager<Memo>(scope, cacheCallbacks = cacheCallbacks) {
 
@@ -68,7 +68,7 @@ class ExploreMemoListManager(
 
 class ArchivedMemoListManager(
     scope: CoroutineScope,
-    private val api: MemosApiV0353,
+    private val api: MemosApi,
     private val currentUserProvider: () -> User?,
     cacheCallbacks: CacheCallbacks<Memo>? = null
 ) : BaseListManager<Memo>(scope, cacheCallbacks = cacheCallbacks) {
@@ -105,7 +105,7 @@ class ArchivedMemoListManager(
 
 class SearchMemoListManager(
     scope: CoroutineScope,
-    private val api: MemosApiV0353
+    private val api: MemosApi
 ) : BaseListManager<Memo>(scope) {
 
     private var currentFilter: String? = null

@@ -22,11 +22,9 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.example.memosm.R
-import org.example.memosm.api.MemosApiV0353
+import org.example.memosm.api.MemosApiFactory
 import org.example.memosm.api.loginAndCreateToken
 import org.example.memosm.model.Account
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 enum class LoginMode {
@@ -161,10 +159,7 @@ fun LoginContent(
 
                 val client = OkHttpClient.Builder().addInterceptor(logging).build()
 
-                val retrofit = Retrofit.Builder().baseUrl(baseUrl).client(client)
-                    .addConverterFactory(GsonConverterFactory.create()).build()
-
-                val api = retrofit.create(MemosApiV0353::class.java)
+                val api = MemosApiFactory.create(baseUrl, client)
 
                 // Check if instance is valid by fetching instance profile
                 try {
@@ -191,8 +186,7 @@ fun LoginContent(
                             chain.proceed(request)
                         }.build()
 
-                    val authApi = retrofit.newBuilder().client(authClient).build()
-                        .create(MemosApiV0353::class.java)
+                    val authApi = MemosApiFactory.create(baseUrl, authClient)
 
                     try {
                         authApi.getCurrentSession()

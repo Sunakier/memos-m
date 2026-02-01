@@ -16,7 +16,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import org.example.memosm.api.AuthInterceptor
-import org.example.memosm.api.MemosApiV0353
+import org.example.memosm.api.MemosApi
+import org.example.memosm.api.MemosApiFactory
 import org.example.memosm.api.StreamingAttachmentApi
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.data.DraftManager
@@ -36,7 +37,7 @@ class MemosViewModel(
     private val _uiState = MutableStateFlow(MemosUiState())
     val uiState: StateFlow<MemosUiState> = _uiState.asStateFlow()
 
-    private var api: MemosApiV0353? = null
+    private var api: MemosApi? = null
     private var currentHttpClient: OkHttpClient? = null
     private var currentBaseUrl: String? = null
 
@@ -55,19 +56,12 @@ class MemosViewModel(
         updateCurrentAccountInList()
     }
 
-    private fun createApi(baseUrl: String, token: String): MemosApiV0353 {
-        var normalizedBaseUrl = baseUrl.trimEnd('/') + "/"
-        if (normalizedBaseUrl.endsWith("/api/v1/")) {
-            normalizedBaseUrl = normalizedBaseUrl.removeSuffix("api/v1/")
-        }
-
+    private suspend fun createApi(baseUrl: String, token: String): MemosApi {
         currentHttpClient = OkHttpClient.Builder().addInterceptor(AuthInterceptor(token)).build()
-        currentBaseUrl = normalizedBaseUrl
-
-        val retrofit = Retrofit.Builder().baseUrl(normalizedBaseUrl).client(currentHttpClient!!)
-            .addConverterFactory(GsonConverterFactory.create()).build()
-
-        return retrofit.create(MemosApiV0353::class.java)
+        currentBaseUrl = baseUrl // factory will normalize it, but we store it here
+        
+        // Factory creates Retrofit and the API
+        return MemosApiFactory.create(baseUrl, currentHttpClient!!)
     }
 
     fun updateCurrentAccountInList() {
