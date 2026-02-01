@@ -4,6 +4,7 @@ import android.util.Log
 import org.example.memosm.model.CreatePersonalAccessTokenRequest
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.example.memosm.model.PasswordCredentials
 import org.example.memosm.model.SignInRequest
 
 const val TAG = "MemosLogin"
@@ -23,15 +24,22 @@ suspend fun loginAndCreateToken(
 ): String {
 
     val logging = HttpLoggingInterceptor { message ->
-        Log.d("MemosApi", message)
+        Log.d(TAG, message)
     }.apply {
-        level = HttpLoggingInterceptor.Level.BASIC
+        level = HttpLoggingInterceptor.Level.BODY
     }
 
 
 
     try {
-        val logInRes = api.signIn(SignInRequest(username = username.trim(), password = password))
+        val logInRes = api.signIn(
+            SignInRequest(
+                passwordCredentials = PasswordCredentials(
+                    username = username.trim(),
+                    password = password
+                )
+            )
+        )
 
         Log.d(TAG, "Login successful! Response: $logInRes")
 
@@ -55,11 +63,15 @@ suspend fun loginAndCreateToken(
 
         val accessTokenRes = authApi.createPersonalAccessToken(
             userId, CreatePersonalAccessTokenRequest(
-                userId, tokenName, 0
+                parent = userId, description = tokenName
             )
         )
         Log.d(TAG, "Access token Res: $accessTokenRes")
         return accessTokenRes.token
+    } catch (e: retrofit2.HttpException) {
+        val errorBody = e.response()?.errorBody()?.string()
+        Log.e(TAG, "Login failed: $errorBody", e)
+        throw Exception("Failed to login: $errorBody", e)
     } catch (e: Exception) {
         throw Exception("Failed to create personal access token: ${e.message}", e)
     }

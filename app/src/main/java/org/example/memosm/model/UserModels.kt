@@ -88,7 +88,7 @@ data class RefreshTokenResponse(
 )
 
 data class SignInRequest(
-    val username: String, val password: String
+    val passwordCredentials: PasswordCredentials? = null
 )
 
 data class PasswordCredentials(
