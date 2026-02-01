@@ -43,7 +43,7 @@ You can also download from [release](https://github.com/yamada-sexta/memos-m/rel
 - User
   - Auth  
     - [x] Login with token
-    - [x] Login with password (no refresh) 
+    - [x] Login with password
   - User info
     - [x] View user info
     - [x] Edit user info
