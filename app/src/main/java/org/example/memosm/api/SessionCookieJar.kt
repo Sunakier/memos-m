@@ -50,6 +50,7 @@ open class SessionCookieJar(
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
         val host = url.host
+        Log.d("SessionCookieJar", "saveFromResponse called for $host with ${cookies.size} cookies")
         val cookieMap = cookieStore.getOrPut(host) { mutableMapOf() }
         
         var changed = false
