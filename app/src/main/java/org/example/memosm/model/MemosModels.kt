@@ -1,5 +1,6 @@
 package org.example.memosm.model
 
+import com.google.gson.annotations.SerializedName
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -21,11 +22,26 @@ enum class Visibility {
 
     @SerialName("PRIVATE")
     PRIVATE,
+
+    @SerializedName("VISIBILITY_UNSPECIFIED")
+    VISIBILITY_UNSPECIFIED
+}
+
+@Serializable
+enum class MemoState {
+    @SerialName("NORMAL")
+    NORMAL,
+
+    @SerialName("ARCHIVED")
+    ARCHIVED,
+
+    @SerialName("STATE_UNSPECIFIED")
+    STATE_UNSPECIFIED
 }
 
 data class Memo(
     val name: String? = null,
-    val state: String? = null,
+    val state: MemoState? = null,
     val creator: String? = null,
     val createTime: String? = null,
     val updateTime: String? = null,

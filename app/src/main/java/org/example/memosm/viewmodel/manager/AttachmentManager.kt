@@ -82,7 +82,7 @@ class AttachmentManager(
             val attachment = if (useStreaming) {
                 // Use streaming upload for large files
                 Log.d(TAG, "uploadAttachment: using STREAMING upload for large file")
-                streamingApi!!.createAttachmentStreaming(fileName, mimeType, uri, context)
+                streamingApi.createAttachmentStreaming(fileName, mimeType, uri, context)
             } else {
                 // Use regular upload for small files
                 Log.d(TAG, "uploadAttachment: using REGULAR upload")
@@ -149,7 +149,7 @@ class AttachmentManager(
             name = uri.path
             val cut = name?.lastIndexOf('/')
             if (cut != null && cut != -1) {
-                name = name?.substring(cut + 1)
+                name = name.substring(cut + 1)
             }
         }
         return name

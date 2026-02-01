@@ -23,6 +23,7 @@ fun getVisibilityLabel(visibility: Visibility): String {
         Visibility.PUBLIC -> stringResource(R.string.memo_visibility_public)
         Visibility.PROTECTED -> stringResource(R.string.memo_visibility_protected)
         Visibility.PRIVATE -> stringResource(R.string.memo_visibility_private)
+        Visibility.VISIBILITY_UNSPECIFIED -> stringResource(R.string.memo_visibility_unspecified)
     }
 }
 
@@ -31,6 +32,7 @@ fun getVisibilityIcon(visibility: Visibility, outlined: Boolean = true): ImageVe
         Visibility.PUBLIC -> if (outlined) Icons.Outlined.Public else Icons.Filled.Public
         Visibility.PROTECTED -> if (outlined) Icons.Outlined.People else Icons.Filled.People
         Visibility.PRIVATE -> if (outlined) Icons.Outlined.Lock else Icons.Filled.Lock
+        Visibility.VISIBILITY_UNSPECIFIED -> if (outlined) Icons.Outlined.QuestionMark else Icons.Filled.QuestionMark
     }
 }
 

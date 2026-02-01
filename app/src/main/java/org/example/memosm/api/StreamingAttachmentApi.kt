@@ -67,18 +67,14 @@ class StreamingAttachmentApi(
             val response = client.newCall(request).execute()
             
             if (!response.isSuccessful) {
-                val errorBody = response.body?.string() ?: "No error body"
+                val errorBody = response.body.string()
                 Log.e(TAG, "Upload failed with code ${response.code}: ${response.message}")
                 Log.e(TAG, "Error response body: $errorBody")
                 return@withContext null
             }
             
-            val responseBody = response.body?.string()
-            if (responseBody == null) {
-                Log.e(TAG, "Empty response body")
-                return@withContext null
-            }
-            
+            val responseBody = response.body.string()
+
             Log.d(TAG, "Response body: $responseBody")
             val attachment = gson.fromJson(responseBody, Attachment::class.java)
             Log.d(TAG, "Upload successful: ${attachment.name}")
@@ -116,18 +112,14 @@ class StreamingAttachmentApi(
             val response = client.newCall(request).execute()
             
             if (!response.isSuccessful) {
-                val errorBody = response.body?.string() ?: "No error body"
+                val errorBody = response.body.string()
                 Log.e(TAG, "Upload failed with code ${response.code}: ${response.message}")
                 Log.e(TAG, "Error response body: $errorBody")
                 return@withContext null
             }
             
-            val responseBody = response.body?.string()
-            if (responseBody == null) {
-                Log.e(TAG, "Empty response body")
-                return@withContext null
-            }
-            
+            val responseBody = response.body.string()
+
             Log.d(TAG, "Response body: $responseBody")
             val attachment = gson.fromJson(responseBody, Attachment::class.java)
             Log.d(TAG, "Upload successful: ${attachment.name}")

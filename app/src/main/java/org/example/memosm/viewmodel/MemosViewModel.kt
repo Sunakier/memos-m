@@ -20,6 +20,7 @@ import org.example.memosm.api.AuthInterceptor
 import org.example.memosm.api.MemosApi
 import org.example.memosm.api.MemosApiFactory
 import org.example.memosm.api.SessionCookieJar
+import org.example.memosm.api.TokenAuthenticator
 import org.example.memosm.api.StreamingAttachmentApi
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.data.DraftManager
@@ -76,8 +77,22 @@ class MemosViewModel(
             }
         }
     
+        val authInterceptor = AuthInterceptor(token)
+
+        val authenticator = TokenAuthenticator(baseUrl, cookieJar) { newToken ->
+            Log.d("MemosViewModel", "Token refreshed, updating state")
+            authInterceptor.updateToken(newToken)
+            viewModelScope.launch {
+                _uiState.update { it.copy(session = it.session.copy(token = newToken)) }
+                if (accountId != null) {
+                    dataStoreManager.updateAccountToken(accountId, newToken)
+                }
+            }
+        }
+
         currentHttpClient = OkHttpClient.Builder()
-            .addInterceptor(AuthInterceptor(token))
+            .addInterceptor(authInterceptor)
+            .authenticator(authenticator)
             .cookieJar(cookieJar)
             .build()
             
@@ -783,7 +798,7 @@ class MemosViewModel(
         visibility: Visibility,
         attachments: List<Attachment>,
         location: Location? = null,
-        state: String? = null,
+        state: MemoState? = null,
         onSuccess: () -> Unit = {}
     ) {
         viewModelScope.launch {

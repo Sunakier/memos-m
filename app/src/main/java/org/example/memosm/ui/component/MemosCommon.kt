@@ -41,6 +41,7 @@ import org.example.memosm.model.Memo
 import org.example.memosm.model.User
 import org.example.memosm.ui.MemoKey
 import org.example.memosm.R
+import org.example.memosm.model.MemoState
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -365,7 +366,8 @@ fun GenericMemosListPane(
                                         memo.visibility,
                                         memo.attachments ?: emptyList(),
                                         memo.location,
-                                        "ARCHIVED"
+//                                        "ARCHIVED"
+                                        MemoState.ARCHIVED
                                     )
                                 }
                             } else null,
@@ -377,7 +379,8 @@ fun GenericMemosListPane(
                                         memo.visibility,
                                         memo.attachments ?: emptyList(),
                                         memo.location,
-                                        "NORMAL"
+//                                        "NORMAL"
+                                        MemoState.NORMAL
                                     )
                                 }
                             } else null,

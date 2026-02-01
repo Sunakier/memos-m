@@ -40,6 +40,7 @@ import coil3.network.httpHeaders
 import com.mikepenz.markdown.model.rememberMarkdownState
 import org.example.memosm.R
 import org.example.memosm.model.Memo
+import org.example.memosm.model.MemoState
 import org.example.memosm.model.Reaction
 import org.example.memosm.model.User
 import org.example.memosm.ui.VisibilityIcon
@@ -284,7 +285,7 @@ fun MemoItem(
                                         )
                                     })
                             }
-                            if (onPin != null && memo.state == "NORMAL") {
+                            if (onPin != null && memo.state == MemoState.NORMAL) {
                                 val isPinned = memo.pinned == true
                                 DropdownMenuItem(
                                     text = { Text(stringResource(if (isPinned) R.string.memo_action_unpin else R.string.memo_action_pin)) },
@@ -298,7 +299,7 @@ fun MemoItem(
                                         )
                                     })
                             }
-                            if (onArchive != null && memo.state == "NORMAL") {
+                            if (onArchive != null && memo.state == MemoState.NORMAL) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.memo_action_archive)) },
                                     onClick = {
@@ -311,7 +312,7 @@ fun MemoItem(
                                         )
                                     })
                             }
-                            if (onUnarchive != null && memo.state == "ARCHIVED") {
+                            if (onUnarchive != null && memo.state == MemoState.ARCHIVED) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.memo_action_unarchive)) },
                                     onClick = {

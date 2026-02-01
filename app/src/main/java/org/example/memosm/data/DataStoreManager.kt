@@ -208,4 +208,16 @@ class DataStoreManager(private val context: Context) {
         }
         saveAccounts(updated)
     }
+
+    suspend fun updateAccountToken(id: String, token: String) {
+        val current = getAccounts()
+        val updated = current.map {
+            if (it.id == id) {
+                val newAcc = it.copy(accessToken = token)
+                if (newAcc.isActive) saveCredentials(newAcc.hostUrl, token)
+                newAcc
+            } else it
+        }
+        saveAccounts(updated)
+    }
 }

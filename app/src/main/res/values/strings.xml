@@ -206,4 +206,5 @@
     <string name="profile_activity_more">More</string>
     <string name="drafts_delete_all_confirmation_title">Delete all drafts?</string>
     <string name="drafts_delete_all_confirmation_message">Are you sure you want to delete all drafts? This action cannot be undone.</string>
+    <string name="memo_visibility_unspecified">Unknown</string>
 </resources>

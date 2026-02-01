@@ -455,7 +455,7 @@ fun InstanceCard(instance: InstanceProfile) {
             }
             
             InfoRow(
-                stringResource(R.string.profile_instance_mode), modeLabel ?: unknown
+                stringResource(R.string.profile_instance_mode), modeLabel
             )
             InfoRow(
                 stringResource(R.string.profile_instance_url), instance.instanceUrl ?: unknown
