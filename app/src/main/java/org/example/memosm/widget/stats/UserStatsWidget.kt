@@ -169,74 +169,131 @@ class UserStatsWidget : GlanceAppWidget() {
         val size = androidx.glance.LocalSize.current
         val notAvailable = context.getString(R.string.common_not_available)
 
-        // Dynamic visibility based on height
-        val isTall = size.height >= 140.dp // Threshold for two rows
-        val isWide = size.width >= 300.dp // Maybe use for horizontal layout later?
-
-        Column(
-            modifier = GlanceModifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Header
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Stats for ${account.name}", style = TextStyle(
-                        color = GlanceTheme.colors.onSurface,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                )
-            }
-            Spacer(GlanceModifier.height(8.dp))
-
-            // Stats Grid - Row 1
-            Row(modifier = GlanceModifier.fillMaxWidth()) {
-                StatItem(
-                    label = context.getString(R.string.profile_stats_memos),
-                    value = stats.totalMemoCount.toString(),
-                    modifier = GlanceModifier.defaultWeight()
-                )
-                StatItem(
-                    label = context.getString(R.string.profile_stats_tags),
-                    value = stats.tagCount?.size?.toString() ?: "0",
-                    modifier = GlanceModifier.defaultWeight()
-                )
-                StatItem(
-                    label = context.getString(R.string.profile_stats_pinned),
-                    value = stats.pinnedMemos?.size?.toString() ?: "0",
-                    modifier = GlanceModifier.defaultWeight()
-                )
-            }
-
-            if (isTall) {
-                Spacer(GlanceModifier.height(8.dp))
-
-                // Stats Grid - Row 2
-                Row(modifier = GlanceModifier.fillMaxWidth()) {
-                    StatItem(
-                        label = context.getString(R.string.profile_stats_links),
-                        value = stats.memoTypeStats?.linkCount?.toString() ?: notAvailable,
-                        modifier = GlanceModifier.defaultWeight()
-                    )
-                    StatItem(
-                        label = context.getString(R.string.profile_stats_code),
-                        value = stats.memoTypeStats?.codeCount?.toString() ?: notAvailable,
-                        modifier = GlanceModifier.defaultWeight()
-                    )
-                    StatItem(
-                        label = context.getString(R.string.profile_stats_todo),
-                        value = stats.memoTypeStats?.todoCount?.toString() ?: notAvailable,
-                        modifier = GlanceModifier.defaultWeight()
-                    )
+        // Configuration
+        val height = size.height
+        val useScroll = height < 160.dp
+        val useLargeFonts = height > 220.dp
+        
+        val fontScale = if (useLargeFonts) 1.3f else 1.0f
+        
+        val valueFontSize = 18.sp * fontScale
+        val labelFontSize = 12.sp * fontScale
+        val headerFontSize = 14.sp * fontScale
+        
+        if (useScroll) {
+             androidx.glance.appwidget.lazy.LazyColumn(
+                modifier = GlanceModifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Header (Centered explicitly in LazyColumn item)
+                item {
+                     Box(
+                        modifier = GlanceModifier.fillMaxWidth().padding(bottom = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                       Text(
+                           text = "Stats for ${account.name}",
+                           style = TextStyle(
+                               color = GlanceTheme.colors.onSurface,
+                               fontWeight = FontWeight.Bold,
+                               fontSize = headerFontSize
+                           )
+                       )
+                    }
                 }
+                item {
+                    Row1(context, stats, valueFontSize, labelFontSize)
+                }
+                item {
+                    Spacer(GlanceModifier.height(8.dp))
+                }
+                item {
+                    Row2(context, stats, notAvailable, valueFontSize, labelFontSize)
+                }
+            }
+        } else {
+            Column(
+                modifier = GlanceModifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                 Text(
+                   text = "Stats for ${account.name}",
+                   style = TextStyle(
+                       color = GlanceTheme.colors.onSurface,
+                       fontWeight = FontWeight.Bold,
+                       fontSize = headerFontSize
+                   ),
+                   modifier = GlanceModifier.padding(bottom = 8.dp)
+               )
+                Row1(context, stats, valueFontSize, labelFontSize)
+                Spacer(GlanceModifier.height(12.dp))
+                Row2(context, stats, notAvailable, valueFontSize, labelFontSize)
             }
         }
     }
 
     @Composable
+    fun Row1(context: Context, stats: UserStats, valueSize: androidx.compose.ui.unit.TextUnit, labelSize: androidx.compose.ui.unit.TextUnit) {
+        Row(modifier = GlanceModifier.fillMaxWidth()) {
+            StatItem(
+                label = context.getString(R.string.profile_stats_memos),
+                value = stats.totalMemoCount.toString(),
+                valueSize = valueSize,
+                labelSize = labelSize,
+                modifier = GlanceModifier.defaultWeight()
+            )
+            StatItem(
+                label = context.getString(R.string.profile_stats_tags),
+                value = stats.tagCount?.size?.toString() ?: "0",
+                valueSize = valueSize,
+                labelSize = labelSize,
+                modifier = GlanceModifier.defaultWeight()
+            )
+            StatItem(
+                label = context.getString(R.string.profile_stats_pinned),
+                value = stats.pinnedMemos?.size?.toString() ?: "0",
+                valueSize = valueSize,
+                labelSize = labelSize,
+                modifier = GlanceModifier.defaultWeight()
+            )
+        }
+    }
+
+    @Composable
+    fun Row2(context: Context, stats: UserStats, notAvailable: String, valueSize: androidx.compose.ui.unit.TextUnit, labelSize: androidx.compose.ui.unit.TextUnit) {
+        Row(modifier = GlanceModifier.fillMaxWidth().padding(bottom = 8.dp)) {
+            StatItem(
+                label = context.getString(R.string.profile_stats_links),
+                value = stats.memoTypeStats?.linkCount?.toString() ?: notAvailable,
+                valueSize = valueSize,
+                labelSize = labelSize,
+                modifier = GlanceModifier.defaultWeight()
+            )
+            StatItem(
+                label = context.getString(R.string.profile_stats_code),
+                value = stats.memoTypeStats?.codeCount?.toString() ?: notAvailable,
+                valueSize = valueSize,
+                labelSize = labelSize,
+                modifier = GlanceModifier.defaultWeight()
+            )
+            StatItem(
+                label = context.getString(R.string.profile_stats_todo),
+                value = stats.memoTypeStats?.todoCount?.toString() ?: notAvailable,
+                valueSize = valueSize,
+                labelSize = labelSize,
+                modifier = GlanceModifier.defaultWeight()
+            )
+        }
+    }
+
+    @Composable
     fun StatItem(
-        label: String, value: String, modifier: GlanceModifier = GlanceModifier
+        label: String,
+        value: String,
+        valueSize: androidx.compose.ui.unit.TextUnit,
+        labelSize: androidx.compose.ui.unit.TextUnit,
+        modifier: GlanceModifier = GlanceModifier
     ) {
         Column(
             modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally
@@ -244,13 +301,13 @@ class UserStatsWidget : GlanceAppWidget() {
             Text(
                 text = value, style = TextStyle(
                     color = GlanceTheme.colors.primary,
-                    fontSize = 18.sp,
+                    fontSize = valueSize,
                     fontWeight = FontWeight.Bold
                 )
             )
             Text(
                 text = label, style = TextStyle(
-                    color = GlanceTheme.colors.onSurfaceVariant, fontSize = 12.sp
+                    color = GlanceTheme.colors.onSurfaceVariant, fontSize = labelSize
                 )
             )
         }
