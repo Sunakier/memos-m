@@ -37,6 +37,7 @@ import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
+import androidx.glance.layout.wrapContentHeight
 import androidx.glance.material3.ColorProviders
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
@@ -171,7 +172,7 @@ class UserStatsWidget : GlanceAppWidget() {
 
         // Configuration
         val height = size.height
-        val useScroll = height < 135.dp // Threshold lowered to favor centering
+        val useScroll = height < 120.dp // Threshold lowered to 120dp as requested
         val useLargeFonts = height > 220.dp
         
         val fontScale = if (useLargeFonts) 1.3f else 1.0f
@@ -183,55 +184,61 @@ class UserStatsWidget : GlanceAppWidget() {
         // Increase padding between rows as requested
         val rowSpacing = 12.dp
         
-        if (useScroll) {
-             androidx.glance.appwidget.lazy.LazyColumn(
-                modifier = GlanceModifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Header (Centered explicitly in LazyColumn item)
-                item {
-                     Box(
-                        modifier = GlanceModifier.fillMaxWidth().padding(bottom = rowSpacing),
-                        contentAlignment = Alignment.Center
-                    ) {
-                       Text(
-                           text = "Stats for ${account.name}",
-                           style = TextStyle(
-                               color = GlanceTheme.colors.onSurface,
-                               fontWeight = FontWeight.Bold,
-                               fontSize = headerFontSize
+        // Root container for centering - crucial for non-scroll layout
+        Box(
+            modifier = GlanceModifier.fillMaxSize(),
+            contentAlignment = if (useScroll) Alignment.TopCenter else Alignment.Center
+        ) {
+            if (useScroll) {
+                 androidx.glance.appwidget.lazy.LazyColumn(
+                    modifier = GlanceModifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Header (Centered explicitly in LazyColumn item)
+                    item {
+                         Box(
+                            modifier = GlanceModifier.fillMaxWidth().padding(bottom = rowSpacing),
+                            contentAlignment = Alignment.Center
+                        ) {
+                           Text(
+                               text = "Stats for ${account.name}",
+                               style = TextStyle(
+                                   color = GlanceTheme.colors.onSurface,
+                                   fontWeight = FontWeight.Bold,
+                                   fontSize = headerFontSize
+                               )
                            )
-                       )
+                        }
+                    }
+                    item {
+                        Row1(context, stats, valueFontSize, labelFontSize)
+                    }
+                    item {
+                        Spacer(GlanceModifier.height(rowSpacing))
+                    }
+                    item {
+                        Row2(context, stats, notAvailable, valueFontSize, labelFontSize)
                     }
                 }
-                item {
+            } else {
+                Column(
+                    modifier = GlanceModifier.wrapContentHeight().fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                     Text(
+                       text = "Stats for ${account.name}",
+                       style = TextStyle(
+                           color = GlanceTheme.colors.onSurface,
+                           fontWeight = FontWeight.Bold,
+                           fontSize = headerFontSize
+                       ),
+                       modifier = GlanceModifier.padding(bottom = rowSpacing)
+                   )
                     Row1(context, stats, valueFontSize, labelFontSize)
-                }
-                item {
                     Spacer(GlanceModifier.height(rowSpacing))
-                }
-                item {
                     Row2(context, stats, notAvailable, valueFontSize, labelFontSize)
                 }
-            }
-        } else {
-            Column(
-                modifier = GlanceModifier.fillMaxSize(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                 Text(
-                   text = "Stats for ${account.name}",
-                   style = TextStyle(
-                       color = GlanceTheme.colors.onSurface,
-                       fontWeight = FontWeight.Bold,
-                       fontSize = headerFontSize
-                   ),
-                   modifier = GlanceModifier.padding(bottom = rowSpacing)
-               )
-                Row1(context, stats, valueFontSize, labelFontSize)
-                Spacer(GlanceModifier.height(rowSpacing))
-                Row2(context, stats, notAvailable, valueFontSize, labelFontSize)
             }
         }
     }
@@ -265,7 +272,7 @@ class UserStatsWidget : GlanceAppWidget() {
 
     @Composable
     fun Row2(context: Context, stats: UserStats, notAvailable: String, valueSize: androidx.compose.ui.unit.TextUnit, labelSize: androidx.compose.ui.unit.TextUnit) {
-        Row(modifier = GlanceModifier.fillMaxWidth()) { // Removed bottom padding from Row itself to control via Spacer
+        Row(modifier = GlanceModifier.fillMaxWidth()) { 
             StatItem(
                 label = context.getString(R.string.profile_stats_links),
                 value = stats.memoTypeStats?.linkCount?.toString() ?: notAvailable,
