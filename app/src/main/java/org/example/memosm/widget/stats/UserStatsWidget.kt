@@ -171,7 +171,7 @@ class UserStatsWidget : GlanceAppWidget() {
 
         // Configuration
         val height = size.height
-        val useScroll = height < 160.dp
+        val useScroll = height < 130.dp
         val useLargeFonts = height > 220.dp
         
         val fontScale = if (useLargeFonts) 1.3f else 1.0f
