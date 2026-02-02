@@ -797,7 +797,7 @@ fun MemoComposer(
                                 draftAttachments.mapNotNull { it.second }.filter { it.name != null }
 
                             onPublish(
-                                contentState.text.toString(), visibility, finalAttachments, location
+                                contentState.text, visibility, finalAttachments, location
                             )
                         }
                     },

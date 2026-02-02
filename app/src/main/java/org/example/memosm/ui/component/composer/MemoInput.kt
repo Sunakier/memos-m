@@ -27,6 +27,15 @@ import org.example.memosm.R
 import kotlin.math.roundToInt
 
 @Composable
+fun rememberMarkdownLanguageHandler(): MarkdownLanguageHandler {
+    val colorScheme = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
+    return remember(colorScheme, typography) {
+        MarkdownLanguageHandler(colorScheme, typography)
+    }
+}
+
+@Composable
 fun MemoInput(
     modifier: Modifier = Modifier,
     contentState: androidx.compose.ui.text.input.TextFieldValue,
@@ -46,6 +55,8 @@ fun MemoInput(
     var tagStartIndex by remember { mutableIntStateOf(-1) }
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
     val density = LocalDensity.current
+
+    val markdownHandler = rememberMarkdownLanguageHandler()
 
     LaunchedEffect(contentState.text, contentState.selection) {
         val text = contentState.text
@@ -94,7 +105,7 @@ fun MemoInput(
         BasicTextField(
             value = contentState,
             onValueChange = { newValue ->
-                val processedValue = processMarkdownInput(contentState, newValue)
+                val processedValue = markdownHandler.processInput(contentState, newValue)
                 onContentChange(processedValue)
             },
             modifier = Modifier
@@ -105,7 +116,7 @@ fun MemoInput(
             maxLines = maxHeightInLines,
             enabled = enabled,
             onTextLayout = { result -> textLayoutResult = result },
-            visualTransformation = rememberMarkdownVisualTransformation(),
+            visualTransformation = markdownHandler,
             interactionSource = interactionSource,
             decorationBox = { innerTextField ->
                 OutlinedTextFieldDefaults.DecorationBox(
@@ -113,7 +124,7 @@ fun MemoInput(
                     innerTextField = innerTextField,
                     enabled = enabled,
                     singleLine = false,
-                    visualTransformation = rememberMarkdownVisualTransformation(),
+                    visualTransformation = markdownHandler,
                     interactionSource = interactionSource,
                     placeholder = { Text(placeholder) },
                     contentPadding = OutlinedTextFieldDefaults.contentPadding(),
@@ -170,97 +181,6 @@ fun MemoInput(
             }
         }
     }
-}
-
-// Helper for markdown list auto-completion
-private fun processMarkdownInput(
-    oldValue: androidx.compose.ui.text.input.TextFieldValue,
-    newValue: androidx.compose.ui.text.input.TextFieldValue
-): androidx.compose.ui.text.input.TextFieldValue {
-    if (newValue.text.length > oldValue.text.length && newValue.selection.start == oldValue.selection.start + 1) {
-        val insertedChar = newValue.text[newValue.selection.start - 1]
-        if (insertedChar == '\n') {
-            val caretIndex = newValue.selection.start
-            // Find start of the current line (the line just completed)
-            // Caret is at the start of the NEW line.
-            // So we look back from caretIndex - 2 (skip \n)
-
-            // Example:
-            // "Item 1\n|"
-            // caretIndex is at end.
-
-            val newlineIndex = caretIndex - 1
-            var lineStartIndex = newlineIndex - 1
-            while (lineStartIndex >= 0 && newValue.text[lineStartIndex] != '\n') {
-                lineStartIndex--
-            }
-            lineStartIndex++
-
-            if (lineStartIndex < newlineIndex) {
-                val previousLine = newValue.text.substring(lineStartIndex, newlineIndex)
-                val prefix = getMarkdownPrefix(previousLine)
-                if (prefix != null) {
-                    val newText =
-                        newValue.text.substring(0, caretIndex) + prefix + newValue.text.substring(
-                            caretIndex
-                        )
-                    val newSelection = TextRange(caretIndex + prefix.length)
-                    return newValue.copy(text = newText, selection = newSelection)
-                }
-            }
-        }
-    }
-    return newValue
-}
-
-private fun getMarkdownPrefix(line: String): String? {
-    // 1. Task List: "- [ ] " or "- [x] "
-    val taskRegex = Regex("^(\\s*[-*+]\\s+\\[)[ xX]?(\\]\\s+)")
-    val taskMatch = taskRegex.find(line)
-    if (taskMatch != null) {
-        val (prefixStart, prefixEnd) = taskMatch.destructured
-        return "$prefixStart $prefixEnd" // Always uncheck
-    }
-
-    // 2. Bullet List: "- " or "* " or "+ "
-    val bulletRegex = Regex("^(\\s*[-*+]\\s+)")
-    val bulletMatch = bulletRegex.find(line)
-    if (bulletMatch != null) {
-        return bulletMatch.groupValues[1]
-    }
-
-    // 3. Numbered List: "1. "
-    val numberedRegex = Regex("^(\\s*)(\\d+)(\\.\\s+)")
-    val numberedMatch = numberedRegex.find(line)
-    if (numberedMatch != null) {
-        val (indent, numberStr, suffix) = numberedMatch.destructured
-        try {
-            val number = numberStr.toInt()
-            return "$indent${number + 1}$suffix"
-        } catch (e: NumberFormatException) {
-            return numberedMatch.groupValues[0]
-        }
-    }
-
-    // 4. Blockquote: "> "
-    val quoteRegex = Regex("^(\\s*>\\s+)")
-    val quoteMatch = quoteRegex.find(line)
-    if (quoteMatch != null) {
-        return quoteMatch.groupValues[1]
-    }
-
-    // 5. Brackets/Parens
-    val bracketRegex = Regex("^(\\s*\\[\\]\\s+)")
-    if (bracketRegex.containsMatchIn(line)) {
-        return bracketRegex.find(line)!!.groupValues[1]
-    }
-
-    val parenRegex = Regex("^(\\s*\\(\\)\\s+)")
-    if (parenRegex.containsMatchIn(line)) {
-        return parenRegex.find(line)!!.groupValues[1]
-    }
-
-    return null
 }
 
 fun Modifier.noRippleClickable(onClick: () -> Unit): Modifier = composed {
