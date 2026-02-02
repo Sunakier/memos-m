@@ -27,25 +27,25 @@ import org.example.memosm.ui.theme.MemosMTheme
 import org.example.memosm.widget.DraftWidget
 
 class MainActivity : ComponentActivity() {
-    
+
     // StateFlow to hold pending share data, observable by Compose
     private val pendingShareDataFlow = MutableStateFlow<ShareIntentData?>(null)
-    
+
     // StateFlow to trigger composer opening from widget
     private val shouldOpenComposerFlow = MutableStateFlow(false)
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
+
         // Parse share intent data from initial launch
         pendingShareDataFlow.value = parseShareIntent(intent)
-        
+
         // Check if launched from widget
         if (intent.action == DraftWidget.ACTION_OPEN_COMPOSER) {
             shouldOpenComposerFlow.value = true
         }
-        
+
         setContent {
             MemosMTheme {
                 val context = LocalContext.current
@@ -55,10 +55,10 @@ class MainActivity : ComponentActivity() {
 
                 // Observe accounts instead of single credentials
                 val accounts by dataStoreManager.accounts.collectAsState(initial = null)
-                
+
                 // Wait for DataStore to emit initial values
                 var isCheckingSession by remember { mutableStateOf(true) }
-                
+
                 // Collect pending share data from the flow
                 val pendingShareData by pendingShareDataFlow.collectAsState()
                 val shouldOpenComposer by shouldOpenComposerFlow.collectAsState()
@@ -76,7 +76,7 @@ class MainActivity : ComponentActivity() {
                     }
                 } else {
                     val activeAccount = accounts?.find { it.isActive }
-                    
+
                     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                         if (activeAccount != null) {
                             MainScreen(
@@ -90,8 +90,7 @@ class MainActivity : ComponentActivity() {
                                 shareIntentData = pendingShareData,
                                 onShareIntentConsumed = { pendingShareDataFlow.value = null },
                                 shouldOpenComposer = shouldOpenComposer,
-                                onComposerOpened = { shouldOpenComposerFlow.value = false }
-                            )
+                                onComposerOpened = { shouldOpenComposerFlow.value = false })
                         } else {
                             // If no active account, show login
                             LoginScreen(
@@ -107,7 +106,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-    
+
     /**
      * Called when the activity is already running and receives a new intent (e.g., share).
      * With launchMode="singleTask", share intents will come here instead of onCreate.
@@ -115,58 +114,57 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent) // Update the current intent
-        
+
         // Parse and emit the new share data
         val shareData = parseShareIntent(intent)
         if (shareData != null) {
             pendingShareDataFlow.value = shareData
         }
-        
+
         if (intent.action == DraftWidget.ACTION_OPEN_COMPOSER) {
             shouldOpenComposerFlow.value = true
         }
     }
-    
+
     /**
      * Parses a share intent (ACTION_SEND or ACTION_SEND_MULTIPLE) and extracts
      * text content and file URIs.
      */
     private fun parseShareIntent(intent: Intent?): ShareIntentData? {
         if (intent == null) return null
-        
+
         val action = intent.action
         if (action != Intent.ACTION_SEND && action != Intent.ACTION_SEND_MULTIPLE) {
             return null
         }
-        
+
         // Extract text content
-        val text = intent.getStringExtra(Intent.EXTRA_TEXT)
-            ?: intent.getStringExtra(Intent.EXTRA_SUBJECT)
-        
+        val text =
+            intent.getStringExtra(Intent.EXTRA_TEXT) ?: intent.getStringExtra(Intent.EXTRA_SUBJECT)
+
         // Extract URIs
         val uris = mutableListOf<Uri>()
-        
+
         when (action) {
             Intent.ACTION_SEND -> {
                 // Single file/image share
                 val singleUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
                 } else {
-                    @Suppress("DEPRECATION")
-                    intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                    @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_STREAM)
                 }
                 singleUri?.let { uri ->
                     takePersistentUriPermission(uri)
                     uris.add(uri)
                 }
             }
+
             Intent.ACTION_SEND_MULTIPLE -> {
                 // Multiple files/images share
                 val multipleUris = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
                 } else {
-                    @Suppress("DEPRECATION")
-                    intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
+                    @Suppress("DEPRECATION") intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
                 }
                 multipleUris?.forEach { uri ->
                     takePersistentUriPermission(uri)
@@ -174,11 +172,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        
+
         val shareData = ShareIntentData(text = text, uris = uris)
         return if (shareData.isEmpty) null else shareData
     }
-    
+
     /**
      * Takes persistable URI permission for content URIs to ensure
      * we can access the file later.
