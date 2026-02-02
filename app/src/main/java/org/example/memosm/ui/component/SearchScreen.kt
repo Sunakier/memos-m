@@ -7,16 +7,64 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.*
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.outlined.Sort
+import androidx.compose.material.icons.outlined.ArrowDownward
+import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Clear
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SearchBar
+import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -34,8 +82,8 @@ import org.example.memosm.ui.component.item.MemoItem
 import org.example.memosm.viewmodel.MemosUiState
 import org.example.memosm.viewmodel.MemosViewModel
 import java.text.SimpleDateFormat
-import java.util.*
-import kotlin.collections.get
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,27 +108,29 @@ fun MemoSearchBar(
     var orderBy by rememberSaveable { mutableStateOf("display_time desc") }
 
     // Aggregate tags from the search pool to be context-accurate
-    val availableTags = remember(uiState.searchMemoList.list.items, uiState.session.userStats, isExplore) {
-        if (isExplore) {
-            val tags = mutableMapOf<String, Int>()
-            uiState.searchMemoList.list.items.forEach { memo ->
-                val regex = "#(\\w+)".toRegex()
-                regex.findAll(memo.content).forEach { match ->
-                    val tag = match.groupValues[1]
-                    tags[tag] = (tags[tag] ?: 0) + 1
+    val availableTags =
+        remember(uiState.searchMemoList.list.items, uiState.session.userStats, isExplore) {
+            if (isExplore) {
+                val tags = mutableMapOf<String, Int>()
+                uiState.searchMemoList.list.items.forEach { memo ->
+                    val regex = "#(\\w+)".toRegex()
+                    regex.findAll(memo.content).forEach { match ->
+                        val tag = match.groupValues[1]
+                        tags[tag] = (tags[tag] ?: 0) + 1
+                    }
                 }
+                tags.toList().sortedByDescending { it.second }.toMap()
+            } else {
+                uiState.session.userStats?.tagCount ?: emptyMap()
             }
-            tags.toList().sortedByDescending { it.second }.toMap()
-        } else {
-            uiState.session.userStats?.tagCount ?: emptyMap()
         }
-    }
 
     // Effect to trigger server-side search whenever filters change
     LaunchedEffect(query, searchSelectedTags, startDateMillis, endDateMillis, orderBy, expanded) {
         if (expanded) {
             // Debounce the search to prevent excessive API calls while typing
             delay(300)
+            viewModel.refreshUserStats()
 
             val filters = mutableListOf<String>()
 
@@ -404,13 +454,9 @@ private fun SearchResultContent(
                     }
 
                     Surface(
-                        onClick = { showSortMenu = true },
-                        modifier = Modifier.menuAnchor(
-                                ExposedDropdownMenuAnchorType.PrimaryNotEditable,
-                                true
-                            ),
-                        shape = RoundedCornerShape(32.dp),
-                        color = Color.Transparent
+                        onClick = { showSortMenu = true }, modifier = Modifier.menuAnchor(
+                            ExposedDropdownMenuAnchorType.PrimaryNotEditable, true
+                        ), shape = RoundedCornerShape(32.dp), color = Color.Transparent
                     ) {
                         Row(
                             modifier = Modifier

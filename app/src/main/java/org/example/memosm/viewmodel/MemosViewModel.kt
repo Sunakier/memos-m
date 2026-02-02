@@ -376,6 +376,15 @@ class MemosViewModel(
         }
     }
 
+    fun refreshUserStats() {
+        viewModelScope.launch {
+            val user = _uiState.value.session.currUser
+            if (user?.name != null) {
+                fetchUserStats(user.name)
+            }
+        }
+    }
+
     private suspend fun fetchActivities() {
         try {
             val hostUrl = _uiState.value.session.hostUrl
