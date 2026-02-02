@@ -186,13 +186,16 @@ fun MemoItem(
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 )
                                 val commentCount = remember(memo.relations) {
-                                    memo.relations?.count { it.type == MemoRelationType.COMMENT } ?: 0
+                                    memo.relations?.count { it.type == MemoRelationType.COMMENT }
+                                        ?: 0
                                 }
                                 if (commentCount > 0 && !isDetailView) {
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Outlined.Comment,
-                                        contentDescription = stringResource(R.string.memo_detail_comments, commentCount),
+                                        contentDescription = stringResource(
+                                            R.string.memo_detail_comments, commentCount
+                                        ),
                                         modifier = Modifier.size(10.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                     )
@@ -200,7 +203,9 @@ fun MemoItem(
                                     Text(
                                         text = commentCount.toString(),
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                            alpha = 0.7f
+                                        )
                                     )
                                 }
                             }
@@ -237,7 +242,9 @@ fun MemoItem(
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.Comment,
-                                    contentDescription = stringResource(R.string.memo_detail_comments, commentCount),
+                                    contentDescription = stringResource(
+                                        R.string.memo_detail_comments, commentCount
+                                    ),
                                     modifier = Modifier.size(12.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 )
