@@ -64,11 +64,13 @@ class UserStatsWidget : GlanceAppWidget() {
             val prefs = currentState<Preferences>()
             val accountId = prefs[stringPreferencesKey("account_id")]
 
-            val state by produceState<StatsState>(initialValue = StatsState.Loading, key1 = accountId) {
+            val state by produceState<StatsState>(
+                initialValue = StatsState.Loading, key1 = accountId
+            ) {
                 if (accountId == null) {
                     // Stay loading or handle as special non-error case in UI? 
                     // Let's assume loading until we determine it's empty in UI check
-                    value = StatsState.Loading 
+                    value = StatsState.Loading
                 } else {
                     value = try {
                         withContext(Dispatchers.IO) {
@@ -83,7 +85,8 @@ class UserStatsWidget : GlanceAppWidget() {
                                         .build()
                                     val api = MemosApiFactory.create(account.hostUrl, client)
 
-                                    val username = account.user?.name ?: api.getCurrentSession().user?.name
+                                    val username =
+                                        account.user?.name ?: api.getCurrentSession().user?.name
 
                                     if (username != null) {
                                         val stats = api.getUserStats(username)
@@ -106,11 +109,8 @@ class UserStatsWidget : GlanceAppWidget() {
 
             GlanceTheme {
                 Box(
-                    modifier = GlanceModifier
-                        .fillMaxSize()
-                        .background(GlanceTheme.colors.surface)
-                        .padding(16.dp)
-                        .clickable(actionStartActivity<MainActivity>())
+                    modifier = GlanceModifier.fillMaxSize().background(GlanceTheme.colors.surface)
+                        .padding(16.dp).clickable(actionStartActivity<MainActivity>())
                 ) {
                     if (accountId == null) {
                         EmptyState(context)
@@ -118,7 +118,9 @@ class UserStatsWidget : GlanceAppWidget() {
                         when (val currentState = state) {
                             is StatsState.Loading -> LoadingState()
                             is StatsState.Error -> ErrorState(currentState.message)
-                            is StatsState.Success -> StatsContent(currentState.stats, currentState.account)
+                            is StatsState.Success -> StatsContent(
+                                currentState.stats, currentState.account
+                            )
                         }
                     }
                 }
@@ -144,8 +146,7 @@ class UserStatsWidget : GlanceAppWidget() {
     @Composable
     fun LoadingState() {
         Box(
-            modifier = GlanceModifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center
         ) {
             Text("Loading...", style = TextStyle(color = GlanceTheme.colors.onSurface))
         }
@@ -154,12 +155,10 @@ class UserStatsWidget : GlanceAppWidget() {
     @Composable
     fun ErrorState(message: String) {
         Box(
-            modifier = GlanceModifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center
         ) {
             Text(
-                "Error: $message",
-                style = TextStyle(color = GlanceTheme.colors.error)
+                "Error: $message", style = TextStyle(color = GlanceTheme.colors.error)
             )
         }
     }
@@ -167,22 +166,30 @@ class UserStatsWidget : GlanceAppWidget() {
     @Composable
     fun StatsContent(stats: UserStats, account: Account) {
         val context = androidx.glance.LocalContext.current
+        val size = androidx.glance.LocalSize.current
         val notAvailable = context.getString(R.string.common_not_available)
 
-        Column(modifier = GlanceModifier.fillMaxSize()) {
+        // Dynamic visibility based on height
+        val isTall = size.height >= 140.dp // Threshold for two rows
+        val isWide = size.width >= 300.dp // Maybe use for horizontal layout later?
+
+        Column(
+            modifier = GlanceModifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             // Header
             Row(verticalAlignment = Alignment.CenterVertically) {
-               Text(
-                   text = "Stats for ${account.name}",
-                   style = TextStyle(
-                       color = GlanceTheme.colors.onSurface,
-                       fontWeight = FontWeight.Bold,
-                       fontSize = 14.sp
-                   )
-               )
+                Text(
+                    text = "Stats for ${account.name}", style = TextStyle(
+                        color = GlanceTheme.colors.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                )
             }
             Spacer(GlanceModifier.height(8.dp))
-            
+
             // Stats Grid - Row 1
             Row(modifier = GlanceModifier.fillMaxWidth()) {
                 StatItem(
@@ -202,52 +209,48 @@ class UserStatsWidget : GlanceAppWidget() {
                 )
             }
 
-            Spacer(GlanceModifier.height(8.dp))
+            if (isTall) {
+                Spacer(GlanceModifier.height(8.dp))
 
-            // Stats Grid - Row 2
-            Row(modifier = GlanceModifier.fillMaxWidth()) {
-                StatItem(
-                    label = context.getString(R.string.profile_stats_links),
-                    value = stats.memoTypeStats?.linkCount?.toString() ?: notAvailable,
-                    modifier = GlanceModifier.defaultWeight()
-                )
-                StatItem(
-                    label = context.getString(R.string.profile_stats_code),
-                    value = stats.memoTypeStats?.codeCount?.toString() ?: notAvailable,
-                    modifier = GlanceModifier.defaultWeight()
-                )
-                StatItem(
-                    label = context.getString(R.string.profile_stats_todo),
-                    value = stats.memoTypeStats?.todoCount?.toString() ?: notAvailable,
-                    modifier = GlanceModifier.defaultWeight()
-                )
+                // Stats Grid - Row 2
+                Row(modifier = GlanceModifier.fillMaxWidth()) {
+                    StatItem(
+                        label = context.getString(R.string.profile_stats_links),
+                        value = stats.memoTypeStats?.linkCount?.toString() ?: notAvailable,
+                        modifier = GlanceModifier.defaultWeight()
+                    )
+                    StatItem(
+                        label = context.getString(R.string.profile_stats_code),
+                        value = stats.memoTypeStats?.codeCount?.toString() ?: notAvailable,
+                        modifier = GlanceModifier.defaultWeight()
+                    )
+                    StatItem(
+                        label = context.getString(R.string.profile_stats_todo),
+                        value = stats.memoTypeStats?.todoCount?.toString() ?: notAvailable,
+                        modifier = GlanceModifier.defaultWeight()
+                    )
+                }
             }
         }
     }
 
     @Composable
     fun StatItem(
-        label: String, 
-        value: String, 
-        modifier: GlanceModifier = GlanceModifier
+        label: String, value: String, modifier: GlanceModifier = GlanceModifier
     ) {
         Column(
-            modifier = modifier,
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = value,
-                style = TextStyle(
+                text = value, style = TextStyle(
                     color = GlanceTheme.colors.primary,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
             )
             Text(
-                text = label,
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurfaceVariant,
-                    fontSize = 12.sp
+                text = label, style = TextStyle(
+                    color = GlanceTheme.colors.onSurfaceVariant, fontSize = 12.sp
                 )
             )
         }

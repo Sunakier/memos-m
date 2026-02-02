@@ -72,15 +72,16 @@ class UserStatsWidgetConfigActivity : ComponentActivity() {
                 Scaffold(
                     topBar = {
                         TopAppBar(title = { Text("Select Account") })
-                    }
-                ) { padding ->
+                    }) { padding ->
                     val accounts = produceState<List<Account>>(initialValue = emptyList()) {
                         val manager = DataStoreManager(this@UserStatsWidgetConfigActivity)
                         value = manager.getAccounts()
                     }
 
                     LazyColumn(
-                        modifier = Modifier.padding(padding).fillMaxSize()
+                        modifier = Modifier
+                            .padding(padding)
+                            .fillMaxSize()
                     ) {
                         items(accounts.value) { account ->
                             AccountItem(account = account, onClick = {
@@ -97,11 +98,11 @@ class UserStatsWidgetConfigActivity : ComponentActivity() {
     private fun selectAccount(account: Account) {
         lifecycleScope.launch {
             val context = this@UserStatsWidgetConfigActivity
-            
+
             // Save the account ID to the widget state
             val widget = UserStatsWidget()
             val glanceId = GlanceAppWidgetManager(context).getGlanceIdBy(appWidgetId)
-            
+
             updateAppWidgetState(context, glanceId) { prefs ->
                 prefs[stringPreferencesKey("account_id")] = account.id
             }
@@ -124,17 +125,20 @@ fun AccountItem(account: Account, onClick: () -> Unit) {
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val avatarUrl = resolveResourceUrl(account.hostUrl, account.avatarUrl ?: account.user?.avatarUrl)
-        
+        val avatarUrl =
+            resolveResourceUrl(account.hostUrl, account.avatarUrl ?: account.user?.avatarUrl)
+
         AsyncImage(
             model = avatarUrl,
             contentDescription = null,
-            modifier = Modifier.size(40.dp).clip(CircleShape),
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape),
             contentScale = ContentScale.Crop
         )
-        
+
         Spacer(modifier = Modifier.width(16.dp))
-        
+
         Column {
             Text(
                 text = account.displayName ?: account.name ?: "Unknown User",
