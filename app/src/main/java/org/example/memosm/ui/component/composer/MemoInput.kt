@@ -97,7 +97,8 @@ fun MemoInput(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-            )
+            ),
+            inputTransformation = MarkdownListInputTransformation()
         )
 
         if (showTagPopup && filteredTags.isNotEmpty()) {
