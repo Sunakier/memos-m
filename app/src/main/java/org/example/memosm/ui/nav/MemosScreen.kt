@@ -133,7 +133,7 @@ fun MemosScreen(
             }
 
             // FAB for creating new memo
-            if (uiState.session.currUser != null) {
+            if (uiState.session.currUser != null && !isSearchExpanded) {
                 // Animate FAB position only if nav bar can be toggled (onToggleNavBar provided)
                 val fabBottomPadding by animateDpAsState(
                     targetValue = if (onToggleNavBar != null && isFabExpanded) 96.dp else 16.dp,
