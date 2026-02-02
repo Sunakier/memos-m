@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Comment
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,6 +41,7 @@ import coil3.network.httpHeaders
 import com.mikepenz.markdown.model.rememberMarkdownState
 import org.example.memosm.R
 import org.example.memosm.model.Memo
+import org.example.memosm.model.MemoRelationType
 import org.example.memosm.model.MemoState
 import org.example.memosm.model.Reaction
 import org.example.memosm.model.User
@@ -183,6 +185,24 @@ fun MemoItem(
                                     modifier = Modifier.size(10.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 )
+                                val commentCount = remember(memo.relations) {
+                                    memo.relations?.count { it.type == MemoRelationType.COMMENT } ?: 0
+                                }
+                                if (commentCount > 0 && !isDetailView) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Outlined.Comment,
+                                        contentDescription = stringResource(R.string.memo_detail_comments, commentCount),
+                                        modifier = Modifier.size(10.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                    )
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text(
+                                        text = commentCount.toString(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                    )
+                                }
                             }
                         }
                     } else {
@@ -210,6 +230,24 @@ fun MemoItem(
                                 modifier = Modifier.size(12.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
+                            val commentCount = remember(memo.relations) {
+                                memo.relations?.count { it.type == MemoRelationType.COMMENT } ?: 0
+                            }
+                            if (commentCount > 0 && !isDetailView) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Outlined.Comment,
+                                    contentDescription = stringResource(R.string.memo_detail_comments, commentCount),
+                                    modifier = Modifier.size(12.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = commentCount.toString(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            }
                         }
                     }
                 }

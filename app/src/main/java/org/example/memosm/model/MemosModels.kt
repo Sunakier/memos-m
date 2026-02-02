@@ -74,8 +74,18 @@ data class Attachment(
         get() = mimeType ?: type
 }
 
+
+enum class MemoRelationType{
+    @SerialName("TYPE_UNSPECIFIED")
+    TYPE_UNSPECIFIED,
+    @SerialName("REFERENCE")
+    COMMENT,
+    @SerialName("COMMENT")
+    REPLY
+}
+
 data class MemoRelation(
-    val memo: MemoSnippet, val relatedMemo: MemoSnippet, val type: String
+    val memo: MemoSnippet, val relatedMemo: MemoSnippet, val type: MemoRelationType
 )
 
 data class MemoSnippet(
