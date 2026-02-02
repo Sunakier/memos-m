@@ -48,7 +48,6 @@ class MarkdownLanguageHandler(
             MarkdownElementTypes.ATX_1 -> {
                 addStyle(
                     SpanStyle(
-                        fontSize = 1.5.em,
                         fontWeight = FontWeight.Bold,
                         color = colorScheme.primary
                     ), range.first, range.last
@@ -57,7 +56,6 @@ class MarkdownLanguageHandler(
             MarkdownElementTypes.ATX_2 -> {
                 addStyle(
                     SpanStyle(
-                        fontSize = 1.3.em,
                         fontWeight = FontWeight.Bold,
                         color = colorScheme.primary
                     ), range.first, range.last
@@ -66,7 +64,6 @@ class MarkdownLanguageHandler(
             MarkdownElementTypes.ATX_3 -> {
                 addStyle(
                     SpanStyle(
-                        fontSize = 1.1.em,
                         fontWeight = FontWeight.Bold,
                         color = colorScheme.secondary
                     ), range.first, range.last
@@ -107,10 +104,41 @@ class MarkdownLanguageHandler(
             MarkdownElementTypes.BLOCK_QUOTE -> {
                 addStyle(
                     SpanStyle(
-                        color = colorScheme.onSurfaceVariant,
-                        fontStyle = FontStyle.Italic
+                        color = colorScheme.tertiary // Custom text color for block quotes
                     ), range.first, range.last
                 )
+            }
+            
+            // Syntax Highlighting for specific tokens
+            org.intellij.markdown.flavours.gfm.GFMTokenTypes.CHECK_BOX,
+            org.intellij.markdown.MarkdownTokenTypes.ATX_HEADER,
+            org.intellij.markdown.MarkdownTokenTypes.LIST_BULLET,
+            org.intellij.markdown.MarkdownTokenTypes.BLOCK_QUOTE,
+            org.intellij.markdown.MarkdownTokenTypes.CODE_FENCE_START,
+            org.intellij.markdown.MarkdownTokenTypes.CODE_FENCE_END,
+            org.intellij.markdown.MarkdownTokenTypes.LPAREN,
+            org.intellij.markdown.MarkdownTokenTypes.RPAREN,
+            org.intellij.markdown.MarkdownTokenTypes.LBRACKET,
+            org.intellij.markdown.MarkdownTokenTypes.RBRACKET -> {
+                addStyle(
+                    SpanStyle(
+                        color = colorScheme.tertiary.copy(alpha = 0.8f) // Highlight syntax markers
+                    ), range.first, range.last
+                )
+            }
+            org.intellij.markdown.MarkdownTokenTypes.TEXT -> {
+                // Highlight Hashtags
+                val textContent = text.substring(range.first, range.last)
+                val hashtagRegex = Regex("#[^\\s#]+")
+                hashtagRegex.findAll(textContent).forEach { match ->
+                    val start = range.first + match.range.first
+                    val end = range.first + match.range.last + 1
+                    addStyle(
+                        SpanStyle(color = colorScheme.primary),
+                        start,
+                        end
+                    )
+                }
             }
         }
 
