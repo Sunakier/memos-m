@@ -3,7 +3,7 @@
     android:description="@string/user_stats_widget_description"
     android:initialLayout="@layout/widget_draft"
     android:minWidth="200dp"
-    android:minHeight="100dp"
+    android:minHeight="140dp"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:configure="org.example.memosm.widget.stats.UserStatsWidgetConfigActivity"

@@ -166,6 +166,9 @@ class UserStatsWidget : GlanceAppWidget() {
 
     @Composable
     fun StatsContent(stats: UserStats, account: Account) {
+        val context = androidx.glance.LocalContext.current
+        val notAvailable = context.getString(R.string.common_not_available)
+
         Column(modifier = GlanceModifier.fillMaxSize()) {
             // Header
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -180,21 +183,42 @@ class UserStatsWidget : GlanceAppWidget() {
             }
             Spacer(GlanceModifier.height(8.dp))
             
-            // Stats Grid
+            // Stats Grid - Row 1
             Row(modifier = GlanceModifier.fillMaxWidth()) {
                 StatItem(
-                    label = "Memos",
+                    label = context.getString(R.string.profile_stats_memos),
                     value = stats.totalMemoCount.toString(),
                     modifier = GlanceModifier.defaultWeight()
                 )
                 StatItem(
-                    label = "Tags",
+                    label = context.getString(R.string.profile_stats_tags),
                     value = stats.tagCount?.size?.toString() ?: "0",
                     modifier = GlanceModifier.defaultWeight()
                 )
                 StatItem(
-                    label = "Pinned",
+                    label = context.getString(R.string.profile_stats_pinned),
                     value = stats.pinnedMemos?.size?.toString() ?: "0",
+                    modifier = GlanceModifier.defaultWeight()
+                )
+            }
+
+            Spacer(GlanceModifier.height(8.dp))
+
+            // Stats Grid - Row 2
+            Row(modifier = GlanceModifier.fillMaxWidth()) {
+                StatItem(
+                    label = context.getString(R.string.profile_stats_links),
+                    value = stats.memoTypeStats?.linkCount?.toString() ?: notAvailable,
+                    modifier = GlanceModifier.defaultWeight()
+                )
+                StatItem(
+                    label = context.getString(R.string.profile_stats_code),
+                    value = stats.memoTypeStats?.codeCount?.toString() ?: notAvailable,
+                    modifier = GlanceModifier.defaultWeight()
+                )
+                StatItem(
+                    label = context.getString(R.string.profile_stats_todo),
+                    value = stats.memoTypeStats?.todoCount?.toString() ?: notAvailable,
                     modifier = GlanceModifier.defaultWeight()
                 )
             }
