@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
@@ -111,6 +112,7 @@ fun MemoInput(
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(focusRequester),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
             minLines = minHeightInLines,
             maxLines = maxHeightInLines,
