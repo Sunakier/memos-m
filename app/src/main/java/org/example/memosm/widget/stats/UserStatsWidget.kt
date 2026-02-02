@@ -110,7 +110,7 @@ class UserStatsWidget : GlanceAppWidget() {
             GlanceTheme {
                 Box(
                     modifier = GlanceModifier.fillMaxSize().background(GlanceTheme.colors.surface)
-                        .padding(16.dp).clickable(actionStartActivity<MainActivity>())
+                        .padding(horizontal = 12.dp, vertical = 8.dp).clickable(actionStartActivity<MainActivity>())
                 ) {
                     if (accountId == null) {
                         EmptyState(context)
@@ -171,7 +171,7 @@ class UserStatsWidget : GlanceAppWidget() {
 
         // Configuration
         val height = size.height
-        val useScroll = height < 130.dp
+        val useScroll = height < 135.dp // Threshold lowered to favor centering
         val useLargeFonts = height > 220.dp
         
         val fontScale = if (useLargeFonts) 1.3f else 1.0f
@@ -179,6 +179,9 @@ class UserStatsWidget : GlanceAppWidget() {
         val valueFontSize = 18.sp * fontScale
         val labelFontSize = 12.sp * fontScale
         val headerFontSize = 14.sp * fontScale
+        
+        // Increase padding between rows as requested
+        val rowSpacing = 12.dp
         
         if (useScroll) {
              androidx.glance.appwidget.lazy.LazyColumn(
@@ -188,7 +191,7 @@ class UserStatsWidget : GlanceAppWidget() {
                 // Header (Centered explicitly in LazyColumn item)
                 item {
                      Box(
-                        modifier = GlanceModifier.fillMaxWidth().padding(bottom = 8.dp),
+                        modifier = GlanceModifier.fillMaxWidth().padding(bottom = rowSpacing),
                         contentAlignment = Alignment.Center
                     ) {
                        Text(
@@ -205,7 +208,7 @@ class UserStatsWidget : GlanceAppWidget() {
                     Row1(context, stats, valueFontSize, labelFontSize)
                 }
                 item {
-                    Spacer(GlanceModifier.height(8.dp))
+                    Spacer(GlanceModifier.height(rowSpacing))
                 }
                 item {
                     Row2(context, stats, notAvailable, valueFontSize, labelFontSize)
@@ -224,10 +227,10 @@ class UserStatsWidget : GlanceAppWidget() {
                        fontWeight = FontWeight.Bold,
                        fontSize = headerFontSize
                    ),
-                   modifier = GlanceModifier.padding(bottom = 8.dp)
+                   modifier = GlanceModifier.padding(bottom = rowSpacing)
                )
                 Row1(context, stats, valueFontSize, labelFontSize)
-                Spacer(GlanceModifier.height(12.dp))
+                Spacer(GlanceModifier.height(rowSpacing))
                 Row2(context, stats, notAvailable, valueFontSize, labelFontSize)
             }
         }
@@ -262,7 +265,7 @@ class UserStatsWidget : GlanceAppWidget() {
 
     @Composable
     fun Row2(context: Context, stats: UserStats, notAvailable: String, valueSize: androidx.compose.ui.unit.TextUnit, labelSize: androidx.compose.ui.unit.TextUnit) {
-        Row(modifier = GlanceModifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Row(modifier = GlanceModifier.fillMaxWidth()) { // Removed bottom padding from Row itself to control via Spacer
             StatItem(
                 label = context.getString(R.string.profile_stats_links),
                 value = stats.memoTypeStats?.linkCount?.toString() ?: notAvailable,
