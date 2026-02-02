@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.input.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
@@ -46,10 +45,8 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.platform.LocalResources
 import androidx.core.net.toUri
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.example.memosm.R
 import org.example.memosm.data.base64ToTempUri
 import org.example.memosm.data.uriToBase64Attachment
@@ -87,7 +84,8 @@ fun MemoComposer(
     val context = LocalContext.current
     val resources = LocalResources.current
 
-    val contentState = remember { TextFieldState(initialContent) }
+    // Changed to TextFieldValue for VisualTransformation support
+    var contentState by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(initialContent)) }
     var visibility by remember { mutableStateOf(initialVisibility) }
     var location by remember { mutableStateOf(initialLocation) }
 
@@ -294,7 +292,7 @@ fun MemoComposer(
         val convertedAttachments = draftAttachments.mapNotNull { (_, attachment) -> attachment }
 
         onDraftChanged.invoke(
-            contentState.text.toString(), visibility, convertedAttachments, location
+            contentState.text, visibility, convertedAttachments, location
         )
     }
 
@@ -381,6 +379,7 @@ fun MemoComposer(
 
         MemoInput(
             contentState = contentState,
+            onContentChange = { contentState = it },
             placeholder = placeholder,
             availableTags = availableTags,
             enabled = !isPosting,
