@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -30,6 +32,10 @@ import androidx.compose.ui.window.PopupPositionProvider
 import kotlinx.coroutines.delay
 import org.example.memosm.R
 import kotlin.math.roundToInt
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.TextUnitType
+import androidx.compose.ui.unit.isSpecified
 
 @Composable
 fun rememberMarkdownLanguageHandler(): MarkdownLanguageHandler {
@@ -53,6 +59,7 @@ fun MemoInput(
     maxHeightInLines: Int = Int.MAX_VALUE
 ) {
     val focusRequester = remember { FocusRequester() }
+    val scrollState = rememberScrollState()
 
     // Tag autocomplete logic
     var showTagPopup by remember { mutableStateOf(false) }
@@ -107,6 +114,25 @@ fun MemoInput(
             unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
         )
 
+        val paddingValues = OutlinedTextFieldDefaults.contentPadding()
+        val textStyle = LocalTextStyle.current
+
+        val maxLimitModifier = remember(maxHeightInLines, density, textStyle, paddingValues) {
+            if (maxHeightInLines == Int.MAX_VALUE) Modifier
+            else {
+                val lineHeight = if (textStyle.lineHeight.isSpecified && textStyle.lineHeight.type == TextUnitType.Sp) {
+                    textStyle.lineHeight
+                } else {
+                    textStyle.fontSize * 1.5 // Fallback estimate
+                }
+                val verticalPadding = paddingValues.calculateTopPadding() + paddingValues.calculateBottomPadding()
+                val maxHeightDp = with(density) {
+                    (lineHeight.toPx() * maxHeightInLines).toDp() + verticalPadding
+                }
+                Modifier.heightIn(max = maxHeightDp)
+            }
+        }
+
         BasicTextField(
             value = contentState,
             onValueChange = { newValue ->
@@ -115,11 +141,11 @@ fun MemoInput(
             },
             modifier = Modifier
                 .fillMaxWidth()
+                .then(maxLimitModifier)
+                .then(if (maxHeightInLines != Int.MAX_VALUE) Modifier.verticalScroll(scrollState) else Modifier)
                 .focusRequester(focusRequester),
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
-            minLines = minHeightInLines,
-            maxLines = maxHeightInLines,
             enabled = enabled,
             onTextLayout = { result -> textLayoutResult = result },
             visualTransformation = markdownHandler,
@@ -154,11 +180,14 @@ fun MemoInput(
                 )
             }
 
-            val popupPositionProvider = remember(cursorRect, imeBottom, density) {
+
+            val effectiveScrollTop = if (maxHeightInLines != Int.MAX_VALUE) scrollState.value else 0
+            val popupPositionProvider = remember(cursorRect, imeBottom, density, effectiveScrollTop) {
                 CursorPopupPositionProvider(
                     cursorRect = cursorRect,
                     imeBottom = imeBottom,
-                    density = density
+                    density = density,
+                    scrollTop = effectiveScrollTop
                 )
             }
 
@@ -210,7 +239,8 @@ fun Modifier.noRippleClickable(onClick: () -> Unit): Modifier = composed {
 private class CursorPopupPositionProvider(
     private val cursorRect: IntRect,
     private val imeBottom: Int,
-    private val density: androidx.compose.ui.unit.Density
+    private val density: androidx.compose.ui.unit.Density,
+    private val scrollTop: Int
 ) : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect,
@@ -219,12 +249,13 @@ private class CursorPopupPositionProvider(
         popupContentSize: IntSize
     ): IntOffset {
         val horizontalPadding = with(density) { 16.dp.roundToPx() }
-        val paddingBelow = with(density) { 8.dp.roundToPx() }
-        val paddingAbove = with(density) { (-4).dp.roundToPx() }
+        // Account for OutlinedTextField internal padding (approx 16dp)
+        val paddingBelow = with(density) { (16 + 4).dp.roundToPx() }
+        val paddingAbove = with(density) { (16 - 4).dp.roundToPx() }
 
         val targetX = anchorBounds.left + cursorRect.left + horizontalPadding
-        val targetYBelow = anchorBounds.top + cursorRect.bottom + paddingBelow
-        val targetYAbove = anchorBounds.top + cursorRect.top - popupContentSize.height - paddingAbove
+        val targetYBelow = anchorBounds.top + cursorRect.bottom - scrollTop + paddingBelow
+        val targetYAbove = anchorBounds.top + cursorRect.top - scrollTop - popupContentSize.height + paddingAbove
 
         val effectiveWindowBottom = windowSize.height - imeBottom
 
