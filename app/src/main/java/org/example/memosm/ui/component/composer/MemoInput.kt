@@ -107,25 +107,22 @@ fun MemoInput(
         }
     }
 
-    Box(modifier = modifier) {
+    Column(modifier = modifier) {
         val interactionSource = remember { MutableInteractionSource() }
-        val colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-        )
-
-        val paddingValues = OutlinedTextFieldDefaults.contentPadding()
+        val paddingValues = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
         val textStyle = LocalTextStyle.current
 
         val maxLimitModifier = remember(maxHeightInLines, density, textStyle, paddingValues) {
             if (maxHeightInLines == Int.MAX_VALUE) Modifier
             else {
-                val lineHeight = if (textStyle.lineHeight.isSpecified && textStyle.lineHeight.type == TextUnitType.Sp) {
-                    textStyle.lineHeight
-                } else {
-                    textStyle.fontSize * 1.5 // Fallback estimate
-                }
-                val verticalPadding = paddingValues.calculateTopPadding() + paddingValues.calculateBottomPadding()
+                val lineHeight =
+                    if (textStyle.lineHeight.isSpecified && textStyle.lineHeight.type == TextUnitType.Sp) {
+                        textStyle.lineHeight
+                    } else {
+                        textStyle.fontSize * 1.5 // Fallback estimate
+                    }
+                val verticalPadding =
+                    paddingValues.calculateTopPadding() + paddingValues.calculateBottomPadding()
                 val maxHeightDp = with(density) {
                     (lineHeight.toPx() * maxHeightInLines).toDp() + verticalPadding
                 }
@@ -133,100 +130,101 @@ fun MemoInput(
             }
         }
 
-        BasicTextField(
-            value = contentState,
-            onValueChange = { newValue ->
-                val processedValue = markdownHandler.processInput(contentState, newValue)
-                onContentChange(processedValue)
-            },
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(maxLimitModifier)
-                .then(if (maxHeightInLines != Int.MAX_VALUE) Modifier.verticalScroll(scrollState) else Modifier)
-                .focusRequester(focusRequester),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface),
-            enabled = enabled,
-            onTextLayout = { result -> textLayoutResult = result },
-            visualTransformation = markdownHandler,
-            interactionSource = interactionSource,
-            decorationBox = { innerTextField ->
-                OutlinedTextFieldDefaults.DecorationBox(
-                    value = contentState.text,
-                    innerTextField = innerTextField,
-                    enabled = enabled,
-                    singleLine = false,
-                    visualTransformation = markdownHandler,
-                    interactionSource = interactionSource,
-                    placeholder = { Text(placeholder) },
-                    contentPadding = OutlinedTextFieldDefaults.contentPadding(),
-                    colors = colors,
-                    label = null
-                )
-            })
-
-        if (showTagPopup && filteredTags.isNotEmpty()) {
-            val imeBottom = WindowInsets.ime.getBottom(density)
-            val cursorRect = remember(textLayoutResult, contentState.selection) {
-                val layout = textLayoutResult ?: return@remember IntRect.Zero
-                val cursorIndex = contentState.selection.start
-                val safeIndex = cursorIndex.coerceIn(0, layout.layoutInput.text.length)
-                val rect = layout.getCursorRect(safeIndex)
-                IntRect(
-                    left = rect.left.roundToInt(),
-                    top = rect.top.roundToInt(),
-                    right = rect.right.roundToInt(),
-                    bottom = rect.bottom.roundToInt()
+                .padding(paddingValues)
+        ) {
+            if (contentState.text.isEmpty()) {
+                Text(
+                    text = placeholder,
+                    style = textStyle.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                 )
             }
 
+            BasicTextField(
+                value = contentState,
+                onValueChange = { newValue ->
+                    val processedValue = markdownHandler.processInput(contentState, newValue)
+                    onContentChange(processedValue)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(maxLimitModifier)
+                    .then(if (maxHeightInLines != Int.MAX_VALUE) Modifier.verticalScroll(scrollState) else Modifier)
+                    .focusRequester(focusRequester),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                textStyle = textStyle.copy(color = MaterialTheme.colorScheme.onSurface),
+                enabled = enabled,
+                onTextLayout = { result -> textLayoutResult = result },
+                visualTransformation = markdownHandler,
+                interactionSource = interactionSource,
+            )
 
-            val effectiveScrollTop = if (maxHeightInLines != Int.MAX_VALUE) scrollState.value else 0
-            val popupPositionProvider = remember(cursorRect, imeBottom, density, effectiveScrollTop) {
-                CursorPopupPositionProvider(
-                    cursorRect = cursorRect,
-                    imeBottom = imeBottom,
-                    density = density,
-                    scrollTop = effectiveScrollTop
-                )
-            }
+            if (showTagPopup && filteredTags.isNotEmpty()) {
+                val imeBottom = WindowInsets.ime.getBottom(density)
+                val cursorRect = remember(textLayoutResult, contentState.selection) {
+                    val layout = textLayoutResult ?: return@remember IntRect.Zero
+                    val cursorIndex = contentState.selection.start
+                    val safeIndex = cursorIndex.coerceIn(0, layout.layoutInput.text.length)
+                    val rect = layout.getCursorRect(safeIndex)
+                    IntRect(
+                        left = rect.left.roundToInt(),
+                        top = rect.top.roundToInt(),
+                        right = rect.right.roundToInt(),
+                        bottom = rect.bottom.roundToInt()
+                    )
+                }
 
-            Popup(
-                popupPositionProvider = popupPositionProvider
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .widthIn(min = 100.dp, max = 200.dp)
-                        .heightIn(max = 200.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    tonalElevation = 3.dp,
-                    shadowElevation = 3.dp,
-                    color = MaterialTheme.colorScheme.surfaceContainer
+                val effectiveScrollTop =
+                    if (maxHeightInLines != Int.MAX_VALUE) scrollState.value else 0
+                val popupPositionProvider =
+                    remember(cursorRect, imeBottom, density, effectiveScrollTop) {
+                        CursorPopupPositionProvider(
+                            cursorRect = cursorRect,
+                            imeBottom = imeBottom,
+                            density = density,
+                            scrollTop = effectiveScrollTop
+                        )
+                    }
+
+                Popup(
+                    popupPositionProvider = popupPositionProvider
                 ) {
-                    LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                        items(filteredTags) { tag ->
-                            DropdownMenuItem(text = { Text(text = "#$tag") }, onClick = {
-                                val replacement = "#$tag "
-                                val text = contentState.text
-                                val newText = text.replaceRange(
-                                    tagStartIndex, contentState.selection.start, replacement
-                                )
-                                val newSelection = TextRange(tagStartIndex + replacement.length)
-                                onContentChange(
-                                    contentState.copy(
-                                        text = newText, selection = newSelection
+                    Surface(
+                        modifier = Modifier
+                            .widthIn(min = 100.dp, max = 200.dp)
+                            .heightIn(max = 200.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        tonalElevation = 3.dp,
+                        shadowElevation = 3.dp,
+                        color = MaterialTheme.colorScheme.surfaceContainer
+                    ) {
+                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                            items(filteredTags) { tag ->
+                                DropdownMenuItem(text = { Text(text = "#$tag") }, onClick = {
+                                    val replacement = "#$tag "
+                                    val text = contentState.text
+                                    val newText = text.replaceRange(
+                                        tagStartIndex, contentState.selection.start, replacement
                                     )
-                                )
-                                showTagPopup = false
-                            })
+                                    val newSelection = TextRange(tagStartIndex + replacement.length)
+                                    onContentChange(
+                                        contentState.copy(
+                                            text = newText, selection = newSelection
+                                        )
+                                    )
+                                    showTagPopup = false
+                                })
+                            }
                         }
                     }
                 }
             }
         }
+        HorizontalDivider()
     }
 }
-
 
 fun Modifier.noRippleClickable(onClick: () -> Unit): Modifier = composed {
     this.clickable(
@@ -248,14 +246,15 @@ private class CursorPopupPositionProvider(
         layoutDirection: LayoutDirection,
         popupContentSize: IntSize
     ): IntOffset {
-        val horizontalPadding = with(density) { 16.dp.roundToPx() }
-        // Account for OutlinedTextField internal padding (approx 16dp)
-        val paddingBelow = with(density) { (16 + 4).dp.roundToPx() }
-        val paddingAbove = with(density) { (16 - 4).dp.roundToPx() }
+        val horizontalPadding = with(density) { 4.dp.roundToPx() }
+        // Account for custom inner padding (vertical = 12dp)
+        val paddingBelow = with(density) { 12.dp.roundToPx() }
+        val paddingAbove = with(density) { 4.dp.roundToPx() }
 
         val targetX = anchorBounds.left + cursorRect.left + horizontalPadding
         val targetYBelow = anchorBounds.top + cursorRect.bottom - scrollTop + paddingBelow
-        val targetYAbove = anchorBounds.top + cursorRect.top - scrollTop - popupContentSize.height + paddingAbove
+        val targetYAbove =
+            anchorBounds.top + cursorRect.top - scrollTop - popupContentSize.height + paddingAbove
 
         val effectiveWindowBottom = windowSize.height - imeBottom
 

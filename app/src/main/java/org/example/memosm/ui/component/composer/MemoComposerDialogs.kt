@@ -59,22 +59,25 @@ fun MemoComposerDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = if (isTablet) 24.dp else 16.dp)
                 .padding(bottom = 16.dp)
                 .navigationBarsPadding()
                 .imePadding()
         ) {
+            val horizontalPadding = if (isTablet) 24.dp else 16.dp
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(horizontal = horizontalPadding)
             )
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
 
             Box(
                 modifier = Modifier
                     .weight(1f, fill = false)
                     .verticalScroll(rememberScrollState())
+                    .padding(horizontal = horizontalPadding)
             ) {
                 // Determine initial content: use initialMemo content if editing, else use passed initialContent
                 val effectiveInitialContent = initialMemo?.content ?: initialContent
