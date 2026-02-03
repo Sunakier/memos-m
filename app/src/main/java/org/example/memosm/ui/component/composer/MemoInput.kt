@@ -21,8 +21,12 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
 import kotlinx.coroutines.delay
 import org.example.memosm.R
 import kotlin.math.roundToInt
@@ -136,22 +140,31 @@ fun MemoInput(
             })
 
         if (showTagPopup && filteredTags.isNotEmpty()) {
-            val popupOffset = remember(textLayoutResult, contentState.selection, density) {
-                val layout = textLayoutResult
-                if (layout != null) {
-                    val cursorIndex = contentState.selection.start
-                    val safeIndex = cursorIndex.coerceIn(0, layout.layoutInput.text.length)
-                    val cursorRect = layout.getCursorRect(safeIndex)
-                    val horizontalPadding = with(density) { 16.dp.roundToPx() }
-                    val verticalPadding = with(density) { 16.dp.roundToPx() }
-                    IntOffset(
-                        x = cursorRect.left.roundToInt() + horizontalPadding,
-                        y = cursorRect.bottom.roundToInt() + verticalPadding
-                    )
-                } else IntOffset(0, 150)
+            val imeBottom = WindowInsets.ime.getBottom(density)
+            val cursorRect = remember(textLayoutResult, contentState.selection) {
+                val layout = textLayoutResult ?: return@remember IntRect.Zero
+                val cursorIndex = contentState.selection.start
+                val safeIndex = cursorIndex.coerceIn(0, layout.layoutInput.text.length)
+                val rect = layout.getCursorRect(safeIndex)
+                IntRect(
+                    left = rect.left.roundToInt(),
+                    top = rect.top.roundToInt(),
+                    right = rect.right.roundToInt(),
+                    bottom = rect.bottom.roundToInt()
+                )
             }
 
-            Popup(alignment = Alignment.TopStart, offset = popupOffset) {
+            val popupPositionProvider = remember(cursorRect, imeBottom, density) {
+                CursorPopupPositionProvider(
+                    cursorRect = cursorRect,
+                    imeBottom = imeBottom,
+                    density = density
+                )
+            }
+
+            Popup(
+                popupPositionProvider = popupPositionProvider
+            ) {
                 Surface(
                     modifier = Modifier
                         .widthIn(min = 100.dp, max = 200.dp)
@@ -185,10 +198,43 @@ fun MemoInput(
     }
 }
 
+
 fun Modifier.noRippleClickable(onClick: () -> Unit): Modifier = composed {
     this.clickable(
         interactionSource = remember { MutableInteractionSource() },
         indication = null,
         onClick = onClick
     )
+}
+
+private class CursorPopupPositionProvider(
+    private val cursorRect: IntRect,
+    private val imeBottom: Int,
+    private val density: androidx.compose.ui.unit.Density
+) : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize
+    ): IntOffset {
+        val horizontalPadding = with(density) { 16.dp.roundToPx() }
+        val paddingBelow = with(density) { 8.dp.roundToPx() }
+        val paddingAbove = with(density) { (-4).dp.roundToPx() }
+
+        val targetX = anchorBounds.left + cursorRect.left + horizontalPadding
+        val targetYBelow = anchorBounds.top + cursorRect.bottom + paddingBelow
+        val targetYAbove = anchorBounds.top + cursorRect.top - popupContentSize.height - paddingAbove
+
+        val effectiveWindowBottom = windowSize.height - imeBottom
+
+        val isSpaceBelow = (targetYBelow + popupContentSize.height) <= effectiveWindowBottom
+
+        return if (isSpaceBelow) {
+            IntOffset(targetX, targetYBelow)
+        } else {
+            // Priority is to show above if blocked below
+            IntOffset(targetX, targetYAbove)
+        }
+    }
 }

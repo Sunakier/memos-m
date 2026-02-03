@@ -54,7 +54,7 @@ fun CustomMarkdownBlockQuote(
 
                 when (child.type) {
 
-                    // ✅ Recurse for nested blockquotes
+                    // Recurse for nested blockquotes
                     MarkdownElementTypes.BLOCK_QUOTE -> {
                         CustomMarkdownBlockQuote(
                             content = content, node = child, style = style
