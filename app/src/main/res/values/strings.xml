@@ -148,6 +148,7 @@
     <string name="memo_visibility_private">Private</string>
 
     <string name="common_save">Save</string>
+    <string name="common_share">Share</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_close">Close</string>
     <string name="common_not_available">N/A</string>

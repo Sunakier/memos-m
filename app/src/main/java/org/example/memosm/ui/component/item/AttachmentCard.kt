@@ -371,6 +371,9 @@ fun AttachmentCard(
                                         contentDescription = null,
                                         modifier = Modifier.size(20.dp)
                                     )
+                                    val openWebUrl = remember(attachment, hostUrl) {
+                                        AttachmentManager.getAttachmentUrl(hostUrl, attachment)
+                                    }
 
                                     DropdownMenu(
                                         expanded = showMenu,
@@ -394,10 +397,6 @@ fun AttachmentCard(
                                                     contentDescription = null
                                                 )
                                             })
-                                        val openWebUrl = remember(attachment, hostUrl) {
-                                            AttachmentManager.getAttachmentUrl(hostUrl, attachment)
-                                        }
-
                                         if (openWebUrl != null) {
                                             DropdownMenuItem(
                                                 text = { Text(stringResource(R.string.memo_action_open_web)) },
@@ -424,6 +423,34 @@ fun AttachmentCard(
                                                 leadingIcon = {
                                                     Icon(
                                                         Icons.Outlined.Language,
+                                                        contentDescription = null
+                                                    )
+                                                })
+
+                                            DropdownMenuItem(
+                                                text = { Text(stringResource(R.string.common_share)) },
+                                                onClick = {
+                                                    showMenu = false
+                                                    try {
+                                                        val sendIntent = Intent().apply {
+                                                            action = Intent.ACTION_SEND
+                                                            putExtra(Intent.EXTRA_TEXT, openWebUrl)
+                                                            type = "text/plain"
+                                                        }
+                                                        val shareIntent =
+                                                            Intent.createChooser(sendIntent, null)
+                                                        context.startActivity(shareIntent)
+                                                    } catch (e: Exception) {
+                                                        Log.e(
+                                                            "AttachmentCard",
+                                                            "Failed to share link",
+                                                            e
+                                                        )
+                                                    }
+                                                },
+                                                leadingIcon = {
+                                                    Icon(
+                                                        Icons.Outlined.Share,
                                                         contentDescription = null
                                                     )
                                                 })
