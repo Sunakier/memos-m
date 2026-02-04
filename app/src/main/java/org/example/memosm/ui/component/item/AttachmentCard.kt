@@ -235,10 +235,6 @@ fun AttachmentCard(
                 showSize
             ) {
                 val w = maxWidth.value
-                // Remove old currentIntrinsic logic block
-
-
-
                 val footerHeight =
                     if (showInfo && !isCompact && (showFilename || showSize || attachment?.createTime != null)) 56f else 0f
 
@@ -252,31 +248,10 @@ fun AttachmentCard(
                          intrinsicRatio
                     }
                 } else {
-                    // For files/audio (non-media), we want a fixed height card usually.
-                    // If compactMode changes, height changes.
-                    // Standard File Card Height is often fixed, e.g. 56dp (just footer) + maybe preview?
-                    // But here we use 'FileThumbnail' which fills.
-                    
-                    // If isWide, we used 100f fixed height for content?
-                    val contentHeight = if (isWide) 100f else w / intrinsicRatio // If not wide, square?
-                    
-                    // Wait, previous logic:
-                    // val currentIntrinsic = if (!isImage && !isVideo && isWide) ... if (w>0) w/100f else 3.0f ... else intrinsicRatio (1.0)
-                    
-                    // Let's simplify.
-                    // If it's a File/Audio, effective content height:
-                    // If isWide -> 100f.
-                    // If !isWide -> It was using 1.0f (Square). This is likely the "Rect" issue.
-                    // Files should probably be rectangular, e.g. 3:2 or 2:1?
-                    // Or maybe a fixed height like 120dp?
-                    
-                    val effectiveContentHeight = if (isWide) 100f else w * 0.75f // Make it 4:3 instead of square?
-                    // actually if w * 0.75, then ratio is 1.33. Content is 1.33.
-
                     // To fix "RECT" (square), let's ensure non-media is nicer.
                     // let's use 3:2 ratio (~1.5) for non-wide files.
                     val nonMediaIntrinsic = 1.5f 
-                    val effectiveIntrinsic = if (isWide) (if(w>0) w/100f else 3.0f) else nonMediaIntrinsic
+                    val effectiveIntrinsic = if (isWide) (if(w>0) w/180f else 3.0f) else nonMediaIntrinsic
 
                     if (w > 0 && footerHeight > 0) {
                         w / (w / effectiveIntrinsic + footerHeight)
