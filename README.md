@@ -61,7 +61,6 @@ You can also download from [release](https://github.com/yamada-sexta/memos-m/rel
     - [ ] LaTeX
   - Attachment
     - [x] View attachments
-    - [ ] Edit attachments
     - [x] Large attachment handle (blocking)
     - [x] Video playback
     - [x] Audio playback
