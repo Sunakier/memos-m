@@ -108,6 +108,9 @@ fun MemoComposerDialog(
                     onUploadFile = { uri, context ->
                         viewModel.uploadAttachment(uri, context)
                     },
+                    onGetLocationName = { lat, lon ->
+                        viewModel.reverseGeocode(lat, lon)
+                    },
                     availableTags = uiState.session.userStats?.tagCount?.keys ?: emptySet(),
                     token = uiState.session.token,
                     hostUrl = hostUrl,

@@ -66,6 +66,7 @@ import java.io.File
 fun MemoComposer(
     onPublish: (String, Visibility, List<Attachment>, Location?) -> Unit,
     onUploadFile: suspend (Uri, Context) -> Attachment?,
+    onGetLocationName: (suspend (Double, Double) -> String?)? = null,
     availableTags: Set<String>,
     token: String,
     hostUrl: String,
@@ -171,13 +172,35 @@ fun MemoComposer(
             Priority.PRIORITY_BALANCED_POWER_ACCURACY, cancellationTokenSource.token
         ).addOnSuccessListener { androidLoc ->
             if (androidLoc != null) {
-                location = Location(
+                var loc = Location(
                     latitude = androidLoc.latitude,
                     longitude = androidLoc.longitude,
                     placeholder = locationPlaceHolder
                 )
+                
+                // Fetch address name
+                val fetcher = onGetLocationName
+                if (fetcher != null) {
+                    scope.launch {
+                        try {
+                            val name = fetcher(androidLoc.latitude, androidLoc.longitude)
+                            if (name != null) {
+                                loc = loc.copy(placeholder = name)
+                            }
+                        } catch (e: Exception) {
+                            Log.e("MemoComposer", "Error in reverse geocoding callback", e)
+                        } finally {
+                            location = loc
+                            isFetchingLocation = false
+                        }
+                    }
+                } else {
+                     location = loc
+                     isFetchingLocation = false
+                }
+            } else {
+                isFetchingLocation = false
             }
-            isFetchingLocation = false
         }.addOnFailureListener {
             isFetchingLocation = false
         }

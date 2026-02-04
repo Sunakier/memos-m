@@ -45,6 +45,7 @@ class MemosViewModel(
     private var api: MemosApi? = null
     private var currentHttpClient: OkHttpClient? = null
     private var currentBaseUrl: String? = null
+    private var nominatimApi: org.example.memosm.api.NominatimApi? = null
 
     // Managers
     private var userMemoManager: UserMemoListManager? = null
@@ -59,6 +60,19 @@ class MemosViewModel(
 
     init {
         updateCurrentAccountInList()
+    }
+
+    suspend fun reverseGeocode(lat: Double, lon: Double): String? {
+        if (nominatimApi == null) {
+            nominatimApi = createNominatimApi()
+        }
+        return try {
+            val response = nominatimApi?.reverseGeocode(lat, lon)
+            response?.display_name
+        } catch (e: Exception) {
+            Log.e("MemosViewModel", "Error fetching address", e)
+            null
+        }
     }
 
     private suspend fun createApi(
@@ -124,6 +138,14 @@ class MemosViewModel(
         currentBaseUrl = baseUrl
 
         return MemosApiFactory.create(baseUrl, currentHttpClient!!)
+    }
+
+    private fun createNominatimApi(): org.example.memosm.api.NominatimApi {
+        return Retrofit.Builder()
+            .baseUrl("https://nominatim.openstreetmap.org/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(org.example.memosm.api.NominatimApi::class.java)
     }
 
     fun updateCurrentAccountInList() {
