@@ -58,6 +58,9 @@ class MemosViewModel(
     private var collectionJob: Job? = null
     private val pendingUserRequests = mutableSetOf<String>()
 
+    private val _attachmentAspectRatios =
+        MutableStateFlow<Map<Float, Map<String, Float>>>(emptyMap())
+
     init {
         updateCurrentAccountInList()
     }
@@ -282,15 +285,19 @@ class MemosViewModel(
                     searchMemoManager!!.listState,
                     commentManager!!.listState,
                     attachmentManager!!.listState
-                ) { s, c, at -> Triple(s, c, at) }, attachmentManager!!.cellWidth
-            ) { (userMemos, exploreMemos, archivedMemos), (searchMemos, comments, attachments), cellWidth ->
+                ) { s, c, at -> Triple(s, c, at) }, attachmentManager!!.cellWidth,
+                _attachmentAspectRatios
+            ) { (userMemos, exploreMemos, archivedMemos), (searchMemos, comments, attachments), cellWidth, aspectRatios ->
+                android.util.Log.d("MemosDebug", "ViewModel: StateCollection. aspectRatiosCount=${aspectRatios.values.sumOf { it.size }}")
                 _uiState.value.copy(
                     userMemoList = _uiState.value.userMemoList.copy(list = userMemos),
                     exploreMemoList = _uiState.value.exploreMemoList.copy(list = exploreMemos),
                     archivedMemoList = _uiState.value.archivedMemoList.copy(list = archivedMemos),
                     searchMemoList = _uiState.value.searchMemoList.copy(list = searchMemos),
                     detailPane = _uiState.value.detailPane.copy(comments = comments),
-                    attachmentList = AttachmentListState(list = attachments, cellWidth = cellWidth)
+                    attachmentList = AttachmentListState(
+                        list = attachments, cellWidth = cellWidth, aspectRatios = aspectRatios
+                    )
                 )
             }.collect { newState ->
                 _uiState.value = newState
@@ -790,16 +797,17 @@ class MemosViewModel(
     }
 
     fun updateAttachmentAspectRatio(cellWidth: Float, key: String, ratio: Float) {
-        _uiState.update { state ->
-            val currentMapForScale = state.attachmentList.aspectRatios[cellWidth] ?: emptyMap()
-            if (currentMapForScale[key] == ratio) return@update state
+        android.util.Log.d("MemosDebug", "ViewModel: Update requested. key=$key, scale=$cellWidth, ratio=$ratio")
+        _attachmentAspectRatios.update { currentRatios ->
+            val currentMapForScale = currentRatios[cellWidth] ?: emptyMap()
+            if (currentMapForScale[key] == ratio) {
+                 android.util.Log.d("MemosDebug", "ViewModel: Ratio unchanged, skipping update.")
+                 return@update currentRatios
+            }
 
             val newMapForScale = currentMapForScale + (key to ratio)
-            state.copy(
-                attachmentList = state.attachmentList.copy(
-                    aspectRatios = state.attachmentList.aspectRatios + (cellWidth to newMapForScale)
-                )
-            )
+            android.util.Log.d("MemosDebug", "ViewModel: Ratio updated. New count for scale: ${newMapForScale.size}")
+            currentRatios + (cellWidth to newMapForScale)
         }
     }
 

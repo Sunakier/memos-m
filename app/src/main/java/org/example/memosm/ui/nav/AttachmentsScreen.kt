@@ -159,7 +159,12 @@ fun AttachmentsScreen(
                         key = { it.name ?: it.filename }) { attachment ->
                         val key = attachment.name ?: attachment.filename
                         val currentScale = uiState.attachmentList.cellWidth
-                        val ratio = uiState.attachmentList.aspectRatios[currentScale]?.get(key) ?: 1.0f
+                        val cachedRatio = uiState.attachmentList.aspectRatios[currentScale]?.get(key)
+                        val ratio = cachedRatio ?: 1.0f
+                        
+                        LaunchedEffect(key, cachedRatio) {
+                             android.util.Log.d("MemosDebug", "AttachmentItem: key=$key, scale=$currentScale, cachedRatio=$cachedRatio, effectiveRatio=$ratio")
+                        }
 
                         AttachmentCard(
                             attachment = attachment,
@@ -172,7 +177,10 @@ fun AttachmentsScreen(
                                 .animateItem(),
                             onRatioAvailable = { newRatio, isExact ->
                                 if (isExact) {
+                                    android.util.Log.d("MemosDebug", "AttachmentItem: Reporting exact ratio. key=$key, scale=$currentScale, newRatio=$newRatio")
                                     viewModel.updateAttachmentAspectRatio(currentScale, key, newRatio)
+                                } else {
+                                     android.util.Log.d("MemosDebug", "AttachmentItem: Ignoring inexact ratio. key=$key, scale=$currentScale, newRatio=$newRatio")
                                 }
                             })
                     }
