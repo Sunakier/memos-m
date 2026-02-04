@@ -47,9 +47,9 @@ fun MarkdownAttachmentImage(content: String, node: ASTNode, token: String, hostU
         showSize = false,
         showFilename = false,
         compactMode = AttachmentCompactMode.Never,
-        onRatioAvailable = {
-            if (it > 0) {
-                aspectRatio = it
+        onRatioAvailable = { ratio, _ ->
+            if (ratio > 0) {
+                aspectRatio = ratio
             }
         })
 }

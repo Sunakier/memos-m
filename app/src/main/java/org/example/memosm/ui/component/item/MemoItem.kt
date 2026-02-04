@@ -494,7 +494,7 @@ fun MemoItem(
                                         .fillMaxWidth()
                                         .aspectRatio(aspectRatio),
                                     compactMode = AttachmentCompactMode.Never,
-                                    onRatioAvailable = { aspectRatio = it })
+                                    onRatioAvailable = { ratio, _ -> aspectRatio = ratio })
                             }
                         }
                     } else {

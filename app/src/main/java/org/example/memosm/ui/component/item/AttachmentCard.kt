@@ -65,7 +65,7 @@ fun AttachmentCard(
     showSize: Boolean = true,
     showFilename: Boolean = true,
     compactMode: AttachmentCompactMode = AttachmentCompactMode.Area,
-    onRatioAvailable: (Float) -> Unit = {}
+    onRatioAvailable: (Float, Boolean) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
     var showInfoDialog by remember { mutableStateOf(false) }
@@ -181,6 +181,8 @@ fun AttachmentCard(
         )
     }
 
+
+
     // Default ratios before loading
     var intrinsicRatio by remember {
         mutableFloatStateOf(
@@ -190,6 +192,7 @@ fun AttachmentCard(
             }
         )
     }
+    var isIntrinsicExact by remember { mutableStateOf(false) }
 
     val backgroundColor by animateColorAsState(
         targetValue = if (isAudioPlaying) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
@@ -243,7 +246,11 @@ fun AttachmentCard(
                 } else {
                     currentIntrinsic
                 }
-                onRatioAvailable(totalRatio)
+
+                // If it's not an image/video, the calculated ratio is always exact (based on fixed heights)
+                // If it is media, we wait for the inner component to report an exact intrinsic ratio
+                val isExact = if (isImage || isVideo) isIntrinsicExact else true
+                onRatioAvailable(totalRatio, isExact)
             }
 
             Column(modifier = Modifier.fillMaxSize()) {
@@ -262,7 +269,10 @@ fun AttachmentCard(
                             uri = uri,
                             filename = filename,
                             modifier = Modifier.fillMaxSize(),
-                            onRatioAvailable = { intrinsicRatio = it },
+                            onRatioAvailable = {
+                                intrinsicRatio = it
+                                isIntrinsicExact = true
+                            },
                             onClick = { showFullScreenImage = true })
                     } else if (isVideo) {
                         val videoUrl =
@@ -274,7 +284,10 @@ fun AttachmentCard(
                                 url = videoUrl,
                                 token = token,
                                 modifier = Modifier.fillMaxSize(),
-                                onRatioAvailable = { intrinsicRatio = it })
+                                onRatioAvailable = {
+                                    intrinsicRatio = it
+                                    isIntrinsicExact = true
+                                })
                         }
                     } else if (isAudio && !audioUrl.isNullOrBlank()) {
                         AudioPlayer(

@@ -31,7 +31,6 @@ fun AttachmentsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyStaggeredGridState()
-    val aspectRatios = remember { mutableStateMapOf<String, Float>() }
 
     // Limits for zooming
     val minCellWidth = 100.dp
@@ -159,7 +158,8 @@ fun AttachmentsScreen(
                         items = uiState.attachmentList.list.items,
                         key = { it.name ?: it.filename }) { attachment ->
                         val key = attachment.name ?: attachment.filename
-                        val ratio = aspectRatios[key] ?: 1.0f
+                        val currentScale = uiState.attachmentList.cellWidth
+                        val ratio = uiState.attachmentList.aspectRatios[currentScale]?.get(key) ?: 1.0f
 
                         AttachmentCard(
                             attachment = attachment,
@@ -170,8 +170,10 @@ fun AttachmentsScreen(
                                 .fillMaxWidth()
                                 .aspectRatio(ratio)
                                 .animateItem(),
-                            onRatioAvailable = { newRatio ->
-                                aspectRatios[key] = newRatio
+                            onRatioAvailable = { newRatio, isExact ->
+                                if (isExact) {
+                                    viewModel.updateAttachmentAspectRatio(currentScale, key, newRatio)
+                                }
                             })
                     }
 

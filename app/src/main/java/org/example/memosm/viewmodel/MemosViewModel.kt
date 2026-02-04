@@ -789,6 +789,20 @@ class MemosViewModel(
         attachmentManager?.updateCellWidth(width)
     }
 
+    fun updateAttachmentAspectRatio(cellWidth: Float, key: String, ratio: Float) {
+        _uiState.update { state ->
+            val currentMapForScale = state.attachmentList.aspectRatios[cellWidth] ?: emptyMap()
+            if (currentMapForScale[key] == ratio) return@update state
+
+            val newMapForScale = currentMapForScale + (key to ratio)
+            state.copy(
+                attachmentList = state.attachmentList.copy(
+                    aspectRatios = state.attachmentList.aspectRatios + (cellWidth to newMapForScale)
+                )
+            )
+        }
+    }
+
     // --- Detail & CRUD ---
 
     fun selectMemo(memo: Memo?) {
