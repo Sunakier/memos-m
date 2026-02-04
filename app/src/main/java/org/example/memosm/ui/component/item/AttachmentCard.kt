@@ -93,10 +93,7 @@ fun AttachmentCard(
         android.text.format.DateUtils.formatDateTime(
             context,
             dateMillis!!,
-            android.text.format.DateUtils.FORMAT_SHOW_DATE or
-                    android.text.format.DateUtils.FORMAT_SHOW_TIME or
-                    android.text.format.DateUtils.FORMAT_SHOW_YEAR or
-                    android.text.format.DateUtils.FORMAT_ABBREV_MONTH
+            android.text.format.DateUtils.FORMAT_SHOW_DATE or android.text.format.DateUtils.FORMAT_SHOW_TIME or android.text.format.DateUtils.FORMAT_SHOW_YEAR or android.text.format.DateUtils.FORMAT_ABBREV_MONTH
         )
     } else attachment?.createTime ?: ""
 
@@ -109,7 +106,9 @@ fun AttachmentCard(
         }
     }
 
-    val displayType by produceState(initialValue = attachment?.displayType ?: "", uri, attachment?.displayType) {
+    val displayType by produceState(
+        initialValue = attachment?.displayType ?: "", uri, attachment?.displayType
+    ) {
         value = withContext(Dispatchers.IO) {
             if (uri != Uri.EMPTY) {
                 val crType = context.contentResolver.getType(uri)
@@ -145,46 +144,45 @@ fun AttachmentCard(
     }
 
     // Audio handling (temp file for base64 if needed)
-    val audioUrl = produceState<String?>(initialValue = null, uri, attachment, displayType, hostUrl) {
-        if (!isAudio) {
-            value = null
-        } else {
-            value = withContext(Dispatchers.IO) {
-                when {
-                    uri != Uri.EMPTY -> uri.toString()
-                    else -> AttachmentManager.getAttachmentUrl(hostUrl, attachment) ?: when {
-                        !attachment?.content.isNullOrBlank() -> {
-                            try {
-                                val bytes = Base64.decode(attachment.content, Base64.NO_WRAP)
-                                val ext = when {
-                                    displayType.contains("aac") -> "aac"
-                                    displayType.contains("mp3") || displayType.contains("mpeg") -> "mp3"
-                                    displayType.contains("ogg") -> "ogg"
-                                    displayType.contains("wav") -> "wav"
-                                    displayType.contains("m4a") -> "m4a"
-                                    else -> "aac"
+    val audioUrl =
+        produceState<String?>(initialValue = null, uri, attachment, displayType, hostUrl) {
+            if (!isAudio) {
+                value = null
+            } else {
+                value = withContext(Dispatchers.IO) {
+                    when {
+                        uri != Uri.EMPTY -> uri.toString()
+                        else -> AttachmentManager.getAttachmentUrl(hostUrl, attachment) ?: when {
+                            !attachment?.content.isNullOrBlank() -> {
+                                try {
+                                    val bytes = Base64.decode(attachment.content, Base64.NO_WRAP)
+                                    val ext = when {
+                                        displayType.contains("aac") -> "aac"
+                                        displayType.contains("mp3") || displayType.contains("mpeg") -> "mp3"
+                                        displayType.contains("ogg") -> "ogg"
+                                        displayType.contains("wav") -> "wav"
+                                        displayType.contains("m4a") -> "m4a"
+                                        else -> "aac"
+                                    }
+                                    val tempFile = File(
+                                        context.cacheDir, "cached_audio_${filename.hashCode()}.$ext"
+                                    )
+                                    if (!tempFile.exists() || tempFile.length() != bytes.size.toLong()) {
+                                        tempFile.writeBytes(bytes)
+                                    }
+                                    tempFile.toUri().toString()
+                                } catch (e: Exception) {
+                                    Log.e("AttachmentCard", "Error creating temp audio file", e)
+                                    null
                                 }
-                                val tempFile =
-                                    File(context.cacheDir, "cached_audio_${filename.hashCode()}.$ext")
-                                if (!tempFile.exists() || tempFile.length() != bytes.size.toLong()) {
-                                    tempFile.writeBytes(bytes)
-                                }
-                                tempFile.toUri().toString()
-                            } catch (e: Exception) {
-                                Log.e("AttachmentCard", "Error creating temp audio file", e)
-                                null
                             }
-                        }
 
-                        else -> null
+                            else -> null
+                        }
                     }
                 }
             }
-        }
-    }.value
-
-
-
+        }.value
 
 
     // Default ratios before loading
@@ -208,8 +206,7 @@ fun AttachmentCard(
         modifier = modifier.clip(RoundedCornerShape(12.dp)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        @Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        @Suppress("COMPOSE_APPLIER_CALL_MISMATCH") BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val isCompact = when (compactMode) {
                 AttachmentCompactMode.Always -> true
                 AttachmentCompactMode.Never -> false
@@ -221,7 +218,8 @@ fun AttachmentCard(
                 }
             }
             val isWide = !isCompact && maxWidth > 240.dp
-            val showFooter = showInfo && !isCompact && (showFilename || showSize || attachment?.createTime != null)
+            val showFooter =
+                showInfo && !isCompact && (showFilename || showSize || attachment?.createTime != null)
 
             // Report total ratio to parent
             LaunchedEffect(
@@ -240,18 +238,19 @@ fun AttachmentCard(
 
                 val calculatedRatio = if (isImage || isVideo) {
                     if (w > 0 && footerHeight > 0) {
-                         // For media with footer: (Width) / (MediaHeight + FooterHeight)
-                         // MediaHeight = Width / IntrinsicRatio
-                         w / (w / intrinsicRatio + footerHeight)
+                        // For media with footer: (Width) / (MediaHeight + FooterHeight)
+                        // MediaHeight = Width / IntrinsicRatio
+                        w / (w / intrinsicRatio + footerHeight)
                     } else {
-                         // No footer or width 0: just use intrinsic
-                         intrinsicRatio
+                        // No footer or width 0: just use intrinsic
+                        intrinsicRatio
                     }
                 } else {
                     // To fix "RECT" (square), let's ensure non-media is nicer.
                     // "Rect" usually means square in this context (1:1)
-                    val nonMediaIntrinsic = 1.0f 
-                    val effectiveIntrinsic = if (isWide) (if(w>0) w/180f else 2.0f) else nonMediaIntrinsic
+                    val nonMediaIntrinsic = 1.0f
+                    val effectiveIntrinsic =
+                        if (isWide) (if (w > 0) w / 180f else 2.0f) else nonMediaIntrinsic
 
                     if (w > 0 && footerHeight > 0) {
                         w / (w / effectiveIntrinsic + footerHeight)
@@ -461,8 +460,9 @@ fun AttachmentCard(
                             val infoText = remember(formattedSize, formattedDate) {
                                 listOfNotNull(
                                     formattedSize.takeIf { showSize && attachment?.size != null },
-                                    formattedDate.takeIf { formattedDate.isNotEmpty() }
-                                ).joinToString(" • ")
+                                    formattedDate.takeIf { formattedDate.isNotEmpty() }).joinToString(
+                                    " • "
+                                )
                             }
 
                             if (infoText.isNotEmpty()) {
