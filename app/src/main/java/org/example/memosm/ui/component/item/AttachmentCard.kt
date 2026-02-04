@@ -249,9 +249,9 @@ fun AttachmentCard(
                     }
                 } else {
                     // To fix "RECT" (square), let's ensure non-media is nicer.
-                    // let's use 3:2 ratio (~1.5) for non-wide files.
-                    val nonMediaIntrinsic = 1.5f 
-                    val effectiveIntrinsic = if (isWide) (if(w>0) w/180f else 3.0f) else nonMediaIntrinsic
+                    // "Rect" usually means square in this context (1:1)
+                    val nonMediaIntrinsic = 1.0f 
+                    val effectiveIntrinsic = if (isWide) (if(w>0) w/180f else 2.0f) else nonMediaIntrinsic
 
                     if (w > 0 && footerHeight > 0) {
                         w / (w / effectiveIntrinsic + footerHeight)
