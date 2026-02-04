@@ -395,28 +395,31 @@ fun AttachmentCard(
                                                     contentDescription = null
                                                 )
                                             })
-                                        if (attachment?.externalLink != null) {
+                                        val openWebUrl = remember(attachment, hostUrl) {
+                                            AttachmentManager.getAttachmentUrl(hostUrl, attachment)
+                                        }
+
+                                        if (openWebUrl != null) {
                                             DropdownMenuItem(
                                                 text = { Text(stringResource(R.string.memo_action_open_web)) },
                                                 onClick = {
                                                     showMenu = false
                                                     try {
-                                                        val url =
-                                                            AttachmentManager.resolveResourceUrl(
-                                                                hostUrl, attachment.externalLink
-                                                            )
-                                                        if (url != null) {
-                                                            val intent = Intent(
-                                                                Intent.ACTION_VIEW, url.toUri()
-                                                            )
-                                                            context.startActivity(intent)
-                                                        }
+                                                        val intent = Intent(
+                                                            Intent.ACTION_VIEW, openWebUrl.toUri()
+                                                        )
+                                                        context.startActivity(intent)
                                                     } catch (e: Exception) {
                                                         Log.e(
                                                             "AttachmentCard",
                                                             "Failed to open link",
                                                             e
                                                         )
+                                                        Toast.makeText(
+                                                            context,
+                                                            context.getString(R.string.attachments_error_open_link),
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
                                                     }
                                                 },
                                                 leadingIcon = {
