@@ -74,26 +74,31 @@ fun AttachmentCard(
     var showFullScreenImage by remember { mutableStateOf(false) }
     var isAudioPlaying by remember { mutableStateOf(false) }
 
-    val formattedDate by produceState(initialValue = "", attachment?.createTime) {
+    val dateMillis by produceState<Long?>(initialValue = null, attachment?.createTime) {
         if (attachment?.createTime != null) {
             value = withContext(Dispatchers.Default) {
                 try {
                     val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
                     inputFormat.timeZone = TimeZone.getTimeZone("UTC")
-                    val date = inputFormat.parse(attachment.createTime)
-                    val outputFormat = java.text.DateFormat.getDateTimeInstance(
-                        java.text.DateFormat.MEDIUM,
-                        java.text.DateFormat.SHORT,
-                        Locale.getDefault()
-                    )
-                    date?.let { outputFormat.format(it) } ?: ""
+                    inputFormat.parse(attachment.createTime)?.time
                 } catch (e: Exception) {
                     Log.e("AttachmentCard", "Failed to parse date: ${attachment.createTime}", e)
-                    attachment.createTime
+                    null
                 }
             }
         }
     }
+
+    val formattedDate = if (dateMillis != null) {
+        android.text.format.DateUtils.formatDateTime(
+            context,
+            dateMillis!!,
+            android.text.format.DateUtils.FORMAT_SHOW_DATE or
+                    android.text.format.DateUtils.FORMAT_SHOW_TIME or
+                    android.text.format.DateUtils.FORMAT_SHOW_YEAR or
+                    android.text.format.DateUtils.FORMAT_ABBREV_MONTH
+        )
+    } else attachment?.createTime ?: ""
 
     val formattedSize by produceState(initialValue = "", attachment?.size) {
         if (attachment?.size != null) {
