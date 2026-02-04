@@ -78,10 +78,14 @@ fun AttachmentCard(
         if (attachment?.createTime != null) {
             value = withContext(Dispatchers.Default) {
                 try {
-                    val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+                    val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
                     inputFormat.timeZone = TimeZone.getTimeZone("UTC")
                     val date = inputFormat.parse(attachment.createTime)
-                    val outputFormat = SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault())
+                    val outputFormat = java.text.DateFormat.getDateTimeInstance(
+                        java.text.DateFormat.MEDIUM,
+                        java.text.DateFormat.SHORT,
+                        Locale.getDefault()
+                    )
                     date?.let { outputFormat.format(it) } ?: ""
                 } catch (e: Exception) {
                     Log.e("AttachmentCard", "Failed to parse date: ${attachment.createTime}", e)
@@ -212,7 +216,7 @@ fun AttachmentCard(
                 }
             }
             val isWide = !isCompact && maxWidth > 240.dp
-            val showFooter = showInfo && !isCompact && (showFilename || showActions || showSize)
+            val showFooter = showInfo && !isCompact && (showFilename || showSize || attachment?.createTime != null)
 
             // Report total ratio to parent
             LaunchedEffect(
@@ -231,7 +235,7 @@ fun AttachmentCard(
 
 
                 val footerHeight =
-                    if (showInfo && !isCompact && (showFilename || showActions || showSize)) 56f else 0f
+                    if (showInfo && !isCompact && (showFilename || showSize || attachment?.createTime != null)) 56f else 0f
 
                 val calculatedRatio = if (isImage || isVideo) {
                     if (w > 0 && footerHeight > 0) {
@@ -364,8 +368,8 @@ fun AttachmentCard(
                         }
                     }
 
-                    // Floating menu button for compact view
-                    if (showInfo && showActions && isCompact) {
+                    // Floating menu button
+                    if (showInfo && showActions) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -471,69 +475,16 @@ fun AttachmentCard(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (showActions) {
-                                    IconButton(
-                                        onClick = { showInfoDialog = true },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Info,
-                                            contentDescription = stringResource(R.string.attachments_info_title),
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                    IconButton(
-                                        onClick = { showDownloadDialog = true },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Download,
-                                            contentDescription = stringResource(R.string.attachments_download_button),
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                    if (attachment?.externalLink != null) {
-                                        val openLinkText =
-                                            stringResource(R.string.attachments_error_open_link)
-                                        IconButton(
-                                            onClick = {
-                                                try {
-                                                    val url = AttachmentManager.resolveResourceUrl(
-                                                        hostUrl, attachment.externalLink
-                                                    )
-                                                    if (url != null) {
-                                                        val intent = Intent(
-                                                            Intent.ACTION_VIEW, url.toUri()
-                                                        )
-                                                        context.startActivity(intent)
-                                                    }
-                                                } catch (e: Exception) {
-                                                    Log.e(
-                                                        "AttachmentCard",
-                                                        "Failed to open link: ${attachment.externalLink}",
-                                                        e
-                                                    )
-                                                    Toast.makeText(
-                                                        context,
-                                                        "$openLinkText: ${e.localizedMessage}",
-                                                        Toast.LENGTH_SHORT
-                                                    ).show()
-                                                }
-                                            }, modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Language,
-                                                contentDescription = stringResource(R.string.memo_action_open_web),
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    }
-                                }
+                            val infoText = remember(formattedSize, formattedDate) {
+                                listOfNotNull(
+                                    formattedSize.takeIf { showSize && attachment?.size != null },
+                                    formattedDate.takeIf { formattedDate.isNotEmpty() }
+                                ).joinToString(" • ")
                             }
-                            if (showSize && attachment?.size != null) {
+
+                            if (infoText.isNotEmpty()) {
                                 Text(
-                                    text = formattedSize,
+                                    text = infoText,
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
