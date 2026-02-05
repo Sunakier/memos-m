@@ -27,6 +27,12 @@ import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import org.intellij.markdown.ast.ASTNode
 import org.intellij.markdown.flavours.gfm.GFMElementTypes
 import org.intellij.markdown.flavours.gfm.GFMTokenTypes
@@ -54,6 +60,15 @@ fun NativeMarkdownTable(
     val inlineSpacing = 4.dp
     val tableCornerSize = 8.dp
 
+    val styles = MarkdownStyles(
+        codeBackground = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+        linkColor = MaterialTheme.colorScheme.primary,
+        strikethroughStyle = SpanStyle(textDecoration = TextDecoration.LineThrough),
+        boldStyle = SpanStyle(fontWeight = FontWeight.Bold),
+        italicStyle = SpanStyle(fontStyle = FontStyle.Italic),
+        codeFontFamily = FontFamily.Monospace
+    )
+
     Box(
         modifier = Modifier
             .padding(vertical = 8.dp)
@@ -71,11 +86,14 @@ fun NativeMarkdownTable(
                 row.forEachIndexed { index, cellNode ->
                     if (index < columnCount) {
                         val placeable = subcompose("measure_${row.hashCode()}_$index") {
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(inlineSpacing)) {
-                                cellNode.children.forEach { child ->
-                                    NativeMarkdownNodeRecursive(child)
-                                }
-                            }
+                             val styledText = buildAnnotatedString {
+                                 appendInlineChildren(cellNode, content, styles)
+                             }
+                             MarkdownText(
+                                 text = styledText,
+                                 style = MaterialTheme.typography.bodyMedium,
+                                 modifier = Modifier.padding(bottom = 2.dp) // Layout fix
+                             )
                         }.first().measure(Constraints())
 
                         val totalPadding = tableCellPadding.roundToPx() * 2
@@ -106,15 +124,13 @@ fun NativeMarkdownTable(
                                             .padding(tableCellPadding)
                                             .fillMaxHeight()
                                     ) {
-                                        FlowRow(
-                                            horizontalArrangement = Arrangement.spacedBy(
-                                                inlineSpacing
-                                            ), verticalArrangement = Arrangement.Center
-                                        ) {
-                                            cellNode.children.forEach { child ->
-                                                NativeMarkdownNodeRecursive(child)
-                                            }
-                                        }
+                                         val styledText = buildAnnotatedString {
+                                             appendInlineChildren(cellNode, content, styles)
+                                         }
+                                         MarkdownText(
+                                             text = styledText,
+                                             style = MaterialTheme.typography.bodyMedium
+                                         )
                                     }
                                     // VERTICAL LINE: Add if it's not the last column
                                     if (columnIndex < columnCount - 1) {
@@ -127,7 +143,7 @@ fun NativeMarkdownTable(
                                 }
                             }
                         }
-                        // 2. Force the HorizontalDivider to match the calculated table width
+                        // 2. Force the HorizontalDivider to match the calculated width
                         if (rowIndex < allRows.lastIndex) {
                             HorizontalDivider(
                                 modifier = Modifier.width(with(LocalDensity.current) { tableWidth.toDp() }),
