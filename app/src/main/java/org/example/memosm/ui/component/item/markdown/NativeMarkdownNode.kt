@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
+import androidx.compose.material3.MaterialTheme.typography
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
@@ -138,18 +140,18 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
             
             MarkdownText(
                 text = styledText,
-                style = MaterialTheme.typography.bodyLarge,
+                style = typography.bodyLarge,
                 modifier = Modifier.padding(top = topPadding, bottom = 4.dp)
             )
         }
 
         MarkdownElementTypes.ATX_1, MarkdownElementTypes.ATX_2, MarkdownElementTypes.ATX_3, MarkdownElementTypes.ATX_4, MarkdownElementTypes.ATX_5, MarkdownElementTypes.ATX_6 -> {
             val style = when (node.type) {
-                MarkdownElementTypes.ATX_1 -> MaterialTheme.typography.displaySmall
-                MarkdownElementTypes.ATX_2 -> MaterialTheme.typography.headlineMedium
-                MarkdownElementTypes.ATX_3 -> MaterialTheme.typography.headlineSmall
-                MarkdownElementTypes.ATX_4 -> MaterialTheme.typography.titleLarge
-                else -> MaterialTheme.typography.titleMedium
+                MarkdownElementTypes.ATX_1 -> typography.displaySmall
+                MarkdownElementTypes.ATX_2 -> typography.headlineMedium
+                MarkdownElementTypes.ATX_3 -> typography.headlineSmall
+                MarkdownElementTypes.ATX_4 -> typography.titleLarge
+                else -> typography.titleMedium
             }
             // Headers contain inline elements usually, or just leaf text
             // Retrieve the text content excluding the # characters
@@ -205,7 +207,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                             } else {
                                 Text(
                                     "•",
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    style = typography.bodyLarge,
                                     modifier = Modifier.padding(end = 8.dp)
                                 )
                             }
@@ -244,7 +246,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                         Row(modifier = Modifier.fillMaxWidth()) {
                             Text(
                                 "$index.",
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = typography.bodyLarge,
                                 modifier = Modifier.padding(end = 8.dp)
                             )
                             Column {
@@ -270,6 +272,32 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                         NativeMarkdownNodeRecursive(child)
                     }
                 }
+            }
+        }
+
+        MarkdownElementTypes.CODE_BLOCK, MarkdownElementTypes.CODE_FENCE -> {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            ) {
+                val sb = StringBuilder()
+                node.children.forEach { child ->
+                    val text = child.getTextInNode(content)
+                    // Naive filtering of fence markers based on text content
+                    // and ignoring language identifier token if recognizable
+                    if (child.type != MarkdownTokenTypes.FENCE_LANG &&
+                        !text.trim().startsWith("```") &&
+                        !text.trim().startsWith("~~~")) {
+                        sb.append(text)
+                    }
+                }
+                Text(
+                    text = sb.toString().trim(),
+                    style = typography.bodyMedium,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.padding(8.dp)
+                )
             }
         }
 
