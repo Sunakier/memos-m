@@ -4,7 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.Criteria
 import android.location.LocationListener
 import android.location.LocationManager
 import android.media.MediaRecorder
@@ -90,7 +89,13 @@ fun MemoComposer(
     val resources = LocalResources.current
 
     // Changed to TextFieldValue for VisualTransformation support
-    var contentState by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(initialContent)) }
+    var contentState by remember {
+        mutableStateOf(
+            androidx.compose.ui.text.input.TextFieldValue(
+                initialContent
+            )
+        )
+    }
     var visibility by remember { mutableStateOf(initialVisibility) }
     var location by remember { mutableStateOf(initialLocation) }
 
@@ -106,7 +111,7 @@ fun MemoComposer(
         // }
 
         val validInitialUris = initialUris
-    
+
 
         val fromUris: List<Pair<Uri, Attachment?>> = validInitialUris.map { it to null }
         mutableStateOf(fromAttachments + fromUris)
@@ -150,7 +155,7 @@ fun MemoComposer(
             // Add URIs immediately for display, then convert to base64 in background
             val newUris = uris.map { it to null as Attachment? }
             draftAttachments = draftAttachments + newUris
-            
+
             // Convert to base64 in background for each URI
             uris.forEach { uri ->
                 scope.launch {
@@ -207,9 +212,32 @@ fun MemoComposer(
 
         fun fetchFallback() {
             try {
-                val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-                val criteria = Criteria()
-                val provider = locationManager.getBestProvider(criteria, true)
+                val locationManager =
+                    context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+
+                // Select provider explicitly instead of using Criteria
+                val provider = when {
+                    // 1. Try Fused: Only valid on Android 12 (S) + and if enabled
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && locationManager.isProviderEnabled(
+                        LocationManager.FUSED_PROVIDER
+                    ) -> {
+                        LocationManager.FUSED_PROVIDER
+                    }
+
+                    // 2. Fallback to Network (Faster, battery efficient)
+                    locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> {
+                        LocationManager.NETWORK_PROVIDER
+                    }
+
+                    // 3. Fallback to GPS (Higher accuracy, slower)
+                    locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) -> {
+                        LocationManager.GPS_PROVIDER
+                    }
+
+                    else -> null
+                }
+
                 if (provider != null) {
                     // Try last known location first as a quick fallback
                     val lastKnown = locationManager.getLastKnownLocation(provider)
@@ -220,20 +248,23 @@ fun MemoComposer(
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         locationManager.getCurrentLocation(
-                            provider,
-                            null,
-                            ContextCompat.getMainExecutor(context)
+                            provider, null, ContextCompat.getMainExecutor(context)
                         ) { loc -> handleAndroidLocation(loc) }
                     } else {
-                        @Suppress("DEPRECATION")
-                        locationManager.requestSingleUpdate(provider, object : LocationListener {
-                            override fun onLocationChanged(l: android.location.Location) {
-                                handleAndroidLocation(l)
-                            }
-                            override fun onStatusChanged(p: String?, s: Int, e: Bundle?) {}
-                            override fun onProviderEnabled(p: String) {}
-                            override fun onProviderDisabled(p: String) {}
-                        }, context.mainLooper)
+                        @Suppress("DEPRECATION") locationManager.requestSingleUpdate(
+                            provider, object : LocationListener {
+                                override fun onLocationChanged(l: android.location.Location) {
+                                    handleAndroidLocation(l)
+                                }
+
+                                @Deprecated("Deprecated in Java")
+                                override fun onStatusChanged(p: String?, s: Int, e: Bundle?) {
+                                }
+
+                                override fun onProviderEnabled(p: String) {}
+                                override fun onProviderDisabled(p: String) {}
+                            }, context.mainLooper
+                        )
                     }
                 } else {
                     isFetchingLocation = false

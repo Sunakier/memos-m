@@ -20,7 +20,7 @@ android {
 
     defaultConfig {
         applicationId = "org.example.memosm"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -163,13 +163,9 @@ dependencies {
     // ----------------------------
     implementation(libs.google.play.services.location)
 
-    implementation(libs.multiplatform.markdown.renderer.android)
-    implementation(libs.multiplatform.markdown.renderer.m3)
-    implementation(libs.multiplatform.markdown.renderer.coil3)
-    implementation(libs.multiplatform.markdown.renderer.code)
-
     implementation(libs.markdown)
-//    implementation(libs.ktreesitter)
+    implementation(libs.highlights)
+    implementation(libs.androidmath)
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.dash)
