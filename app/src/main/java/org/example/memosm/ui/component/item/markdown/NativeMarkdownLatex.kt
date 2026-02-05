@@ -59,7 +59,7 @@ fun NativeMarkdownLatex(
         AndroidView(
             factory = { context ->
                 MTMathView(context, null).apply {
-                    fontSize = if (inline) 24f else 36f // Smaller font for inline
+                    fontSize = 36f
                     textColor = c
                     // labelMode = MTMathViewMode.KMathViewModeDisplay
                 }
