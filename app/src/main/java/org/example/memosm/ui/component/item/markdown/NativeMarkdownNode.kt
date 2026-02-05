@@ -80,6 +80,7 @@ fun MarkdownText(
 // Local provider for content and callbacks to avoid passing them deep
 val LocalMarkdownContent = compositionLocalOf { "" }
 val LocalOnContentChange = compositionLocalOf<((String) -> Unit)?> { null }
+val LocalForceNoTopPadding = compositionLocalOf { false }
 
 @Composable
 fun NativeMarkdownNode(
@@ -125,10 +126,13 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
             val styledText = buildAnnotatedString {
                 appendInlineChildren(node, content, styles)
             }
+            val noTopPadding = LocalForceNoTopPadding.current
+            val topPadding = if (noTopPadding) 0.dp else 4.dp
+            
             MarkdownText(
                 text = styledText,
                 style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(vertical = 4.dp)
+                modifier = Modifier.padding(top = topPadding, bottom = 4.dp)
             )
         }
 
@@ -157,8 +161,11 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                      }
                  }
             }
+            val noTopPadding = LocalForceNoTopPadding.current
+            val topPadding = if (noTopPadding) 0.dp else 8.dp
+            
             MarkdownText(
-                text = styledText, style = style, modifier = Modifier.padding(vertical = 8.dp)
+                text = styledText, style = style, modifier = Modifier.padding(top = topPadding, bottom = 8.dp)
             )
         }
 
@@ -194,9 +201,20 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                             }
 
                             Column {
+                                var firstChildProcessed = false
                                 child.children.forEach { listChild ->
-                                    if (listChild.type != GFMTokenTypes.CHECK_BOX) {
-                                        NativeMarkdownNodeRecursive(listChild)
+                                    if (listChild.type != GFMTokenTypes.CHECK_BOX && 
+                                        listChild.type != MarkdownTokenTypes.LIST_BULLET && // Also skip the bullet if present as child
+                                        listChild.type != org.intellij.markdown.MarkdownTokenTypes.EOL) { // Skip newlines if separate nodes
+                                        
+                                        if (!firstChildProcessed) {
+                                            CompositionLocalProvider(LocalForceNoTopPadding provides true) {
+                                                NativeMarkdownNodeRecursive(listChild)
+                                            }
+                                            firstChildProcessed = true
+                                        } else {
+                                            NativeMarkdownNodeRecursive(listChild)
+                                        }
                                     }
                                 }
                             }
@@ -220,8 +238,20 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                                 modifier = Modifier.padding(horizontal = 8.dp)
                             )
                             Column {
+                                var firstChildProcessed = false
                                 child.children.forEach { listChild ->
-                                    NativeMarkdownNodeRecursive(listChild)
+                                    if (listChild.type != MarkdownTokenTypes.LIST_NUMBER && // Skip number if present as child
+                                        listChild.type != org.intellij.markdown.MarkdownTokenTypes.EOL) {
+
+                                        if (!firstChildProcessed) {
+                                            CompositionLocalProvider(LocalForceNoTopPadding provides true) {
+                                                NativeMarkdownNodeRecursive(listChild)
+                                            }
+                                            firstChildProcessed = true
+                                        } else {
+                                            NativeMarkdownNodeRecursive(listChild)
+                                        }
+                                    }
                                 }
                             }
                             index++
@@ -240,7 +270,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                     modifier = Modifier
                         .width(4.dp)
                         .fillMaxHeight()
-                        .background(MaterialTheme.colorScheme.outlineVariant)
+                        .background(color = MaterialTheme.colorScheme.outlineVariant, shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
                 )
                 Column(modifier = Modifier.padding(start = 8.dp)) {
                     CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurfaceVariant) {
