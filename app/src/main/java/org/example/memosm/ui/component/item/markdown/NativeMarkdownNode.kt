@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.foundation.background
@@ -191,7 +192,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                                             )
                                         )
                                     },
-                                    modifier = Modifier.padding(end = 8.dp)
+                                    modifier = Modifier.scale(0.8f).padding(end = 8.dp)
                                 )
                             } else {
                                 Text(
