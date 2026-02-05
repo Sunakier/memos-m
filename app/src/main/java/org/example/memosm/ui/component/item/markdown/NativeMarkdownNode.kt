@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.TextStyle
@@ -71,7 +72,8 @@ data class MarkdownStyles(
 fun MarkdownText(
     text: AnnotatedString,
     style: TextStyle,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    textAlign: TextAlign = TextAlign.Start
 ) {
     val uriHandler = LocalUriHandler.current
     val defaultColor = LocalContentColor.current
@@ -104,7 +106,8 @@ fun MarkdownText(
         text = text,
         style = style.copy(color = textColor),
         modifier = drawModifier,
-        onTextLayout = { layoutResult = it }
+        onTextLayout = { layoutResult = it },
+        textAlign = textAlign
     )
 }
 

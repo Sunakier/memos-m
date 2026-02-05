@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -27,6 +28,8 @@ import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextDecoration
@@ -53,6 +56,8 @@ fun NativeMarkdownTable(
 
     val columnCount = headerCells.size
     if (columnCount == 0) return
+
+    val align = remember(node) { getTableAlignments(node, content, columnCount) }
 
     val tableCellPadding = 8.dp
     val headerBackground = MaterialTheme.colorScheme.secondaryContainer
@@ -92,7 +97,8 @@ fun NativeMarkdownTable(
                              MarkdownText(
                                  text = styledText,
                                  style = MaterialTheme.typography.bodyMedium,
-                                 modifier = Modifier.padding(bottom = 2.dp) // Layout fix
+                                 modifier = Modifier.padding(bottom = 2.dp), // Layout fix
+                                 textAlign = align.getOrElse(index) { TextAlign.Start }
                              )
                         }.first().measure(Constraints())
 
@@ -122,14 +128,21 @@ fun NativeMarkdownTable(
                                         modifier = Modifier
                                             .width(with(LocalDensity.current) { columnWidths[columnIndex].toDp() })
                                             .padding(tableCellPadding)
-                                            .fillMaxHeight()
+                                            .fillMaxHeight(),
+                                        contentAlignment = when (align.getOrElse(columnIndex) { TextAlign.Start }) {
+                                            TextAlign.Center -> Alignment.Center
+                                            TextAlign.End -> Alignment.CenterEnd
+                                            else -> Alignment.CenterStart
+                                        }
                                     ) {
                                          val styledText = buildAnnotatedString {
                                              appendInlineChildren(cellNode, content, styles)
                                          }
                                          MarkdownText(
                                              text = styledText,
-                                             style = MaterialTheme.typography.bodyMedium
+                                             style = MaterialTheme.typography.bodyMedium,
+                                             textAlign = align.getOrElse(columnIndex) { TextAlign.Start },
+                                             modifier = Modifier.fillMaxWidth()
                                          )
                                     }
                                     // VERTICAL LINE: Add if it's not the last column
@@ -160,4 +173,24 @@ fun NativeMarkdownTable(
             }
         }
     }
+}
+
+fun getTableAlignments(node: ASTNode, content: String, columnCount: Int): List<TextAlign> {
+    val separator = node.children.find { it.type == GFMTokenTypes.TABLE_SEPARATOR }
+    
+    if (separator != null) {
+        val sepText = separator.getTextInNode(content).toString().trim().trim('|')
+        val cells = sepText.split("|")
+        return cells.map { cell ->
+            val trimmed = cell.trim()
+            when {
+                trimmed.startsWith(":") && trimmed.endsWith(":") -> TextAlign.Center
+                trimmed.endsWith(":") -> TextAlign.End
+                else -> TextAlign.Start
+            }
+        }
+    }
+    
+    // Fallback: Default to Start
+    return List(columnCount) { TextAlign.Start }
 }
