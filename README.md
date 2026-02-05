@@ -58,7 +58,7 @@ You can also download from [release](https://github.com/yamada-sexta/memos-m/rel
     - [x] Checkboxes
     - [x] Codeblocks with syntax highlighting
     - [x] Table
-    - [ ] LaTeX
+    - [x] Basic LaTeX
   - Attachment
     - [x] View attachments
     - [x] Large attachment handle (blocking)
