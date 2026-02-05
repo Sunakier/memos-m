@@ -123,6 +123,7 @@ fun MarkdownText(
 val LocalMarkdownContent = compositionLocalOf { "" }
 val LocalOnContentChange = compositionLocalOf<((String) -> Unit)?> { null }
 val LocalForceNoTopPadding = compositionLocalOf { false }
+val LocalOnHashtagClick = compositionLocalOf<((String) -> Unit)?> { null }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,10 +131,13 @@ fun NativeMarkdownNode(
     modifier: Modifier = Modifier,
     node: ASTNode,
     content: String,
-    onContentChange: ((String) -> Unit)? = null
+    onContentChange: ((String) -> Unit)? = null,
+    onHashtagClick: ((String) -> Unit)? = null
 ) {
     CompositionLocalProvider(
-        LocalMarkdownContent provides content, LocalOnContentChange provides onContentChange
+        LocalMarkdownContent provides content,
+        LocalOnContentChange provides onContentChange,
+        LocalOnHashtagClick provides onHashtagClick
     ) {
         Column(modifier = modifier) {
             NativeMarkdownNodeRecursive(node)
@@ -146,6 +150,7 @@ fun NativeMarkdownNode(
 fun NativeMarkdownNodeRecursive(node: ASTNode) {
     val content = LocalMarkdownContent.current
     val onContentChange = LocalOnContentChange.current
+    val onHashtagClick = LocalOnHashtagClick.current
 
     val styles = MarkdownStyles(
         codeBackground = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
@@ -182,7 +187,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                             val styledText = buildAnnotatedString {
                                 textNodes.forEach { textNode ->
                                     visitInlineChild(
-                                        textNode, content, styles, this, inlineContentMap
+                                        textNode, content, styles, this, inlineContentMap, onHashtagClick
                                     )
                                 }
                             }
@@ -223,7 +228,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
 
                     val styledText = buildAnnotatedString {
                         textNodes.forEach { textNode ->
-                            visitInlineChild(textNode, content, styles, this, inlineContentMap)
+                            visitInlineChild(textNode, content, styles, this, inlineContentMap, onHashtagClick)
                         }
                     }
                     if (styledText.isNotEmpty()) {
@@ -262,7 +267,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                 val inlineContentMap = mutableMapOf<String, InlineTextContent>()
                 node.children.forEach { child ->
                     if (child.type != MarkdownTokenTypes.ATX_HEADER) {
-                        visitInlineChild(child, content, styles, this, inlineContentMap)
+                        visitInlineChild(child, content, styles, this, inlineContentMap, onHashtagClick)
                     }
                 }
             }
@@ -491,16 +496,34 @@ fun AnnotatedString.Builder.appendInlineChildren(
     node: ASTNode,
     content: String,
     styles: MarkdownStyles,
-    inlineContent: MutableMap<String, InlineTextContent>
+    inlineContent: MutableMap<String, InlineTextContent>,
+    onHashtagClick: ((String) -> Unit)?
 ) {
     if (node.children.isEmpty()) {
-        // Leaf node, append text
-        append(node.getTextInNode(content).toString())
+        val text = node.getTextInNode(content).toString()
+        // Check for hashtags
+        val hashtagRegex = Regex("#[^\\s#]+")
+        var lastIndex = 0
+        hashtagRegex.findAll(text).forEach { match ->
+            if (match.range.first > lastIndex) {
+                 append(text.substring(lastIndex, match.range.first))
+            }
+            val tag = match.value
+            pushLink(LinkAnnotation.Clickable(tag) { onHashtagClick?.invoke(tag) })
+            withStyle(SpanStyle(color = styles.linkColor, textDecoration = TextDecoration.None)) {
+                append(tag)
+            }
+            pop()
+            lastIndex = match.range.last + 1
+        }
+        if (lastIndex < text.length) {
+            append(text.substring(lastIndex))
+        }
         return
     }
 
     node.children.forEach { child ->
-        visitInlineChild(child, content, styles, this, inlineContent)
+        visitInlineChild(child, content, styles, this, inlineContent, onHashtagClick)
     }
 }
 
@@ -509,7 +532,8 @@ fun visitInlineChild(
     content: String,
     styles: MarkdownStyles,
     builder: AnnotatedString.Builder,
-    inlineContent: MutableMap<String, InlineTextContent>
+    inlineContent: MutableMap<String, InlineTextContent>,
+    onHashtagClick: ((String) -> Unit)?
 ) {
     with(builder) {
         when (child.type) {
@@ -517,7 +541,7 @@ fun visitInlineChild(
                 withStyle(styles.boldStyle) {
                     child.children.forEach { c ->
                         if (c.type != MarkdownTokenTypes.EMPH) {
-                            visitInlineChild(c, content, styles, this, inlineContent)
+                            visitInlineChild(c, content, styles, this, inlineContent, onHashtagClick)
                         }
                     }
                 }
@@ -527,7 +551,7 @@ fun visitInlineChild(
                 withStyle(styles.italicStyle) {
                     child.children.forEach { c ->
                         if (c.type != MarkdownTokenTypes.EMPH) {
-                            visitInlineChild(c, content, styles, this, inlineContent)
+                            visitInlineChild(c, content, styles, this, inlineContent, onHashtagClick)
                         }
                     }
                 }
@@ -614,7 +638,7 @@ fun visitInlineChild(
                     if (linkTextNode != null) {
                         linkTextNode.children.forEach { lc ->
                             if (lc.type != MarkdownTokenTypes.LBRACKET && lc.type != MarkdownTokenTypes.RBRACKET) {
-                                visitInlineChild(lc, content, styles, this, inlineContent)
+                                visitInlineChild(lc, content, styles, this, inlineContent, onHashtagClick)
                             }
                         }
                     } else {
@@ -628,14 +652,14 @@ fun visitInlineChild(
                 withStyle(styles.strikethroughStyle) {
                     child.children.forEach { c ->
                         if (c.type != GFMTokenTypes.TILDE) {
-                            visitInlineChild(c, content, styles, this, inlineContent)
+                            visitInlineChild(c, content, styles, this, inlineContent, onHashtagClick)
                         }
                     }
                 }
             }
 
             else -> {
-                appendInlineChildren(child, content, styles, inlineContent)
+                appendInlineChildren(child, content, styles, inlineContent, onHashtagClick)
             }
         }
     }

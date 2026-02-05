@@ -21,7 +21,8 @@ fun NativeComposeMarkdown(
     token: String = "",
     hostUrl: String = "",
     selectable: Boolean = false,
-    onContentChange: ((String) -> Unit)? = null
+    onContentChange: ((String) -> Unit)? = null,
+    onHashtagClick: ((String) -> Unit)? = null
 ) {
     val flavour = remember { GFMFlavourDescriptor() }
     val parser = remember(flavour) { MarkdownParser(flavour) }
@@ -51,12 +52,12 @@ fun NativeComposeMarkdown(
         if (selectable) {
             androidx.compose.foundation.text.selection.SelectionContainer {
                 NativeMarkdownNode(
-                    node = tree, content = content, modifier = modifier, onContentChange = onContentChange
+                    node = tree, content = content, modifier = modifier, onContentChange = onContentChange, onHashtagClick = onHashtagClick
                 )
             }
         } else {
             NativeMarkdownNode(
-                node = tree, content = content, modifier = modifier, onContentChange = onContentChange
+                node = tree, content = content, modifier = modifier, onContentChange = onContentChange, onHashtagClick = onHashtagClick
             )
         }
     }

@@ -59,6 +59,8 @@ fun NativeMarkdownTable(
     val columnCount = headerCells.size
     if (columnCount == 0) return
 
+    val onHashtagClick = LocalOnHashtagClick.current
+
     val align = remember(node) { getTableAlignments(node, content, columnCount) }
 
     val tableCellPadding = 8.dp
@@ -95,7 +97,7 @@ fun NativeMarkdownTable(
                         val placeable = subcompose("measure_${row.hashCode()}_$index") {
                              val inlineContentMap = remember { mutableMapOf<String, InlineTextContent>() }
                              val styledText = buildAnnotatedString {
-                                 appendInlineChildren(cellNode, content, styles, inlineContentMap)
+                                 appendInlineChildren(cellNode, content, styles, inlineContentMap, onHashtagClick)
                              }
                              MarkdownText(
                                  text = styledText,
@@ -141,7 +143,7 @@ fun NativeMarkdownTable(
                                     ) {
                                          val inlineContentMap = remember { mutableMapOf<String, InlineTextContent>() }
                                          val styledText = buildAnnotatedString {
-                                             appendInlineChildren(cellNode, content, styles, inlineContentMap)
+                                             appendInlineChildren(cellNode, content, styles, inlineContentMap, onHashtagClick)
                                          }
                                          MarkdownText(
                                              text = styledText,
