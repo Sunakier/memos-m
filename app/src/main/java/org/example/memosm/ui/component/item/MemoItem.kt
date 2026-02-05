@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import coil3.network.httpHeaders
-import com.mikepenz.markdown.model.rememberMarkdownState
+
 import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.model.MemoRelationType
@@ -46,7 +46,7 @@ import org.example.memosm.model.MemoState
 import org.example.memosm.model.Reaction
 import org.example.memosm.model.User
 import org.example.memosm.ui.VisibilityIcon
-import org.example.memosm.ui.component.item.markdown.MemoMarkdown
+import org.example.memosm.ui.component.item.markdown.NativeComposeMarkdown
 import org.example.memosm.ui.component.resolveResourceUrl
 import java.text.SimpleDateFormat
 import java.util.*
@@ -95,12 +95,7 @@ fun MemoItem(
         }
     }
 
-    // Configure markdown to treat single newlines as line breaks (memos-style)
-    val markdownState = if (memo.content.length < 1000) rememberMarkdownState(
-        memo.content, retainState = true, immediate = true
-    ) else rememberMarkdownState(
-        memo.content, retainState = true, immediate = false
-    )
+
 
     Card(
         modifier = modifier.fillMaxWidth(), colors = colors
@@ -415,11 +410,11 @@ fun MemoItem(
                         } else {
                             Modifier
                         })) {
-                    MemoMarkdown(
+                    NativeComposeMarkdown(
                         content = memo.content,
-                        markdownState = markdownState,
-                        onContentUpdate = onContentUpdate,
-                        selectable = isDetailView,
+                        token = token,
+                        hostUrl = hostUrl,
+                        onContentChange = onContentUpdate,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 12.dp, end = 16.dp, bottom = 8.dp)

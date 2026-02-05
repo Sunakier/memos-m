@@ -24,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+
 import org.intellij.markdown.IElementType
 import org.intellij.markdown.MarkdownElementTypes
 import org.intellij.markdown.MarkdownTokenTypes
@@ -32,6 +34,16 @@ import org.intellij.markdown.flavours.gfm.GFMElementTypes
 import org.intellij.markdown.flavours.gfm.GFMTokenTypes
 import org.intellij.markdown.ast.findChildOfType
 import toggleCheckbox
+
+// Helper data class for styles
+data class MarkdownStyles(
+    val codeBackground: Color,
+    val linkColor: Color,
+    val strikethroughStyle: SpanStyle,
+    val boldStyle: SpanStyle,
+    val italicStyle: SpanStyle,
+    val codeFontFamily: FontFamily
+)
 
 // Local provider for content and callbacks to avoid passing them deep
 val LocalMarkdownContent = compositionLocalOf { "" }
@@ -45,8 +57,7 @@ fun NativeMarkdownNode(
     onContentChange: ((String) -> Unit)? = null
 ) {
     CompositionLocalProvider(
-        LocalMarkdownContent provides content,
-        LocalOnContentChange provides onContentChange
+        LocalMarkdownContent provides content, LocalOnContentChange provides onContentChange
     ) {
         Column(modifier = modifier) {
             NativeMarkdownNodeRecursive(node)
@@ -58,6 +69,15 @@ fun NativeMarkdownNode(
 fun NativeMarkdownNodeRecursive(node: ASTNode) {
     val content = LocalMarkdownContent.current
     val onContentChange = LocalOnContentChange.current
+
+    val styles = MarkdownStyles(
+        codeBackground = MaterialTheme.colorScheme.surfaceVariant,
+        linkColor = MaterialTheme.colorScheme.primary,
+        strikethroughStyle = SpanStyle(textDecoration = TextDecoration.LineThrough),
+        boldStyle = SpanStyle(fontWeight = FontWeight.Bold),
+        italicStyle = SpanStyle(fontStyle = FontStyle.Italic),
+        codeFontFamily = FontFamily.Monospace
+    )
 
     when (node.type) {
         MarkdownElementTypes.MARKDOWN_FILE -> {
@@ -71,18 +91,16 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
             // Render paragraph text with inline styling
             // This needs to collect all inline children and build an AnnotatedString
             val styledText = buildAnnotatedString {
-                appendInlineChildren(node, content)
+                appendInlineChildren(node, content, styles)
             }
             Text(
                 text = styledText,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         }
 
-        MarkdownElementTypes.ATX_1, MarkdownElementTypes.ATX_2,
-        MarkdownElementTypes.ATX_3, MarkdownElementTypes.ATX_4,
-        MarkdownElementTypes.ATX_5, MarkdownElementTypes.ATX_6 -> {
+        MarkdownElementTypes.ATX_1, MarkdownElementTypes.ATX_2, MarkdownElementTypes.ATX_3, MarkdownElementTypes.ATX_4, MarkdownElementTypes.ATX_5, MarkdownElementTypes.ATX_6 -> {
             val style = when (node.type) {
                 MarkdownElementTypes.ATX_1 -> MaterialTheme.typography.displaySmall
                 MarkdownElementTypes.ATX_2 -> MaterialTheme.typography.headlineMedium
@@ -103,14 +121,12 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                 node.children.forEach { child ->
                     if (child.type != MarkdownTokenTypes.ATX_HEADER) {
                         // append recursively
-                        appendInlineChildren(child, content)
+                        appendInlineChildren(child, content, styles)
                     }
                 }
             }
             Text(
-                text = styledText,
-                style = style,
-                modifier = Modifier.padding(vertical = 8.dp)
+                text = styledText, style = style, modifier = Modifier.padding(vertical = 8.dp)
             )
         }
 
@@ -125,8 +141,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                                 val isChecked = checkBoxNode.getTextInNode(content)
                                     .contains("x", ignoreCase = true)
                                 Checkbox(
-                                    checked = isChecked,
-                                    onCheckedChange = { checked ->
+                                    checked = isChecked, onCheckedChange = { checked ->
                                         // Edit source string: replace [ ] with [x] or vice versa
                                         onContentChange?.invoke(
                                             toggleCheckbox(
@@ -136,11 +151,10 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                                                 checked
                                             )
                                         )
-                                    },
-                                    modifier = Modifier.padding(end = 8.dp)
+                                    }, modifier = Modifier.padding(end = 8.dp)
                                 )
                             } else {
-                                Text("•", modifier = Modifier.padding(horizontal = 8.dp))
+                                Text("•", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 8.dp))
                             }
 
                             Column {
@@ -164,7 +178,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                 node.children.forEach { child ->
                     if (child.type == MarkdownElementTypes.LIST_ITEM) {
                         Row(modifier = Modifier.fillMaxWidth()) {
-                            Text("$index.", modifier = Modifier.padding(horizontal = 8.dp))
+                            Text("$index.", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 8.dp))
                             Column {
                                 child.children.forEach { listChild ->
                                     NativeMarkdownNodeRecursive(listChild)
@@ -222,9 +236,10 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
     }
 }
 
-// Inline content builder
-@Composable
-fun AnnotatedString.Builder.appendInlineChildren(node: ASTNode, content: String) {
+// Inline content builder, NOT Composable
+fun AnnotatedString.Builder.appendInlineChildren(
+    node: ASTNode, content: String, styles: MarkdownStyles
+) {
     if (node.children.isEmpty()) {
         // Leaf node, append text
         append(node.getTextInNode(content).toString())
@@ -234,22 +249,29 @@ fun AnnotatedString.Builder.appendInlineChildren(node: ASTNode, content: String)
     node.children.forEach { child ->
         when (child.type) {
             MarkdownElementTypes.STRONG -> {
-                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                    appendInlineChildren(child, content)
+                withStyle(styles.boldStyle) {
+                    child.children.forEach { c ->
+                        if (c.type != MarkdownTokenTypes.EMPH) {
+                            appendInlineChildren(c, content, styles)
+                        }
+                    }
                 }
             }
 
             MarkdownElementTypes.EMPH -> {
-                withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                    appendInlineChildren(child, content)
+                withStyle(styles.italicStyle) {
+                    child.children.forEach { c ->
+                        if (c.type != MarkdownTokenTypes.EMPH) {
+                            appendInlineChildren(c, content, styles)
+                        }
+                    }
                 }
             }
 
             MarkdownElementTypes.CODE_SPAN -> {
                 withStyle(
                     SpanStyle(
-                        fontFamily = FontFamily.Monospace,
-                        background = MaterialTheme.colorScheme.surfaceVariant
+                        fontFamily = styles.codeFontFamily, background = styles.codeBackground
                     )
                 ) {
                     // Usually wraps content in backticks, we might want to strip them or custom render
@@ -274,7 +296,7 @@ fun AnnotatedString.Builder.appendInlineChildren(node: ASTNode, content: String)
                     ?.getTextInNode(content)?.toString() ?: ""
 
                 pushStringAnnotation(tag = "URL", annotation = linkDest)
-                withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) {
+                withStyle(SpanStyle(color = styles.linkColor)) {
                     // The text might be wrapped in brackets in the AST?
                     // LINK_TEXT children: [ "[", TEXT, "]" ]
                     // We recursively append children of LINK_TEXT, avoiding brackets
@@ -282,7 +304,7 @@ fun AnnotatedString.Builder.appendInlineChildren(node: ASTNode, content: String)
                     if (linkTextNode != null) {
                         linkTextNode.children.forEach { lc ->
                             if (lc.type != MarkdownTokenTypes.LBRACKET && lc.type != MarkdownTokenTypes.RBRACKET) {
-                                appendInlineChildren(lc, content)
+                                appendInlineChildren(lc, content, styles)
                             }
                         }
                     } else {
@@ -293,17 +315,17 @@ fun AnnotatedString.Builder.appendInlineChildren(node: ASTNode, content: String)
             }
 
             GFMElementTypes.STRIKETHROUGH -> {
-                withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) {
+                withStyle(styles.strikethroughStyle) {
                     child.children.forEach { c ->
                         if (c.type != GFMTokenTypes.TILDE) {
-                            appendInlineChildren(c, content)
+                            appendInlineChildren(c, content, styles)
                         }
                     }
                 }
             }
 
             else -> {
-                appendInlineChildren(child, content)
+                appendInlineChildren(child, content, styles)
             }
         }
     }
