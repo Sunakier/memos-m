@@ -16,13 +16,10 @@ object CodeHighlighter {
 
     fun highlightCode(code: String, language: String, isDarkMode: Boolean = true): AnnotatedString {
         val syntaxLanguage = getSyntaxLanguage(language)
-        val theme = SyntaxThemes.atom(isDarkMode)
+        val theme = SyntaxThemes.default(isDarkMode)
 
-        val highlights = Highlights.Builder()
-            .code(code)
-            .theme(theme)
-            .language(syntaxLanguage)
-            .build()
+        val highlights =
+            Highlights.Builder().code(code).theme(theme).language(syntaxLanguage).build()
 
         val structure = highlights.getHighlights()
 
@@ -42,6 +39,7 @@ object CodeHighlighter {
                                 end = end
                             )
                         }
+
                         is BoldHighlight -> {
                             addStyle(
                                 style = SpanStyle(fontWeight = FontWeight.Bold),
