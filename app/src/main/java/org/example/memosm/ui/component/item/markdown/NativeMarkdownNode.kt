@@ -56,7 +56,6 @@ import org.intellij.markdown.ast.ASTNode
 import org.intellij.markdown.flavours.gfm.GFMElementTypes
 import org.intellij.markdown.flavours.gfm.GFMTokenTypes
 import org.intellij.markdown.ast.findChildOfType
-import toggleCheckbox
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.ui.text.Placeholder
@@ -174,7 +173,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                 var lastIndex = 0
 
                 children.forEachIndexed { index, child ->
-                    if (child.type == GFMElementTypes.BLOCK_MATH) {
+                    if (child.type == GFMElementTypes.BLOCK_MATH || child.type == MarkdownElementTypes.IMAGE) {
                         // Render previous text chunk
                         if (index > lastIndex) {
                             val textNodes = children.subList(lastIndex, index)
@@ -196,17 +195,22 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                             }
                         }
 
-                        // Render Block Math
-                        val rawText = child.children.joinToString("") { it.getTextInNode(content) }
-                        val latex = rawText.trim().removePrefix("$$").removeSuffix("$$").trim()
+                        if (child.type == GFMElementTypes.BLOCK_MATH) {
+                            // Render Block Math
+                            val rawText = child.children.joinToString("") { it.getTextInNode(content) }
+                            val latex = rawText.trim().removePrefix("$$").removeSuffix("$$").trim()
 
-                        NativeMarkdownLatex(
-                            latex = latex,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            inline = false
-                        )
+                            NativeMarkdownLatex(
+                                latex = latex,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                inline = false
+                            )
+                        } else if (child.type == MarkdownElementTypes.IMAGE) {
+                            // Render Image
+                            NativeMarkdownAttachmentImage(content, child)
+                        }
 
                         lastIndex = index + 1
                     }

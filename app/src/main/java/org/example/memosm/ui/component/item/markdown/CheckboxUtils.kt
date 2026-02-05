@@ -1,4 +1,6 @@
 
+package org.example.memosm.ui.component.item.markdown
+
 fun toggleCheckbox(content: String, start: Int, end: Int, checked: Boolean): String {
     // Expected content at range [start, end] is "[ ]" or "[x]"
     var newStatus = if (checked) "[x]" else "[ ]"
