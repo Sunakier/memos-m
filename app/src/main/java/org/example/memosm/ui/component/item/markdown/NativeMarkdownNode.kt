@@ -113,7 +113,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
     val onContentChange = LocalOnContentChange.current
 
     val styles = MarkdownStyles(
-        codeBackground = MaterialTheme.colorScheme.surfaceVariant,
+        codeBackground = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
         linkColor = MaterialTheme.colorScheme.primary,
         strikethroughStyle = SpanStyle(textDecoration = TextDecoration.LineThrough),
         boldStyle = SpanStyle(fontWeight = FontWeight.Bold),
@@ -277,23 +277,32 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
 
         MarkdownElementTypes.CODE_BLOCK, MarkdownElementTypes.CODE_FENCE -> {
             Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
             ) {
+                var lang = ""
                 val sb = StringBuilder()
                 node.children.forEach { child ->
-                    val text = child.getTextInNode(content)
-                    // Naive filtering of fence markers based on text content
-                    // and ignoring language identifier token if recognizable
-                    if (child.type != MarkdownTokenTypes.FENCE_LANG &&
-                        !text.trim().startsWith("```") &&
-                        !text.trim().startsWith("~~~")) {
-                        sb.append(text)
+                    when (child.type) {
+                        MarkdownTokenTypes.FENCE_LANG -> {
+                            lang = child.getTextInNode(content).toString().trim()
+                        }
+                        MarkdownTokenTypes.CODE_FENCE_CONTENT,
+                        MarkdownTokenTypes.CODE_LINE,
+                        MarkdownTokenTypes.EOL -> {
+                            sb.append(child.getTextInNode(content))
+                        }
+                        // Ignore fence delimiters (START/END) and other metadata
                     }
                 }
+                
+                // Remove leading/trailing newlines to avoid extra padding, but preserve indentation
+                val code = sb.toString().removePrefix("\n").removeSuffix("\n")
+                val highlightedText = CodeHighlighter.highlightCode(code, lang)
+                
                 Text(
-                    text = sb.toString().trim(),
+                    text = highlightedText,
                     style = typography.bodyMedium,
                     fontFamily = FontFamily.Monospace,
                     modifier = Modifier.padding(8.dp)

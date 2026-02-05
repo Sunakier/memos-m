@@ -169,6 +169,7 @@ dependencies {
     implementation(libs.multiplatform.markdown.renderer.code)
 
     implementation(libs.markdown)
+    implementation(libs.highlights)
 //    implementation(libs.ktreesitter)
 
     implementation(libs.media3.exoplayer)

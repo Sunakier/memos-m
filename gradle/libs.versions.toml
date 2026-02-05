@@ -2,6 +2,7 @@
 agp = "9.0.0"
 glance = "1.1.1"
 connectKotlinOkhttp = "0.7.4"
+highlights = "1.1.0"
 kotlin = "2.3.0"
 coreKtx = "1.17.0"
 junit = "4.13.2"
@@ -43,6 +44,7 @@ androidx-room-rxjava3 = { module = "androidx.room:room-rxjava3", version.ref = "
 androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "roomRuntime" }
 connect-kotlin-google-java-ext = { module = "com.connectrpc:connect-kotlin-google-java-ext", version.ref = "connectKotlinOkhttp" }
 connect-kotlin-okhttp = { module = "com.connectrpc:connect-kotlin-okhttp", version.ref = "connectKotlinOkhttp" }
+highlights = { module = "dev.snipme:highlights", version.ref = "highlights" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
