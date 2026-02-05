@@ -180,8 +180,8 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                                 val isChecked = checkBoxNode.getTextInNode(content)
                                     .contains("x", ignoreCase = true)
                                 Checkbox(
-                                    checked = isChecked, onCheckedChange = { checked ->
-                                        // Edit source string: replace [ ] with [x] or vice versa
+                                    checked = isChecked,
+                                    onCheckedChange = { checked ->
                                         onContentChange?.invoke(
                                             toggleCheckbox(
                                                 content,
@@ -190,23 +190,24 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                                                 checked
                                             )
                                         )
-                                    }, modifier = Modifier.padding(end = 8.dp)
+                                    },
+                                    modifier = Modifier.padding(end = 8.dp)
                                 )
                             } else {
                                 Text(
                                     "•",
                                     style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                    modifier = Modifier.padding(end = 8.dp)
                                 )
                             }
 
                             Column {
                                 var firstChildProcessed = false
                                 child.children.forEach { listChild ->
-                                    if (listChild.type != GFMTokenTypes.CHECK_BOX && 
-                                        listChild.type != MarkdownTokenTypes.LIST_BULLET && // Also skip the bullet if present as child
-                                        listChild.type != org.intellij.markdown.MarkdownTokenTypes.EOL) { // Skip newlines if separate nodes
-                                        
+                                    if (listChild.type != GFMTokenTypes.CHECK_BOX &&
+                                        listChild.type != MarkdownTokenTypes.LIST_BULLET &&
+                                        listChild.type != org.intellij.markdown.MarkdownTokenTypes.EOL
+                                    ) {
                                         if (!firstChildProcessed) {
                                             CompositionLocalProvider(LocalForceNoTopPadding provides true) {
                                                 NativeMarkdownNodeRecursive(listChild)
@@ -235,14 +236,14 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                             Text(
                                 "$index.",
                                 style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(horizontal = 8.dp)
+                                modifier = Modifier.padding(end = 8.dp)
                             )
                             Column {
                                 var firstChildProcessed = false
                                 child.children.forEach { listChild ->
-                                    if (listChild.type != MarkdownTokenTypes.LIST_NUMBER && // Skip number if present as child
-                                        listChild.type != org.intellij.markdown.MarkdownTokenTypes.EOL) {
-
+                                    if (listChild.type != MarkdownTokenTypes.LIST_NUMBER &&
+                                        listChild.type != org.intellij.markdown.MarkdownTokenTypes.EOL
+                                    ) {
                                         if (!firstChildProcessed) {
                                             CompositionLocalProvider(LocalForceNoTopPadding provides true) {
                                                 NativeMarkdownNodeRecursive(listChild)
