@@ -68,7 +68,7 @@
         </activity>
 
         <receiver
-            android:name=".widget.DraftWidget"
+            android:name=".widget.DraftWidgetReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

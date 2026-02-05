@@ -1,81 +1,102 @@
 package org.example.memosm.widget
 
-import android.app.PendingIntent
-import android.appwidget.AppWidgetManager
-import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
-import android.widget.RemoteViews
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.glance.GlanceId
+import androidx.glance.GlanceModifier
+import androidx.glance.GlanceTheme
+import androidx.glance.Image
+import androidx.glance.ImageProvider
+import androidx.glance.ColorFilter
+import androidx.glance.action.Action
+import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionParametersOf
+import androidx.glance.action.clickable
+import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.provideContent
+import androidx.glance.background
+import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
+import androidx.glance.layout.Row
+import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.padding
+import androidx.glance.layout.size
+import androidx.glance.layout.width
+import androidx.glance.text.FontWeight
+import androidx.glance.text.Text
+import androidx.glance.text.TextStyle
 import org.example.memosm.MainActivity
 import org.example.memosm.R
 
-import android.os.Bundle
-import android.view.View
+class DraftWidget : GlanceAppWidget() {
 
-class DraftWidget : AppWidgetProvider() {
-    override fun onUpdate(
-        context: Context,
-        appWidgetManager: AppWidgetManager,
-        appWidgetIds: IntArray
-    ) {
-        // There may be multiple widgets active, so update all of them
-        for (appWidgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, appWidgetId)
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
+        provideContent {
+            val size = androidx.glance.LocalSize.current
+            // Show text if width is >= 150dp (approx 2 cells), similar to original logic
+            val showText = size.width >= 150.dp
+
+            GlanceTheme {
+                Box(
+                    modifier = GlanceModifier
+                        .fillMaxSize()
+                        .background(GlanceTheme.colors.primaryContainer)
+                        .padding(12.dp)
+                        .clickable(actionRunCallback<OpenComposerAction>()),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            provider = ImageProvider(R.drawable.outline_ink_pen_24),
+                            contentDescription = context.getString(R.string.memo_composer_fab_new_memo),
+                            modifier = GlanceModifier.size(24.dp),
+                            colorFilter = ColorFilter.tint(GlanceTheme.colors.onPrimaryContainer)
+                        )
+                        if (showText) {
+                            Spacer(GlanceModifier.width(8.dp))
+                            Text(
+                                text = context.getString(R.string.memo_composer_fab_new_memo),
+                                style = TextStyle(
+                                    color = GlanceTheme.colors.onPrimaryContainer,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
         }
-    }
-
-    override fun onAppWidgetOptionsChanged(
-        context: Context,
-        appWidgetManager: AppWidgetManager,
-        appWidgetId: Int,
-        newOptions: Bundle
-    ) {
-        updateAppWidget(context, appWidgetManager, appWidgetId)
-        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
     }
 
     companion object {
         const val ACTION_OPEN_COMPOSER = "org.example.memosm.action.OPEN_COMPOSER"
-
-        internal fun updateAppWidget(
-            context: Context,
-            appWidgetManager: AppWidgetManager,
-            appWidgetId: Int
-        ) {
-            // Check widget width options
-            val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
-            // minWidth is in dp
-            val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
-            
-            // Show text if width is >= 100dp (approx 2 cells)
-            val showText = minWidth >= 150
-
-            // Create an Intent to launch MainActivity with the specific action
-            val intent = Intent(context, MainActivity::class.java).apply {
-                action = ACTION_OPEN_COMPOSER
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            }
-            
-            val pendingIntent: PendingIntent = PendingIntent.getActivity(
-                context,
-                0,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-
-            // Construct the RemoteViews object
-            val views = RemoteViews(context.packageName, R.layout.widget_draft)
-            views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
-
-            // Toggle text visibility
-            if (showText) {
-                views.setViewVisibility(R.id.widget_text, View.VISIBLE)
-            } else {
-                views.setViewVisibility(R.id.widget_text, View.GONE)
-            }
-
-            // Instruct the widget manager to update the widget
-            appWidgetManager.updateAppWidget(appWidgetId, views)
-        }
     }
+}
+
+class OpenComposerAction : ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters
+    ) {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = DraftWidget.ACTION_OPEN_COMPOSER
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        context.startActivity(intent)
+    }
+}
+
+class DraftWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = DraftWidget()
 }
