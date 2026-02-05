@@ -421,6 +421,12 @@ fun MemoItem(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 12.dp, end = 16.dp, bottom = 8.dp)
+                            .then(
+                                if (maxHeight != Dp.Unspecified) Modifier.wrapContentHeight(
+                                    unbounded = true,
+                                    align = Alignment.Top
+                                ) else Modifier
+                            )
                     )
                 }
 
