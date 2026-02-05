@@ -57,6 +57,7 @@ object CodeHighlighter {
         return when (alias.lowercase()) {
             "c" -> SyntaxLanguage.C
             "cpp", "c++" -> SyntaxLanguage.CPP
+            "slang", "glsl", "shader" -> SyntaxLanguage.CPP
             "csharp", "c#" -> SyntaxLanguage.CSHARP
             "dart" -> SyntaxLanguage.DART
             "go", "golang" -> SyntaxLanguage.GO
@@ -74,7 +75,7 @@ object CodeHighlighter {
             "coffee", "coffeescript" -> SyntaxLanguage.COFFEESCRIPT
             "xml", "html" -> SyntaxLanguage.DEFAULT
             "yaml", "yml" -> SyntaxLanguage.DEFAULT
-            "shell", "sh", "bash" -> SyntaxLanguage.SHELL
+            "shell", "sh", "bash", "zsh" -> SyntaxLanguage.SHELL
             else -> SyntaxLanguage.DEFAULT
         }
     }
