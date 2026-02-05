@@ -141,8 +141,10 @@
     <string name="memo_visibility_public">所有人可見</string>
     <string name="memo_visibility_protected">登入使用者可見</string>
     <string name="memo_visibility_private">僅自己可見</string>
+    <string name="memo_visibility_unspecified">未知</string>
 
     <string name="common_save">儲存</string>
+    <string name="common_share">分享</string>
     <string name="common_cancel">取消</string>
     <string name="common_close">關閉</string>
     <string name="common_not_available">無</string>
@@ -192,4 +194,6 @@
     <string name="profile_activity_more">多</string>
     <string name="drafts_delete_all_confirmation_title">刪除所有草稿？</string>
     <string name="drafts_delete_all_confirmation_message">您確定要刪除所有草稿嗎？此動作無法復原。</string>
+
+    <string name="user_stats_widget_description">顯示使用者統計資訊。</string>
 </resources>

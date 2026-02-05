@@ -157,7 +157,8 @@ abstract class BaseListManager<T>(
                     "loadInternal: fetched ${newItems.size} items, rawToken='$rawNextToken' -> nextToken=$nextToken"
                 )
 
-                val updatedItems = if (pageToken == null) processedItems else _listState.value.items + processedItems
+                val updatedItems =
+                    if (pageToken == null) processedItems else _listState.value.items + processedItems
 
                 _listState.value = _listState.value.copy(
                     items = updatedItems,
@@ -188,7 +189,10 @@ abstract class BaseListManager<T>(
                     try {
                         val cachedItems = cacheCallbacks.getCachedData()
                         if (cachedItems.isNotEmpty()) {
-                            android.util.Log.d("MemosListManager", "Loaded ${cachedItems.size} items from cache")
+                            android.util.Log.d(
+                                "MemosListManager",
+                                "Loaded ${cachedItems.size} items from cache"
+                            )
                             _listState.value = _listState.value.copy(
                                 items = cachedItems,
                                 isLoading = false,
@@ -198,11 +202,16 @@ abstract class BaseListManager<T>(
                             return@launch
                         }
                     } catch (cacheError: Exception) {
-                        android.util.Log.e("MemosListManager", "Error loading from cache", cacheError)
+                        android.util.Log.e(
+                            "MemosListManager",
+                            "Error loading from cache",
+                            cacheError
+                        )
                     }
                 }
 
-                _listState.value = _listState.value.copy(isLoading = false, errorMessage = errorMessage)
+                _listState.value =
+                    _listState.value.copy(isLoading = false, errorMessage = errorMessage)
             }
         }
     }

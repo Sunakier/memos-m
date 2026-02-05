@@ -1,8 +1,50 @@
 package org.example.memosm.api
 
-import okhttp3.MultipartBody
-import org.example.memosm.model.*
-import retrofit2.http.*
+import org.example.memosm.model.Activity
+import org.example.memosm.model.Attachment
+import org.example.memosm.model.CreatePersonalAccessTokenRequest
+import org.example.memosm.model.CreatePersonalAccessTokenResponse
+import org.example.memosm.model.CurrentSessionResponse
+import org.example.memosm.model.IdentityProvider
+import org.example.memosm.model.InstanceProfile
+import org.example.memosm.model.InstanceSetting
+import org.example.memosm.model.ListActivitiesResponse
+import org.example.memosm.model.ListAllUserStatsResponse
+import org.example.memosm.model.ListAttachmentsResponse
+import org.example.memosm.model.ListIdentityProvidersResponse
+import org.example.memosm.model.ListMemoAttachmentsResponse
+import org.example.memosm.model.ListMemoCommentsResponse
+import org.example.memosm.model.ListMemoReactionsResponse
+import org.example.memosm.model.ListMemoRelationsResponse
+import org.example.memosm.model.ListMemosResponse
+import org.example.memosm.model.ListPersonalAccessTokensResponse
+import org.example.memosm.model.ListUserNotificationsResponse
+import org.example.memosm.model.ListUserSettingsResponse
+import org.example.memosm.model.ListUserWebhooksResponse
+import org.example.memosm.model.ListUsersResponse
+import org.example.memosm.model.Memo
+import org.example.memosm.model.Reaction
+import org.example.memosm.model.RefreshTokenRequest
+import org.example.memosm.model.RefreshTokenResponse
+import org.example.memosm.model.SetMemoAttachmentsRequest
+import org.example.memosm.model.SetMemoRelationsRequest
+import org.example.memosm.model.Shortcut
+import org.example.memosm.model.ShortcutResponse
+import org.example.memosm.model.SignInRequest
+import org.example.memosm.model.SignInResponse
+import org.example.memosm.model.UpsertMemoReactionRequest
+import org.example.memosm.model.User
+import org.example.memosm.model.UserNotification
+import org.example.memosm.model.UserSetting
+import org.example.memosm.model.UserStats
+import org.example.memosm.model.UserWebhook
+import retrofit2.http.Body
+import retrofit2.http.DELETE
+import retrofit2.http.GET
+import retrofit2.http.PATCH
+import retrofit2.http.POST
+import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface MemosApiV0353 {
 
@@ -41,7 +83,6 @@ interface MemosApiV0353 {
         @Body attachmentData: Attachment,
         @Query("updateMask") updateMask: String
     ): Attachment
-
 
 
     // --- AuthService ---
@@ -93,7 +134,12 @@ interface MemosApiV0353 {
     suspend fun getInstanceProfile(): InstanceProfile
 
     @GET("api/v1/instance/{instance}")
-    suspend fun getInstanceSetting(@Path("instance", encoded = true) instance: String): InstanceSetting
+    suspend fun getInstanceSetting(
+        @Path(
+            "instance",
+            encoded = true
+        ) instance: String
+    ): InstanceSetting
 
     @PATCH("api/v1/instance/{instance}/*")
     suspend fun updateInstanceSetting(

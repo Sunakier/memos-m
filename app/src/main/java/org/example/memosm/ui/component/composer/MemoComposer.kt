@@ -16,7 +16,18 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -24,10 +35,39 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.outlined.ArrowDropDown
+import androidx.compose.material.icons.outlined.ArrowDropUp
+import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.MicNone
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Place
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
@@ -627,105 +667,105 @@ fun MemoComposer(
                             onDismissRequest = { showActionOverflowMenu = false }) {
                             DropdownMenuItem(
                                 text = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.AttachFile,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(stringResource(R.string.memo_composer_attach_file))
-                                }
-                            }, onClick = {
-                                showActionOverflowMenu = false
-                                pickerLauncher.launch("*/*")
-                            }, enabled = !isPosting
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Image,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(stringResource(R.string.memo_composer_add_image))
-                                }
-                            }, onClick = {
-                                showActionOverflowMenu = false
-                                pickerLauncher.launch("image/*")
-                            }, enabled = !isPosting
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = if (isRecording) Icons.Default.Mic else Icons.Outlined.MicNone,
-                                        contentDescription = null,
-                                        tint = if (isRecording) MaterialTheme.colorScheme.error else LocalContentColor.current,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        if (isRecording) "Stop Recording" else "Record Audio"
-                                    )
-                                }
-                            }, onClick = {
-                                showActionOverflowMenu = false
-                                if (isRecording) {
-                                    stopRecording()
-                                } else {
-                                    val permission = Manifest.permission.RECORD_AUDIO
-                                    if (ContextCompat.checkSelfPermission(
-                                            context, permission
-                                        ) == PackageManager.PERMISSION_GRANTED
-                                    ) {
-                                        startRecording()
-                                    } else {
-                                        audioPermissionLauncher.launch(permission)
-                                    }
-                                }
-                            }, enabled = !isPosting
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    if (isFetchingLocation) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(20.dp), strokeWidth = 2.dp
-                                        )
-                                    } else {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
-                                            imageVector = if (location != null) Icons.Default.Place else Icons.Outlined.Place,
+                                            imageVector = Icons.Outlined.AttachFile,
                                             contentDescription = null,
-                                            tint = if (location != null) MaterialTheme.colorScheme.primary else LocalContentColor.current,
                                             modifier = Modifier.size(20.dp)
                                         )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(stringResource(R.string.memo_composer_attach_file))
                                     }
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(stringResource(R.string.memo_composer_add_location))
-                                }
-                            }, onClick = {
-                                showActionOverflowMenu = false
-                                val hasCoarse = ContextCompat.checkSelfPermission(
-                                    context, Manifest.permission.ACCESS_COARSE_LOCATION
-                                ) == PackageManager.PERMISSION_GRANTED
-                                val hasFine = ContextCompat.checkSelfPermission(
-                                    context, Manifest.permission.ACCESS_FINE_LOCATION
-                                ) == PackageManager.PERMISSION_GRANTED
-
-                                if (hasCoarse || hasFine) {
-                                    fetchLocation()
-                                } else {
-                                    locationPermissionLauncher.launch(
-                                        arrayOf(
-                                            Manifest.permission.ACCESS_FINE_LOCATION,
-                                            Manifest.permission.ACCESS_COARSE_LOCATION
+                                }, onClick = {
+                                    showActionOverflowMenu = false
+                                    pickerLauncher.launch("*/*")
+                                }, enabled = !isPosting
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Image,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
                                         )
-                                    )
-                                }
-                            }, enabled = !isPosting && !isFetchingLocation
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(stringResource(R.string.memo_composer_add_image))
+                                    }
+                                }, onClick = {
+                                    showActionOverflowMenu = false
+                                    pickerLauncher.launch("image/*")
+                                }, enabled = !isPosting
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = if (isRecording) Icons.Default.Mic else Icons.Outlined.MicNone,
+                                            contentDescription = null,
+                                            tint = if (isRecording) MaterialTheme.colorScheme.error else LocalContentColor.current,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            if (isRecording) "Stop Recording" else "Record Audio"
+                                        )
+                                    }
+                                }, onClick = {
+                                    showActionOverflowMenu = false
+                                    if (isRecording) {
+                                        stopRecording()
+                                    } else {
+                                        val permission = Manifest.permission.RECORD_AUDIO
+                                        if (ContextCompat.checkSelfPermission(
+                                                context, permission
+                                            ) == PackageManager.PERMISSION_GRANTED
+                                        ) {
+                                            startRecording()
+                                        } else {
+                                            audioPermissionLauncher.launch(permission)
+                                        }
+                                    }
+                                }, enabled = !isPosting
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (isFetchingLocation) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(20.dp), strokeWidth = 2.dp
+                                            )
+                                        } else {
+                                            Icon(
+                                                imageVector = if (location != null) Icons.Default.Place else Icons.Outlined.Place,
+                                                contentDescription = null,
+                                                tint = if (location != null) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(stringResource(R.string.memo_composer_add_location))
+                                    }
+                                }, onClick = {
+                                    showActionOverflowMenu = false
+                                    val hasCoarse = ContextCompat.checkSelfPermission(
+                                        context, Manifest.permission.ACCESS_COARSE_LOCATION
+                                    ) == PackageManager.PERMISSION_GRANTED
+                                    val hasFine = ContextCompat.checkSelfPermission(
+                                        context, Manifest.permission.ACCESS_FINE_LOCATION
+                                    ) == PackageManager.PERMISSION_GRANTED
+
+                                    if (hasCoarse || hasFine) {
+                                        fetchLocation()
+                                    } else {
+                                        locationPermissionLauncher.launch(
+                                            arrayOf(
+                                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                                Manifest.permission.ACCESS_COARSE_LOCATION
+                                            )
+                                        )
+                                    }
+                                }, enabled = !isPosting && !isFetchingLocation
                             )
                         }
                     }

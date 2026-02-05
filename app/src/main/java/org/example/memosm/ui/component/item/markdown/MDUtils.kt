@@ -22,7 +22,7 @@ fun CharSequence.unescape(): String {
     return this.toString()
         .replace("\\n", "\n")
         .replace("\\t", "\t")
-        // Add more as needed
+    // Add more as needed
 }
 
 fun Color.toHex(): String {

@@ -1,67 +1,63 @@
 package org.example.memosm.ui.component.item.markdown
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.ui.draw.scale
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.isSpecified
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.unit.em
 import org.intellij.markdown.MarkdownElementTypes
 import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.ASTNode
+import org.intellij.markdown.ast.findChildOfType
 import org.intellij.markdown.flavours.gfm.GFMElementTypes
 import org.intellij.markdown.flavours.gfm.GFMTokenTypes
-import org.intellij.markdown.ast.findChildOfType
-import androidx.compose.foundation.text.InlineTextContent
-import androidx.compose.foundation.text.appendInlineContent
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
-import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
 import java.util.UUID
 
 // Helper data class for styles
@@ -82,7 +78,7 @@ fun MarkdownText(
     textAlign: TextAlign = TextAlign.Start,
     inlineContent: Map<String, InlineTextContent> = emptyMap()
 ) {
-    val uriHandler = LocalUriHandler.current
+    LocalUriHandler.current
     val defaultColor = LocalContentColor.current
     val textColor = if (style.color.isSpecified) style.color else defaultColor
 
@@ -187,7 +183,12 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                             val styledText = buildAnnotatedString {
                                 textNodes.forEach { textNode ->
                                     visitInlineChild(
-                                        textNode, content, styles, this, inlineContentMap, onHashtagClick
+                                        textNode,
+                                        content,
+                                        styles,
+                                        this,
+                                        inlineContentMap,
+                                        onHashtagClick
                                     )
                                 }
                             }
@@ -202,7 +203,8 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
 
                         if (child.type == GFMElementTypes.BLOCK_MATH) {
                             // Render Block Math
-                            val rawText = child.children.joinToString("") { it.getTextInNode(content) }
+                            val rawText =
+                                child.children.joinToString("") { it.getTextInNode(content) }
                             val latex = rawText.trim().removePrefix("$$").removeSuffix("$$").trim()
 
                             NativeMarkdownLatex(
@@ -228,7 +230,14 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
 
                     val styledText = buildAnnotatedString {
                         textNodes.forEach { textNode ->
-                            visitInlineChild(textNode, content, styles, this, inlineContentMap, onHashtagClick)
+                            visitInlineChild(
+                                textNode,
+                                content,
+                                styles,
+                                this,
+                                inlineContentMap,
+                                onHashtagClick
+                            )
                         }
                     }
                     if (styledText.isNotEmpty()) {
@@ -267,7 +276,14 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                 val inlineContentMap = mutableMapOf<String, InlineTextContent>()
                 node.children.forEach { child ->
                     if (child.type != MarkdownTokenTypes.ATX_HEADER) {
-                        visitInlineChild(child, content, styles, this, inlineContentMap, onHashtagClick)
+                        visitInlineChild(
+                            child,
+                            content,
+                            styles,
+                            this,
+                            inlineContentMap,
+                            onHashtagClick
+                        )
                     }
                 }
             }
@@ -321,7 +337,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                             Column {
                                 var firstChildProcessed = false
                                 child.children.forEach { listChild ->
-                                    if (listChild.type != GFMTokenTypes.CHECK_BOX && listChild.type != MarkdownTokenTypes.LIST_BULLET && listChild.type != org.intellij.markdown.MarkdownTokenTypes.EOL) {
+                                    if (listChild.type != GFMTokenTypes.CHECK_BOX && listChild.type != MarkdownTokenTypes.LIST_BULLET && listChild.type != MarkdownTokenTypes.EOL) {
                                         if (!firstChildProcessed) {
                                             CompositionLocalProvider(LocalForceNoTopPadding provides true) {
                                                 NativeMarkdownNodeRecursive(listChild)
@@ -355,7 +371,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                             Column {
                                 var firstChildProcessed = false
                                 child.children.forEach { listChild ->
-                                    if (listChild.type != MarkdownTokenTypes.LIST_NUMBER && listChild.type != org.intellij.markdown.MarkdownTokenTypes.EOL) {
+                                    if (listChild.type != MarkdownTokenTypes.LIST_NUMBER && listChild.type != MarkdownTokenTypes.EOL) {
                                         if (!firstChildProcessed) {
                                             CompositionLocalProvider(LocalForceNoTopPadding provides true) {
                                                 NativeMarkdownNodeRecursive(listChild)
@@ -506,7 +522,7 @@ fun AnnotatedString.Builder.appendInlineChildren(
         var lastIndex = 0
         hashtagRegex.findAll(text).forEach { match ->
             if (match.range.first > lastIndex) {
-                 append(text.substring(lastIndex, match.range.first))
+                append(text.substring(lastIndex, match.range.first))
             }
             val tag = match.value
             pushLink(LinkAnnotation.Clickable(tag) { onHashtagClick?.invoke(tag) })
@@ -541,7 +557,14 @@ fun visitInlineChild(
                 withStyle(styles.boldStyle) {
                     child.children.forEach { c ->
                         if (c.type != MarkdownTokenTypes.EMPH) {
-                            visitInlineChild(c, content, styles, this, inlineContent, onHashtagClick)
+                            visitInlineChild(
+                                c,
+                                content,
+                                styles,
+                                this,
+                                inlineContent,
+                                onHashtagClick
+                            )
                         }
                     }
                 }
@@ -551,7 +574,14 @@ fun visitInlineChild(
                 withStyle(styles.italicStyle) {
                     child.children.forEach { c ->
                         if (c.type != MarkdownTokenTypes.EMPH) {
-                            visitInlineChild(c, content, styles, this, inlineContent, onHashtagClick)
+                            visitInlineChild(
+                                c,
+                                content,
+                                styles,
+                                this,
+                                inlineContent,
+                                onHashtagClick
+                            )
                         }
                     }
                 }
@@ -638,7 +668,14 @@ fun visitInlineChild(
                     if (linkTextNode != null) {
                         linkTextNode.children.forEach { lc ->
                             if (lc.type != MarkdownTokenTypes.LBRACKET && lc.type != MarkdownTokenTypes.RBRACKET) {
-                                visitInlineChild(lc, content, styles, this, inlineContent, onHashtagClick)
+                                visitInlineChild(
+                                    lc,
+                                    content,
+                                    styles,
+                                    this,
+                                    inlineContent,
+                                    onHashtagClick
+                                )
                             }
                         }
                     } else {
@@ -652,7 +689,14 @@ fun visitInlineChild(
                 withStyle(styles.strikethroughStyle) {
                     child.children.forEach { c ->
                         if (c.type != GFMTokenTypes.TILDE) {
-                            visitInlineChild(c, content, styles, this, inlineContent, onHashtagClick)
+                            visitInlineChild(
+                                c,
+                                content,
+                                styles,
+                                this,
+                                inlineContent,
+                                onHashtagClick
+                            )
                         }
                     }
                 }

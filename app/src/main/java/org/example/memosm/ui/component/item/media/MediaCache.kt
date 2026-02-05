@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap
 object MediaCache {
     private val aspectRatios = ConcurrentHashMap<String, Float>()
     private var simpleCache: SimpleCache? = null
-    
+
     private val okHttpClient by lazy {
         OkHttpClient.Builder()
             .build()

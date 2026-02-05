@@ -1,9 +1,9 @@
 package org.example.memosm.api
 
 import android.util.Log
-import org.example.memosm.model.CreatePersonalAccessTokenRequest
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.example.memosm.model.CreatePersonalAccessTokenRequest
 import org.example.memosm.model.PasswordCredentials
 import org.example.memosm.model.SignInRequest
 
@@ -29,14 +29,11 @@ suspend fun loginAndCreateToken(
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-
-
     try {
         val logInRes = api.signIn(
             SignInRequest(
                 passwordCredentials = PasswordCredentials(
-                    username = username.trim(),
-                    password = password
+                    username = username.trim(), password = password
                 )
             )
         )

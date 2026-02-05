@@ -1,16 +1,34 @@
 package org.example.memosm.ui.component
 
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.*
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.layout.AnimatedPane
@@ -22,7 +40,16 @@ import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaf
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -32,16 +59,15 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import org.example.memosm.R
+import org.example.memosm.model.Memo
+import org.example.memosm.model.MemoState
+import org.example.memosm.model.User
+import org.example.memosm.ui.MemoKey
 import org.example.memosm.ui.component.composer.DeleteConfirmationDialog
 import org.example.memosm.ui.component.composer.MemoEditDialog
 import org.example.memosm.ui.component.item.MemoItem
 import org.example.memosm.viewmodel.MemosViewModel
-
-import org.example.memosm.model.Memo
-import org.example.memosm.model.User
-import org.example.memosm.ui.MemoKey
-import org.example.memosm.R
-import org.example.memosm.model.MemoState
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -153,15 +179,15 @@ fun MemosScaffold(
 
                         overlay(
                             { memo ->
-                            focusManager.clearFocus()
-                            scope.launch {
-                                val id = memo.name ?: memo.content.hashCode().toString()
-                                navigator.navigateTo(
-                                    ListDetailPaneScaffoldRole.Detail,
-                                    MemoKey(id, fromSearch = true)
-                                )
-                            }
-                        },
+                                focusManager.clearFocus()
+                                scope.launch {
+                                    val id = memo.name ?: memo.content.hashCode().toString()
+                                    navigator.navigateTo(
+                                        ListDetailPaneScaffoldRole.Detail,
+                                        MemoKey(id, fromSearch = true)
+                                    )
+                                }
+                            },
                             showSearchBar,
                             isSearchExpanded,
                             { isSearchExpanded = it },

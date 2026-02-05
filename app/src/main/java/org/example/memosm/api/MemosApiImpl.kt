@@ -1,12 +1,52 @@
 package org.example.memosm.api
 
-import org.example.memosm.model.*
+import org.example.memosm.model.Activity
+import org.example.memosm.model.Attachment
+import org.example.memosm.model.CreatePersonalAccessTokenRequest
+import org.example.memosm.model.CreatePersonalAccessTokenResponse
+import org.example.memosm.model.CurrentSessionResponse
+import org.example.memosm.model.IdentityProvider
+import org.example.memosm.model.InstanceProfile
+import org.example.memosm.model.InstanceSetting
+import org.example.memosm.model.ListActivitiesResponse
+import org.example.memosm.model.ListAllUserStatsResponse
+import org.example.memosm.model.ListAttachmentsResponse
+import org.example.memosm.model.ListIdentityProvidersResponse
+import org.example.memosm.model.ListMemoAttachmentsResponse
+import org.example.memosm.model.ListMemoCommentsResponse
+import org.example.memosm.model.ListMemoReactionsResponse
+import org.example.memosm.model.ListMemoRelationsResponse
+import org.example.memosm.model.ListMemosResponse
+import org.example.memosm.model.ListPersonalAccessTokensResponse
+import org.example.memosm.model.ListUserNotificationsResponse
+import org.example.memosm.model.ListUserSettingsResponse
+import org.example.memosm.model.ListUserWebhooksResponse
+import org.example.memosm.model.ListUsersResponse
+import org.example.memosm.model.Memo
+import org.example.memosm.model.Reaction
+import org.example.memosm.model.RefreshTokenRequest
+import org.example.memosm.model.RefreshTokenResponse
+import org.example.memosm.model.SetMemoAttachmentsRequest
+import org.example.memosm.model.SetMemoRelationsRequest
+import org.example.memosm.model.Shortcut
+import org.example.memosm.model.ShortcutResponse
+import org.example.memosm.model.SignInRequest
+import org.example.memosm.model.SignInResponse
+import org.example.memosm.model.UpsertMemoReactionRequest
+import org.example.memosm.model.User
+import org.example.memosm.model.UserNotification
+import org.example.memosm.model.UserSetting
+import org.example.memosm.model.UserStats
+import org.example.memosm.model.UserWebhook
 
 open class MemosApiImpl(
     protected val api: MemosApiV0353
 ) : MemosApi {
 
-    override suspend fun listActivities(pageSize: Int?, pageToken: String?): ListActivitiesResponse {
+    override suspend fun listActivities(
+        pageSize: Int?,
+        pageToken: String?
+    ): ListActivitiesResponse {
         return api.listActivities(pageSize, pageToken)
     }
 
@@ -23,7 +63,10 @@ open class MemosApiImpl(
         return api.listAttachments(pageSize, pageToken, filter, orderBy)
     }
 
-    override suspend fun createAttachment(attachment: Attachment, attachmentId: String?): Attachment {
+    override suspend fun createAttachment(
+        attachment: Attachment,
+        attachmentId: String?
+    ): Attachment {
         return api.createAttachment(attachment, attachmentId)
     }
 

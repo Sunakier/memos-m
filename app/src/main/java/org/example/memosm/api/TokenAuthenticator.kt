@@ -4,8 +4,6 @@ import android.util.Log
 import com.google.gson.Gson
 import okhttp3.Authenticator
 import okhttp3.CookieJar
-import okhttp3.HttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -74,13 +72,16 @@ class TokenAuthenticator(
                     val tokenResponse =
                         Gson().fromJson(bodyString, RefreshTokenResponse::class.java)
                     val newToken = tokenResponse.accessToken
-                    
+
                     if (newToken.isNullOrBlank()) {
                         Log.e("TokenAuthenticator", "Parsed accessToken is null or blank!")
                         return null
                     }
 
-                    Log.i("TokenAuthenticator", "Token refresh successful, new token: ${newToken.take(20)}...")
+                    Log.i(
+                        "TokenAuthenticator",
+                        "Token refresh successful, new token: ${newToken.take(20)}..."
+                    )
 
                     // Notify the app to update storage and interceptor
                     onTokenRefreshed(newToken)

@@ -7,9 +7,9 @@ import android.util.Log
 import android.webkit.MimeTypeMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import org.example.memosm.api.MemosApi
 import org.example.memosm.api.StreamingAttachmentApi
 import org.example.memosm.model.Attachment
@@ -29,7 +29,6 @@ class AttachmentManager(
     private val streamingApi: StreamingAttachmentApi?,
     initialCellWidth: Float = 120f
 ) : BaseListManager<Attachment>(scope) {
-
 
 
     private val _cellWidth = MutableStateFlow(initialCellWidth)
@@ -74,10 +73,16 @@ class AttachmentManager(
 
             // Get file size to determine upload method
             val fileSize = getFileSize(uri, context)
-            Log.d(TAG, "uploadAttachment: fileName=$fileName, mimeType=$mimeType, fileSize=$fileSize bytes (threshold=$STREAMING_THRESHOLD)")
+            Log.d(
+                TAG,
+                "uploadAttachment: fileName=$fileName, mimeType=$mimeType, fileSize=$fileSize bytes (threshold=$STREAMING_THRESHOLD)"
+            )
 
             val useStreaming = fileSize > STREAMING_THRESHOLD && streamingApi != null
-            Log.d(TAG, "uploadAttachment: useStreaming=$useStreaming (hasStreamingApi=${streamingApi != null})")
+            Log.d(
+                TAG,
+                "uploadAttachment: useStreaming=$useStreaming (hasStreamingApi=${streamingApi != null})"
+            )
 
             val attachment = if (useStreaming) {
                 // Use streaming upload for large files
@@ -96,7 +101,10 @@ class AttachmentManager(
                     state.copy(items = listOf(attachment) + state.items)
                 }
             } else {
-                Log.e(TAG, "uploadAttachment: FAILED - returned null (used streaming=$useStreaming)")
+                Log.e(
+                    TAG,
+                    "uploadAttachment: FAILED - returned null (used streaming=$useStreaming)"
+                )
             }
 
             return attachment

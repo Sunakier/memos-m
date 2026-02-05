@@ -7,7 +7,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import dev.snipme.highlights.Highlights
 import dev.snipme.highlights.model.BoldHighlight
-import dev.snipme.highlights.model.CodeHighlight
 import dev.snipme.highlights.model.ColorHighlight
 import dev.snipme.highlights.model.SyntaxLanguage
 import dev.snipme.highlights.model.SyntaxThemes
@@ -100,6 +99,7 @@ object CodeHighlighter {
             "yaml", "yml",
             "css", "scss", "sass", "less", "styl",
             "sql" -> SyntaxLanguage.DEFAULT
+
             else -> SyntaxLanguage.DEFAULT
         }
     }

@@ -8,7 +8,6 @@ import okhttp3.java.net.cookiejar.JavaNetCookieJar
 import java.net.CookieManager
 import java.net.CookiePolicy
 import java.net.HttpCookie
-import java.net.URI
 
 class MemosCookieJar(
     private val onCookiesUpdated: ((Map<String, String>) -> Unit)? = null

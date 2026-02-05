@@ -42,7 +42,8 @@ fun ProfileHeader(
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     MemoImage(
                         uri = user?.avatarUrl?.toUri() ?: Uri.EMPTY,
@@ -82,7 +83,7 @@ fun ProfileHeader(
                     )
                 }
             }
-            
+
             // Edit button in top-right corner
             if (onEditClick != null) {
                 IconButton(

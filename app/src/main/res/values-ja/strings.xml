@@ -144,8 +144,10 @@
     <string name="memo_visibility_public">公開</string>
     <string name="memo_visibility_protected">メンバー限定</string>
     <string name="memo_visibility_private">非公開</string>
+    <string name="memo_visibility_unspecified">不明</string>
 
     <string name="common_save">保存</string>
+    <string name="common_share">共有</string>
     <string name="common_cancel">キャンセル</string>
     <string name="common_close">閉じる</string>
     <string name="common_not_available">N/A</string>
@@ -205,4 +207,6 @@
     <string name="profile_activity_more">多い</string>
     <string name="drafts_delete_all_confirmation_title">すべての下書きを削除しますか？</string>
     <string name="drafts_delete_all_confirmation_message">本当にすべての下書きを削除しますか？この操作は取り消せません。</string>
+
+    <string name="user_stats_widget_description">ユーザー統計を表示します。</string>
 </resources>

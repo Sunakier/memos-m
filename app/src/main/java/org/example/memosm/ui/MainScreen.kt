@@ -1,54 +1,83 @@
 package org.example.memosm.ui
 
 import android.net.Uri
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Attachment
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.outlined.Attachment
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
-import androidx.compose.runtime.*
+import androidx.compose.material3.contentColorFor
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil3.compose.AsyncImage
-import coil3.network.httpHeaders
 import kotlinx.coroutines.launch
+import org.example.memosm.MemosApplication
 import org.example.memosm.R
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.data.DraftManager
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Location
 import org.example.memosm.model.ShareIntentData
+import org.example.memosm.model.Visibility
 import org.example.memosm.ui.component.LoginDialog
+import org.example.memosm.ui.component.composer.ComposerMode
+import org.example.memosm.ui.component.composer.MemoComposerDialog
+import org.example.memosm.ui.component.item.media.MemoImage
+import org.example.memosm.ui.component.resolveResourceUrl
 import org.example.memosm.ui.nav.AttachmentsScreen
 import org.example.memosm.ui.nav.ExploreScreen
 import org.example.memosm.ui.nav.MemosScreen
 import org.example.memosm.ui.nav.ProfileScreen
 import org.example.memosm.viewmodel.MemosViewModel
-
-import org.example.memosm.ui.component.resolveResourceUrl
-import org.example.memosm.ui.component.item.media.MemoImage
-import androidx.core.net.toUri
-import org.example.memosm.MemosApplication
-import org.example.memosm.model.Visibility
-import org.example.memosm.ui.component.composer.ComposerMode
-import org.example.memosm.ui.component.composer.MemoComposerDialog
 
 enum class MainDestination(
     val labelRes: Int
@@ -72,11 +101,13 @@ fun MainScreen(
     var currentDestination by rememberSaveable { mutableStateOf(MainDestination.MEMOS) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
     val viewModel: MemosViewModel =
-        viewModel(factory = MemosViewModel.provideFactory(
-            dataStoreManager, 
-            draftManager,
-            MemosApplication.instance.memoCacheRepository
-        ))
+        viewModel(
+            factory = MemosViewModel.provideFactory(
+                dataStoreManager,
+                draftManager,
+                MemosApplication.instance.memoCacheRepository
+            )
+        )
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
@@ -93,21 +124,21 @@ fun MainScreen(
     var shareAttachments by remember { mutableStateOf<List<Attachment>>(emptyList()) }
     var shareVisibility by remember { mutableStateOf<Visibility?>(null) }
     var shareLocation by remember { mutableStateOf<Location?>(null) }
-    
+
     // Track if we've already processed the current share intent
     var processedShareData by remember { mutableStateOf<ShareIntentData?>(null) }
 
     // Trigger composer when share data is received - APPEND to existing draft
     // Wait for draft to be loaded before processing to avoid race condition
     val isDraftLoaded = uiState.draft.isDraftLoaded
-    
+
     // Switch to Memos tab if widget triggered composer
     LaunchedEffect(shouldOpenComposer) {
         if (shouldOpenComposer) {
             currentDestination = MainDestination.MEMOS
         }
     }
-    
+
     LaunchedEffect(shareIntentData, isDraftLoaded) {
         // Only process if:
         // 1. We have share data
@@ -310,7 +341,7 @@ fun MainScreen(
                         saveableStateHolder.SaveableStateProvider(targetDestination) {
                             when (targetDestination) {
                                 MainDestination.MEMOS -> MemosScreen(
-                                    viewModel = viewModel, 
+                                    viewModel = viewModel,
                                     onToggleNavBar = toggleNavBar,
                                     isNavBarVisible = isNavBarVisible,
                                     openComposer = shouldOpenComposer,
@@ -318,13 +349,13 @@ fun MainScreen(
                                 )
 
                                 MainDestination.EXPLORE -> ExploreScreen(
-                                    viewModel = viewModel, 
+                                    viewModel = viewModel,
                                     onToggleNavBar = toggleNavBar,
                                     isNavBarVisible = isNavBarVisible
                                 )
 
                                 MainDestination.ATTACHMENTS -> AttachmentsScreen(
-                                    viewModel = viewModel, 
+                                    viewModel = viewModel,
                                     onToggleNavBar = toggleNavBar,
                                     isNavBarVisible = isNavBarVisible
                                 )

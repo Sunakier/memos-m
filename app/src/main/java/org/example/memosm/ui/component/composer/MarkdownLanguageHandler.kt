@@ -11,7 +11,6 @@ import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.unit.em
 import org.intellij.markdown.MarkdownElementTypes
 import org.intellij.markdown.ast.ASTNode
 import org.intellij.markdown.flavours.gfm.GFMFlavourDescriptor
@@ -53,6 +52,7 @@ class MarkdownLanguageHandler(
                     ), range.first, range.last
                 )
             }
+
             MarkdownElementTypes.ATX_2 -> {
                 addStyle(
                     SpanStyle(
@@ -61,6 +61,7 @@ class MarkdownLanguageHandler(
                     ), range.first, range.last
                 )
             }
+
             MarkdownElementTypes.ATX_3 -> {
                 addStyle(
                     SpanStyle(
@@ -69,12 +70,15 @@ class MarkdownLanguageHandler(
                     ), range.first, range.last
                 )
             }
+
             MarkdownElementTypes.STRONG -> {
                 addStyle(SpanStyle(fontWeight = FontWeight.Bold), range.first, range.last)
             }
+
             MarkdownElementTypes.EMPH -> {
                 addStyle(SpanStyle(fontStyle = FontStyle.Italic), range.first, range.last)
             }
+
             MarkdownElementTypes.CODE_SPAN -> {
                 addStyle(
                     SpanStyle(
@@ -84,6 +88,7 @@ class MarkdownLanguageHandler(
                     ), range.first, range.last
                 )
             }
+
             MarkdownElementTypes.CODE_BLOCK, MarkdownElementTypes.CODE_FENCE -> {
                 addStyle(
                     SpanStyle(
@@ -93,6 +98,7 @@ class MarkdownLanguageHandler(
                     ), range.first, range.last
                 )
             }
+
             MarkdownElementTypes.LINK_TEXT -> {
                 addStyle(
                     SpanStyle(
@@ -101,6 +107,7 @@ class MarkdownLanguageHandler(
                     ), range.first, range.last
                 )
             }
+
             MarkdownElementTypes.BLOCK_QUOTE -> {
                 addStyle(
                     SpanStyle(
@@ -108,7 +115,7 @@ class MarkdownLanguageHandler(
                     ), range.first, range.last
                 )
             }
-            
+
             // Syntax Highlighting for specific tokens
             org.intellij.markdown.flavours.gfm.GFMTokenTypes.CHECK_BOX,
             org.intellij.markdown.MarkdownTokenTypes.ATX_HEADER,
@@ -126,6 +133,7 @@ class MarkdownLanguageHandler(
                     ), range.first, range.last
                 )
             }
+
             org.intellij.markdown.MarkdownTokenTypes.TEXT -> {
                 // Highlight Hashtags
                 val textContent = text.substring(range.first, range.last)
@@ -163,34 +171,34 @@ class MarkdownLanguageHandler(
     private fun handleNewline(newValue: TextFieldValue): TextFieldValue {
         val caretIndex = newValue.selection.start
         val text = newValue.text
-        
+
         // The parser expects the full text. 
         // We are interested in the structure *before* the newline to decide what to continue.
         // However, we just inserted a newline.
-        
+
         // Let's parse the text. Parsing is fast enough for this size.
         val rootNode = parser.buildMarkdownTreeFromString(text)
-        
+
         // We want to find the node at the position just before the newline.
-        val checkIndex = (caretIndex - 2).coerceAtLeast(0) 
+        val checkIndex = (caretIndex - 2).coerceAtLeast(0)
         val leafNode = findLeafNode(rootNode, checkIndex) ?: return newValue
 
         // Check if we are in a list item or block quote
         val (prefix, shouldContinue) = determineContinuation(leafNode, text)
-        
+
         if (shouldContinue && prefix != null) {
             val newText = text.substring(0, caretIndex) + prefix + text.substring(caretIndex)
             val newSelection = TextRange(caretIndex + prefix.length)
             return newValue.copy(text = newText, selection = newSelection)
         }
-        
+
         return newValue
     }
-    
+
     // DFS to find leaf node at offset
     private fun findLeafNode(node: ASTNode, offset: Int): ASTNode? {
         if (offset < node.startOffset || offset >= node.endOffset) return null
-        
+
         for (child in node.children) {
             val found = findLeafNode(child, offset)
             if (found != null) return found
@@ -206,10 +214,10 @@ class MarkdownLanguageHandler(
                 MarkdownElementTypes.LIST_ITEM -> {
                     // Extract the list marker
                     val nodeText = text.substring(current.startOffset, current.endOffset)
-                    
+
                     // Regex is still useful here to extract the exact marker from the node content
                     // (e.g. "- [ ] " vs "- ")
-                    
+
                     // Task list
                     val taskRegex = Regex("^(\\s*[-*+]\\s+\\[)[ xX]?(\\]\\s+)")
                     val taskMatch = taskRegex.find(nodeText)
@@ -217,27 +225,28 @@ class MarkdownLanguageHandler(
                         val (prefixStart, prefixEnd) = taskMatch.destructured
                         return "$prefixStart $prefixEnd" to true
                     }
-                    
+
                     // Bullet list
                     val bulletRegex = Regex("^(\\s*[-*+]\\s+)")
                     val bulletMatch = bulletRegex.find(nodeText)
                     if (bulletMatch != null) {
                         return bulletMatch.groupValues[1] to true
                     }
-                    
+
                     // Numbered list
                     val numberedRegex = Regex("^(\\s*)(\\d+)(\\.\\s+)")
                     val numberedMatch = numberedRegex.find(nodeText)
                     if (numberedMatch != null) {
-                         val (indent, numberStr, suffix) = numberedMatch.destructured
-                         return try {
-                             val number = numberStr.toInt()
-                             "$indent${number + 1}$suffix" to true
-                         } catch (e: NumberFormatException) {
-                             numberedMatch.groupValues[0] to true
-                         }
+                        val (indent, numberStr, suffix) = numberedMatch.destructured
+                        return try {
+                            val number = numberStr.toInt()
+                            "$indent${number + 1}$suffix" to true
+                        } catch (e: NumberFormatException) {
+                            numberedMatch.groupValues[0] to true
+                        }
                     }
                 }
+
                 MarkdownElementTypes.BLOCK_QUOTE -> {
                     // "> "
                     return "> " to true

@@ -1,6 +1,16 @@
 package org.example.memosm.viewmodel
 
-import org.example.memosm.model.*
+import org.example.memosm.model.Account
+import org.example.memosm.model.Activity
+import org.example.memosm.model.Attachment
+import org.example.memosm.model.InstanceProfile
+import org.example.memosm.model.InstanceSetting
+import org.example.memosm.model.Memo
+import org.example.memosm.model.Shortcut
+import org.example.memosm.model.User
+import org.example.memosm.model.UserGeneralSetting
+import org.example.memosm.model.UserStats
+import org.example.memosm.model.UserWebhook
 
 // --- Paginated List State (Generic) ---
 

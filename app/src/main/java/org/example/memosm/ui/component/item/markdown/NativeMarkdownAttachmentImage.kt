@@ -28,17 +28,17 @@ fun NativeMarkdownAttachmentImage(content: String, node: ASTNode) {
 
     val linkDestinationNode = node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_DESTINATION)
     var link = linkDestinationNode?.getTextInNode(content)?.toString()
-    
+
     if (link == null) {
         // Try to resolve as reference
         val labelNode = node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_LABEL)
         if (labelNode != null) {
-             val label = labelNode.getTextInNode(content).toString().lowercase()
-             val references = LocalMarkdownReferences.current
-             link = references[label]
+            val label = labelNode.getTextInNode(content).toString().lowercase()
+            val references = LocalMarkdownReferences.current
+            link = references[label]
         }
     }
-    
+
     if (link == null) return
 
     // Maintain aspect ratio state

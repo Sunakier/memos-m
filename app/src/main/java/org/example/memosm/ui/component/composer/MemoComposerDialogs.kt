@@ -1,12 +1,32 @@
 package org.example.memosm.ui.component.composer
 
 import android.net.Uri
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
-import androidx.compose.runtime.*
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -89,27 +109,27 @@ fun MemoComposerDialog(
 
                 MemoComposer(
                     onPublish = { content, visibility, attachments, location ->
-                    when {
-                        initialMemo != null -> {
-                            viewModel.updateMemo(
-                                initialMemo, content, visibility, attachments, location
-                            ) {
+                        when {
+                            initialMemo != null -> {
+                                viewModel.updateMemo(
+                                    initialMemo, content, visibility, attachments, location
+                                ) {
+                                    onDismiss()
+                                }
+                            }
+
+                            parentMemo != null -> {
+                                viewModel.createComment(parentMemo, content)
                                 onDismiss()
                             }
-                        }
 
-                        parentMemo != null -> {
-                            viewModel.createComment(parentMemo, content)
-                            onDismiss()
-                        }
-
-                        else -> {
-                            viewModel.createMemo(content, visibility, attachments, location) {
-                                onDismiss()
+                            else -> {
+                                viewModel.createMemo(content, visibility, attachments, location) {
+                                    onDismiss()
+                                }
                             }
                         }
-                    }
-                },
+                    },
                     onUploadFile = { uri, context ->
                         viewModel.uploadAttachment(uri, context)
                     },

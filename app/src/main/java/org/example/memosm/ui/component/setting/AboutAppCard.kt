@@ -102,12 +102,14 @@ fun AboutAppCard() {
                             }
                         },
                         onLongClick = {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clipboard =
+                                context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("App Version", versionName)
                             clipboard.setPrimaryClip(clip)
 
                             currentToast.value?.cancel()
-                            val toast = Toast.makeText(context, versionCopiedMessage, Toast.LENGTH_SHORT)
+                            val toast =
+                                Toast.makeText(context, versionCopiedMessage, Toast.LENGTH_SHORT)
                             currentToast.value = toast
                             toast.show()
                         }

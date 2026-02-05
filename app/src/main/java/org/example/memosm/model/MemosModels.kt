@@ -75,11 +75,13 @@ data class Attachment(
 }
 
 
-enum class MemoRelationType{
+enum class MemoRelationType {
     @SerialName("TYPE_UNSPECIFIED")
     TYPE_UNSPECIFIED,
+
     @SerialName("REFERENCE")
     COMMENT,
+
     @SerialName("COMMENT")
     REPLY
 }

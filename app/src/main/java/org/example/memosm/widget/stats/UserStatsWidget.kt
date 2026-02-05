@@ -2,28 +2,19 @@ package org.example.memosm.widget.stats
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
-import androidx.glance.Image
-import androidx.glance.ImageProvider
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.provideContent
-import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.background
 import androidx.glance.currentState
 import androidx.glance.layout.Alignment
@@ -35,26 +26,21 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.size
-import androidx.glance.layout.width
 import androidx.glance.layout.wrapContentHeight
-import androidx.glance.material3.ColorProviders
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
 import org.example.memosm.MainActivity
 import org.example.memosm.R
+import org.example.memosm.api.AuthInterceptor
 import org.example.memosm.api.MemosApiFactory
 import org.example.memosm.data.DataStoreManager
-import org.example.memosm.model.UserStats
-import okhttp3.OkHttpClient
-import org.example.memosm.api.TokenAuthenticator
-import org.example.memosm.api.MemosCookieJar
-import org.example.memosm.api.AuthInterceptor
 import org.example.memosm.model.Account
+import org.example.memosm.model.UserStats
 
 class UserStatsWidget : GlanceAppWidget() {
 
@@ -111,7 +97,8 @@ class UserStatsWidget : GlanceAppWidget() {
             GlanceTheme {
                 Box(
                     modifier = GlanceModifier.fillMaxSize().background(GlanceTheme.colors.surface)
-                        .padding(horizontal = 12.dp, vertical = 8.dp).clickable(actionStartActivity<MainActivity>())
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .clickable(actionStartActivity<MainActivity>())
                 ) {
                     if (accountId == null) {
                         EmptyState(context)
@@ -174,40 +161,40 @@ class UserStatsWidget : GlanceAppWidget() {
         val height = size.height
         val useScroll = height < 120.dp // Threshold lowered to 120dp as requested
         val useLargeFonts = height > 220.dp
-        
+
         val fontScale = if (useLargeFonts) 1.3f else 1.0f
-        
+
         val valueFontSize = 18.sp * fontScale
         val labelFontSize = 12.sp * fontScale
         val headerFontSize = 14.sp * fontScale
-        
+
         // Increase padding between rows as requested
         val rowSpacing = 12.dp
-        
+
         // Root container for centering - crucial for non-scroll layout
         Box(
             modifier = GlanceModifier.fillMaxSize(),
             contentAlignment = if (useScroll) Alignment.TopCenter else Alignment.Center
         ) {
             if (useScroll) {
-                 androidx.glance.appwidget.lazy.LazyColumn(
+                androidx.glance.appwidget.lazy.LazyColumn(
                     modifier = GlanceModifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Header (Centered explicitly in LazyColumn item)
                     item {
-                         Box(
+                        Box(
                             modifier = GlanceModifier.fillMaxWidth().padding(bottom = rowSpacing),
                             contentAlignment = Alignment.Center
                         ) {
-                           Text(
-                               text = "Stats for ${account.name}",
-                               style = TextStyle(
-                                   color = GlanceTheme.colors.onSurface,
-                                   fontWeight = FontWeight.Bold,
-                                   fontSize = headerFontSize
-                               )
-                           )
+                            Text(
+                                text = "Stats for ${account.name}",
+                                style = TextStyle(
+                                    color = GlanceTheme.colors.onSurface,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = headerFontSize
+                                )
+                            )
                         }
                     }
                     item {
@@ -226,15 +213,15 @@ class UserStatsWidget : GlanceAppWidget() {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                     Text(
-                       text = "Stats for ${account.name}",
-                       style = TextStyle(
-                           color = GlanceTheme.colors.onSurface,
-                           fontWeight = FontWeight.Bold,
-                           fontSize = headerFontSize
-                       ),
-                       modifier = GlanceModifier.padding(bottom = rowSpacing)
-                   )
+                    Text(
+                        text = "Stats for ${account.name}",
+                        style = TextStyle(
+                            color = GlanceTheme.colors.onSurface,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = headerFontSize
+                        ),
+                        modifier = GlanceModifier.padding(bottom = rowSpacing)
+                    )
                     Row1(context, stats, valueFontSize, labelFontSize)
                     Spacer(GlanceModifier.height(rowSpacing))
                     Row2(context, stats, notAvailable, valueFontSize, labelFontSize)
@@ -244,7 +231,12 @@ class UserStatsWidget : GlanceAppWidget() {
     }
 
     @Composable
-    fun Row1(context: Context, stats: UserStats, valueSize: androidx.compose.ui.unit.TextUnit, labelSize: androidx.compose.ui.unit.TextUnit) {
+    fun Row1(
+        context: Context,
+        stats: UserStats,
+        valueSize: androidx.compose.ui.unit.TextUnit,
+        labelSize: androidx.compose.ui.unit.TextUnit
+    ) {
         Row(modifier = GlanceModifier.fillMaxWidth()) {
             StatItem(
                 label = context.getString(R.string.profile_stats_memos),
@@ -271,8 +263,14 @@ class UserStatsWidget : GlanceAppWidget() {
     }
 
     @Composable
-    fun Row2(context: Context, stats: UserStats, notAvailable: String, valueSize: androidx.compose.ui.unit.TextUnit, labelSize: androidx.compose.ui.unit.TextUnit) {
-        Row(modifier = GlanceModifier.fillMaxWidth()) { 
+    fun Row2(
+        context: Context,
+        stats: UserStats,
+        notAvailable: String,
+        valueSize: androidx.compose.ui.unit.TextUnit,
+        labelSize: androidx.compose.ui.unit.TextUnit
+    ) {
+        Row(modifier = GlanceModifier.fillMaxWidth()) {
             StatItem(
                 label = context.getString(R.string.profile_stats_links),
                 value = stats.memoTypeStats?.linkCount?.toString() ?: notAvailable,

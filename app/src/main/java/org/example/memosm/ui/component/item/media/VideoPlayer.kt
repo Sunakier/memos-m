@@ -107,20 +107,20 @@ fun VideoPlayer(
     ) {
         AndroidView(
             factory = { ctx ->
-            PlayerView(ctx).apply {
-                player = exoPlayer
-                useController = true
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-                setFullscreenButtonClickListener { isFullscreen = true }
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
-                )
-            }
-        }, update = { view ->
-            view.player = if (isFullscreen) null else exoPlayer
-        }, modifier = Modifier
+                PlayerView(ctx).apply {
+                    player = exoPlayer
+                    useController = true
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    setFullscreenButtonClickListener { isFullscreen = true }
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                }
+            }, update = { view ->
+                view.player = if (isFullscreen) null else exoPlayer
+            }, modifier = Modifier
                 .fillMaxSize()
                 .alpha(if (isReady) 1f else 0f)
         )
@@ -148,7 +148,8 @@ fun VideoPlayer(
 
             val activity = context.findActivity()
             val videoSize = exoPlayer.videoSize
-            val isVertical = videoSize.height > 0 && videoSize.width > 0 && videoSize.width < videoSize.height
+            val isVertical =
+                videoSize.height > 0 && videoSize.width > 0 && videoSize.width < videoSize.height
             DisposableEffect(Unit) {
                 val originalOrientation =
                     activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED

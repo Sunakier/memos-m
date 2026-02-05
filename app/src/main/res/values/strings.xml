@@ -146,6 +146,7 @@
     <string name="memo_visibility_public">Public</string>
     <string name="memo_visibility_protected">Protected</string>
     <string name="memo_visibility_private">Private</string>
+    <string name="memo_visibility_unspecified">Unknown</string>
 
     <string name="common_save">Save</string>
     <string name="common_share">Share</string>
@@ -207,6 +208,6 @@
     <string name="profile_activity_more">More</string>
     <string name="drafts_delete_all_confirmation_title">Delete all drafts?</string>
     <string name="drafts_delete_all_confirmation_message">Are you sure you want to delete all drafts? This action cannot be undone.</string>
-    <string name="memo_visibility_unspecified">Unknown</string>
+
     <string name="user_stats_widget_description">Displays user statistics.</string>
 </resources>

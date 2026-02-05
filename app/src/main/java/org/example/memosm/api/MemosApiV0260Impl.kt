@@ -2,9 +2,8 @@ package org.example.memosm.api
 
 import org.example.memosm.model.CurrentSessionResponse
 import org.example.memosm.model.SignInRequest
-import org.example.memosm.model.SignInResponse
 import org.example.memosm.model.SignInRequestV0260
-import org.example.memosm.model.PasswordCredentials
+import org.example.memosm.model.SignInResponse
 
 class MemosApiV0260Impl(
     private val apiV0260: MemosApiV0260

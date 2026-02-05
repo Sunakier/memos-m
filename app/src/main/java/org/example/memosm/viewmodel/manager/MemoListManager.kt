@@ -5,7 +5,6 @@ import kotlinx.coroutines.CoroutineScope
 import org.example.memosm.api.MemosApi
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User
-import org.example.memosm.viewmodel.PaginatedListState
 import retrofit2.HttpException
 
 private const val PAGE_SIZE = 10
@@ -24,7 +23,10 @@ class UserMemoListManager(
 
         try {
             val response = api.listMemos(
-                pageSize = PAGE_SIZE, pageToken = pageToken, filter = filter, orderBy = "pinned desc, display_time desc"
+                pageSize = PAGE_SIZE,
+                pageToken = pageToken,
+                filter = filter,
+                orderBy = "pinned desc, display_time desc"
             )
             Log.d(TAG, "UserMemoListManager success: count=${response.memos?.size ?: 0}")
             return Pair(response.memos ?: emptyList(), response.nextPageToken)

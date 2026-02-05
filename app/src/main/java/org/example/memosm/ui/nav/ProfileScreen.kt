@@ -1,46 +1,89 @@
 package org.example.memosm.ui.nav
 
 import AccountsList
-import org.example.memosm.ui.component.setting.SettingsCard
 import androidx.activity.compose.PredictiveBackHandler
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.SeekableTransitionState
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.*
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CancellationException
 import org.example.memosm.R
-import org.example.memosm.model.*
+import org.example.memosm.model.Account
+import org.example.memosm.model.InstanceProfile
+import org.example.memosm.model.User
+import org.example.memosm.model.UserGeneralSetting
 import org.example.memosm.ui.component.ArchivedMemosScreen
 import org.example.memosm.ui.component.ErrorView
-import org.example.memosm.viewmodel.MemosViewModel
+import org.example.memosm.ui.component.LoginDialog
+import org.example.memosm.ui.component.ProfileHeader
+import org.example.memosm.ui.component.StatsActivityCard
+import org.example.memosm.ui.component.rememberScrollContext
 import org.example.memosm.ui.component.setting.AboutAppCard
 import org.example.memosm.ui.component.setting.AccountEditDialog
+import org.example.memosm.ui.component.setting.SettingsCard
 import org.example.memosm.ui.component.setting.ShortcutsCard
 import org.example.memosm.ui.component.setting.WebhooksCard
-import org.example.memosm.ui.component.LoginDialog
-import org.example.memosm.ui.component.StatsActivityCard
-import org.example.memosm.ui.component.ProfileHeader
-import org.example.memosm.ui.component.rememberScrollContext
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.rememberTransition
-import androidx.compose.animation.core.tween
+import org.example.memosm.viewmodel.MemosViewModel
 import org.example.memosm.viewmodel.RefreshSource
-import kotlinx.coroutines.CancellationException
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -147,7 +190,7 @@ private fun ProfileListPane(
     val accounts = uiState.accounts
 
     // Scroll direction tracking for nav bar visibility
-    val scrollContext = rememberScrollContext(
+    rememberScrollContext(
         listState = listState,
         onScrollDown = { onToggleNavBar?.invoke(false) },
         onScrollUp = { onToggleNavBar?.invoke(true) })
@@ -327,7 +370,8 @@ private fun ProfileListPane(
                                                 animatedVisibilityScope = animatedVisibilityScope,
                                                 boundsTransform = { _, _ ->
                                                     tween(durationMillis = 300)
-                                                }))
+                                                })
+                                        )
                                     },
                                     leadingContent = {
                                         Icon(
@@ -445,7 +489,7 @@ fun InstanceCard(instance: InstanceProfile) {
             InfoRow(
                 stringResource(R.string.profile_instance_version), instance.version ?: unknown
             )
-            
+
             val modeLabel = if (instance.mode != null) {
                 instance.mode
             } else if (instance.demo == true) {
@@ -453,7 +497,7 @@ fun InstanceCard(instance: InstanceProfile) {
             } else {
                 "prod" // Default assumption if not demo and no mode
             }
-            
+
             InfoRow(
                 stringResource(R.string.profile_instance_mode), modeLabel
             )

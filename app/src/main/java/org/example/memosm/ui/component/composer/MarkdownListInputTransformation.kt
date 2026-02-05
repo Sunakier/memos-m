@@ -17,7 +17,7 @@ class MarkdownListInputTransformation : InputTransformation {
                 val insertedContent = text.subSequence(range.min, range.max)
                 if (insertedContent.contains('\n')) {
                     val newlineIndex = range.min + insertedContent.indexOf('\n')
-                    
+
                     // Check logic: if cursor is exactly after the newline, we trigger.
                     // This handles standard typing behavior.
                     if (selection.start == newlineIndex + 1) {
@@ -30,17 +30,17 @@ class MarkdownListInputTransformation : InputTransformation {
 
     private fun TextFieldBuffer.handleNewLine(newlineIndex: Int) {
         val text = asCharSequence()
-        
+
         // Find start of the previous line
         var lineStartIndex = newlineIndex - 1
         while (lineStartIndex >= 0 && text[lineStartIndex] != '\n') {
             lineStartIndex--
         }
-        lineStartIndex++ 
-        
+        lineStartIndex++
+
         if (lineStartIndex < newlineIndex) {
             val previousLine = text.subSequence(lineStartIndex, newlineIndex).toString()
-            
+
             val matchResult = getMarkdownPrefix(previousLine)
             if (matchResult != null) {
                 insert(selection.start, matchResult)
@@ -53,15 +53,15 @@ class MarkdownListInputTransformation : InputTransformation {
         // Task lists: - [ ] or - [x]
         // Numbered: 1.
         // Indentation is preserved.
-        
+
         // Match bullet: ^(\s*)([-*+])\s+(.*)
         // Match task: ^(\s*)([-*+])\s+\[([ xX])\]\s+(.*)
         // Match numbered: ^(\s*)(\d+)\.\s+(.*)
         // Match regex for brackets/parens if simple list item style: ^(\s*)([\[\(].*[\]\)])\s+(.*) -- user asked for [] and () support specifically.
         // User example: "[]" and "()"
-        
+
         // Let's use specific regexes.
-        
+
         // 1. Task List: "- [ ] " or "- [x] "
         // If it was "- [x] ", we probably want to continue with "- [ ] " (unchecked)
         val taskRegex = Regex("^(\\s*[-*+]\\s+\\[)[ xX]?(\\]\\s+)")
@@ -78,7 +78,7 @@ class MarkdownListInputTransformation : InputTransformation {
         if (bulletMatch != null) {
             return bulletMatch.groupValues[1]
         }
-        
+
         // 3. Numbered List: "1. "
         // We will try to just repeat it for now, or maybe increment?
         // Implementation plan said "repeat". 
@@ -94,29 +94,29 @@ class MarkdownListInputTransformation : InputTransformation {
                 return matchResultToText(numberedMatch) // Fallback
             }
         }
-        
+
         // 4. Blockquote: "> "
         val quoteRegex = Regex("^(\\s*>\\s+)")
         val quoteMatch = quoteRegex.find(line)
         if (quoteMatch != null) {
-             return quoteMatch.groupValues[1]
+            return quoteMatch.groupValues[1]
         }
-        
+
         // 5. Brackets [] and Parens ()
         // User asked for "[]" and "()". Assumed to be used as list markers like "[] item".
         val bracketRegex = Regex("^(\\s*\\[\\]\\s+)")
         if (bracketRegex.containsMatchIn(line)) {
             return bracketRegex.find(line)!!.groupValues[1]
         }
-        
+
         val parenRegex = Regex("^(\\s*\\(\\)\\s+)")
         if (parenRegex.containsMatchIn(line)) {
             return parenRegex.find(line)!!.groupValues[1]
         }
-        
+
         return null
     }
-    
+
     private fun matchResultToText(matchResult: MatchResult): String {
         return matchResult.groupValues[0]
     }

@@ -17,19 +17,38 @@ import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import org.example.memosm.api.AuthInterceptor
-import org.example.memosm.api.MemosApi
-import org.example.memosm.api.MemosApiFactory
-import org.example.memosm.api.TokenAuthenticator
 import org.example.memosm.api.GrpcCookieInterceptor
 import org.example.memosm.api.GrpcMetadataCookieInterceptor
+import org.example.memosm.api.MemosApi
+import org.example.memosm.api.MemosApiFactory
 import org.example.memosm.api.MemosCookieJar
 import org.example.memosm.api.StreamingAttachmentApi
+import org.example.memosm.api.TokenAuthenticator
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.data.DraftManager
 import org.example.memosm.data.cache.CacheListType
 import org.example.memosm.data.cache.MemoCacheRepository
-import org.example.memosm.model.*
-import org.example.memosm.viewmodel.manager.*
+import org.example.memosm.model.Account
+import org.example.memosm.model.Attachment
+import org.example.memosm.model.Draft
+import org.example.memosm.model.Location
+import org.example.memosm.model.Memo
+import org.example.memosm.model.MemoState
+import org.example.memosm.model.Reaction
+import org.example.memosm.model.Shortcut
+import org.example.memosm.model.UpsertMemoReactionRequest
+import org.example.memosm.model.User
+import org.example.memosm.model.UserGeneralSetting
+import org.example.memosm.model.UserSetting
+import org.example.memosm.model.UserWebhook
+import org.example.memosm.model.Visibility
+import org.example.memosm.viewmodel.manager.ArchivedMemoListManager
+import org.example.memosm.viewmodel.manager.AttachmentManager
+import org.example.memosm.viewmodel.manager.CacheCallbacks
+import org.example.memosm.viewmodel.manager.CommentListManager
+import org.example.memosm.viewmodel.manager.ExploreMemoListManager
+import org.example.memosm.viewmodel.manager.SearchMemoListManager
+import org.example.memosm.viewmodel.manager.UserMemoListManager
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -205,12 +224,12 @@ class MemosViewModel(
 
                         val shortcut = _uiState.value.userMemoList.selectedShortcut
                         val hashtag = _uiState.value.userMemoList.selectedHashtag
-                        
+
                         if (shortcut != null && !shortcut.filter.isNullOrBlank()) {
                             "$base && ${shortcut.filter}"
                         } else if (hashtag != null) {
-                             val tagName = hashtag.removePrefix("#")
-                             "$base && tag in [\"$tagName\"]"
+                            val tagName = hashtag.removePrefix("#")
+                            "$base && tag in [\"$tagName\"]"
                         } else {
                             base
                         }
@@ -293,7 +312,10 @@ class MemosViewModel(
                 ) { s, c, at -> Triple(s, c, at) }, attachmentManager!!.cellWidth,
                 _attachmentAspectRatios
             ) { (userMemos, exploreMemos, archivedMemos), (searchMemos, comments, attachments), cellWidth, aspectRatios ->
-                android.util.Log.d("MemosDebug", "ViewModel: StateCollection. aspectRatiosCount=${aspectRatios.values.sumOf { it.size }}")
+                Log.d(
+                    "MemosDebug",
+                    "ViewModel: StateCollection. aspectRatiosCount=${aspectRatios.values.sumOf { it.size }}"
+                )
                 _uiState.value.copy(
                     userMemoList = _uiState.value.userMemoList.copy(list = userMemos),
                     exploreMemoList = _uiState.value.exploreMemoList.copy(list = exploreMemos),
@@ -556,10 +578,12 @@ class MemosViewModel(
         val newSelection = if (currShortcut == shortcut) null else shortcut
 
         _uiState.update {
-            it.copy(userMemoList = it.userMemoList.copy(
-                selectedShortcut = newSelection,
-                selectedHashtag = null
-            ))
+            it.copy(
+                userMemoList = it.userMemoList.copy(
+                    selectedShortcut = newSelection,
+                    selectedHashtag = null
+                )
+            )
         }
 
         userMemoManager?.fetch(refresh = true)
@@ -570,10 +594,12 @@ class MemosViewModel(
         val newSelection = if (currTag == tag) null else tag
 
         _uiState.update {
-            it.copy(userMemoList = it.userMemoList.copy(
-                selectedHashtag = newSelection,
-                selectedShortcut = null
-            ))
+            it.copy(
+                userMemoList = it.userMemoList.copy(
+                    selectedHashtag = newSelection,
+                    selectedShortcut = null
+                )
+            )
         }
 
         userMemoManager?.fetch(refresh = true)
@@ -819,16 +845,22 @@ class MemosViewModel(
     }
 
     fun updateAttachmentAspectRatio(cellWidth: Float, key: String, ratio: Float) {
-        android.util.Log.d("MemosDebug", "ViewModel: Update requested. key=$key, scale=$cellWidth, ratio=$ratio")
+        Log.d(
+            "MemosDebug",
+            "ViewModel: Update requested. key=$key, scale=$cellWidth, ratio=$ratio"
+        )
         _attachmentAspectRatios.update { currentRatios ->
             val currentMapForScale = currentRatios[cellWidth] ?: emptyMap()
             if (currentMapForScale[key] == ratio) {
-                 android.util.Log.d("MemosDebug", "ViewModel: Ratio unchanged, skipping update.")
-                 return@update currentRatios
+                Log.d("MemosDebug", "ViewModel: Ratio unchanged, skipping update.")
+                return@update currentRatios
             }
 
             val newMapForScale = currentMapForScale + (key to ratio)
-            android.util.Log.d("MemosDebug", "ViewModel: Ratio updated. New count for scale: ${newMapForScale.size}")
+            Log.d(
+                "MemosDebug",
+                "ViewModel: Ratio updated. New count for scale: ${newMapForScale.size}"
+            )
             currentRatios + (cellWidth to newMapForScale)
         }
     }

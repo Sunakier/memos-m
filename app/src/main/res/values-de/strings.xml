@@ -144,8 +144,10 @@
     <string name="memo_visibility_public">Öffentlich</string>
     <string name="memo_visibility_protected">Geschützt</string>
     <string name="memo_visibility_private">Privat</string>
+    <string name="memo_visibility_unspecified">Unbekannt</string>
 
     <string name="common_save">Speichern</string>
+    <string name="common_share">Teilen</string>
     <string name="common_cancel">Abbrechen</string>
     <string name="common_close">Schließen</string>
     <string name="common_not_available">N/V</string>
@@ -204,4 +206,6 @@
     <string name="profile_activity_more">Mehr</string>
     <string name="drafts_delete_all_confirmation_title">Alle Entwürfe löschen?</string>
     <string name="drafts_delete_all_confirmation_message">Sind Sie sicher, dass Sie alle Entwürfe löschen möchten? Dieser Vorgang kann nicht rückgängig gemacht werden.</string>
+
+    <string name="user_stats_widget_description">Zeigt Benutzerstatistiken an.</string>
 </resources>

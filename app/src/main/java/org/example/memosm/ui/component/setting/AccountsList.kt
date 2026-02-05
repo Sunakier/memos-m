@@ -81,7 +81,7 @@ fun AccountsList(
 ) {
     var accountToRemove by remember { mutableStateOf<Account?>(null) }
     val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
+    LocalDensity.current
 
     if (accountToRemove != null) {
         AlertDialog(
@@ -184,6 +184,7 @@ fun AccountsList(
                             pendingDeletion = true
                             accountToRemove = account
                         }
+
                         SwipeState.EditTriggered -> {
                             pendingEdit = true
                             onEditAccount?.invoke(account)
@@ -193,6 +194,7 @@ fun AccountsList(
                             }
                             pendingEdit = false
                         }
+
                         else -> {}
                     }
                 }
@@ -217,7 +219,7 @@ fun AccountsList(
                         }
                     }
                 }
-                
+
                 val swipeProgress by remember {
                     derivedStateOf {
                         if (componentWidth > 0) {
@@ -225,7 +227,7 @@ fun AccountsList(
                         } else 0f
                     }
                 }
-                
+
                 val isSwipingRight by remember {
                     derivedStateOf { currentOffset > 0 }
                 }
@@ -352,9 +354,10 @@ fun AccountsList(
                         onClick = { if (!account.isActive) onSwitchAccount(account) }
                     ) {
                         val avatarUrl = account.avatarUrl
-                        val fullAvatarUrl = if (!avatarUrl.isNullOrBlank() && !avatarUrl.startsWith("http")) {
-                            "${account.hostUrl.trimEnd('/')}$avatarUrl"
-                        } else avatarUrl
+                        val fullAvatarUrl =
+                            if (!avatarUrl.isNullOrBlank() && !avatarUrl.startsWith("http")) {
+                                "${account.hostUrl.trimEnd('/')}$avatarUrl"
+                            } else avatarUrl
 
                         ListItem(
                             headlineContent = {
@@ -372,11 +375,12 @@ fun AccountsList(
                             },
                             supportingContent = {
                                 val name = account.name
-                                val text = if (!account.displayName.isNullOrBlank() && !name.isNullOrBlank()) {
-                                    "@$name • ${account.hostUrl}"
-                                } else {
-                                    account.hostUrl
-                                }
+                                val text =
+                                    if (!account.displayName.isNullOrBlank() && !name.isNullOrBlank()) {
+                                        "@$name • ${account.hostUrl}"
+                                    } else {
+                                        account.hostUrl
+                                    }
                                 Text(text)
                             },
                             leadingContent = {

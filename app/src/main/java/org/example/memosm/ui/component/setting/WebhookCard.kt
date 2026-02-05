@@ -1,12 +1,33 @@
 package org.example.memosm.ui.component.setting
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -40,7 +61,10 @@ fun WebhooksCard(
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = { showCreateDialog = true }, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.profile_webhooks_add))
+                    Icon(
+                        Icons.Outlined.Add,
+                        contentDescription = stringResource(R.string.profile_webhooks_add)
+                    )
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -128,10 +152,13 @@ fun WebhooksCard(
             title = { Text(stringResource(R.string.profile_webhooks_delete_title)) },
             text = { Text(stringResource(R.string.profile_webhooks_delete_confirm)) },
             confirmButton = {
-                TextButton(onClick = {
-                    onDelete(webhook)
-                    showDeleteConfirm = null
-                }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                TextButton(
+                    onClick = {
+                        onDelete(webhook)
+                        showDeleteConfirm = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
                     Text(stringResource(R.string.common_delete))
                 }
             },

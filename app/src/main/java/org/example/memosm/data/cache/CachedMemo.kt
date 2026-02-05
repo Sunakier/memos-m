@@ -31,7 +31,12 @@ data class CachedMemo(
     companion object {
         private val gson = Gson()
 
-        fun fromMemo(memo: Memo, accountId: String, listType: CacheListType, order: Int): CachedMemo {
+        fun fromMemo(
+            memo: Memo,
+            accountId: String,
+            listType: CacheListType,
+            order: Int
+        ): CachedMemo {
             return CachedMemo(
                 name = memo.name ?: "",
                 accountId = accountId,

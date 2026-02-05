@@ -1,9 +1,14 @@
 package org.example.memosm.ui.component
 
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 
 @Composable
 fun rememberScrollContext(
@@ -16,23 +21,23 @@ fun rememberScrollContext(
         var previousScrollOffset = listState.firstVisibleItemScrollOffset
 
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (currentIndex, currentOffset) ->
-                if (currentIndex > previousIndex) {
-                    scrollContext.isScrollingDown = true
-                    onScrollDown()
-                } else if (currentIndex < previousIndex) {
-                    scrollContext.isScrollingDown = false
-                    onScrollUp()
-                } else if (currentOffset > previousScrollOffset + 10) {
-                    scrollContext.isScrollingDown = true
-                    onScrollDown()
-                } else if (currentOffset < previousScrollOffset - 10) {
-                    scrollContext.isScrollingDown = false
-                    onScrollUp()
-                }
-
-                previousIndex = currentIndex
-                previousScrollOffset = currentOffset
+            if (currentIndex > previousIndex) {
+                scrollContext.isScrollingDown = true
+                onScrollDown()
+            } else if (currentIndex < previousIndex) {
+                scrollContext.isScrollingDown = false
+                onScrollUp()
+            } else if (currentOffset > previousScrollOffset + 10) {
+                scrollContext.isScrollingDown = true
+                onScrollDown()
+            } else if (currentOffset < previousScrollOffset - 10) {
+                scrollContext.isScrollingDown = false
+                onScrollUp()
             }
+
+            previousIndex = currentIndex
+            previousScrollOffset = currentOffset
+        }
     }
 
     return scrollContext
@@ -49,23 +54,23 @@ fun rememberStaggeredGridScrollContext(
         var previousScrollOffset = listState.firstVisibleItemScrollOffset
 
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (currentIndex, currentOffset) ->
-                if (currentIndex > previousIndex) {
-                    scrollContext.isScrollingDown = true
-                    onScrollDown()
-                } else if (currentIndex < previousIndex) {
-                    scrollContext.isScrollingDown = false
-                    onScrollUp()
-                } else if (currentOffset > previousScrollOffset + 10) {
-                    scrollContext.isScrollingDown = true
-                    onScrollDown()
-                } else if (currentOffset < previousScrollOffset - 10) {
-                    scrollContext.isScrollingDown = false
-                    onScrollUp()
-                }
-
-                previousIndex = currentIndex
-                previousScrollOffset = currentOffset
+            if (currentIndex > previousIndex) {
+                scrollContext.isScrollingDown = true
+                onScrollDown()
+            } else if (currentIndex < previousIndex) {
+                scrollContext.isScrollingDown = false
+                onScrollUp()
+            } else if (currentOffset > previousScrollOffset + 10) {
+                scrollContext.isScrollingDown = true
+                onScrollDown()
+            } else if (currentOffset < previousScrollOffset - 10) {
+                scrollContext.isScrollingDown = false
+                onScrollUp()
             }
+
+            previousIndex = currentIndex
+            previousScrollOffset = currentOffset
+        }
     }
 
     return scrollContext

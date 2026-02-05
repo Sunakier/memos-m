@@ -149,32 +149,32 @@ private fun SettingsSelectionItem(
                         val isSelected = option == currentValue
                         ListItem(
                             headlineContent = {
-                            Text(
-                                labelProvider(option),
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
-                        }, leadingContent = {
-                            if (isSelected) {
-                                Icon(
-                                    Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
+                                Text(
+                                    labelProvider(option),
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                 )
-                            } else {
-                                Spacer(modifier = Modifier.width(24.dp))
-                            }
-                        }, modifier = Modifier
+                            }, leadingContent = {
+                                if (isSelected) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.width(24.dp))
+                                }
+                            }, modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
                                 .clickable {
                                     onSelect(option)
                                     showDialog = false
                                 }, colors = ListItemDefaults.colors(
-                            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(
-                                alpha = 0.3f
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(
+                                    alpha = 0.3f
+                                )
+                                else Color.Transparent
                             )
-                            else Color.Transparent
-                        )
                         )
                     }
                 }

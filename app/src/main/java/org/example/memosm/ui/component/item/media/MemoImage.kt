@@ -2,8 +2,6 @@ package org.example.memosm.ui.component.item.media
 
 import android.net.Uri
 import android.util.Base64
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,9 +33,10 @@ import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
-
 import org.example.memosm.viewmodel.manager.AttachmentManager
 
 @Composable

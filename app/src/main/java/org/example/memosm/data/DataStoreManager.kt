@@ -4,14 +4,13 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import org.example.memosm.model.Account
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -120,7 +119,11 @@ class DataStoreManager(private val context: Context) {
         return final
     }
 
-    suspend fun addAccount(hostUrl: String, accessToken: String, cookies: Map<String, String> = emptyMap()) {
+    suspend fun addAccount(
+        hostUrl: String,
+        accessToken: String,
+        cookies: Map<String, String> = emptyMap()
+    ) {
         val current = getAccounts().toMutableList()
         // Check if account already exists to avoid duplicates
         val existingIndex =
@@ -132,7 +135,14 @@ class DataStoreManager(private val context: Context) {
         } else {
             // Deactivate others
             val updated = current.map { it.copy(isActive = false) }.toMutableList()
-            updated.add(Account(hostUrl = hostUrl, accessToken = accessToken, isActive = true, cookies = cookies))
+            updated.add(
+                Account(
+                    hostUrl = hostUrl,
+                    accessToken = accessToken,
+                    isActive = true,
+                    cookies = cookies
+                )
+            )
             saveAccounts(updated)
         }
 
@@ -174,7 +184,12 @@ class DataStoreManager(private val context: Context) {
         }
     }
 
-    suspend fun updateAccount(id: String, hostUrl: String, token: String, cookies: Map<String, String> = emptyMap()) {
+    suspend fun updateAccount(
+        id: String,
+        hostUrl: String,
+        token: String,
+        cookies: Map<String, String> = emptyMap()
+    ) {
         val current = getAccounts()
         val updated = current.map {
             if (it.id == id) {
