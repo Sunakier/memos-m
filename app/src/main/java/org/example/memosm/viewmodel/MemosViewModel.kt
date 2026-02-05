@@ -204,8 +204,13 @@ class MemosViewModel(
                         }
 
                         val shortcut = _uiState.value.userMemoList.selectedShortcut
+                        val hashtag = _uiState.value.userMemoList.selectedHashtag
+                        
                         if (shortcut != null && !shortcut.filter.isNullOrBlank()) {
                             "$base && ${shortcut.filter}"
+                        } else if (hashtag != null) {
+                             val tagName = hashtag.removePrefix("#")
+                             "$base && tag in [\"$tagName\"]"
                         } else {
                             base
                         }
@@ -551,7 +556,24 @@ class MemosViewModel(
         val newSelection = if (currShortcut == shortcut) null else shortcut
 
         _uiState.update {
-            it.copy(userMemoList = it.userMemoList.copy(selectedShortcut = newSelection))
+            it.copy(userMemoList = it.userMemoList.copy(
+                selectedShortcut = newSelection,
+                selectedHashtag = null
+            ))
+        }
+
+        userMemoManager?.fetch(refresh = true)
+    }
+
+    fun toggleHashtagFilter(tag: String) {
+        val currTag = _uiState.value.userMemoList.selectedHashtag
+        val newSelection = if (currTag == tag) null else tag
+
+        _uiState.update {
+            it.copy(userMemoList = it.userMemoList.copy(
+                selectedHashtag = newSelection,
+                selectedShortcut = null
+            ))
         }
 
         userMemoManager?.fetch(refresh = true)

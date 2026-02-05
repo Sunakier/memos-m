@@ -255,7 +255,8 @@ fun GenericMemosListPane(
     ),
     errorTitle: String = stringResource(R.string.common_error_failed_to_load),
     isOffline: Boolean = false,
-    errorMessage: String? = null
+    errorMessage: String? = null,
+    onHashtagClick: ((String) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
@@ -407,6 +408,7 @@ fun GenericMemosListPane(
                             } else null,
                             maxHeight = 400.dp,
                             modifier = Modifier.widthIn(max = 800.dp),
+                            onHashtagClick = onHashtagClick,
                             reactionOptions = uiState.session.instanceSettings?.memoRelatedSetting?.reactions
                                 ?: emptyList())
 

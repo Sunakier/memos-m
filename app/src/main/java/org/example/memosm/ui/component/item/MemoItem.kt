@@ -74,6 +74,7 @@ fun MemoItem(
     maxHeight: Dp = Dp.Unspecified,
     isDetailView: Boolean = false,
     reactionOptions: List<String> = emptyList(),
+    onHashtagClick: ((String) -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showReactionPicker by remember { mutableStateOf(false) }
@@ -81,6 +82,7 @@ fun MemoItem(
     val context = LocalContext.current
 
     val unknownTime = stringResource(R.string.memo_unknown_time)
+
     val formattedTime = remember(memo.displayTime) {
         try {
             val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
@@ -419,6 +421,7 @@ fun MemoItem(
                         hostUrl = hostUrl,
                         selectable = isDetailView,
                         onContentChange = onContentUpdate,
+                        onHashtagClick = onHashtagClick,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 12.dp, end = 16.dp, bottom = 8.dp)

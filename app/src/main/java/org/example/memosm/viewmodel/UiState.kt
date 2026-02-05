@@ -31,7 +31,8 @@ data class SessionState(
 data class MemoListState(
     val list: PaginatedListState<Memo> = PaginatedListState(),
     val shortcuts: List<Shortcut> = emptyList(),
-    val selectedShortcut: Shortcut? = null
+    val selectedShortcut: Shortcut? = null,
+    val selectedHashtag: String? = null
 )
 
 // --- Attachment List State ---

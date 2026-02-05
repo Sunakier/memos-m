@@ -117,7 +117,9 @@ fun MemosScreen(
                 contentPadding = PaddingValues(
                     start = 16.dp, top = 88.dp, end = 16.dp, bottom = bottomPadding
                 ),
-                onDraftsCardClick = { showDraftsScreen = true })
+                onDraftsCardClick = { showDraftsScreen = true },
+                onHashtagClick = { tag -> viewModel.toggleHashtagFilter(tag) }
+            )
         },
         overlay = { onMemoClick, showSearchBar, isSearchExpanded, onSearchExpandedChange, isDualPane, isDetailVisible ->
             AnimatedVisibility(
@@ -259,7 +261,8 @@ private fun MemosListPane(
     listState: LazyListState,
     onMemoClick: (Memo) -> Unit,
     contentPadding: PaddingValues,
-    onDraftsCardClick: () -> Unit
+    onDraftsCardClick: () -> Unit,
+    onHashtagClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val hasDrafts = uiState.draft.drafts.isNotEmpty()
@@ -281,9 +284,13 @@ private fun MemosListPane(
         errorTitle = stringResource(R.string.common_error_failed_to_load_memos),
         isOffline = uiState.userMemoList.list.isOffline,
         errorMessage = uiState.userMemoList.list.errorMessage,
+        onHashtagClick = onHashtagClick,
         header = {
             val hasShortcuts = uiState.userMemoList.shortcuts.isNotEmpty()
-            if (hasDrafts || hasShortcuts) {
+            val selectedHashtag = uiState.userMemoList.selectedHashtag
+            val showFilterRow = hasShortcuts || selectedHashtag != null
+
+            if (hasDrafts || showFilterRow) {
                 item(key = "header_section") {
                     Column(
                         modifier = Modifier.fillMaxWidth()
@@ -355,7 +362,7 @@ private fun MemosListPane(
 
                         // Horizontal Shortcut Row
                         AnimatedVisibility(
-                            visible = hasShortcuts,
+                            visible = showFilterRow,
                             enter = fadeIn() + expandVertically(),
                             exit = fadeOut() + shrinkVertically()
                         ) {
@@ -387,6 +394,34 @@ private fun MemosListPane(
                                     },
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
+                                if (selectedHashtag != null) {
+                                    item {
+                                        FilterChip(
+                                            selected = true,
+                                            onClick = { viewModel.toggleHashtagFilter(selectedHashtag) },
+                                            label = {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(
+                                                        imageVector = Icons.Outlined.Tag,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(selectedHashtag)
+                                                }
+                                            },
+                                            shape = RoundedCornerShape(16.dp),
+                                            trailingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Close,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
+
                                 items(uiState.userMemoList.shortcuts, key = {
                                     it.name.takeUnless { n -> n.isNullOrBlank() }
                                         ?: "${it.title?.hashCode() ?: 0}_${it.filter?.hashCode() ?: 0}"
