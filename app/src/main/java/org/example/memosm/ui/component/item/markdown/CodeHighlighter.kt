@@ -57,13 +57,11 @@ object CodeHighlighter {
         return when (alias.lowercase()) {
             "c" -> SyntaxLanguage.C
             "cpp", "c++" -> SyntaxLanguage.CPP
-            "slang", "glsl", "shader" -> SyntaxLanguage.CPP
             "csharp", "c#" -> SyntaxLanguage.CSHARP
             "dart" -> SyntaxLanguage.DART
             "go", "golang" -> SyntaxLanguage.GO
             "java" -> SyntaxLanguage.JAVA
             "js", "javascript" -> SyntaxLanguage.JAVASCRIPT
-            "json" -> SyntaxLanguage.JAVASCRIPT
             "kotlin", "kt" -> SyntaxLanguage.KOTLIN
             "php" -> SyntaxLanguage.PHP
             "perl" -> SyntaxLanguage.PERL
@@ -73,9 +71,35 @@ object CodeHighlighter {
             "swift" -> SyntaxLanguage.SWIFT
             "ts", "typescript" -> SyntaxLanguage.TYPESCRIPT
             "coffee", "coffeescript" -> SyntaxLanguage.COFFEESCRIPT
-            "xml", "html" -> SyntaxLanguage.DEFAULT
-            "yaml", "yml" -> SyntaxLanguage.DEFAULT
             "shell", "sh", "bash", "zsh" -> SyntaxLanguage.SHELL
+            // Fallbacks for unsupported languages
+// -----------------------------------------------------------------
+            // 2. HEURISTIC FALLBACKS (Approximations)
+            // -----------------------------------------------------------------
+
+            // C-Style approximations (Shaders, Arduino, Objective-C)
+            "glsl", "hlsl", "shader", "frag", "vert",
+            "arduino", "ino",
+            "objc", "objective-c" -> SyntaxLanguage.CPP
+
+            // JVM approximations (Gradle/Groovy use C-style syntax similar to Java)
+            "groovy", "gradle", "scala" -> SyntaxLanguage.JAVA
+            // JavaScript approximations (JSON is valid JS object syntax)
+            "json" -> SyntaxLanguage.JAVASCRIPT
+            // Python approximations (Build systems often use Python dialects)
+            "starlark", "bazel", "gyp" -> SyntaxLanguage.PYTHON
+
+            // Shell/Script approximations (Config files with '#' comments look like Shell)
+            "bat", "batch", "cmd", "ps1", "powershell",
+            "toml", "ini", "conf", "properties" -> SyntaxLanguage.SHELL
+            // -----------------------------------------------------------------
+            // 3. UNSUPPORTED / DEFAULT
+            // -----------------------------------------------------------------
+            // Markup and Styles (HTML/XML/YAML/CSS usually look bad in C/Java highlighters)
+            "xml", "html", "xhtml", "rss", "atom", "plist",
+            "yaml", "yml",
+            "css", "scss", "sass", "less", "styl",
+            "sql" -> SyntaxLanguage.DEFAULT
             else -> SyntaxLanguage.DEFAULT
         }
     }
