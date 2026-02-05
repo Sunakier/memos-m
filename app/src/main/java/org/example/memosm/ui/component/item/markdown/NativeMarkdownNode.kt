@@ -63,7 +63,6 @@ import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.max
 import java.util.UUID
 
 // Helper data class for styles
@@ -548,7 +547,9 @@ fun visitInlineChild(
                 // 0.6em per char is a rough estimate for monospace/math.
                 // Height 1.5em to fit in line height.
                 // Height 1.5em to fit in line height.
-                val width = max((latex.length * 0.6).em, 1.em)
+                // Height 1.5em to fit in line height.
+                val rawWidth = (latex.length * 0.6)
+                val width = (if (rawWidth < 1.0) 1.0 else rawWidth).em
                 
                 inlineContent[id] = InlineTextContent(
                     Placeholder(

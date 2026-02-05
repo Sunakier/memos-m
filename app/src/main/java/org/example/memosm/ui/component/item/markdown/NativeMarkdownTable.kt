@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.foundation.text.InlineTextContent
 import org.intellij.markdown.ast.ASTNode
 import org.intellij.markdown.ast.findChildOfType
 import org.intellij.markdown.flavours.gfm.GFMElementTypes
@@ -92,14 +93,16 @@ fun NativeMarkdownTable(
                 row.forEachIndexed { index, cellNode ->
                     if (index < columnCount) {
                         val placeable = subcompose("measure_${row.hashCode()}_$index") {
+                             val inlineContentMap = remember { mutableMapOf<String, InlineTextContent>() }
                              val styledText = buildAnnotatedString {
-                                 appendInlineChildren(cellNode, content, styles)
+                                 appendInlineChildren(cellNode, content, styles, inlineContentMap)
                              }
                              MarkdownText(
                                  text = styledText,
                                  style = MaterialTheme.typography.bodyMedium,
                                  modifier = Modifier.padding(bottom = 2.dp), // Layout fix
-                                 textAlign = align.getOrElse(index) { TextAlign.Start }
+                                 textAlign = align.getOrElse(index) { TextAlign.Start },
+                                 inlineContent = inlineContentMap
                              )
                         }.first().measure(Constraints())
 
@@ -136,14 +139,16 @@ fun NativeMarkdownTable(
                                             else -> Alignment.CenterStart
                                         }
                                     ) {
+                                         val inlineContentMap = remember { mutableMapOf<String, InlineTextContent>() }
                                          val styledText = buildAnnotatedString {
-                                             appendInlineChildren(cellNode, content, styles)
+                                             appendInlineChildren(cellNode, content, styles, inlineContentMap)
                                          }
                                          MarkdownText(
                                              text = styledText,
                                              style = MaterialTheme.typography.bodyMedium,
                                              textAlign = align.getOrElse(columnIndex) { TextAlign.Start },
-                                             modifier = Modifier.fillMaxWidth()
+                                             modifier = Modifier.fillMaxWidth(),
+                                             inlineContent = inlineContentMap
                                          )
                                     }
                                     // VERTICAL LINE: Add if it's not the last column
