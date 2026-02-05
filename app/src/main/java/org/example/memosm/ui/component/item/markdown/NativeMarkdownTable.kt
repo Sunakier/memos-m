@@ -79,7 +79,8 @@ fun NativeMarkdownTable(
                         }.first().measure(Constraints())
 
                         val totalPadding = tableCellPadding.roundToPx() * 2
-                        columnWidths[index] = maxOf(columnWidths[index], placeable.width + totalPadding)
+                        columnWidths[index] =
+                            maxOf(columnWidths[index], placeable.width + totalPadding)
                     }
                 }
             }
@@ -106,8 +107,9 @@ fun NativeMarkdownTable(
                                             .fillMaxHeight()
                                     ) {
                                         FlowRow(
-                                            horizontalArrangement = Arrangement.spacedBy(inlineSpacing),
-                                            verticalArrangement = Arrangement.Center
+                                            horizontalArrangement = Arrangement.spacedBy(
+                                                inlineSpacing
+                                            ), verticalArrangement = Arrangement.Center
                                         ) {
                                             cellNode.children.forEach { child ->
                                                 NativeMarkdownNodeRecursive(child)

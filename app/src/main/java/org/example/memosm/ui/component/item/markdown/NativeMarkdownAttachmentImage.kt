@@ -27,9 +27,7 @@ fun NativeMarkdownAttachmentImage(content: String, node: ASTNode) {
     // Standard Image: [ !, [, LINK_TEXT, ], (, LINK_DESTINATION, ) ]
     
     val linkDestinationNode = node.findChildOfTypeRecursive(MarkdownElementTypes.LINK_DESTINATION)
-    val link = linkDestinationNode?.getTextInNode(content)?.toString()
-
-    if (link == null) return
+    val link = linkDestinationNode?.getTextInNode(content)?.toString() ?: return
 
     // Maintain aspect ratio state
     var aspectRatio by remember { mutableFloatStateOf(1.777f) }

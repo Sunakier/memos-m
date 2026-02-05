@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.ClickableText
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.foundation.background
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
@@ -16,7 +18,6 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -25,8 +26,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
-
-import org.intellij.markdown.IElementType
+import androidx.compose.ui.text.TextStyle
 import org.intellij.markdown.MarkdownElementTypes
 import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.ASTNode
@@ -44,6 +44,30 @@ data class MarkdownStyles(
     val italicStyle: SpanStyle,
     val codeFontFamily: FontFamily
 )
+
+@Composable
+fun MarkdownText(
+    text: AnnotatedString,
+    style: TextStyle,
+    modifier: Modifier = Modifier
+) {
+    val uriHandler = LocalUriHandler.current
+    ClickableText(
+        text = text,
+        style = style.copy(color = MaterialTheme.colorScheme.onSurface),
+        modifier = modifier,
+        onClick = { offset ->
+            text.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                .firstOrNull()?.let { annotation ->
+                    try {
+                        uriHandler.openUri(annotation.item)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+        }
+    )
+}
 
 // Local provider for content and callbacks to avoid passing them deep
 val LocalMarkdownContent = compositionLocalOf { "" }
@@ -93,7 +117,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
             val styledText = buildAnnotatedString {
                 appendInlineChildren(node, content, styles)
             }
-            Text(
+            MarkdownText(
                 text = styledText,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(vertical = 4.dp)
@@ -118,14 +142,14 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                 // Skip the leading hashtags if they are separate tokens or part of content?
                 // Usually children include HEADER_LEAD (#) and content.
                 // We will filter only relevant text content.
-                node.children.forEach { child ->
-                    if (child.type != MarkdownTokenTypes.ATX_HEADER) {
-                        // append recursively
-                        appendInlineChildren(child, content, styles)
-                    }
-                }
+                 node.children.forEach { child ->
+                     if (child.type != MarkdownTokenTypes.ATX_HEADER) {
+                         // append recursively
+                         visitInlineChild(child, content, styles, this)
+                     }
+                 }
             }
-            Text(
+            MarkdownText(
                 text = styledText, style = style, modifier = Modifier.padding(vertical = 8.dp)
             )
         }
@@ -154,7 +178,11 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                                     }, modifier = Modifier.padding(end = 8.dp)
                                 )
                             } else {
-                                Text("•", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 8.dp))
+                                Text(
+                                    "•",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                )
                             }
 
                             Column {
@@ -178,7 +206,11 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                 node.children.forEach { child ->
                     if (child.type == MarkdownElementTypes.LIST_ITEM) {
                         Row(modifier = Modifier.fillMaxWidth()) {
-                            Text("$index.", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 8.dp))
+                            Text(
+                                "$index.",
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
                             Column {
                                 child.children.forEach { listChild ->
                                     NativeMarkdownNodeRecursive(listChild)
@@ -247,12 +279,18 @@ fun AnnotatedString.Builder.appendInlineChildren(
     }
 
     node.children.forEach { child ->
+        visitInlineChild(child, content, styles, this)
+    }
+}
+
+fun visitInlineChild(child: ASTNode, content: String, styles: MarkdownStyles, builder: AnnotatedString.Builder) {
+    with(builder) {
         when (child.type) {
             MarkdownElementTypes.STRONG -> {
                 withStyle(styles.boldStyle) {
                     child.children.forEach { c ->
                         if (c.type != MarkdownTokenTypes.EMPH) {
-                            appendInlineChildren(c, content, styles)
+                            visitInlineChild(c, content, styles, this)
                         }
                     }
                 }
@@ -262,7 +300,7 @@ fun AnnotatedString.Builder.appendInlineChildren(
                 withStyle(styles.italicStyle) {
                     child.children.forEach { c ->
                         if (c.type != MarkdownTokenTypes.EMPH) {
-                            appendInlineChildren(c, content, styles)
+                            visitInlineChild(c, content, styles, this)
                         }
                     }
                 }
@@ -274,10 +312,6 @@ fun AnnotatedString.Builder.appendInlineChildren(
                         fontFamily = styles.codeFontFamily, background = styles.codeBackground
                     )
                 ) {
-                    // Usually wraps content in backticks, we might want to strip them or custom render
-                    // Simple approach: append everything.
-                    // Or finding children of type TEXT inside.
-                    // Often CODE_SPAN has children [BACKTICK, TEXT, BACKTICK]
                     child.children.forEach { grandChild ->
                         if (grandChild.type != MarkdownTokenTypes.BACKTICK) {
                             append(grandChild.getTextInNode(content).toString())
@@ -287,8 +321,6 @@ fun AnnotatedString.Builder.appendInlineChildren(
             }
 
             MarkdownElementTypes.LINK_DEFINITION, MarkdownElementTypes.INLINE_LINK -> {
-                // For now, just append text. Links need ClickableText or Annotation.
-                // We can use pushStringAnnotation
                 val linkText =
                     child.findChildOfType(MarkdownElementTypes.LINK_TEXT)?.getTextInNode(content)
                         ?.toString() ?: "Link"
@@ -297,14 +329,11 @@ fun AnnotatedString.Builder.appendInlineChildren(
 
                 pushStringAnnotation(tag = "URL", annotation = linkDest)
                 withStyle(SpanStyle(color = styles.linkColor)) {
-                    // The text might be wrapped in brackets in the AST?
-                    // LINK_TEXT children: [ "[", TEXT, "]" ]
-                    // We recursively append children of LINK_TEXT, avoiding brackets
                     val linkTextNode = child.findChildOfType(MarkdownElementTypes.LINK_TEXT)
                     if (linkTextNode != null) {
                         linkTextNode.children.forEach { lc ->
                             if (lc.type != MarkdownTokenTypes.LBRACKET && lc.type != MarkdownTokenTypes.RBRACKET) {
-                                appendInlineChildren(lc, content, styles)
+                                visitInlineChild(lc, content, styles, this)
                             }
                         }
                     } else {
@@ -318,7 +347,7 @@ fun AnnotatedString.Builder.appendInlineChildren(
                 withStyle(styles.strikethroughStyle) {
                     child.children.forEach { c ->
                         if (c.type != GFMTokenTypes.TILDE) {
-                            appendInlineChildren(c, content, styles)
+                            visitInlineChild(c, content, styles, this)
                         }
                     }
                 }
