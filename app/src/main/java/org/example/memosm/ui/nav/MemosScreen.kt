@@ -33,6 +33,7 @@ import org.example.memosm.model.Memo
 import org.example.memosm.ui.component.GenericMemosListPane
 import org.example.memosm.ui.component.MemoSearchBar
 import org.example.memosm.ui.component.MemosScaffold
+import org.example.memosm.ui.component.composer.ComposerMode
 import org.example.memosm.ui.component.composer.MemoComposerDialog
 import org.example.memosm.ui.component.rememberScrollContext
 import org.example.memosm.viewmodel.MemosViewModel
@@ -231,7 +232,8 @@ fun MemosScreen(
             initialContent = draftToLoad?.content ?: "",
             initialAttachments = draftToLoad?.attachments ?: emptyList(),
             initialVisibility = draftToLoad?.visibility,
-            initialLocation = draftToLoad?.location
+            initialLocation = draftToLoad?.location,
+            mode = ComposerMode.PUBLISH
         )
     }
 

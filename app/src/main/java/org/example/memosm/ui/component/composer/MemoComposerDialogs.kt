@@ -32,7 +32,12 @@ fun MemoComposerDialog(
     initialUris: List<Uri> = emptyList(),
     initialAttachments: List<Attachment> = emptyList(),
     initialVisibility: Visibility? = null,
-    initialLocation: Location? = null
+    initialLocation: Location? = null,
+    mode: ComposerMode = when {
+        initialMemo != null -> ComposerMode.UPDATE
+        parentMemo != null -> ComposerMode.COMMENT
+        else -> ComposerMode.PUBLISH
+    }
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val adaptiveInfo = currentWindowAdaptiveInfo()
@@ -84,27 +89,27 @@ fun MemoComposerDialog(
 
                 MemoComposer(
                     onPublish = { content, visibility, attachments, location ->
-                        when {
-                            initialMemo != null -> {
-                                viewModel.updateMemo(
-                                    initialMemo, content, visibility, attachments, location
-                                ) {
-                                    onDismiss()
-                                }
-                            }
-
-                            parentMemo != null -> {
-                                viewModel.createComment(parentMemo, content)
+                    when {
+                        initialMemo != null -> {
+                            viewModel.updateMemo(
+                                initialMemo, content, visibility, attachments, location
+                            ) {
                                 onDismiss()
                             }
+                        }
 
-                            else -> {
-                                viewModel.createMemo(content, visibility, attachments, location) {
-                                    onDismiss()
-                                }
+                        parentMemo != null -> {
+                            viewModel.createComment(parentMemo, content)
+                            onDismiss()
+                        }
+
+                        else -> {
+                            viewModel.createMemo(content, visibility, attachments, location) {
+                                onDismiss()
                             }
                         }
-                    },
+                    }
+                },
                     onUploadFile = { uri, context ->
                         viewModel.uploadAttachment(uri, context)
                     },
@@ -117,20 +122,20 @@ fun MemoComposerDialog(
                     isPosting = uiState.isPosting,
                     initialContent = effectiveInitialContent,
                     initialVisibility = initialMemo?.visibility ?: initialVisibility
-                    ?: parentMemo?.visibility
-                    ?: uiState.session.userSettings?.memoVisibility ?: Visibility.PRIVATE,
+                    ?: parentMemo?.visibility ?: uiState.session.userSettings?.memoVisibility
+                    ?: Visibility.PRIVATE,
                     initialAttachments = initialMemo?.attachments ?: initialAttachments,
                     initialUris = if (initialMemo == null) initialUris else emptyList(),
                     initialLocation = initialMemo?.location ?: initialLocation,
                     placeholder = placeholder,
                     autoFocus = true,
+                    mode = mode,
                     // Save drafts only for new memos (not editing or commenting)
                     onDraftChanged = if (initialMemo == null && parentMemo == null) {
                         { content, visibility, attachments, location ->
                             viewModel.saveDraft(content, visibility, attachments, location)
                         }
-                    } else null
-                )
+                    } else null)
             }
         }
     }
@@ -145,7 +150,8 @@ fun MemoEditDialog(
         viewModel = viewModel,
         hostUrl = hostUrl,
         title = stringResource(R.string.memo_dialog_edit_title),
-        initialMemo = memo
+        initialMemo = memo,
+        mode = ComposerMode.UPDATE
     )
 }
 

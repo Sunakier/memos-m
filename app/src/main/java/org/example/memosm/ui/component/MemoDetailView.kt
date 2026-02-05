@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.model.Memo
+import org.example.memosm.ui.component.composer.ComposerMode
 import org.example.memosm.ui.component.composer.DeleteConfirmationDialog
 import org.example.memosm.ui.component.composer.MemoComposerDialog
 import org.example.memosm.ui.component.composer.MemoEditDialog

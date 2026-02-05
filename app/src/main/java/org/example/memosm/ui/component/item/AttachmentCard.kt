@@ -347,6 +347,8 @@ fun AttachmentCard(
                         }
                     }
 
+                    val errorOpenLinkString = stringResource(R.string.attachments_error_open_link)
+
                     // Floating menu button
                     if (showInfo && showActions) {
                         Box(
@@ -415,7 +417,7 @@ fun AttachmentCard(
                                                         )
                                                         Toast.makeText(
                                                             context,
-                                                            context.getString(R.string.attachments_error_open_link),
+                                                            errorOpenLinkString,
                                                             Toast.LENGTH_SHORT
                                                         ).show()
                                                     }

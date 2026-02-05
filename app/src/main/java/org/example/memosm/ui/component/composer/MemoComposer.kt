@@ -65,6 +65,21 @@ import org.example.memosm.ui.getVisibilityLabel
 import java.io.File
 
 
+/**
+ * Mode for the memo composer, determines the submit button label.
+ * All callers MUST specify an explicit mode.
+ */
+enum class ComposerMode {
+    /** Creating a new memo or publishing a draft */
+    PUBLISH,
+
+    /** Editing an existing memo */
+    UPDATE,
+
+    /** Adding a comment to a memo */
+    COMMENT
+}
+
 @Composable
 fun MemoComposer(
     modifier: Modifier = Modifier,
@@ -74,6 +89,7 @@ fun MemoComposer(
     availableTags: Set<String>,
     token: String,
     hostUrl: String,
+    mode: ComposerMode,
     isPosting: Boolean = false,
     initialContent: String = "",
     initialVisibility: Visibility = Visibility.PRIVATE,
@@ -82,8 +98,7 @@ fun MemoComposer(
     initialLocation: Location? = null,
     placeholder: String = stringResource(R.string.memo_composer_placeholder),
     autoFocus: Boolean = false,
-    onDraftChanged: ((String, Visibility, List<Attachment>, Location?) -> Unit)? = null,
-    submitLabel: String? = null
+    onDraftChanged: ((String, Visibility, List<Attachment>, Location?) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -845,10 +860,10 @@ fun MemoComposer(
                     }
                 }
 
-                val label = submitLabel ?: run {
-                    val isEdit = initialContent.isNotEmpty() || initialAttachments.isNotEmpty()
-                    if (isEdit) stringResource(R.string.memo_action_update)
-                    else stringResource(R.string.memo_action_post)
+                val label = when (mode) {
+                    ComposerMode.PUBLISH -> stringResource(R.string.memo_publish)
+                    ComposerMode.UPDATE -> stringResource(R.string.memo_action_update)
+                    ComposerMode.COMMENT -> stringResource(R.string.memo_action_post)
                 }
 
                 Button(

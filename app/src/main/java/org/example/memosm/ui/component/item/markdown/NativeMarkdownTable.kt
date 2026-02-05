@@ -95,17 +95,20 @@ fun NativeMarkdownTable(
                 row.forEachIndexed { index, cellNode ->
                     if (index < columnCount) {
                         val placeable = subcompose("measure_${row.hashCode()}_$index") {
-                             val inlineContentMap = remember { mutableMapOf<String, InlineTextContent>() }
-                             val styledText = buildAnnotatedString {
-                                 appendInlineChildren(cellNode, content, styles, inlineContentMap, onHashtagClick)
-                             }
-                             MarkdownText(
-                                 text = styledText,
-                                 style = MaterialTheme.typography.bodyMedium,
-                                 modifier = Modifier.padding(bottom = 2.dp), // Layout fix
-                                 textAlign = align.getOrElse(index) { TextAlign.Start },
-                                 inlineContent = inlineContentMap
-                             )
+                            val inlineContentMap =
+                                remember { mutableMapOf<String, InlineTextContent>() }
+                            val styledText = buildAnnotatedString {
+                                appendInlineChildren(
+                                    cellNode, content, styles, inlineContentMap, onHashtagClick
+                                )
+                            }
+                            MarkdownText(
+                                text = styledText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(bottom = 2.dp), // Layout fix
+                                textAlign = align.getOrElse(index) { TextAlign.Start },
+                                inlineContent = inlineContentMap
+                            )
                         }.first().measure(Constraints())
 
                         val totalPadding = tableCellPadding.roundToPx() * 2
@@ -141,17 +144,24 @@ fun NativeMarkdownTable(
                                             else -> Alignment.CenterStart
                                         }
                                     ) {
-                                         val inlineContentMap = remember { mutableMapOf<String, InlineTextContent>() }
-                                         val styledText = buildAnnotatedString {
-                                             appendInlineChildren(cellNode, content, styles, inlineContentMap, onHashtagClick)
-                                         }
-                                         MarkdownText(
-                                             text = styledText,
-                                             style = MaterialTheme.typography.bodyMedium,
-                                             textAlign = align.getOrElse(columnIndex) { TextAlign.Start },
-                                             modifier = Modifier.fillMaxWidth(),
-                                             inlineContent = inlineContentMap
-                                         )
+                                        val inlineContentMap =
+                                            remember { mutableMapOf<String, InlineTextContent>() }
+                                        val styledText = buildAnnotatedString {
+                                            appendInlineChildren(
+                                                cellNode,
+                                                content,
+                                                styles,
+                                                inlineContentMap,
+                                                onHashtagClick
+                                            )
+                                        }
+                                        MarkdownText(
+                                            text = styledText,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            textAlign = align.getOrElse(columnIndex) { TextAlign.Start },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            inlineContent = inlineContentMap
+                                        )
                                     }
                                     // VERTICAL LINE: Add if it's not the last column
                                     if (columnIndex < columnCount - 1) {
@@ -186,13 +196,13 @@ fun NativeMarkdownTable(
 fun getTableAlignments(node: ASTNode, content: String, columnCount: Int): List<TextAlign> {
     // Try to find the separator node. It might be a direct child or a specific token type
     val separator = node.findChildOfType(GFMTokenTypes.TABLE_SEPARATOR)
-    
+
     if (separator != null) {
         val sepText = separator.getTextInNode(content).toString().trim()
         val rawCells = sepText.split('|')
         // Filter out empty strings that result from splitting leading/trailing pipes
         val validCells = rawCells.map { it.trim() }.filter { it.isNotEmpty() }
-        
+
         val alignList = validCells.map { cell ->
             when {
                 cell.startsWith(":") && cell.endsWith(":") -> TextAlign.Center
@@ -200,15 +210,15 @@ fun getTableAlignments(node: ASTNode, content: String, columnCount: Int): List<T
                 else -> TextAlign.Start
             }
         }
-        
+
         if (alignList.isNotEmpty()) {
-             // Pad or truncate to match column count
-             if (alignList.size < columnCount) {
-                  return alignList + List(columnCount - alignList.size) { TextAlign.Start }
-             }
-             return alignList.take(columnCount)
+            // Pad or truncate to match column count
+            if (alignList.size < columnCount) {
+                return alignList + List(columnCount - alignList.size) { TextAlign.Start }
+            }
+            return alignList.take(columnCount)
         }
     }
-    
+
     return List(columnCount) { TextAlign.Start }
 }

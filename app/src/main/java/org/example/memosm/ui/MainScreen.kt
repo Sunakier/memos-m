@@ -47,6 +47,7 @@ import org.example.memosm.ui.component.item.media.MemoImage
 import androidx.core.net.toUri
 import org.example.memosm.MemosApplication
 import org.example.memosm.model.Visibility
+import org.example.memosm.ui.component.composer.ComposerMode
 import org.example.memosm.ui.component.composer.MemoComposerDialog
 
 enum class MainDestination(
@@ -186,7 +187,8 @@ fun MainScreen(
             initialUris = shareUris,
             initialAttachments = shareAttachments,
             initialVisibility = shareVisibility,
-            initialLocation = shareLocation
+            initialLocation = shareLocation,
+            mode = ComposerMode.PUBLISH
         )
     }
 

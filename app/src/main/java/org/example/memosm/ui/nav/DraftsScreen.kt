@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Attachment
@@ -30,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.model.Draft
+import org.example.memosm.ui.component.composer.ComposerMode
 import org.example.memosm.ui.component.composer.MemoComposerDialog
 import org.example.memosm.ui.getVisibilityLabel
 import org.example.memosm.viewmodel.MemosViewModel
@@ -47,7 +47,6 @@ fun DraftsScreen(
 
     var draftToEdit by remember { mutableStateOf<Draft?>(null) }
     var draftToDelete by remember { mutableStateOf<Draft?>(null) }
-    var draftToPost by remember { mutableStateOf<Draft?>(null) }
 
     val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
 
@@ -109,14 +108,13 @@ fun DraftsScreen(
                         draft = draft,
                         dateFormat = dateFormat,
                         onEdit = { draftToEdit = draft },
-                        onPost = { draftToPost = draft },
                         onDelete = { draftToDelete = draft })
                 }
             }
         }
     }
 
-    // Edit Draft Dialog
+    // Edit Draft Dialog - opens composer with "Publish" button
     if (draftToEdit != null) {
         viewModel.setCurrentEditingDraft(draftToEdit!!.id)
         MemoComposerDialog(
@@ -130,25 +128,11 @@ fun DraftsScreen(
             initialContent = draftToEdit!!.content,
             initialAttachments = draftToEdit!!.attachments,
             initialVisibility = draftToEdit!!.visibility,
-            initialLocation = draftToEdit!!.location
+            initialLocation = draftToEdit!!.location,
+            mode = ComposerMode.PUBLISH
         )
     }
 
-    // Post Draft (create memo and delete draft)
-    LaunchedEffect(draftToPost) {
-        draftToPost?.let { draft ->
-            viewModel.setCurrentEditingDraft(draft.id)
-            viewModel.createMemo(
-                content = draft.content,
-                visibility = draft.visibility,
-                attachments = draft.attachments,
-                location = draft.location
-            ) {
-                // Draft is automatically deleted by createMemo via clearCurrentEditingDraft
-            }
-            draftToPost = null
-        }
-    }
 
     // Delete confirmation dialog
     if (draftToDelete != null) {
@@ -181,7 +165,6 @@ private fun DraftCard(
     draft: Draft,
     dateFormat: SimpleDateFormat,
     onEdit: () -> Unit,
-    onPost: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
@@ -285,21 +268,6 @@ private fun DraftCard(
                         contentDescription = stringResource(R.string.drafts_action_edit),
                         tint = MaterialTheme.colorScheme.primary
                     )
-                }
-
-                // Post button
-                FilledTonalButton(
-                    onClick = onPost, colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.Send,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.drafts_action_post))
                 }
             }
         }
