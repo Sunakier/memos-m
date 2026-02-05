@@ -4,7 +4,6 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.Criteria
 import android.location.LocationListener
 import android.location.LocationManager
 import android.media.MediaRecorder
@@ -208,8 +207,22 @@ fun MemoComposer(
         fun fetchFallback() {
             try {
                 val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-                val criteria = Criteria()
-                val provider = locationManager.getBestProvider(criteria, true)
+
+                
+
+                // Select provider explicitly instead of using Criteria
+                val provider = when {
+                    locationManager.isProviderEnabled(LocationManager.FUSED_PROVIDER) -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        LocationManager.FUSED_PROVIDER
+                    } else {
+                        TODO("VERSION.SDK_INT < S")
+                    }
+
+                    locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
+                    locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
+                    else -> null
+                }
+
                 if (provider != null) {
                     // Try last known location first as a quick fallback
                     val lastKnown = locationManager.getLastKnownLocation(provider)
