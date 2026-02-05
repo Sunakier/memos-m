@@ -163,13 +163,7 @@ dependencies {
     // ----------------------------
     implementation(libs.google.play.services.location)
 
-    implementation(libs.multiplatform.markdown.renderer.android)
-    implementation(libs.multiplatform.markdown.renderer.m3)
-    implementation(libs.multiplatform.markdown.renderer.coil3)
-    implementation(libs.multiplatform.markdown.renderer.code)
-
     implementation(libs.markdown)
-    implementation(libs.highlights)
     implementation(libs.highlights)
     implementation(libs.androidmath)
 
