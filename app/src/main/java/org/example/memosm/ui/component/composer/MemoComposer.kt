@@ -4,9 +4,13 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Criteria
+import android.location.LocationListener
+import android.location.LocationManager
 import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -17,6 +21,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -26,25 +31,24 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draganddrop.DragAndDropEvent
-import androidx.compose.ui.draganddrop.DragAndDropTarget
-import androidx.compose.ui.draganddrop.toAndroidDragEvent
-import androidx.compose.ui.platform.LocalResources
-import androidx.core.net.toUri
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.example.memosm.R
@@ -57,20 +61,20 @@ import org.example.memosm.ui.VisibilityIcon
 import org.example.memosm.ui.component.item.AttachmentCard
 import org.example.memosm.ui.component.item.AttachmentCompactMode
 import org.example.memosm.ui.findActivity
-import org.example.memosm.ui.getVisibilityLabel
 import org.example.memosm.ui.getFileSize
+import org.example.memosm.ui.getVisibilityLabel
 import java.io.File
 
 
 @Composable
 fun MemoComposer(
+    modifier: Modifier = Modifier,
     onPublish: (String, Visibility, List<Attachment>, Location?) -> Unit,
     onUploadFile: suspend (Uri, Context) -> Attachment?,
     onGetLocationName: (suspend (Double, Double) -> String?)? = null,
     availableTags: Set<String>,
     token: String,
     hostUrl: String,
-    modifier: Modifier = Modifier,
     isPosting: Boolean = false,
     initialContent: String = "",
     initialVisibility: Visibility = Visibility.PRIVATE,
@@ -167,17 +171,15 @@ fun MemoComposer(
     @SuppressLint("MissingPermission")
     fun fetchLocation() {
         isFetchingLocation = true
-        val cancellationTokenSource = CancellationTokenSource()
-        fusedLocationClient.getCurrentLocation(
-            Priority.PRIORITY_BALANCED_POWER_ACCURACY, cancellationTokenSource.token
-        ).addOnSuccessListener { androidLoc ->
+
+        fun handleAndroidLocation(androidLoc: android.location.Location?) {
             if (androidLoc != null) {
                 var loc = Location(
                     latitude = androidLoc.latitude,
                     longitude = androidLoc.longitude,
                     placeholder = locationPlaceHolder
                 )
-                
+
                 // Fetch address name
                 val fetcher = onGetLocationName
                 if (fetcher != null) {
@@ -195,14 +197,64 @@ fun MemoComposer(
                         }
                     }
                 } else {
-                     location = loc
-                     isFetchingLocation = false
+                    location = loc
+                    isFetchingLocation = false
                 }
             } else {
                 isFetchingLocation = false
             }
+        }
+
+        fun fetchFallback() {
+            try {
+                val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                val criteria = Criteria()
+                val provider = locationManager.getBestProvider(criteria, true)
+                if (provider != null) {
+                    // Try last known location first as a quick fallback
+                    val lastKnown = locationManager.getLastKnownLocation(provider)
+                    if (lastKnown != null) {
+                        handleAndroidLocation(lastKnown)
+                        return
+                    }
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        locationManager.getCurrentLocation(
+                            provider,
+                            null,
+                            ContextCompat.getMainExecutor(context)
+                        ) { loc -> handleAndroidLocation(loc) }
+                    } else {
+                        @Suppress("DEPRECATION")
+                        locationManager.requestSingleUpdate(provider, object : LocationListener {
+                            override fun onLocationChanged(l: android.location.Location) {
+                                handleAndroidLocation(l)
+                            }
+                            override fun onStatusChanged(p: String?, s: Int, e: Bundle?) {}
+                            override fun onProviderEnabled(p: String) {}
+                            override fun onProviderDisabled(p: String) {}
+                        }, context.mainLooper)
+                    }
+                } else {
+                    isFetchingLocation = false
+                }
+            } catch (e: Exception) {
+                Log.e("MemoComposer", "Error in fallback location fetch", e)
+                isFetchingLocation = false
+            }
+        }
+
+        val cancellationTokenSource = CancellationTokenSource()
+        fusedLocationClient.getCurrentLocation(
+            Priority.PRIORITY_BALANCED_POWER_ACCURACY, cancellationTokenSource.token
+        ).addOnSuccessListener { androidLoc ->
+            if (androidLoc != null) {
+                handleAndroidLocation(androidLoc)
+            } else {
+                fetchFallback()
+            }
         }.addOnFailureListener {
-            isFetchingLocation = false
+            fetchFallback()
         }
     }
 
