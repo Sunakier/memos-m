@@ -426,6 +426,26 @@ fun visitInlineChild(child: ASTNode, content: String, styles: MarkdownStyles, bu
                 }
             }
 
+            MarkdownElementTypes.AUTOLINK -> {
+                val text = child.getTextInNode(content).toString()
+                val destination = text.removePrefix("<").removeSuffix(">")
+                
+                pushLink(LinkAnnotation.Url(destination))
+                withStyle(SpanStyle(color = styles.linkColor)) {
+                    append(text)
+                }
+                pop()
+            }
+
+            GFMTokenTypes.GFM_AUTOLINK -> {
+               val text = child.getTextInNode(content).toString()
+               pushLink(LinkAnnotation.Url(text))
+               withStyle(SpanStyle(color = styles.linkColor)) {
+                   append(text)
+               }
+               pop()
+            }
+
             MarkdownElementTypes.CODE_SPAN -> {
                 val hexColor = styles.codeBackground.toHex()
                 pushStringAnnotation(tag = "ROUNDED_BG_COLOR", annotation = hexColor)
