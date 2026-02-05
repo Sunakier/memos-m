@@ -432,7 +432,7 @@ fun visitInlineChild(child: ASTNode, content: String, styles: MarkdownStyles, bu
                 
                 pushLink(LinkAnnotation.Url(destination))
                 withStyle(SpanStyle(color = styles.linkColor)) {
-                    append(text)
+                    append(destination)
                 }
                 pop()
             }
