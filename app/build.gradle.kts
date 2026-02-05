@@ -52,10 +52,10 @@ android {
                 "proguard-rules.pro"
             )
             applicationIdSuffix = ".canary"
-            
+
             val timestamp = SimpleDateFormat("yyyyMMddHHmm").format(Date())
             versionNameSuffix = "-canary-$timestamp-${gitShortHash.get()}"
-            
+
             manifestPlaceholders["appLabel"] = "MemosM"
             signingConfig = signingConfigs.getByName("release")
         }
