@@ -57,6 +57,14 @@ import org.intellij.markdown.flavours.gfm.GFMElementTypes
 import org.intellij.markdown.flavours.gfm.GFMTokenTypes
 import org.intellij.markdown.ast.findChildOfType
 import toggleCheckbox
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.max
+import java.util.UUID
 
 // Helper data class for styles
 data class MarkdownStyles(
@@ -73,14 +81,15 @@ fun MarkdownText(
     text: AnnotatedString,
     style: TextStyle,
     modifier: Modifier = Modifier,
-    textAlign: TextAlign = TextAlign.Start
+    textAlign: TextAlign = TextAlign.Start,
+    inlineContent: Map<String, InlineTextContent> = emptyMap()
 ) {
     val uriHandler = LocalUriHandler.current
     val defaultColor = LocalContentColor.current
     val textColor = if (style.color.isSpecified) style.color else defaultColor
-    
+
     var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
-    
+
     val drawModifier = modifier.drawBehind {
         layoutResult?.let { layout ->
             text.getStringAnnotations("ROUNDED_BG_COLOR", 0, text.length).forEach { range ->
@@ -107,7 +116,8 @@ fun MarkdownText(
         style = style.copy(color = textColor),
         modifier = drawModifier,
         onTextLayout = { layoutResult = it },
-        textAlign = textAlign
+        textAlign = textAlign,
+        inlineContent = inlineContent
     )
 }
 
@@ -157,19 +167,68 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
         }
 
         MarkdownElementTypes.PARAGRAPH -> {
-            // Render paragraph text with inline styling
-            // This needs to collect all inline children and build an AnnotatedString
-            val styledText = buildAnnotatedString {
-                appendInlineChildren(node, content, styles)
-            }
             val noTopPadding = LocalForceNoTopPadding.current
             val topPadding = if (noTopPadding) 0.dp else 4.dp
-            
-            MarkdownText(
-                text = styledText,
-                style = typography.bodyLarge,
-                modifier = Modifier.padding(top = topPadding, bottom = 4.dp)
-            )
+
+            Column(modifier = Modifier.padding(top = topPadding, bottom = 4.dp)) {
+                val children = node.children
+                var lastIndex = 0
+
+                children.forEachIndexed { index, child ->
+                    if (child.type == GFMElementTypes.BLOCK_MATH) {
+                        // Render previous text chunk
+                        if (index > lastIndex) {
+                            val textNodes = children.subList(lastIndex, index)
+                            val inlineContentMap = mutableMapOf<String, InlineTextContent>()
+                            
+                            val styledText = buildAnnotatedString {
+                                textNodes.forEach { textNode ->
+                                    visitInlineChild(textNode, content, styles, this, inlineContentMap)
+                                }
+                            }
+                            if (styledText.isNotEmpty()) {
+                                MarkdownText(
+                                    text = styledText, 
+                                    style = typography.bodyLarge,
+                                    inlineContent = inlineContentMap
+                                )
+                            }
+                        }
+
+                        // Render Block Math
+                        val rawText = child.children.joinToString("") { it.getTextInNode(content) }
+                        val latex = rawText.trim().removePrefix("$$").removeSuffix("$$").trim()
+
+                        NativeMarkdownLatex(
+                            latex = latex,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                        )
+
+                        lastIndex = index + 1
+                    }
+                }
+
+                // Render remaining text
+                if (lastIndex < children.size) {
+                    val textNodes = children.subList(lastIndex, children.size)
+                    val inlineContentMap = mutableMapOf<String, InlineTextContent>()
+                    
+                    val styledText = buildAnnotatedString {
+                        textNodes.forEach { textNode ->
+                            visitInlineChild(textNode, content, styles, this, inlineContentMap)
+                        }
+                    }
+                    if (styledText.isNotEmpty()) {
+                        MarkdownText(
+                            text = styledText, 
+                            style = typography.bodyLarge,
+                            inlineContent = inlineContentMap
+                        )
+                    }
+                }
+            }
         }
 
         MarkdownElementTypes.ATX_1, MarkdownElementTypes.ATX_2, MarkdownElementTypes.ATX_3, MarkdownElementTypes.ATX_4, MarkdownElementTypes.ATX_5, MarkdownElementTypes.ATX_6 -> {
@@ -187,21 +246,27 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
             // We can just recursively render inline content.
             // But headers are block elements, so we treat them as text with style.
             val styledText = buildAnnotatedString {
-                // Skip the leading hashtags if they are separate tokens or part of content?
-                // Usually children include HEADER_LEAD (#) and content.
-                // We will filter only relevant text content.
+                // Header content usually doesn't have complex math, but we support it best effort.
+                // Pass a local map, but we don't render it in MarkdownText yet?
+                // MarkdownText call below needs to accept it if we want to support it.
+                // For now, let's just render text. If inline math is present, it will be added to the map.
+                // We create a map but might ignore it if we don't pass it to MarkdownText?
+                // Actually MarkdownText accepts inlineContent now.
+                // So let's capture it.
+                val inlineContentMap = mutableMapOf<String, InlineTextContent>()
                  node.children.forEach { child ->
-                     if (child.type != MarkdownTokenTypes.ATX_HEADER) {
-                         // append recursively
-                         visitInlineChild(child, content, styles, this)
-                     }
-                 }
+                    if (child.type != MarkdownTokenTypes.ATX_HEADER) {
+                        visitInlineChild(child, content, styles, this, inlineContentMap)
+                    }
+                }
             }
             val noTopPadding = LocalForceNoTopPadding.current
             val topPadding = if (noTopPadding) 0.dp else 8.dp
-            
+
             MarkdownText(
-                text = styledText, style = style, modifier = Modifier.padding(top = topPadding, bottom = 8.dp)
+                text = styledText,
+                style = style,
+                modifier = Modifier.padding(top = topPadding, bottom = 8.dp)
             )
         }
 
@@ -228,7 +293,10 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                                                 )
                                             )
                                         },
-                                        modifier = Modifier.scale(0.8f).offset(x = (-4).dp, y = (-2).dp).padding(end = 4.dp)
+                                        modifier = Modifier
+                                            .scale(0.8f)
+                                            .offset(x = (-4).dp, y = (-2).dp)
+                                            .padding(end = 4.dp)
                                     )
                                 }
                             } else {
@@ -242,10 +310,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                             Column {
                                 var firstChildProcessed = false
                                 child.children.forEach { listChild ->
-                                    if (listChild.type != GFMTokenTypes.CHECK_BOX &&
-                                        listChild.type != MarkdownTokenTypes.LIST_BULLET &&
-                                        listChild.type != org.intellij.markdown.MarkdownTokenTypes.EOL
-                                    ) {
+                                    if (listChild.type != GFMTokenTypes.CHECK_BOX && listChild.type != MarkdownTokenTypes.LIST_BULLET && listChild.type != org.intellij.markdown.MarkdownTokenTypes.EOL) {
                                         if (!firstChildProcessed) {
                                             CompositionLocalProvider(LocalForceNoTopPadding provides true) {
                                                 NativeMarkdownNodeRecursive(listChild)
@@ -279,9 +344,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                             Column {
                                 var firstChildProcessed = false
                                 child.children.forEach { listChild ->
-                                    if (listChild.type != MarkdownTokenTypes.LIST_NUMBER &&
-                                        listChild.type != org.intellij.markdown.MarkdownTokenTypes.EOL
-                                    ) {
+                                    if (listChild.type != MarkdownTokenTypes.LIST_NUMBER && listChild.type != org.intellij.markdown.MarkdownTokenTypes.EOL) {
                                         if (!firstChildProcessed) {
                                             CompositionLocalProvider(LocalForceNoTopPadding provides true) {
                                                 NativeMarkdownNodeRecursive(listChild)
@@ -306,7 +369,9 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
             Surface(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
             ) {
                 var lang = ""
                 val sb = StringBuilder()
@@ -315,20 +380,19 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                         MarkdownTokenTypes.FENCE_LANG -> {
                             lang = child.getTextInNode(content).toString().trim()
                         }
-                        MarkdownTokenTypes.CODE_FENCE_CONTENT,
-                        MarkdownTokenTypes.CODE_LINE,
-                        MarkdownTokenTypes.EOL -> {
+
+                        MarkdownTokenTypes.CODE_FENCE_CONTENT, MarkdownTokenTypes.CODE_LINE, MarkdownTokenTypes.EOL -> {
                             sb.append(child.getTextInNode(content))
                         }
                         // Ignore fence delimiters (START/END) and other metadata
                     }
                 }
-                
+
                 // Remove leading/trailing newlines to avoid extra padding, but preserve indentation
                 val code = sb.toString().removePrefix("\n").removeSuffix("\n")
                 val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
                 val highlightedText = CodeHighlighter.highlightCode(code, lang, isDarkTheme)
-                
+
                 Text(
                     text = highlightedText,
                     style = typography.bodyMedium,
@@ -340,12 +404,19 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
 
         MarkdownElementTypes.BLOCK_QUOTE -> {
             // Simple blockquote with left border/padding
-            Row(modifier = Modifier.padding(vertical = 4.dp).height(IntrinsicSize.Min)) {
+            Row(
+                modifier = Modifier
+                    .padding(vertical = 4.dp)
+                    .height(IntrinsicSize.Min)
+            ) {
                 Spacer(
                     modifier = Modifier
                         .width(4.dp)
                         .fillMaxHeight()
-                        .background(color = MaterialTheme.colorScheme.outlineVariant, shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
+                        .background(
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(2.dp)
+                        )
                 )
                 Column(modifier = Modifier.padding(start = 8.dp)) {
                     CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurfaceVariant) {
@@ -368,6 +439,18 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
 
         GFMElementTypes.TABLE -> {
             NativeMarkdownTable(content, node)
+        }
+
+        GFMElementTypes.BLOCK_MATH -> {
+            // $$ ... $$
+            val rawText = node.children.joinToString("") { it.getTextInNode(content) }
+            val latex = rawText.trim().removePrefix("$$").removeSuffix("$$").trim()
+
+            NativeMarkdownLatex(
+                latex = latex, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            )
         }
 
         MarkdownElementTypes.IMAGE -> {
@@ -393,7 +476,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
 
 // Inline content builder, NOT Composable
 fun AnnotatedString.Builder.appendInlineChildren(
-    node: ASTNode, content: String, styles: MarkdownStyles
+    node: ASTNode, content: String, styles: MarkdownStyles, inlineContent: MutableMap<String, InlineTextContent>
 ) {
     if (node.children.isEmpty()) {
         // Leaf node, append text
@@ -402,18 +485,24 @@ fun AnnotatedString.Builder.appendInlineChildren(
     }
 
     node.children.forEach { child ->
-        visitInlineChild(child, content, styles, this)
+        visitInlineChild(child, content, styles, this, inlineContent)
     }
 }
 
-fun visitInlineChild(child: ASTNode, content: String, styles: MarkdownStyles, builder: AnnotatedString.Builder) {
+fun visitInlineChild(
+    child: ASTNode, 
+    content: String, 
+    styles: MarkdownStyles, 
+    builder: AnnotatedString.Builder,
+    inlineContent: MutableMap<String, InlineTextContent>
+) {
     with(builder) {
         when (child.type) {
             MarkdownElementTypes.STRONG -> {
                 withStyle(styles.boldStyle) {
                     child.children.forEach { c ->
                         if (c.type != MarkdownTokenTypes.EMPH) {
-                            visitInlineChild(c, content, styles, this)
+                            visitInlineChild(c, content, styles, this, inlineContent)
                         }
                     }
                 }
@@ -423,7 +512,7 @@ fun visitInlineChild(child: ASTNode, content: String, styles: MarkdownStyles, bu
                 withStyle(styles.italicStyle) {
                     child.children.forEach { c ->
                         if (c.type != MarkdownTokenTypes.EMPH) {
-                            visitInlineChild(c, content, styles, this)
+                            visitInlineChild(c, content, styles, this, inlineContent)
                         }
                     }
                 }
@@ -432,7 +521,7 @@ fun visitInlineChild(child: ASTNode, content: String, styles: MarkdownStyles, bu
             MarkdownElementTypes.AUTOLINK -> {
                 val text = child.getTextInNode(content).toString()
                 val destination = text.removePrefix("<").removeSuffix(">")
-                
+
                 pushLink(LinkAnnotation.Url(destination))
                 withStyle(SpanStyle(color = styles.linkColor)) {
                     append(destination)
@@ -441,12 +530,40 @@ fun visitInlineChild(child: ASTNode, content: String, styles: MarkdownStyles, bu
             }
 
             GFMTokenTypes.GFM_AUTOLINK -> {
-               val text = child.getTextInNode(content).toString()
-               pushLink(LinkAnnotation.Url(text))
-               withStyle(SpanStyle(color = styles.linkColor)) {
-                   append(text)
-               }
-               pop()
+                val text = child.getTextInNode(content).toString()
+                pushLink(LinkAnnotation.Url(text))
+                withStyle(SpanStyle(color = styles.linkColor)) {
+                    append(text)
+                }
+                pop()
+            }
+
+            GFMElementTypes.INLINE_MATH -> {
+                val rawText = child.getTextInNode(content).toString()
+                val latex = rawText.removePrefix("$").removeSuffix("$").trim()
+                val id = "inline_math_${UUID.randomUUID()}"
+                
+                // Heuristic for width: 
+                // Since we can't measure the view easily, we estimate width based on char count.
+                // 0.6em per char is a rough estimate for monospace/math.
+                // Height 1.5em to fit in line height.
+                // Height 1.5em to fit in line height.
+                val width = max((latex.length * 0.6).em, 1.em)
+                
+                inlineContent[id] = InlineTextContent(
+                    Placeholder(
+                        width = width,
+                        height = 1.5.em,
+                        placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+                    )
+                ) {
+                    NativeMarkdownLatex(
+                        latex = latex,
+                        modifier = Modifier.fillMaxHeight() // Fill the placeholder height
+                    )
+                }
+                
+                appendInlineContent(id, "($latex)")
             }
 
             MarkdownElementTypes.CODE_SPAN -> {
@@ -479,7 +596,7 @@ fun visitInlineChild(child: ASTNode, content: String, styles: MarkdownStyles, bu
                     if (linkTextNode != null) {
                         linkTextNode.children.forEach { lc ->
                             if (lc.type != MarkdownTokenTypes.LBRACKET && lc.type != MarkdownTokenTypes.RBRACKET) {
-                                visitInlineChild(lc, content, styles, this)
+                                visitInlineChild(lc, content, styles, this, inlineContent)
                             }
                         }
                     } else {
@@ -493,14 +610,14 @@ fun visitInlineChild(child: ASTNode, content: String, styles: MarkdownStyles, bu
                 withStyle(styles.strikethroughStyle) {
                     child.children.forEach { c ->
                         if (c.type != GFMTokenTypes.TILDE) {
-                            visitInlineChild(c, content, styles, this)
+                            visitInlineChild(c, content, styles, this, inlineContent)
                         }
                     }
                 }
             }
 
             else -> {
-                appendInlineChildren(child, content, styles)
+                appendInlineChildren(child, content, styles, inlineContent)
             }
         }
     }

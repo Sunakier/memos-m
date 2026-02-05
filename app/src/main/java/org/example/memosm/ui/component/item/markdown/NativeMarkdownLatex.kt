@@ -3,23 +3,20 @@ package org.example.memosm.ui.component.item.markdown
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
-import de.gregcockroft.androidmath.MathView
+import com.agog.mathdisplay.MTMathView
 
 @Composable
 fun NativeMarkdownLatex(
-    latex: String,
-    modifier: Modifier = Modifier
+    latex: String, modifier: Modifier = Modifier
 ) {
     AndroidView(
         factory = { context ->
-            MathView(context, null).apply {
-                setEngine(MathView.Engine.KATEX) // or MATHJAX, usually KATEX is faster
-                setText(latex)
-            }
-        },
-        update = { view ->
-            view.setText(latex)
-        },
-        modifier = modifier
+        MTMathView(context, null).apply {
+//            fontSize = 50f // Default size, maybe adjustable?
+            // labelMode = MTMathViewMode.KMathViewModeDisplay
+        }
+    }, update = { view ->
+        view.latex = latex
+    }, modifier = modifier
     )
 }
