@@ -443,6 +443,10 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
             )
         }
 
+        MarkdownElementTypes.LINK_DEFINITION -> {
+            // Do not render link definitions
+        }
+
         GFMElementTypes.TABLE -> {
             NativeMarkdownTable(content, node)
         }
