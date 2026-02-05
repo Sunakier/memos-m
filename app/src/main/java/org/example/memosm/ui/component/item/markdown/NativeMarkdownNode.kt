@@ -179,15 +179,17 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                         if (index > lastIndex) {
                             val textNodes = children.subList(lastIndex, index)
                             val inlineContentMap = mutableMapOf<String, InlineTextContent>()
-                            
+
                             val styledText = buildAnnotatedString {
                                 textNodes.forEach { textNode ->
-                                    visitInlineChild(textNode, content, styles, this, inlineContentMap)
+                                    visitInlineChild(
+                                        textNode, content, styles, this, inlineContentMap
+                                    )
                                 }
                             }
                             if (styledText.isNotEmpty()) {
                                 MarkdownText(
-                                    text = styledText, 
+                                    text = styledText,
                                     style = typography.bodyLarge,
                                     inlineContent = inlineContentMap
                                 )
@@ -214,7 +216,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                 if (lastIndex < children.size) {
                     val textNodes = children.subList(lastIndex, children.size)
                     val inlineContentMap = mutableMapOf<String, InlineTextContent>()
-                    
+
                     val styledText = buildAnnotatedString {
                         textNodes.forEach { textNode ->
                             visitInlineChild(textNode, content, styles, this, inlineContentMap)
@@ -222,7 +224,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                     }
                     if (styledText.isNotEmpty()) {
                         MarkdownText(
-                            text = styledText, 
+                            text = styledText,
                             style = typography.bodyLarge,
                             inlineContent = inlineContentMap
                         )
@@ -254,7 +256,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                 // Actually MarkdownText accepts inlineContent now.
                 // So let's capture it.
                 val inlineContentMap = mutableMapOf<String, InlineTextContent>()
-                 node.children.forEach { child ->
+                node.children.forEach { child ->
                     if (child.type != MarkdownTokenTypes.ATX_HEADER) {
                         visitInlineChild(child, content, styles, this, inlineContentMap)
                     }
@@ -368,7 +370,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
         MarkdownElementTypes.CODE_BLOCK, MarkdownElementTypes.CODE_FENCE -> {
             Surface(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
@@ -390,7 +392,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
 
                 // Remove leading/trailing newlines to avoid extra padding, but preserve indentation
                 val code = sb.toString().removePrefix("\n").removeSuffix("\n")
-                val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
+                val isDarkTheme = isSystemInDarkTheme()
                 val highlightedText = CodeHighlighter.highlightCode(code, lang, isDarkTheme)
 
                 Text(
@@ -447,7 +449,8 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
             val latex = rawText.trim().removePrefix("$$").removeSuffix("$$").trim()
 
             NativeMarkdownLatex(
-                latex = latex, modifier = Modifier
+                latex = latex,
+                modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
                 inline = false
@@ -477,7 +480,10 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
 
 // Inline content builder, NOT Composable
 fun AnnotatedString.Builder.appendInlineChildren(
-    node: ASTNode, content: String, styles: MarkdownStyles, inlineContent: MutableMap<String, InlineTextContent>
+    node: ASTNode,
+    content: String,
+    styles: MarkdownStyles,
+    inlineContent: MutableMap<String, InlineTextContent>
 ) {
     if (node.children.isEmpty()) {
         // Leaf node, append text
@@ -491,9 +497,9 @@ fun AnnotatedString.Builder.appendInlineChildren(
 }
 
 fun visitInlineChild(
-    child: ASTNode, 
-    content: String, 
-    styles: MarkdownStyles, 
+    child: ASTNode,
+    content: String,
+    styles: MarkdownStyles,
     builder: AnnotatedString.Builder,
     inlineContent: MutableMap<String, InlineTextContent>
 ) {
@@ -543,7 +549,7 @@ fun visitInlineChild(
                 val rawText = child.getTextInNode(content).toString()
                 val latex = rawText.removePrefix("$").removeSuffix("$").trim()
                 val id = "inline_math_${UUID.randomUUID()}"
-                
+
                 // Heuristic for width: 
                 // Since we can't measure the view easily, we estimate width based on char count.
                 // 0.6em per char is a rough estimate for monospace/math.
@@ -552,7 +558,7 @@ fun visitInlineChild(
                 // Height 1.5em to fit in line height.
                 val rawWidth = (latex.length * 0.6)
                 val width = (if (rawWidth < 1.0) 1.0 else rawWidth).em
-                
+
                 inlineContent[id] = InlineTextContent(
                     Placeholder(
                         width = width,
@@ -566,7 +572,7 @@ fun visitInlineChild(
                         modifier = Modifier.fillMaxHeight() // Fill the placeholder height
                     )
                 }
-                
+
                 appendInlineContent(id, "($latex)")
             }
 
