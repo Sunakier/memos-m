@@ -14,9 +14,12 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
@@ -83,6 +86,7 @@ val LocalMarkdownContent = compositionLocalOf { "" }
 val LocalOnContentChange = compositionLocalOf<((String) -> Unit)?> { null }
 val LocalForceNoTopPadding = compositionLocalOf { false }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NativeMarkdownNode(
     modifier: Modifier = Modifier,
@@ -99,6 +103,7 @@ fun NativeMarkdownNode(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NativeMarkdownNodeRecursive(node: ASTNode) {
     val content = LocalMarkdownContent.current
@@ -180,20 +185,22 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                             if (checkBoxNode != null) {
                                 val isChecked = checkBoxNode.getTextInNode(content)
                                     .contains("x", ignoreCase = true)
-                                Checkbox(
-                                    checked = isChecked,
-                                    onCheckedChange = { checked ->
-                                        onContentChange?.invoke(
-                                            toggleCheckbox(
-                                                content,
-                                                checkBoxNode.startOffset,
-                                                checkBoxNode.endOffset,
-                                                checked
+                                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+                                    Checkbox(
+                                        checked = isChecked,
+                                        onCheckedChange = { checked ->
+                                            onContentChange?.invoke(
+                                                toggleCheckbox(
+                                                    content,
+                                                    checkBoxNode.startOffset,
+                                                    checkBoxNode.endOffset,
+                                                    checked
+                                                )
                                             )
-                                        )
-                                    },
-                                    modifier = Modifier.scale(0.8f).padding(end = 8.dp)
-                                )
+                                        },
+                                        modifier = Modifier.scale(0.8f).padding(end = 8.dp)
+                                    )
+                                }
                             } else {
                                 Text(
                                     "•",
