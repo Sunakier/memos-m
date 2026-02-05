@@ -170,7 +170,8 @@ dependencies {
 
     implementation(libs.markdown)
     implementation(libs.highlights)
-//    implementation(libs.ktreesitter)
+    implementation(libs.highlights)
+    implementation(libs.androidmath)
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.dash)

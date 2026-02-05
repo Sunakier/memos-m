@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import org.intellij.markdown.ast.ASTNode
+import org.intellij.markdown.ast.findChildOfType
 import org.intellij.markdown.flavours.gfm.GFMElementTypes
 import org.intellij.markdown.flavours.gfm.GFMTokenTypes
 
@@ -176,21 +177,31 @@ fun NativeMarkdownTable(
 }
 
 fun getTableAlignments(node: ASTNode, content: String, columnCount: Int): List<TextAlign> {
-    val separator = node.children.find { it.type == GFMTokenTypes.TABLE_SEPARATOR }
+    // Try to find the separator node. It might be a direct child or a specific token type
+    val separator = node.findChildOfType(GFMTokenTypes.TABLE_SEPARATOR)
     
     if (separator != null) {
-        val sepText = separator.getTextInNode(content).toString().trim().trim('|')
-        val cells = sepText.split("|")
-        return cells.map { cell ->
-            val trimmed = cell.trim()
+        val sepText = separator.getTextInNode(content).toString().trim()
+        val rawCells = sepText.split('|')
+        // Filter out empty strings that result from splitting leading/trailing pipes
+        val validCells = rawCells.map { it.trim() }.filter { it.isNotEmpty() }
+        
+        val alignList = validCells.map { cell ->
             when {
-                trimmed.startsWith(":") && trimmed.endsWith(":") -> TextAlign.Center
-                trimmed.endsWith(":") -> TextAlign.End
+                cell.startsWith(":") && cell.endsWith(":") -> TextAlign.Center
+                cell.endsWith(":") -> TextAlign.End
                 else -> TextAlign.Start
             }
         }
+        
+        if (alignList.isNotEmpty()) {
+             // Pad or truncate to match column count
+             if (alignList.size < columnCount) {
+                  return alignList + List(columnCount - alignList.size) { TextAlign.Start }
+             }
+             return alignList.take(columnCount)
+        }
     }
     
-    // Fallback: Default to Start
     return List(columnCount) { TextAlign.Start }
 }

@@ -1,5 +1,6 @@
 [versions]
 agp = "9.0.0"
+androidmath = "v1.1.0"
 glance = "1.1.1"
 connectKotlinOkhttp = "0.7.4"
 highlights = "1.1.0"
@@ -33,6 +34,7 @@ roomRuntime = "2.8.4"
 
 [libraries]
 android-desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }
+androidmath = { module = "com.github.gregcockroft:AndroidMath", version.ref = "androidmath" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomRuntime" }
 androidx-room-guava = { module = "androidx.room:room-guava", version.ref = "roomRuntime" }
