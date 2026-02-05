@@ -12,7 +12,7 @@ fun NativeMarkdownLatex(
     AndroidView(
         factory = { context ->
         MTMathView(context, null).apply {
-//            fontSize = 50f // Default size, maybe adjustable?
+            fontSize = 36f
             // labelMode = MTMathViewMode.KMathViewModeDisplay
         }
     }, update = { view ->
