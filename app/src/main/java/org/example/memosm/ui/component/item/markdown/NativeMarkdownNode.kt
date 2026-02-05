@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.draw.scale
@@ -198,7 +199,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                                                 )
                                             )
                                         },
-                                        modifier = Modifier.scale(0.8f).padding(end = 8.dp)
+                                        modifier = Modifier.scale(0.8f).offset(x = (-4).dp, y = (-2).dp).padding(end = 4.dp)
                                     )
                                 }
                             } else {
