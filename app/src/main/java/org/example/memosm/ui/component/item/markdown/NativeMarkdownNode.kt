@@ -202,7 +202,8 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                             latex = latex,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp)
+                                .padding(vertical = 8.dp),
+                            inline = false
                         )
 
                         lastIndex = index + 1
@@ -448,7 +449,8 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
             NativeMarkdownLatex(
                 latex = latex, modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = 8.dp),
+                inline = false
             )
         }
 
@@ -560,6 +562,7 @@ fun visitInlineChild(
                 ) {
                     NativeMarkdownLatex(
                         latex = latex,
+                        inline = true,
                         modifier = Modifier.fillMaxHeight() // Fill the placeholder height
                     )
                 }

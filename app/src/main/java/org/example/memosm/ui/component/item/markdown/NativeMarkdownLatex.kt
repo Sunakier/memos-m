@@ -1,6 +1,7 @@
 package org.example.memosm.ui.component.item.markdown
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -11,9 +12,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -24,33 +25,43 @@ import com.agog.mathdisplay.parse.MTMathListBuilder
 fun NativeMarkdownLatex(
     modifier: Modifier = Modifier,
     latex: String,
+    inline: Boolean // New parameter to distinguish inline vs block
 ) {
     // 1. Pre-validate the LaTeX string
     val validationError by remember(latex) {
         mutableStateOf(
             try {
                 val list = MTMathListBuilder.buildFromString(latex)
-                if (list == null) "Invalid LaTeX syntax" else null
+                if (list == null) "Invalid Syntax" else null
             } catch (e: Exception) {
-                e.message ?: "Rendering Error"
+                e.message ?: "Error"
             }
         )
     }
 
     if (validationError != null) {
-        // 2. Pass the raw source string to the card
-        LatexErrorCard(
-            error = validationError!!,
-            source = latex,
-            modifier = modifier
-        )
+        // 2. Choose error display based on inline status
+        if (inline) {
+            InlineLatexError(
+                source = latex,
+                modifier = modifier
+            )
+        } else {
+            BlockLatexErrorCard(
+                error = validationError!!,
+                source = latex,
+                modifier = modifier
+            )
+        }
     } else {
+        // 3. Render Native View if valid
         val c = MaterialTheme.colorScheme.onSurface.toArgb()
         AndroidView(
             factory = { context ->
                 MTMathView(context, null).apply {
-                    fontSize = 36f
+                    fontSize = if (inline) 24f else 36f // Smaller font for inline
                     textColor = c
+                    // labelMode = MTMathViewMode.KMathViewModeDisplay
                 }
             },
             update = { view ->
@@ -62,7 +73,29 @@ fun NativeMarkdownLatex(
 }
 
 @Composable
-private fun LatexErrorCard(
+private fun InlineLatexError(
+    source: String,
+    modifier: Modifier = Modifier
+) {
+    // Simple red text for inline errors
+    Text(
+        text = source,
+        color = MaterialTheme.colorScheme.error,
+        fontFamily = FontFamily.Monospace,
+        style = MaterialTheme.typography.bodyMedium,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(4.dp)
+            )
+            .padding(horizontal = 4.dp, vertical = 2.dp)
+    )
+}
+
+@Composable
+private fun BlockLatexErrorCard(
     error: String,
     source: String,
     modifier: Modifier = Modifier
@@ -78,31 +111,28 @@ private fun LatexErrorCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header Row
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Warning,
-                    contentDescription = "Rendering Error",
+                    contentDescription = null,
                     tint = MaterialTheme.colorScheme.error
                 )
                 Text(
-                    text = "Equation Rendering Failed",
+                    text = "Equation Error",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.error
                 )
             }
 
-            // Error Description
             Text(
                 text = error,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
 
-            // Source Code Block
             SelectionContainer {
                 Box(
                     modifier = Modifier
