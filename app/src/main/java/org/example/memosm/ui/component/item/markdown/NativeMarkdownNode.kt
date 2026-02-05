@@ -12,6 +12,10 @@ import androidx.compose.foundation.background
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
@@ -26,6 +30,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.text.TextStyle
 import org.intellij.markdown.MarkdownElementTypes
 import org.intellij.markdown.MarkdownTokenTypes
@@ -52,9 +57,12 @@ fun MarkdownText(
     modifier: Modifier = Modifier
 ) {
     val uriHandler = LocalUriHandler.current
+    val defaultColor = LocalContentColor.current
+    val textColor = if (style.color.isSpecified) style.color else defaultColor
+
     ClickableText(
         text = text,
-        style = style.copy(color = MaterialTheme.colorScheme.onSurface),
+        style = style.copy(color = textColor),
         modifier = modifier,
         onClick = { offset ->
             text.getStringAnnotations(tag = "URL", start = offset, end = offset)
@@ -227,20 +235,30 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
 
         MarkdownElementTypes.BLOCK_QUOTE -> {
             // Simple blockquote with left border/padding
-            Row(modifier = Modifier.padding(vertical = 4.dp)) {
+            Row(modifier = Modifier.padding(vertical = 4.dp).height(IntrinsicSize.Min)) {
                 Spacer(
                     modifier = Modifier
                         .width(4.dp)
+                        .fillMaxHeight()
                         .background(MaterialTheme.colorScheme.outlineVariant)
                 )
                 Column(modifier = Modifier.padding(start = 8.dp)) {
-                    node.children.forEach { child ->
-                        if (child.type != MarkdownTokenTypes.BLOCK_QUOTE) {
-                            NativeMarkdownNodeRecursive(child)
+                    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurfaceVariant) {
+                        node.children.forEach { child ->
+                            if (child.type != MarkdownTokenTypes.BLOCK_QUOTE) {
+                                NativeMarkdownNodeRecursive(child)
+                            }
                         }
                     }
                 }
             }
+        }
+
+        MarkdownTokenTypes.HORIZONTAL_RULE -> {
+            androidx.compose.material3.HorizontalDivider(
+                modifier = Modifier.padding(vertical = 8.dp),
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
         }
 
         GFMElementTypes.TABLE -> {
