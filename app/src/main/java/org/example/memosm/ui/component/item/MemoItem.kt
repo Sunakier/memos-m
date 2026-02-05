@@ -417,6 +417,7 @@ fun MemoItem(
                         content = memo.content,
                         token = token,
                         hostUrl = hostUrl,
+                        selectable = isDetailView,
                         onContentChange = onContentUpdate,
                         modifier = Modifier
                             .fillMaxWidth()
