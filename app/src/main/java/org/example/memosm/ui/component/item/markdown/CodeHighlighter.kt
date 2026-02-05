@@ -14,12 +14,13 @@ import dev.snipme.highlights.model.SyntaxThemes
 
 object CodeHighlighter {
 
-    fun highlightCode(code: String, language: String): AnnotatedString {
+    fun highlightCode(code: String, language: String, isDarkMode: Boolean = true): AnnotatedString {
         val syntaxLanguage = getSyntaxLanguage(language)
+        val theme = SyntaxThemes.atom(isDarkMode)
         
         val highlights = Highlights.Builder()
             .code(code)
-            .theme(SyntaxThemes.monokai())
+            .theme(theme)
             .language(syntaxLanguage)
             .build()
 
@@ -36,7 +37,7 @@ object CodeHighlighter {
                     when (highlight) {
                         is ColorHighlight -> {
                             addStyle(
-                                style = SpanStyle(color = Color(highlight.rgb)),
+                                style = SpanStyle(color = Color(highlight.rgb).copy(alpha = 1f)),
                                 start = start,
                                 end = end
                             )

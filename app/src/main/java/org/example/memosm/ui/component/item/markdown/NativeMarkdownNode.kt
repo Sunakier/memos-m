@@ -11,6 +11,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -299,7 +300,8 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                 
                 // Remove leading/trailing newlines to avoid extra padding, but preserve indentation
                 val code = sb.toString().removePrefix("\n").removeSuffix("\n")
-                val highlightedText = CodeHighlighter.highlightCode(code, lang)
+                val isDarkTheme = androidx.compose.foundation.isSystemInDarkTheme()
+                val highlightedText = CodeHighlighter.highlightCode(code, lang, isDarkTheme)
                 
                 Text(
                     text = highlightedText,
