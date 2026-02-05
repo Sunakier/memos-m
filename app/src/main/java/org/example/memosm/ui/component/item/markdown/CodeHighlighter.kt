@@ -31,18 +31,17 @@ object CodeHighlighter {
             structure.forEach { highlight ->
                 val start = highlight.location.start
                 val end = highlight.location.end
-                
+
                 // Ensure range is valid
                 if (start in code.indices && end <= code.length) {
                     when (highlight) {
                         is ColorHighlight -> {
                             addStyle(
-                                style = SpanStyle(color = Color(highlight.rgb)),
+                                style = SpanStyle(color = Color(highlight.rgb).copy(alpha = 1f)),
                                 start = start,
                                 end = end
                             )
                         }
-
                         is BoldHighlight -> {
                             addStyle(
                                 style = SpanStyle(fontWeight = FontWeight.Bold),
