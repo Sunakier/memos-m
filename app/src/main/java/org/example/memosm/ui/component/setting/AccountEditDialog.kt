@@ -158,13 +158,13 @@ fun AccountEditDialog(
                 onClick = {
                     onSave(
                         UserProfileUpdate(
-                        username = username.takeIf { it != account.name },
-                        email = email.takeIf { it != (account.email ?: "") },
-                        displayName = displayName.takeIf { it != (account.displayName ?: "") },
-                        avatarUrl = avatarUrl.takeIf { it != (account.avatarUrl ?: "") },
-                        description = description.takeIf { it != (account.description ?: "") },
-                        password = password.takeIf { it.isNotBlank() }
-                    ))
+                            username = username.takeIf { it != account.name },
+                            email = email.takeIf { it != (account.email ?: "") },
+                            displayName = displayName.takeIf { it != (account.displayName ?: "") },
+                            avatarUrl = avatarUrl.takeIf { it != (account.avatarUrl ?: "") },
+                            description = description.takeIf { it != (account.description ?: "") },
+                            password = password.takeIf { it.isNotBlank() }
+                        ))
                 },
                 enabled = !isSaving
             ) {
