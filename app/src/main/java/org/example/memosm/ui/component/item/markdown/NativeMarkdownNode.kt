@@ -37,9 +37,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.isSpecified
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.LinkAnnotation
 import org.intellij.markdown.MarkdownElementTypes
 import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.ASTNode
@@ -67,21 +76,35 @@ fun MarkdownText(
     val uriHandler = LocalUriHandler.current
     val defaultColor = LocalContentColor.current
     val textColor = if (style.color.isSpecified) style.color else defaultColor
+    
+    var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    
+    val drawModifier = modifier.drawBehind {
+        layoutResult?.let { layout ->
+            text.getStringAnnotations("ROUNDED_BG_COLOR", 0, text.length).forEach { range ->
+                try {
+                    val color = Color(range.item.toLong(16))
+                    val path = layout.getPathForRange(range.start, range.end)
+                    val bounds = path.getBounds()
+                    // Draw slightly inflated rounded rect for better visuals
+                    drawRoundRect(
+                        color = color,
+                        topLeft = bounds.topLeft,
+                        size = bounds.size,
+                        cornerRadius = CornerRadius(8f, 8f)
+                    )
+                } catch (e: Exception) {
+                    // Ignore parsing errors
+                }
+            }
+        }
+    }
 
-    ClickableText(
+    Text(
         text = text,
         style = style.copy(color = textColor),
-        modifier = modifier,
-        onClick = { offset ->
-            text.getStringAnnotations(tag = "URL", start = offset, end = offset)
-                .firstOrNull()?.let { annotation ->
-                    try {
-                        uriHandler.openUri(annotation.item)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-        }
+        modifier = drawModifier,
+        onTextLayout = { layoutResult = it }
     )
 }
 
@@ -404,9 +427,11 @@ fun visitInlineChild(child: ASTNode, content: String, styles: MarkdownStyles, bu
             }
 
             MarkdownElementTypes.CODE_SPAN -> {
+                val hexColor = styles.codeBackground.toHex()
+                pushStringAnnotation(tag = "ROUNDED_BG_COLOR", annotation = hexColor)
                 withStyle(
                     SpanStyle(
-                        fontFamily = styles.codeFontFamily, background = styles.codeBackground
+                        fontFamily = styles.codeFontFamily
                     )
                 ) {
                     child.children.forEach { grandChild ->
@@ -415,6 +440,7 @@ fun visitInlineChild(child: ASTNode, content: String, styles: MarkdownStyles, bu
                         }
                     }
                 }
+                pop()
             }
 
             MarkdownElementTypes.LINK_DEFINITION, MarkdownElementTypes.INLINE_LINK -> {
@@ -424,7 +450,7 @@ fun visitInlineChild(child: ASTNode, content: String, styles: MarkdownStyles, bu
                 val linkDest = child.findChildOfType(MarkdownElementTypes.LINK_DESTINATION)
                     ?.getTextInNode(content)?.toString() ?: ""
 
-                pushStringAnnotation(tag = "URL", annotation = linkDest)
+                pushLink(LinkAnnotation.Url(linkDest))
                 withStyle(SpanStyle(color = styles.linkColor)) {
                     val linkTextNode = child.findChildOfType(MarkdownElementTypes.LINK_TEXT)
                     if (linkTextNode != null) {

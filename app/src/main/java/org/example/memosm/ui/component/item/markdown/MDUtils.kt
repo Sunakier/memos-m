@@ -1,5 +1,7 @@
 package org.example.memosm.ui.component.item.markdown
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import org.intellij.markdown.ast.ASTNode
 
 /**
@@ -21,4 +23,8 @@ fun CharSequence.unescape(): String {
         .replace("\\n", "\n")
         .replace("\\t", "\t")
         // Add more as needed
+}
+
+fun Color.toHex(): String {
+    return "%08X".format(this.toArgb())
 }
