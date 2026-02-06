@@ -96,13 +96,7 @@ android {
         compose = true
     }
 
-    applicationVariants.all {
-        if (buildType.name == "insider") {
-            outputs.all {
-                (this as? com.android.build.gradle.api.ApkVariantOutput)?.versionNameOverride = gitTag.get().removePrefix("v")
-            }
-        }
-    }
+
 
     sourceSets {
         named("main") {
@@ -213,4 +207,17 @@ dependencies {
     // optional - Paging 3 Integration
     implementation(libs.androidx.room.paging)
 
+}
+
+// Fix for unresolved reference: Access ApplicationVariants via existing AppExtension
+// This must be done outside the 'android' block or by casting 'android' inside it,
+// but cleaner to do it here where we can be explicit.
+val androidExtension = extensions.getByName("android") as com.android.build.gradle.AppExtension
+androidExtension.applicationVariants.all { variant ->
+    if (variant.buildType.name == "insider") {
+        variant.outputs.all { output ->
+            val outputImpl = output as? com.android.build.gradle.api.ApkVariantOutput
+            outputImpl?.versionNameOverride = gitTag.get().removePrefix("v")
+        }
+    }
 }
