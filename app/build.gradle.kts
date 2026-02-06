@@ -71,7 +71,7 @@ android {
             applicationIdSuffix = ".insider"
             
             // Tag format is likely v1.1.1, so we strip the 'v' prefix
-            versionName = gitTag.get().removePrefix("v")
+            // versionName assignment moved to applicationVariants.all block below
             versionNameSuffix = "-insider"
 
             manifestPlaceholders["appLabel"] = "MemosM (Insider)"
@@ -94,6 +94,14 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    applicationVariants.all {
+        if (buildType.name == "insider") {
+            outputs.all {
+                (this as? com.android.build.gradle.api.ApkVariantOutput)?.versionNameOverride = gitTag.get().removePrefix("v")
+            }
+        }
     }
 
     sourceSets {
