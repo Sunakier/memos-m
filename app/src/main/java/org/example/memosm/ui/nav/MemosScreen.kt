@@ -442,7 +442,7 @@ private fun MemosListPane(
                                                         modifier = Modifier.size(16.dp)
                                                     )
                                                     Spacer(modifier = Modifier.width(4.dp))
-                                                    Text(selectedHashtag)
+                                                    Text(selectedHashtag.removePrefix("#"))
                                                 }
                                             },
                                             shape = RoundedCornerShape(16.dp),
