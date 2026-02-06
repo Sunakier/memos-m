@@ -1,5 +1,6 @@
 package org.example.memosm.ui.component.item.markdown
 
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -54,8 +56,12 @@ fun NativeMarkdownTable(
         rows.map { row -> row.children.filter { it.type == GFMTokenTypes.CELL } }
     }
 
+
     val columnCount = headerCells.size
     if (columnCount == 0) return
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val fontSizePx = with(density) { MaterialTheme.typography.bodyMedium.fontSize.toPx() }
 
     val onHashtagClick = LocalOnHashtagClick.current
 
@@ -97,7 +103,7 @@ fun NativeMarkdownTable(
                                 remember { mutableMapOf<String, InlineTextContent>() }
                             val styledText = buildAnnotatedString {
                                 appendInlineChildren(
-                                    cellNode, content, styles, inlineContentMap, onHashtagClick
+                                    cellNode, content, styles, context, density, fontSizePx, inlineContentMap, onHashtagClick
                                 )
                             }
                             MarkdownText(
@@ -149,6 +155,9 @@ fun NativeMarkdownTable(
                                                 cellNode,
                                                 content,
                                                 styles,
+                                                context,
+                                                density,
+                                                fontSizePx,
                                                 inlineContentMap,
                                                 onHashtagClick
                                             )

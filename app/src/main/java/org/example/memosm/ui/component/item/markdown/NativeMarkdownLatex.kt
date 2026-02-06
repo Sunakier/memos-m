@@ -16,6 +16,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,6 +41,7 @@ fun NativeMarkdownLatex(
     latex: String,
     inline: Boolean // New parameter to distinguish inline vs block
 ) {
+    val localDensity = androidx.compose.ui.platform.LocalDensity.current
     // 1. Pre-validate the LaTeX string
     val validationError by remember(latex) {
         mutableStateOf(
@@ -68,16 +70,21 @@ fun NativeMarkdownLatex(
         }
     } else {
         // 3. Render Native View if valid
-        val style = MaterialTheme.typography.bodyLarge
+        val style = typography.bodyLarge
         val defaultColor = LocalContentColor.current
         // Match the logic in MarkdownText for "regular texts"
         val resolvedColor = if (style.color.isSpecified) style.color else defaultColor
         val argbColor = resolvedColor.toArgb()
 
+        // Calculate font size in Composable scope
+        val fontSizePx = with(localDensity) {
+            style.fontSize.toPx()
+        }
+
         AndroidView(
             factory = { context ->
                 MTMathView(context, null).apply {
-                    fontSize = 36f
+                    fontSize = fontSizePx
                     // Set initial color
                     textColor = argbColor
                     // labelMode = MTMathViewMode.KMathViewModeDisplay
@@ -103,7 +110,7 @@ private fun InlineLatexError(
         text = source,
         color = MaterialTheme.colorScheme.error,
         fontFamily = FontFamily.Monospace,
-        style = MaterialTheme.typography.bodyMedium,
+        style = typography.bodyMedium,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier
@@ -143,14 +150,14 @@ private fun BlockLatexErrorCard(
                 )
                 Text(
                     text = "Equation Error",
-                    style = MaterialTheme.typography.titleSmall,
+                    style = typography.titleSmall,
                     color = MaterialTheme.colorScheme.error
                 )
             }
 
             Text(
                 text = error,
-                style = MaterialTheme.typography.bodySmall,
+                style = typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
 
@@ -164,7 +171,7 @@ private fun BlockLatexErrorCard(
                 ) {
                     Text(
                         text = source,
-                        style = MaterialTheme.typography.bodySmall.copy(
+                        style = typography.bodySmall.copy(
                             fontFamily = FontFamily.Monospace,
                             fontSize = 12.sp
                         ),

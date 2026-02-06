@@ -59,6 +59,12 @@ import org.intellij.markdown.ast.findChildOfType
 import org.intellij.markdown.flavours.gfm.GFMElementTypes
 import org.intellij.markdown.flavours.gfm.GFMTokenTypes
 import java.util.UUID
+import android.content.Context
+import android.view.View.MeasureSpec
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import com.agog.mathdisplay.MTMathView
 
 // Helper data class for styles
 data class MarkdownStyles(
@@ -147,6 +153,9 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
     val content = LocalMarkdownContent.current
     val onContentChange = LocalOnContentChange.current
     val onHashtagClick = LocalOnHashtagClick.current
+    val context = LocalContext.current
+    val density = LocalDensity.current
+    val fontSizePx = with(density) { MaterialTheme.typography.bodyLarge.fontSize.toPx() }
 
     val styles = MarkdownStyles(
         codeBackground = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
@@ -178,20 +187,27 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                         // Render previous text chunk
                         if (index > lastIndex) {
                             val textNodes = children.subList(lastIndex, index)
-                            val inlineContentMap = mutableMapOf<String, InlineTextContent>()
 
-                            val styledText = buildAnnotatedString {
-                                textNodes.forEach { textNode ->
-                                    visitInlineChild(
-                                        textNode,
-                                        content,
-                                        styles,
-                                        this,
-                                        inlineContentMap,
-                                        onHashtagClick
-                                    )
+                            val (styledText, inlineContentMap) = remember(textNodes, content) {
+                                val map = mutableMapOf<String, InlineTextContent>()
+                                val text = buildAnnotatedString {
+                                    textNodes.forEach { textNode ->
+                                        visitInlineChild(
+                                            textNode,
+                                            content,
+                                            styles,
+                                            context,
+                                            density,
+                                            fontSizePx,
+                                            this,
+                                            map,
+                                            onHashtagClick
+                                        )
+                                    }
                                 }
+                                text to map
                             }
+
                             if (styledText.isNotEmpty()) {
                                 MarkdownText(
                                     text = styledText,
@@ -226,20 +242,27 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                 // Render remaining text
                 if (lastIndex < children.size) {
                     val textNodes = children.subList(lastIndex, children.size)
-                    val inlineContentMap = mutableMapOf<String, InlineTextContent>()
 
-                    val styledText = buildAnnotatedString {
-                        textNodes.forEach { textNode ->
-                            visitInlineChild(
-                                textNode,
-                                content,
-                                styles,
-                                this,
-                                inlineContentMap,
-                                onHashtagClick
-                            )
+                    val (styledText, inlineContentMap) = remember(textNodes, content) {
+                        val map = mutableMapOf<String, InlineTextContent>()
+                        val text = buildAnnotatedString {
+                            textNodes.forEach { textNode ->
+                                visitInlineChild(
+                                    textNode,
+                                    content,
+                                    styles,
+                                    context,
+                                    density,
+                                    fontSizePx,
+                                    this,
+                                    map,
+                                    onHashtagClick
+                                )
+                            }
                         }
+                        text to map
                     }
+
                     if (styledText.isNotEmpty()) {
                         MarkdownText(
                             text = styledText,
@@ -265,27 +288,28 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
             // ATX_1 -> [ATX_CONTENT -> [TEXT]]
             // We can just recursively render inline content.
             // But headers are block elements, so we treat them as text with style.
-            val styledText = buildAnnotatedString {
-                // Header content usually doesn't have complex math, but we support it best effort.
-                // Pass a local map, but we don't render it in MarkdownText yet?
-                // MarkdownText call below needs to accept it if we want to support it.
-                // For now, let's just render text. If inline math is present, it will be added to the map.
-                // We create a map but might ignore it if we don't pass it to MarkdownText?
-                // Actually MarkdownText accepts inlineContent now.
-                // So let's capture it.
-                val inlineContentMap = mutableMapOf<String, InlineTextContent>()
-                node.children.forEach { child ->
-                    if (child.type != MarkdownTokenTypes.ATX_HEADER) {
-                        visitInlineChild(
-                            child,
-                            content,
-                            styles,
-                            this,
-                            inlineContentMap,
-                            onHashtagClick
-                        )
+            // But headers are block elements, so we treat them as text with style.
+            val (styledText, inlineContentMap) = remember(node, content) {
+                val map = mutableMapOf<String, InlineTextContent>()
+                val text = buildAnnotatedString {
+                    // Header content usually doesn't have complex math, but we support it best effort.
+                    node.children.forEach { child ->
+                        if (child.type != MarkdownTokenTypes.ATX_HEADER) {
+                            visitInlineChild(
+                                child,
+                                content,
+                                styles,
+                                context,
+                                density,
+                                fontSizePx,
+                                this,
+                                map,
+                                onHashtagClick
+                            )
+                        }
                     }
                 }
+                text to map
             }
             val noTopPadding = LocalForceNoTopPadding.current
             val topPadding = if (noTopPadding) 0.dp else 8.dp
@@ -512,6 +536,9 @@ fun AnnotatedString.Builder.appendInlineChildren(
     node: ASTNode,
     content: String,
     styles: MarkdownStyles,
+    context: Context,
+    density: Density,
+    fontSizePx: Float,
     inlineContent: MutableMap<String, InlineTextContent>,
     onHashtagClick: ((String) -> Unit)?
 ) {
@@ -539,7 +566,17 @@ fun AnnotatedString.Builder.appendInlineChildren(
     }
 
     node.children.forEach { child ->
-        visitInlineChild(child, content, styles, this, inlineContent, onHashtagClick)
+        visitInlineChild(
+            child,
+            content,
+            styles,
+            context,
+            density,
+            fontSizePx,
+            this,
+            inlineContent,
+            onHashtagClick
+        )
     }
 }
 
@@ -547,6 +584,9 @@ fun visitInlineChild(
     child: ASTNode,
     content: String,
     styles: MarkdownStyles,
+    context: Context,
+    density: Density,
+    fontSizePx: Float,
     builder: AnnotatedString.Builder,
     inlineContent: MutableMap<String, InlineTextContent>,
     onHashtagClick: ((String) -> Unit)?
@@ -561,6 +601,9 @@ fun visitInlineChild(
                                 c,
                                 content,
                                 styles,
+                                context,
+                                density,
+                                fontSizePx,
                                 this,
                                 inlineContent,
                                 onHashtagClick
@@ -578,6 +621,9 @@ fun visitInlineChild(
                                 c,
                                 content,
                                 styles,
+                                context,
+                                density,
+                                fontSizePx,
                                 this,
                                 inlineContent,
                                 onHashtagClick
@@ -612,26 +658,42 @@ fun visitInlineChild(
                 val latex = rawText.removePrefix("$").removeSuffix("$").trim()
                 val id = "inline_math_${UUID.randomUUID()}"
 
-                // Heuristic for width: 
-                // Since we can't measure the view easily, we estimate width based on char count.
-                // 0.6em per char is a rough estimate for monospace/math.
-                // Height 1.5em to fit in line height.
-                // Height 1.5em to fit in line height.
-                // Height 1.5em to fit in line height.
-                val rawWidth = (latex.length * 0.6)
-                val width = (if (rawWidth < 1.0) 1.0 else rawWidth).em
+                // Dynamic Measurement
+                val (widthEm, heightEm) = try {
+                    val mathView = MTMathView(context, null)
+                    mathView.fontSize = fontSizePx
+                    mathView.latex = latex
+                    // Measure with unspecified specs to get desired size
+                    mathView.measure(
+                        MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED),
+                        MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
+                    )
+                    val w = mathView.measuredWidth
+                    val h = mathView.measuredHeight
+
+                    // Convert px to em
+                    val wEm = (w / fontSizePx).toDouble()
+                    val hEm = (h / fontSizePx).toDouble()
+
+                    wEm to hEm
+                } catch (e: Exception) {
+                    // Fallback if measurement fails
+                    val rawWidth = (latex.length * 0.6)
+                    val fallbackWidth = if (rawWidth < 1.0) 1.0 else rawWidth
+                    fallbackWidth to 1.5
+                }
 
                 inlineContent[id] = InlineTextContent(
                     Placeholder(
-                        width = width,
-                        height = 1.5.em,
+                        width = widthEm.em,
+                        height = heightEm.em,
                         placeholderVerticalAlign = PlaceholderVerticalAlign.Center
                     )
                 ) {
                     NativeMarkdownLatex(
                         latex = latex,
                         inline = true,
-                        modifier = Modifier.fillMaxHeight() // Fill the placeholder height
+                        modifier = Modifier.fillMaxHeight()
                     )
                 }
 
@@ -672,6 +734,9 @@ fun visitInlineChild(
                                     lc,
                                     content,
                                     styles,
+                                    context,
+                                    density,
+                                    fontSizePx,
                                     this,
                                     inlineContent,
                                     onHashtagClick
@@ -693,6 +758,9 @@ fun visitInlineChild(
                                 c,
                                 content,
                                 styles,
+                                context,
+                                density,
+                                fontSizePx,
                                 this,
                                 inlineContent,
                                 onHashtagClick
@@ -703,7 +771,16 @@ fun visitInlineChild(
             }
 
             else -> {
-                appendInlineChildren(child, content, styles, inlineContent, onHashtagClick)
+                appendInlineChildren(
+                    child,
+                    content,
+                    styles,
+                    context,
+                    density,
+                    fontSizePx,
+                    inlineContent,
+                    onHashtagClick
+                )
             }
         }
     }
