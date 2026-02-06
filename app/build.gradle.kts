@@ -149,33 +149,29 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
 
-    // ----------------------------
     // REST Networking (Retrofit)
-    // ----------------------------
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp.logging)
     implementation(libs.okhttp.java.net.cookiejar)
 
 
-    // ----------------------------
-    // Other app deps
-    // ----------------------------
+    // Location
     implementation(libs.google.play.services.location)
 
+    // Markdown
     implementation(libs.markdown)
     implementation(libs.highlights)
     implementation(libs.androidmath)
 
+    // Media
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.dash)
     implementation(libs.media3.ui)
     implementation(libs.media3.common)
     implementation(libs.media3.datasource.okhttp)
 
-    // ----------------------------
     // Tests
-    // ----------------------------
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -186,7 +182,6 @@ dependencies {
 
 
     // ROOM
-
     implementation(libs.androidx.room.runtime)
 
     // If this project uses any Kotlin source, use Kotlin Symbol Processing (KSP)
