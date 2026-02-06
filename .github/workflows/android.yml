@@ -48,9 +48,6 @@ jobs:
           cache-read-only: false
           cache-encryption-key: ${{ secrets.GRADLE_CACHE_KEY }}
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
       - name: Get current timestamp
         id: timestamp
         run: echo "date=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
