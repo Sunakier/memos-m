@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,17 +68,25 @@ fun NativeMarkdownLatex(
         }
     } else {
         // 3. Render Native View if valid
-        val c = MaterialTheme.colorScheme.onSurface.toArgb()
+        val style = MaterialTheme.typography.bodyLarge
+        val defaultColor = LocalContentColor.current
+        // Match the logic in MarkdownText for "regular texts"
+        val resolvedColor = if (style.color.isSpecified) style.color else defaultColor
+        val argbColor = resolvedColor.toArgb()
+
         AndroidView(
             factory = { context ->
                 MTMathView(context, null).apply {
                     fontSize = 36f
-                    textColor = c
+                    // Set initial color
+                    textColor = argbColor
                     // labelMode = MTMathViewMode.KMathViewModeDisplay
                 }
             },
             update = { view ->
                 view.latex = latex
+                // Update color on recomposition/theme change
+                view.textColor = argbColor
             },
             modifier = modifier
         )
