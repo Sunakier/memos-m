@@ -3,7 +3,7 @@ name: Insider Build CI
 on:
   push:
     tags:
-      - "v*"
+      - "v*.i"
 
 jobs:
   build:
