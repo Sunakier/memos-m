@@ -1,9 +1,13 @@
-name: Android Insider CI
+name: Canary Build CI
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: ["main"]
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
+      - ".gitignore"
+      - ".editorconfig"
 
 jobs:
   build:
@@ -26,6 +30,9 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      # - name: Install NDK
+      #   run: sdkmanager --install "ndk;25.1.8937393"
+
       - name: Cache Android SDK
         uses: actions/cache@v5
         with:
@@ -41,12 +48,16 @@ jobs:
           cache-read-only: false
           cache-encryption-key: ${{ secrets.GRADLE_CACHE_KEY }}
 
+      - name: Get current timestamp
+        id: timestamp
+        run: echo "date=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_OUTPUT
+
       - name: Decode Keystore
         run: |
           echo "${{ secrets.KEYSTORE }}" | base64 --decode > app/release.keystore
 
-      - name: Build Insider APK
-        run: ./gradlew assembleInsider
+      - name: Build Canary APK
+        run: ./gradlew assembleCanary
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
@@ -55,20 +66,35 @@ jobs:
 
       - name: Prepare APK for Upload
         run: |
-          APK_FILE=$(find app/build/outputs/apk/insider -name "*.apk" ! -name "*-unsigned.apk" | head -n 1)
+          APK_FILE=$(find app/build/outputs/apk/canary -name "*.apk" ! -name "*-unsigned.apk" | head -n 1)
           if [ -z "$APK_FILE" ]; then echo "No signed APK found!"; exit 1; fi
-          cp "$APK_FILE" "memos-insider.apk"
-          echo "APK_PATH=memos-insider.apk" >> $GITHUB_ENV
+          cp "$APK_FILE" "memos-latest.apk"
+          echo "APK_PATH=memos-latest.apk" >> $GITHUB_ENV
 
+      # -------------------------------
+      # FORCE-UPDATE TAG
+      # -------------------------------
+      - name: Update latest tag
+        run: |
+          git tag -f latest
+          git push origin latest --force
+
+      # -------------------------------
+      # CREATE / UPDATE RELEASE
+      # -------------------------------
       - name: Create/Update Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "Insider Build ${{ github.ref_name }}"
+          tag_name: latest
+          name: "Latest Build"
           body: |
-            **Insider Build**
-            Version: ${{ github.ref_name }}
+            **Auto Build – Every Commit (Canary)**
             Commit: ${{ github.sha }}
+            Date: ${{ steps.timestamp.outputs.date }}
+
+            This release is automatically updated on every push to main with the Canary build.
           files: ${{ env.APK_PATH }}
           prerelease: true
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
