@@ -155,7 +155,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
     val onHashtagClick = LocalOnHashtagClick.current
     val context = LocalContext.current
     val density = LocalDensity.current
-    val fontSizePx = with(density) { MaterialTheme.typography.bodyLarge.fontSize.toPx() }
+    val fontSizePx = with(density) { typography.bodyLarge.fontSize.toPx() }
 
     val styles = MarkdownStyles(
         codeBackground = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
@@ -289,7 +289,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
             // We can just recursively render inline content.
             // But headers are block elements, so we treat them as text with style.
             // But headers are block elements, so we treat them as text with style.
-            val (styledText, inlineContentMap) = remember(node, content) {
+            val (styledText, _) = remember(node, content) {
                 val map = mutableMapOf<String, InlineTextContent>()
                 val text = buildAnnotatedString {
                     // Header content usually doesn't have complex math, but we support it best effort.

@@ -103,7 +103,14 @@ fun NativeMarkdownTable(
                                 remember { mutableMapOf<String, InlineTextContent>() }
                             val styledText = buildAnnotatedString {
                                 appendInlineChildren(
-                                    cellNode, content, styles, context, density, fontSizePx, inlineContentMap, onHashtagClick
+                                    cellNode,
+                                    content,
+                                    styles,
+                                    context,
+                                    density,
+                                    fontSizePx,
+                                    inlineContentMap,
+                                    onHashtagClick
                                 )
                             }
                             MarkdownText(
