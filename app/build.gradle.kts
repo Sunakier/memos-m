@@ -9,7 +9,6 @@ val gitShortHash: Provider<String> = providers.exec {
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.buf)
     id("kotlin-parcelize")
     id("com.google.devtools.ksp")
 }
@@ -80,7 +79,6 @@ android {
 
     sourceSets {
         named("main") {
-            java.directories.add(("build/bufbuild/generated/java"))
         }
         named("canary") {
             res.directories.add(("src/canary/res"))
@@ -88,29 +86,7 @@ android {
     }
 }
 
-androidComponents {
-    onVariants(selector().all()) { variant ->
-        // Add the buf generated directory as a static source directory
-        // This replaces: sourceSets.named("main") { java.directories.add(...) }
-        variant.sources.java?.addStaticSourceDirectory("build/bufbuild/generated/java")
-    }
-}
 
-buf {
-    configFileLocation = file("buf.yaml")
-    generate {
-        includeImports = false
-    }
-}
-
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    dependsOn("bufGenerate")
-}
-
-// KSP tasks also need to depend on bufGenerate since Room processes sources
-tasks.matching { it.name.startsWith("ksp") && it.name.endsWith("Kotlin") }.configureEach {
-    dependsOn("bufGenerate")
-}
 
 dependencies {
     coreLibraryDesugaring(libs.android.desugarJdkLibs)
@@ -149,14 +125,6 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.okhttp.java.net.cookiejar)
 
-    // ----------------------------
-    // Connect RPC / Protobuf dependencies
-    // ----------------------------
-    implementation(libs.connect.kotlin.okhttp)
-    // Java specific dependencies.
-    implementation(libs.connect.kotlin.google.java.ext)
-    implementation(libs.protobuf.java)
-    implementation(libs.google.common.protos)
 
     // ----------------------------
     // Other app deps
