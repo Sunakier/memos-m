@@ -6,6 +6,10 @@ val gitShortHash: Provider<String> = providers.exec {
     commandLine("git", "rev-parse", "--short", "HEAD")
 }.standardOutput.asText.map { it.trim() }
 
+val gitTag: Provider<String> = providers.exec {
+    commandLine("git", "describe", "--tags", "--abbrev=0")
+}.standardOutput.asText.map { it.trim() }
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -58,6 +62,21 @@ android {
             manifestPlaceholders["appLabel"] = "MemosM"
             signingConfig = signingConfigs.getByName("release")
         }
+        create("insider") {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            applicationIdSuffix = ".insider"
+            
+            // Tag format is likely v1.1.1, so we strip the 'v' prefix
+            versionName = gitTag.get().removePrefix("v")
+            versionNameSuffix = "-insider"
+
+            manifestPlaceholders["appLabel"] = "MemosM (Insider)"
+            signingConfig = signingConfigs.getByName("release")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -82,6 +101,9 @@ android {
         }
         named("canary") {
             res.directories.add(("src/canary/res"))
+        }
+        named("insider") {
+            res.directories.add(("src/insider/res"))
         }
     }
 }
