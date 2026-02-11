@@ -79,6 +79,7 @@ import org.example.memosm.ui.component.StatsActivityCard
 import org.example.memosm.ui.component.rememberScrollContext
 import org.example.memosm.ui.component.setting.AboutAppCard
 import org.example.memosm.ui.component.setting.AccountEditDialog
+import org.example.memosm.ui.component.setting.AppSettingsCard
 import org.example.memosm.ui.component.setting.SettingsCard
 import org.example.memosm.ui.component.setting.ShortcutsCard
 import org.example.memosm.ui.component.setting.WebhooksCard
@@ -437,6 +438,14 @@ private fun ProfileListPane(
                         Box(itemModifier) {
                             InstanceCard(instance)
                         }
+                    }
+                }
+
+                item {
+                    Box(itemModifier) {
+                        AppSettingsCard(
+                            pageSize = uiState.appSettings.pageSize,
+                            onPageSizeChange = { viewModel.updatePageSize(it) })
                     }
                 }
 

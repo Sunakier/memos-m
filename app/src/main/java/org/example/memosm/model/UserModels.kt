@@ -28,14 +28,14 @@ enum class UseRole {
 
 data class User(
     val name: String? = null,
-    val role: String? = null,
+    val role: UseRole? = null,
     val username: String? = null,
     val email: String? = null,
     val displayName: String? = null,
     val avatarUrl: String? = null,
     val description: String? = null,
     val password: String? = null,
-    val state: String? = null,
+    val state: UseState? = null,
     val createTime: String? = null,
     val updateTime: String? = null,
     val token: String? = null

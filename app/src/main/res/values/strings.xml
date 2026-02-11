@@ -33,6 +33,9 @@
     <string name="profile_settings_locale_edit">Edit Locale</string>
     <string name="profile_settings_locale_label">Locale (e.g. en, zh-Hans)</string>
     <string name="profile_settings_visibility">Default Memo Visibility</string>
+    <string name="profile_app_settings">App Settings</string>
+    <string name="profile_app_settings_page_size">Pagination Size</string>
+    <string name="profile_app_settings_page_size_hint">Items per page</string>
     <string name="profile_archived">Archived</string>
     <string name="profile_shortcuts">Shortcuts</string>
     <string name="profile_shortcuts_none">No shortcuts configured</string>

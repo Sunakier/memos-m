@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
@@ -23,6 +24,8 @@ class DataStoreManager(private val context: Context) {
         val HOST_URL = stringPreferencesKey("host_url")
         val ACCESS_TOKEN = stringPreferencesKey("access_token")
         val ACCOUNTS_JSON = stringPreferencesKey("accounts_json")
+        val PAGE_SIZE = intPreferencesKey("page_size")
+        const val DEFAULT_PAGE_SIZE = 10
     }
 
     val hostUrl: Flow<String?> = context.dataStore.data.map { preferences ->
@@ -250,5 +253,15 @@ class DataStoreManager(private val context: Context) {
             } else it
         }
         saveAccounts(updated)
+    }
+
+    val pageSize: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[PAGE_SIZE] ?: DEFAULT_PAGE_SIZE
+    }
+
+    suspend fun savePageSize(size: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PAGE_SIZE] = size
+        }
     }
 }

@@ -70,6 +70,12 @@ data class DetailPaneState(
     // isLoadingComments is now part of comments.isLoading
 )
 
+// --- App Settings (local) ---
+
+data class AppSettings(
+    val pageSize: Int = 10
+)
+
 // --- Main UI State ---
 
 data class MemosUiState(
@@ -81,6 +87,7 @@ data class MemosUiState(
     val attachmentList: AttachmentListState = AttachmentListState(),
     val draft: DraftState = DraftState(),
     val detailPane: DetailPaneState = DetailPaneState(),
+    val appSettings: AppSettings = AppSettings(),
 
     val accounts: List<Account> = emptyList(),
     val users: Map<String, User> = emptyMap(),

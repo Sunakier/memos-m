@@ -82,6 +82,7 @@ class MemosViewModel(
 
     init {
         updateCurrentAccountInList()
+        loadPageSize()
     }
 
     suspend fun reverseGeocode(lat: Double, lon: Double): String? {
@@ -233,7 +234,8 @@ class MemosViewModel(
                         } else {
                             base
                         }
-                    }, cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
+                    }, pageSizeProvider = { _uiState.value.appSettings.pageSize },
+                    cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
                         memoCacheRepository.cacheMemos(
                             accountId, CacheListType.USER, memos
                         )
@@ -246,6 +248,7 @@ class MemosViewModel(
                 exploreMemoManager = ExploreMemoListManager(
                     scope = viewModelScope,
                     api = currentApi,
+                    pageSizeProvider = { _uiState.value.appSettings.pageSize },
                     cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
                         memoCacheRepository.cacheMemos(
                             accountId, CacheListType.EXPLORE, memos
@@ -261,6 +264,7 @@ class MemosViewModel(
                     scope = viewModelScope,
                     api = currentApi,
                     currentUserProvider = { _uiState.value.session.currUser },
+                    pageSizeProvider = { _uiState.value.appSettings.pageSize },
                     cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
                         memoCacheRepository.cacheMemos(
                             accountId, CacheListType.ARCHIVED, memos
@@ -271,7 +275,7 @@ class MemosViewModel(
                         )
                     })
                 )
-                searchMemoManager = SearchMemoListManager(viewModelScope, currentApi)
+                searchMemoManager = SearchMemoListManager(viewModelScope, currentApi, pageSizeProvider = { _uiState.value.appSettings.pageSize })
                 commentManager = CommentListManager(viewModelScope, currentApi)
                 attachmentManager = AttachmentManager(
                     scope = viewModelScope,
@@ -512,6 +516,26 @@ class MemosViewModel(
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
+        }
+    }
+
+    // --- App Settings (local) ---
+
+    private fun loadPageSize() {
+        viewModelScope.launch {
+            dataStoreManager.pageSize.collect { size ->
+                _uiState.update { it.copy(appSettings = it.appSettings.copy(pageSize = size)) }
+            }
+        }
+    }
+
+    fun updatePageSize(size: Int) {
+        viewModelScope.launch {
+            dataStoreManager.savePageSize(size)
+            _uiState.update { it.copy(appSettings = it.appSettings.copy(pageSize = size)) }
+            // Refresh all lists with new page size
+            userMemoManager?.fetch(refresh = true)
+            exploreMemoManager?.fetch(refresh = true)
         }
     }
 
