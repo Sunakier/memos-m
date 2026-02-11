@@ -957,9 +957,7 @@ class MemosViewModel(
                 }
 
                 val updated = api?.updateMemo(memo.name!!, update, maskParts.joinToString(","))
-                val comparator = Comparator<Memo> { m1, m2 ->
-                    (m2.displayTime ?: "").compareTo(m1.displayTime ?: "")
-                }
+                val comparator = compareByDescending<Memo> { it.displayTime }
 
                 if (updated != null) {
                     onSuccess()
@@ -1114,6 +1112,43 @@ class MemosViewModel(
             loadDraftsForAccount(accountId)
             // If the current editing draft was one of them, clear it
             setCurrentEditingDraft(null)
+        }
+    }
+
+    fun publishAllDrafts(onResult: (Int) -> Unit = {}) {
+        val accountId = getActiveAccountId() ?: return
+        val drafts = _uiState.value.draft.drafts
+        if (drafts.isEmpty()) return
+
+        viewModelScope.launch {
+            var published = 0
+            try {
+                _uiState.update { it.copy(isPosting = true) }
+                for (draft in drafts) {
+                    if (!draft.hasContent()) continue
+                    try {
+                        val memo = Memo(
+                            content = draft.content,
+                            visibility = draft.visibility,
+                            attachments = draft.attachments.ifEmpty { null },
+                            location = draft.location
+                        )
+                        val created = api?.createMemo(memo)
+                        if (created != null) {
+                            draftManager.deleteDraft(accountId, draft.id)
+                            published++
+                        }
+                    } catch (e: Exception) {
+                        Log.e("MemosViewModel", "Failed to publish draft ${draft.id}", e)
+                    }
+                }
+            } finally {
+                _uiState.update { it.copy(isPosting = false) }
+                loadDraftsForAccount(accountId)
+                setCurrentEditingDraft(null)
+                userMemoManager?.fetch(refresh = true)
+                onResult(published)
+            }
         }
     }
 

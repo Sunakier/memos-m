@@ -3,6 +3,7 @@ package org.example.memosm.model
 import com.google.gson.annotations.SerializedName
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.time.Instant
 
 data class ListMemosResponse(
     val memos: List<Memo>?, val nextPageToken: String?
@@ -43,9 +44,9 @@ data class Memo(
     val name: String? = null,
     val state: MemoState? = null,
     val creator: String? = null,
-    val createTime: String? = null,
-    val updateTime: String? = null,
-    val displayTime: String? = null,
+    val createTime: Instant? = null,
+    val updateTime: Instant? = null,
+    val displayTime: Instant? = null,
     val content: String,
     val visibility: Visibility = Visibility.PRIVATE,
     val tags: List<String>? = null,
@@ -61,7 +62,7 @@ data class Memo(
 
 data class Attachment(
     val name: String? = null,
-    val createTime: String? = null,
+    val createTime: Instant? = null,
     val filename: String,
     val content: String? = null,
     val externalLink: String? = null,
@@ -99,7 +100,7 @@ data class Reaction(
     val creator: String? = null,
     val contentId: String,
     val reactionType: String,
-    val createTime: String? = null
+    val createTime: Instant? = null
 )
 
 data class MemoProperty(
@@ -124,7 +125,7 @@ data class Activity(
     val creator: String? = null,
     val type: String? = null,
     val level: String? = null,
-    val createTime: String? = null,
+    val createTime: Instant? = null,
     val payload: ActivityPayload? = null
 )
 

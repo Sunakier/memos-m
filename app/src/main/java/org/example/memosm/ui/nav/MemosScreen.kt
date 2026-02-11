@@ -26,10 +26,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.automirrored.outlined.Shortcut
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -66,6 +68,7 @@ import org.example.memosm.model.Memo
 import org.example.memosm.ui.component.GenericMemosListPane
 import org.example.memosm.ui.component.MemoSearchBar
 import org.example.memosm.ui.component.MemosScaffold
+import org.example.memosm.ui.component.item.DraftsCard
 import org.example.memosm.ui.component.composer.ComposerMode
 import org.example.memosm.ui.component.composer.MemoComposerDialog
 import org.example.memosm.ui.component.rememberScrollContext
@@ -299,7 +302,6 @@ private fun MemosListPane(
     val hasDrafts = uiState.draft.drafts.isNotEmpty()
     val shortcutListState = rememberLazyListState()
     val draftCount = uiState.draft.drafts.size
-    var showDeleteAllDialog by remember { mutableStateOf(false) }
 
     GenericMemosListPane(
         viewModel = viewModel,
@@ -332,63 +334,11 @@ private fun MemosListPane(
                             enter = fadeIn() + expandVertically(),
                             exit = fadeOut() + shrinkVertically()
                         ) {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 8.dp)
-                                    .clickable(onClick = onDraftsCardClick),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                                )
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Edit,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                        )
-                                        Column {
-                                            Text(
-                                                text = stringResource(R.string.drafts_card_message),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Medium,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                                            )
-                                            Text(
-                                                text = stringResource(
-                                                    R.string.drafts_count, draftCount
-                                                ),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
-                                                    alpha = 0.7f
-                                                )
-                                            )
-                                        }
-                                    }
-                                    Icon(
-                                        imageVector = Icons.Outlined.Close,
-                                        contentDescription = stringResource(R.string.common_delete),
-                                        modifier = Modifier
-                                            .size(24.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .clickable { showDeleteAllDialog = true }
-                                            .padding(4.dp),
-                                        tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(
-                                            alpha = 0.5f
-                                        ))
-                                }
-                            }
+                            DraftsCard(
+                                draftCount = draftCount,
+                                viewModel = viewModel,
+                                onCardClick = onDraftsCardClick
+                            )
                         }
 
                         // Horizontal Shortcut Row
@@ -495,28 +445,5 @@ private fun MemosListPane(
             }
         })
 
-    if (showDeleteAllDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteAllDialog = false },
-            title = { Text(stringResource(R.string.drafts_delete_all_confirmation_title)) },
-            text = { Text(stringResource(R.string.drafts_delete_all_confirmation_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteAllDrafts()
-                        showDeleteAllDialog = false
-                    }, colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text(stringResource(R.string.common_delete))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteAllDialog = false }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            })
-    }
 }
 

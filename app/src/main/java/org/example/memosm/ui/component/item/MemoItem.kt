@@ -91,9 +91,7 @@ import org.example.memosm.model.User
 import org.example.memosm.ui.VisibilityIcon
 import org.example.memosm.ui.component.item.markdown.NativeComposeMarkdown
 import org.example.memosm.ui.component.resolveResourceUrl
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.TimeZone
+
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -127,18 +125,15 @@ fun MemoItem(
     val unknownTime = stringResource(R.string.memo_unknown_time)
 
     val formattedTime = remember(memo.displayTime) {
-        try {
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
-            inputFormat.timeZone = TimeZone.getTimeZone("UTC")
-            val date = inputFormat.parse(memo.displayTime ?: "")
-            date?.let {
+        memo.displayTime?.let { instant ->
+            try {
                 DateUtils.getRelativeTimeSpanString(
-                    it.time, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS
+                    instant.toEpochMilliseconds(), System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS
                 ).toString()
-            } ?: memo.displayTime ?: unknownTime
-        } catch (_: Exception) {
-            memo.displayTime ?: unknownTime
-        }
+            } catch (_: Exception) {
+                instant.toString()
+            }
+        } ?: unknownTime
     }
 
 

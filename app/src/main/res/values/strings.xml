@@ -208,6 +208,10 @@
     <string name="profile_activity_more">More</string>
     <string name="drafts_delete_all_confirmation_title">Delete all drafts?</string>
     <string name="drafts_delete_all_confirmation_message">Are you sure you want to delete all drafts? This action cannot be undone.</string>
+    <string name="drafts_publish_all_confirmation_title">Publish all drafts?</string>
+    <string name="drafts_publish_all_confirmation_message">This will publish all %1$d drafts as individual memos. Continue?</string>
+    <string name="drafts_publish_all_success">Published %1$d drafts</string>
+    <string name="common_publish">Publish</string>
 
     <string name="user_stats_widget_description">Displays user statistics.</string>
 </resources>

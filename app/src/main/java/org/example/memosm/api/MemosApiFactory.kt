@@ -14,7 +14,7 @@ object MemosApiFactory {
         }
 
         val retrofit = Retrofit.Builder().baseUrl(normalizedBaseUrl).client(client)
-            .addConverterFactory(GsonConverterFactory.create()).build()
+            .addConverterFactory(GsonConverterFactory.create(GsonProvider.gson)).build()
 
         // Create the standard V1 implementation
         val v1Api = retrofit.create(MemosApiV0353::class.java)

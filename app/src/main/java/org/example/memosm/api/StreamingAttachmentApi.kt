@@ -28,7 +28,7 @@ class StreamingAttachmentApi(
         private const val TAG = "StreamingAttachmentApi"
     }
 
-    private val gson = Gson()
+    private val gson = GsonProvider.gson
 
     /**
      * Create an attachment by streaming the file content as base64.

@@ -1,6 +1,7 @@
 package org.example.memosm.model
 
 import java.util.UUID
+import kotlin.time.Instant
 
 /**
  * Represents a local draft memo that hasn't been published yet.
@@ -19,5 +20,35 @@ data class Draft(
      * Returns true if the draft has meaningful content worth saving.
      */
     fun hasContent(): Boolean = content.isNotBlank() || attachments.isNotEmpty() || location != null
+
+    /**
+     * Converts this Draft to a [Memo] for display in MemoItem.
+     * Server-specific fields (name, state, reactions, etc.) are left null/default.
+     */
+    fun toMemo(): Memo {
+        return Memo(
+            content = content,
+            visibility = visibility,
+            attachments = attachments.ifEmpty { null },
+            location = location,
+            displayTime = Instant.fromEpochMilliseconds(updatedAt),
+            state = MemoState.NORMAL,
+        )
+    }
 }
 
+/**
+ * Converts a server [Memo] into a local [Draft] for editing.
+ * Maps Instant timestamps back to millis and carries over shared fields.
+ */
+fun Memo.toDraft(): Draft {
+    val now = System.currentTimeMillis()
+    return Draft(
+        content = content,
+        visibility = visibility,
+        attachments = attachments ?: emptyList(),
+        location = location,
+        createdAt = createTime?.toEpochMilliseconds() ?: now,
+        updatedAt = updateTime?.toEpochMilliseconds() ?: now,
+    )
+}

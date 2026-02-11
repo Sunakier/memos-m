@@ -75,9 +75,6 @@ import org.example.memosm.ui.component.item.media.MemoImage
 import org.example.memosm.ui.component.item.media.VideoPlayer
 import org.example.memosm.viewmodel.manager.AttachmentManager
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.TimeZone
 
 enum class AttachmentCompactMode {
     Area, Width, Height, Always, Never
@@ -107,16 +104,7 @@ fun AttachmentCard(
 
     val dateMillis by produceState<Long?>(initialValue = null, attachment?.createTime) {
         if (attachment?.createTime != null) {
-            value = withContext(Dispatchers.Default) {
-                try {
-                    val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-                    inputFormat.timeZone = TimeZone.getTimeZone("UTC")
-                    inputFormat.parse(attachment.createTime)?.time
-                } catch (e: Exception) {
-                    Log.e("AttachmentCard", "Failed to parse date: ${attachment.createTime}", e)
-                    null
-                }
-            }
+            value = attachment.createTime.toEpochMilliseconds()
         }
     }
 
@@ -126,7 +114,7 @@ fun AttachmentCard(
             dateMillis!!,
             android.text.format.DateUtils.FORMAT_SHOW_DATE or android.text.format.DateUtils.FORMAT_SHOW_TIME or android.text.format.DateUtils.FORMAT_SHOW_YEAR or android.text.format.DateUtils.FORMAT_ABBREV_MONTH
         )
-    } else attachment?.createTime ?: ""
+    } else ""
 
     val formattedSize by produceState(initialValue = "", attachment?.size) {
         if (attachment?.size != null) {

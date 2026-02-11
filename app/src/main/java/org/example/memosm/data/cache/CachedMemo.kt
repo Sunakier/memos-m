@@ -29,7 +29,7 @@ data class CachedMemo(
     val cachedAt: Long          // Timestamp when cached
 ) {
     companion object {
-        private val gson = Gson()
+        private val gson = org.example.memosm.api.GsonProvider.gson
 
         fun fromMemo(
             memo: Memo,

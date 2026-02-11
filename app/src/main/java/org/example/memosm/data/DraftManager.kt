@@ -19,6 +19,7 @@ import java.io.BufferedWriter
 import java.io.File
 import java.io.FileReader
 import java.io.FileWriter
+import kotlin.time.Instant
 
 /**
  * Manages draft storage in the app's cache directory using streaming JSON parsing.
@@ -146,7 +147,7 @@ class DraftManager(private val context: Context) {
     private fun parseAttachment(reader: JsonReader): Attachment? {
         try {
             var name: String? = null
-            var createTime: String? = null
+            var createTime: Instant? = null
             var filename = ""
             var content: String? = null
             var externalLink: String? = null
@@ -162,9 +163,16 @@ class DraftManager(private val context: Context) {
                         reader.nextNull(); null
                     } else reader.nextString()
 
+//                    "createTime" -> createTime = if (reader.peek() == JsonToken.NULL) {
+//                        reader.nextNull(); null
+//                    } else reader.nextString()
                     "createTime" -> createTime = if (reader.peek() == JsonToken.NULL) {
-                        reader.nextNull(); null
-                    } else reader.nextString()
+                        reader.nextNull()
+                        null
+                    } else {
+                        // You must parse the string into an Instant object
+                        Instant.parse(reader.nextString())
+                    }
 
                     "filename" -> filename = reader.nextString()
                     "content" -> content = if (reader.peek() == JsonToken.NULL) {
@@ -194,15 +202,7 @@ class DraftManager(private val context: Context) {
             reader.endObject()
 
             return Attachment(
-                name,
-                createTime,
-                filename,
-                content,
-                externalLink,
-                type,
-                mimeType,
-                size,
-                memo
+                name, createTime, filename, content, externalLink, type, mimeType, size, memo
             )
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing attachment", e)
@@ -404,7 +404,7 @@ class DraftManager(private val context: Context) {
         if (attachment.name != null) writer.value(attachment.name) else writer.nullValue()
 
         writer.name("createTime")
-        if (attachment.createTime != null) writer.value(attachment.createTime) else writer.nullValue()
+        if (attachment.createTime != null) writer.value(attachment.createTime.toString()) else writer.nullValue()
 
         writer.name("filename").value(attachment.filename)
 
