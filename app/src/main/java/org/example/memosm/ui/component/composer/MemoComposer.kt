@@ -530,471 +530,92 @@ fun MemoComposer(
             modifier = Modifier.weight(1f),
         )
 
-        // Floating action bar card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-
-                if (draftAttachments.isNotEmpty()) {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        contentPadding = PaddingValues(top = 8.dp, end = 8.dp)
-                    ) {
-                        items(draftAttachments, key = { (uri, attachment) ->
-                            if (uri != Uri.EMPTY) uri.toString()
-                            else "${attachment?.name ?: "unknown"}_${attachment?.filename ?: "unknown"}_${attachment?.createTime ?: System.currentTimeMillis()}"
-                        }) { (uri, attachment) ->
-                            val isUploading = uri in uploadingUris
-
-                            Box(modifier = Modifier.size(80.dp, 80.dp)) {
-                                AttachmentCard(
-                                    attachment = attachment,
-                                    token = token,
-                                    hostUrl = hostUrl,
-                                    uri = uri,
-                                    modifier = Modifier.fillMaxSize(),
-                                    showInfo = false,
-                                    compactMode = AttachmentCompactMode.Always
-                                )
-
-                                if (isUploading) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(
-                                                Color.Black.copy(alpha = 0.3f),
-                                                RoundedCornerShape(8.dp)
-                                            ), contentAlignment = Alignment.Center
-                                    ) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(24.dp), color = Color.White
-                                        )
-                                    }
-                                }
-
-                                IconButton(
-                                    onClick = {
-                                        val updated =
-                                            draftAttachments.filter { it.second != attachment || (it.first != uri && uri != Uri.EMPTY) }
-                                        draftAttachments = updated
-                                    },
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = 4.dp, y = (-4).dp)
-                                        .size(24.dp)
-                                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
-                                        .zIndex(1f)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Close,
-                                        contentDescription = stringResource(R.string.memo_composer_remove_attachment),
-                                        tint = Color.White,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        }
+        MemoComposerBottomBar(
+            modifier = Modifier,
+            draftAttachments = draftAttachments,
+            uploadingUris = uploadingUris,
+            location = location,
+            isPosting = isPosting,
+            isFetchingLocation = isFetchingLocation,
+            isRecording = isRecording,
+            visibility = visibility,
+            mode = mode,
+            componentWidth = componentWidth,
+            pickerLauncher = pickerLauncher,
+            audioPermissionLauncher = audioPermissionLauncher,
+            locationPermissionLauncher = locationPermissionLauncher,
+            token = token,
+            hostUrl = hostUrl,
+            contentStateText = contentState.text,
+            isUploadingCount = isUploadingCount,
+            onFetchLocation = { fetchLocation() },
+            onStartRecording = { startRecording() },
+            onStopRecording = { stopRecording() },
+            onRemoveLocation = { location = null },
+            onLocationClick = { showLocationEditDialog = true },
+            onVisibilityChange = { visibility = it },
+            onRemoveAttachment = { uri, attachment ->
+                val updated =
+                    draftAttachments.filter { it.second != attachment || (it.first != uri && uri != Uri.EMPTY) }
+                draftAttachments = updated
+            },
+            onPublishClick = {
+                scope.launch {
+                    val pendingUploads = draftAttachments.filter {
+                        // Case 1: New local file (Uri is not EMPTY, Attachment is null)
+                        (it.second == null && it.first != Uri.EMPTY) ||
+                                // Case 2: Restored draft (Uri is EMPTY, Attachment has content but no name on server)
+                                (it.second != null && it.second!!.name == null && it.second!!.content != null)
                     }
-                }
+                    val uploadedAttachments = mutableListOf<Attachment>()
 
-                location?.let { loc ->
-                    Spacer(modifier = Modifier.height(8.dp))
-                    InputChip(
-                        selected = true,
-                        onClick = { showLocationEditDialog = true },
-                        label = {
-                            Text(
-                                text = loc.placeholder ?: "${loc.latitude}, ${loc.longitude}",
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        },
-                        trailingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Close,
-                                contentDescription = stringResource(R.string.memo_composer_remove_location),
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .noRippleClickable { location = null })
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Place,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        })
-                }
+                    for ((uri, attachment) in pendingUploads) {
+                        isUploadingCount++
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Determine if we should use overflow menu based on width
-                val useOverflowMenu = componentWidth < 320.dp && componentWidth != 0.dp
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (useOverflowMenu) {
-                            // Show overflow menu button
-                            Box {
-                                IconButton(
-                                    onClick = { showActionOverflowMenu = true },
-                                    enabled = !isPosting,
-                                    modifier = Modifier.size(actionButtonSize)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.MoreVert,
-                                        contentDescription = stringResource(R.string.memo_action_more),
-                                        modifier = Modifier.size(actionIconSize)
-                                    )
-                                }
-
-                                DropdownMenu(
-                                    expanded = showActionOverflowMenu,
-                                    onDismissRequest = { showActionOverflowMenu = false }) {
-                                    DropdownMenuItem(
-                                        text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.AttachFile,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Text(stringResource(R.string.memo_composer_attach_file))
-                                        }
-                                    }, onClick = {
-                                        showActionOverflowMenu = false
-                                        pickerLauncher.launch("*/*")
-                                    }, enabled = !isPosting
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Image,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Text(stringResource(R.string.memo_composer_add_image))
-                                        }
-                                    }, onClick = {
-                                        showActionOverflowMenu = false
-                                        pickerLauncher.launch("image/*")
-                                    }, enabled = !isPosting
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = if (isRecording) Icons.Default.Mic else Icons.Outlined.MicNone,
-                                                contentDescription = null,
-                                                tint = if (isRecording) MaterialTheme.colorScheme.error else LocalContentColor.current,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Text(
-                                                if (isRecording) "Stop Recording" else "Record Audio"
-                                            )
-                                        }
-                                    }, onClick = {
-                                        showActionOverflowMenu = false
-                                        if (isRecording) {
-                                            stopRecording()
-                                        } else {
-                                            val permission = Manifest.permission.RECORD_AUDIO
-                                            if (ContextCompat.checkSelfPermission(
-                                                    context, permission
-                                                ) == PackageManager.PERMISSION_GRANTED
-                                            ) {
-                                                startRecording()
-                                            } else {
-                                                audioPermissionLauncher.launch(permission)
-                                            }
-                                        }
-                                    }, enabled = !isPosting
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            if (isFetchingLocation) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(20.dp),
-                                                    strokeWidth = 2.dp
-                                                )
-                                            } else {
-                                                Icon(
-                                                    imageVector = if (location != null) Icons.Default.Place else Icons.Outlined.Place,
-                                                    contentDescription = null,
-                                                    tint = if (location != null) MaterialTheme.colorScheme.primary else LocalContentColor.current,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Text(stringResource(R.string.memo_composer_add_location))
-                                        }
-                                    }, onClick = {
-                                        showActionOverflowMenu = false
-                                        val hasCoarse = ContextCompat.checkSelfPermission(
-                                            context, Manifest.permission.ACCESS_COARSE_LOCATION
-                                        ) == PackageManager.PERMISSION_GRANTED
-                                        val hasFine = ContextCompat.checkSelfPermission(
-                                            context, Manifest.permission.ACCESS_FINE_LOCATION
-                                        ) == PackageManager.PERMISSION_GRANTED
-
-                                        if (hasCoarse || hasFine) {
-                                            fetchLocation()
-                                        } else {
-                                            locationPermissionLauncher.launch(
-                                                arrayOf(
-                                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                                )
-                                            )
-                                        }
-                                    }, enabled = !isPosting && !isFetchingLocation
-                                    )
-                                }
-                            }
-                        } else {
-                            // Show individual icon buttons
-                            IconButton(
-                                onClick = { pickerLauncher.launch("*/*") },
-                                enabled = !isPosting,
-                                modifier = Modifier.size(actionButtonSize)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.AttachFile,
-                                    contentDescription = stringResource(R.string.memo_composer_attach_file),
-                                    modifier = Modifier.size(actionIconSize)
-                                )
-                            }
-                            IconButton(
-                                onClick = { pickerLauncher.launch("image/*") },
-                                enabled = !isPosting,
-                                modifier = Modifier.size(actionButtonSize)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Image,
-                                    contentDescription = stringResource(R.string.memo_composer_add_image),
-                                    modifier = Modifier.size(actionIconSize)
-                                )
-                            }
-                            IconButton(
-                                onClick = {
-                                    if (isRecording) {
-                                        stopRecording()
-                                    } else {
-                                        val permission = Manifest.permission.RECORD_AUDIO
-                                        if (ContextCompat.checkSelfPermission(
-                                                context, permission
-                                            ) == PackageManager.PERMISSION_GRANTED
-                                        ) {
-                                            startRecording()
-                                        } else {
-                                            audioPermissionLauncher.launch(permission)
-                                        }
-                                    }
-                                }, enabled = !isPosting, modifier = Modifier.size(actionButtonSize)
-                            ) {
-                                Icon(
-                                    imageVector = if (isRecording) Icons.Default.Mic else Icons.Outlined.MicNone,
-                                    contentDescription = stringResource(R.string.memo_composer_error_microphone_permission).removeSuffix(
-                                        " required"
-                                    ), // Best effort if no specific string
-                                    tint = if (isRecording) MaterialTheme.colorScheme.error else LocalContentColor.current,
-                                    modifier = Modifier.size(actionIconSize)
-                                )
-                            }
-                            IconButton(
-                                onClick = {
-                                    val hasCoarse = ContextCompat.checkSelfPermission(
-                                        context, Manifest.permission.ACCESS_COARSE_LOCATION
-                                    ) == PackageManager.PERMISSION_GRANTED
-                                    val hasFine = ContextCompat.checkSelfPermission(
-                                        context, Manifest.permission.ACCESS_FINE_LOCATION
-                                    ) == PackageManager.PERMISSION_GRANTED
-
-                                    if (hasCoarse || hasFine) {
-                                        fetchLocation()
-                                    } else {
-                                        locationPermissionLauncher.launch(
-                                            arrayOf(
-                                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                                Manifest.permission.ACCESS_COARSE_LOCATION
-                                            )
-                                        )
-                                    }
-                                },
-                                enabled = !isPosting && !isFetchingLocation,
-                                modifier = Modifier.size(actionButtonSize)
-                            ) {
-                                if (isFetchingLocation) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(actionIconSize), strokeWidth = 2.dp
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = if (location != null) Icons.Default.Place else Icons.Outlined.Place,
-                                        contentDescription = stringResource(R.string.memo_composer_add_location),
-                                        tint = if (location != null) MaterialTheme.colorScheme.primary else LocalContentColor.current,
-                                        modifier = Modifier.size(actionIconSize)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box {
-                            TextButton(
-                                onClick = { expanded = true },
-                                enabled = !isPosting,
-                                contentPadding = if (isCompact) PaddingValues(horizontal = 8.dp) else ButtonDefaults.TextButtonContentPadding,
-                                modifier = if (isCompact) Modifier.height(actionButtonSize) else Modifier
-                            ) {
-                                VisibilityIcon(
-                                    visibility = visibility, modifier = Modifier.size(18.dp)
-                                )
-                                if (showVisibilityLabel) {
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(getVisibilityLabel(visibility))
-                                    Icon(
-                                        imageVector = if (expanded) Icons.Outlined.ArrowDropUp else Icons.Outlined.ArrowDropDown,
-                                        contentDescription = null
-                                    )
-                                }
-                            }
-                            DropdownMenu(
-                                expanded = expanded, onDismissRequest = { expanded = false }) {
-                                Visibility.entries.forEach { option ->
-                                    DropdownMenuItem(text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            // Now uses your new VisibilityIcon component!
-                                            VisibilityIcon(
-                                                visibility = option,
-                                                modifier = Modifier.size(18.dp),
-                                                outlined = true // Optional: force specific style for menu
-                                            )
-
-                                            Spacer(modifier = Modifier.width(8.dp))
-
-                                            // option is now type Visibility, so this works automatically
-                                            Text(text = getVisibilityLabel(option))
-                                        }
-                                    }, onClick = {
-                                        visibility = option // Type-safe assignment
-                                        expanded = false
-                                    })
-                                }
-                            }
-                        }
-
-                        val label = when (mode) {
-                            ComposerMode.PUBLISH -> stringResource(R.string.memo_publish)
-                            ComposerMode.UPDATE -> stringResource(R.string.memo_action_update)
-                            ComposerMode.COMMENT -> stringResource(R.string.memo_action_post)
-                        }
-
-                        Button(
-                            onClick = {
-                                scope.launch {
-                                    val pendingUploads = draftAttachments.filter {
-                                        // Case 1: New local file (Uri is not EMPTY, Attachment is null)
-                                        (it.second == null && it.first != Uri.EMPTY) ||
-                                                // Case 2: Restored draft (Uri is EMPTY, Attachment has content but no name on server)
-                                                (it.second != null && it.second!!.name == null && it.second!!.content != null)
-                                    }
-                                    val uploadedAttachments = mutableListOf<Attachment>()
-
-                                    for ((uri, attachment) in pendingUploads) {
-                                        isUploadingCount++
-
-                                        // If it's a restored draft, we first need to convert it to a temp Uri
-                                        val uploadUri =
-                                            if (uri == Uri.EMPTY && attachment != null) {
-                                                base64ToTempUri(
-                                                    attachment.content ?: "",
-                                                    attachment.filename,
-                                                    attachment.type,
-                                                    context
-                                                )
-                                            } else {
-                                                uri
-                                            }
-
-                                        if (uploadUri != null) {
-                                            uploadingUris = uploadingUris + uploadUri
-                                            val uploaded = onUploadFile(uploadUri, context)
-                                            uploadingUris = uploadingUris - uploadUri
-
-                                            if (uploaded != null) {
-                                                uploadedAttachments.add(uploaded)
-                                                // Update local draft state immediately as we upload
-                                                // We match by the ORIGINAL pair to replace it
-                                                draftAttachments = draftAttachments.map {
-                                                    if (it == (uri to attachment)) uploadUri to uploaded else it
-                                                }
-                                            }
-                                        }
-                                        isUploadingCount--
-                                    }
-
-                                    // Now collect all valid attachments:
-                                    // 1. Items that were already valid (non-null attachment with name)
-                                    // 2. Newly uploaded items are already swapped into draftAttachments by the loop above,
-                                    //    OR added to uploadedAttachments if we want to be safe, but the loop upates draftAttachments.
-                                    // Let's just grab everything from draftAttachments that has a valid server-side attachment (name != null)
-                                    val finalAttachments = draftAttachments.mapNotNull { it.second }
-                                        .filter { it.name != null }
-
-                                    onPublish(
-                                        contentState.text, visibility, finalAttachments, location
-                                    )
-                                }
-                            },
-                            enabled = (contentState.text.isNotBlank() || draftAttachments.isNotEmpty()) && !isPosting && isUploadingCount == 0,
-                            contentPadding = if (showPublishLabel) ButtonDefaults.ContentPadding else PaddingValues(
-                                horizontal = if (isCompact) 8.dp else 12.dp
-                            ),
-                            modifier = if (isCompact) Modifier.height(actionButtonSize) else Modifier
-                        ) {
-                            if (isPosting) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(actionIconSize),
-                                    color = LocalContentColor.current,
-                                    strokeWidth = 2.dp
+                        // If it's a restored draft, we first need to convert it to a temp Uri
+                        val uploadUri =
+                            if (uri == Uri.EMPTY && attachment != null) {
+                                base64ToTempUri(
+                                    attachment.content ?: "",
+                                    attachment.filename,
+                                    attachment.type,
+                                    context
                                 )
                             } else {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Send,
-                                    contentDescription = stringResource(R.string.memo_publish),
-                                    modifier = Modifier.size(actionIconSize)
-                                )
+                                uri
                             }
-                            if (showPublishLabel) {
-                                Spacer(modifier = Modifier.width(if (isCompact) 4.dp else 8.dp))
-                                Text(label)
+
+                        if (uploadUri != null) {
+                            uploadingUris = uploadingUris + uploadUri
+                            val uploaded = onUploadFile(uploadUri, context)
+                            uploadingUris = uploadingUris - uploadUri
+
+                            if (uploaded != null) {
+                                uploadedAttachments.add(uploaded)
+                                // Update local draft state immediately as we upload
+                                // We match by the ORIGINAL pair to replace it
+                                draftAttachments = draftAttachments.map {
+                                    if (it == (uri to attachment)) uploadUri to uploaded else it
+                                }
                             }
                         }
+                        isUploadingCount--
                     }
-                }
 
-            } // end Column inside Card
-        } // end Card
+                    // Now collect all valid attachments:
+                    // 1. Items that were already valid (non-null attachment with name)
+                    // 2. Newly uploaded items are already swapped into draftAttachments by the loop above,
+                    //    OR added to uploadedAttachments if we want to be safe, but the loop upates draftAttachments.
+                    // Let's just grab everything from draftAttachments that has a valid server-side attachment (name != null)
+                    val finalAttachments = draftAttachments.mapNotNull { it.second }
+                        .filter { it.name != null }
+
+                    onPublish(
+                        contentState.text, visibility, finalAttachments, location
+                    )
+                }
+            }
+        )
     }
 
     if (showLocationEditDialog && location != null) {
