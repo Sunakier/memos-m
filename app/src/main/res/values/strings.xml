@@ -68,6 +68,7 @@
     <string name="profile_about_repo_url" translatable="false">https://github.com/yamada-sexta/memos-m</string>
     <string name="profile_about_issues">Report an Issue</string>
     <string name="profile_about_issues_url" translatable="false">https://github.com/yamada-sexta/memos-m/issues</string>
+    <string name="profile_about_licenses">Open Source Licenses</string>
     <string name="profile_add_account">Add Account</string>
     <string name="profile_accounts">Accounts</string>
     <string name="profile_remove_account_title">Remove Account</string>

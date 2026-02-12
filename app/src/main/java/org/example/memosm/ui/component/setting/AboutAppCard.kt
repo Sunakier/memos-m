@@ -7,25 +7,36 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Balance
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -33,13 +44,16 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
+import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
+import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import org.example.memosm.R
 import org.example.memosm.ui.nav.InfoRow
 
 private data class KaomojiMessage(val text: String, val kaomoji: String)
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AboutAppCard() {
     val context = LocalContext.current
@@ -66,6 +80,7 @@ fun AboutAppCard() {
     }
 
     val currentToast = remember { mutableStateOf<Toast?>(null) }
+    var showLicensesDialog by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -87,33 +102,28 @@ fun AboutAppCard() {
                 stringResource(R.string.profile_about_version),
                 versionName,
                 modifier = Modifier
-                    .combinedClickable(
-                        onClick = {
-                            currentToast.value?.cancel()
-                            val item = kaomojis.randomOrNull()
-                            if (item != null) {
-                                val toast = Toast.makeText(
-                                    context,
-                                    "${item.text} ${item.kaomoji}",
-                                    Toast.LENGTH_SHORT
-                                )
-                                currentToast.value = toast
-                                toast.show()
-                            }
-                        },
-                        onLongClick = {
-                            val clipboard =
-                                context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clip = ClipData.newPlainText("App Version", versionName)
-                            clipboard.setPrimaryClip(clip)
-
-                            currentToast.value?.cancel()
-                            val toast =
-                                Toast.makeText(context, versionCopiedMessage, Toast.LENGTH_SHORT)
+                    .combinedClickable(onClick = {
+                        currentToast.value?.cancel()
+                        val item = kaomojis.randomOrNull()
+                        if (item != null) {
+                            val toast = Toast.makeText(
+                                context, "${item.text} ${item.kaomoji}", Toast.LENGTH_SHORT
+                            )
                             currentToast.value = toast
                             toast.show()
                         }
-                    )
+                    }, onLongClick = {
+                        val clipboard =
+                            context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText("App Version", versionName)
+                        clipboard.setPrimaryClip(clip)
+
+                        currentToast.value?.cancel()
+                        val toast =
+                            Toast.makeText(context, versionCopiedMessage, Toast.LENGTH_SHORT)
+                        currentToast.value = toast
+                        toast.show()
+                    })
                     .padding(horizontal = 16.dp, vertical = 8.dp))
 
             val repoUrl = stringResource(R.string.profile_about_repo_url)
@@ -131,10 +141,8 @@ fun AboutAppCard() {
                     onClick = {
                         val intent = Intent(Intent.ACTION_VIEW, repoUrl.toUri())
                         context.startActivity(intent)
-                    }
-                ),
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
+                    }),
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent))
 
             ListItem(
                 headlineContent = { Text(stringResource(R.string.profile_about_issues)) },
@@ -148,10 +156,53 @@ fun AboutAppCard() {
                     onClick = {
                         val intent = Intent(Intent.ACTION_VIEW, issuesUrl.toUri())
                         context.startActivity(intent)
+                    }),
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent))
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.profile_about_licenses)) },
+                leadingContent = { Icon(Icons.Outlined.Balance, contentDescription = null) },
+                modifier = Modifier.combinedClickable(
+                    onClick = { showLicensesDialog = true }),
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent))
+        }
+    }
+
+    if (showLicensesDialog) {
+        Dialog(
+            onDismissRequest = { showLicensesDialog = false },
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.9f),
+                shape = MaterialTheme.shapes.extraLarge
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 24.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            stringResource(R.string.profile_about_licenses),
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        IconButton(onClick = { showLicensesDialog = false }) {
+                            Icon(Icons.Filled.Close, contentDescription = null)
+                        }
                     }
-                ),
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
+                    val libs by produceLibraries()
+                    libs?.let {
+                        LibrariesContainer(
+                            it, modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+            }
         }
     }
 }
+

@@ -15,6 +15,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("kotlin-parcelize")
     id("com.google.devtools.ksp")
+    alias(libs.plugins.aboutlibraries)
 }
 
 android {
@@ -158,6 +159,9 @@ dependencies {
 
     // Location
     implementation(libs.google.play.services.location)
+
+    // About Libraries (OSS Licenses)
+    implementation(libs.aboutlibraries.compose)
 
     // Markdown
     implementation(libs.markdown)
