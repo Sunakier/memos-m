@@ -51,6 +51,7 @@ import kotlin.math.min
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import kotlinx.coroutines.delay
+import android.util.Log
 import org.example.memosm.R
 import kotlin.math.roundToInt
 
@@ -217,6 +218,16 @@ fun MemoInput(
                 val popupMaxHeightDp = with(density) { popupMaxHeightPx.toDp() }
                 val constrainedMaxHeight = min(popupMaxHeightDp.value, 200f).dp
 
+                Log.d("PopupDebug", "=== Height Constraint ===")
+                Log.d("PopupDebug", "cursorRect=$cursorRect")
+                Log.d("PopupDebug", "scrollTop=$effectiveScrollTop")
+                Log.d("PopupDebug", "boxPosInWindow=$boxPositionInWindow, boxHeight=$boxHeightPx")
+                Log.d("PopupDebug", "cursorTopInWindow=$cursorTopInWindow, cursorBottomInWindow=$cursorBottomInWindow")
+                Log.d("PopupDebug", "effectiveWindowBottom=$effectiveWindowBottom")
+                Log.d("PopupDebug", "spaceBelow=$spaceBelow, spaceAbove=$spaceAbove")
+                Log.d("PopupDebug", "popupMaxHeightPx=$popupMaxHeightPx, constrainedMaxHeight=$constrainedMaxHeight")
+                Log.d("PopupDebug", "imeBottom=$imeBottom")
+
                 val popupPositionProvider =
                     remember(cursorRect, imeBottom, density, effectiveScrollTop) {
                         CursorPopupPositionProvider(
@@ -298,6 +309,17 @@ private class CursorPopupPositionProvider(
 
         val isSpaceBelow = (targetYBelow + popupContentSize.height) <= effectiveWindowBottom
         val isSpaceAbove = targetYAbove >= 0
+
+        Log.d("PopupDebug", "=== calculatePosition ===")
+        Log.d("PopupDebug", "anchorBounds=$anchorBounds")
+        Log.d("PopupDebug", "windowSize=$windowSize")
+        Log.d("PopupDebug", "cursorRect=$cursorRect, scrollTop=$scrollTop")
+        Log.d("PopupDebug", "popupContentSize=$popupContentSize")
+        Log.d("PopupDebug", "imeBottom=$imeBottom, effectiveWindowBottom=$effectiveWindowBottom")
+        Log.d("PopupDebug", "targetYBelow=$targetYBelow, targetYAbove=$targetYAbove")
+        Log.d("PopupDebug", "isSpaceBelow=$isSpaceBelow (${targetYBelow + popupContentSize.height} <= $effectiveWindowBottom)")
+        Log.d("PopupDebug", "isSpaceAbove=$isSpaceAbove (targetYAbove=$targetYAbove >= 0)")
+
         val y = when {
             isSpaceBelow -> targetYBelow
             isSpaceAbove -> targetYAbove
@@ -307,15 +329,16 @@ private class CursorPopupPositionProvider(
                 val cursorTopInWindow = anchorBounds.top + cursorRect.top - scrollTop
                 val spaceBelow = effectiveWindowBottom - cursorBottomInWindow
                 val spaceAbove = cursorTopInWindow
+                Log.d("PopupDebug", "else branch: spaceBelow=$spaceBelow, spaceAbove=$spaceAbove")
                 if (spaceBelow >= spaceAbove) {
-                    // More space below cursor: place below
                     targetYBelow
                 } else {
-                    // More space above cursor: place above, clamp to screen top
                     targetYAbove.coerceAtLeast(0)
                 }
             }
         }
+
+        Log.d("PopupDebug", "FINAL y=$y (chose=${if (isSpaceBelow) "below" else if (isSpaceAbove) "above" else "else"})")
 
         return IntOffset(targetX, y)
     }
