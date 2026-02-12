@@ -1,6 +1,9 @@
 package org.example.memosm.ui.component
 
+import DeleteConfirmationDialog
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -64,8 +67,7 @@ import org.example.memosm.model.Memo
 import org.example.memosm.model.MemoState
 import org.example.memosm.model.User
 import org.example.memosm.ui.MemoKey
-import org.example.memosm.ui.component.composer.DeleteConfirmationDialog
-import org.example.memosm.ui.component.composer.MemoEditDialog
+import org.example.memosm.ui.component.composer.MemoEditScreen
 import org.example.memosm.ui.component.item.MemoItem
 import org.example.memosm.viewmodel.MemosViewModel
 
@@ -472,13 +474,29 @@ fun GenericMemosListPane(
         }
     }
 
-    memoToEdit?.let { memo ->
-        MemoEditDialog(
-            memo = memo,
-            onDismiss = { memoToEdit = null },
-            viewModel = viewModel,
-            hostUrl = uiState.session.hostUrl
+    // Material Expressive easing
+    val enterEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
+    val exitEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
+
+    AnimatedVisibility(
+        visible = memoToEdit != null,
+        enter = slideInVertically(
+            animationSpec = tween(400, easing = enterEasing), initialOffsetY = { it }) + fadeIn(
+            animationSpec = tween(400, easing = enterEasing)
+        ),
+        exit = slideOutVertically(
+            animationSpec = tween(200, easing = exitEasing), targetOffsetY = { it }) + fadeOut(
+            animationSpec = tween(200, easing = exitEasing)
         )
+    ) {
+        memoToEdit?.let { memo ->
+            MemoEditScreen(
+                memo = memo,
+                onDismiss = { memoToEdit = null },
+                viewModel = viewModel,
+                hostUrl = uiState.session.hostUrl
+            )
+        }
     }
 
     memoToDelete?.let { memo ->

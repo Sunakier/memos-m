@@ -128,7 +128,9 @@ fun MemoItem(
         memo.displayTime?.let { instant ->
             try {
                 DateUtils.getRelativeTimeSpanString(
-                    instant.toEpochMilliseconds(), System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS
+                    instant.toEpochMilliseconds(),
+                    System.currentTimeMillis(),
+                    DateUtils.MINUTE_IN_MILLIS
                 ).toString()
             } catch (_: Exception) {
                 instant.toString()

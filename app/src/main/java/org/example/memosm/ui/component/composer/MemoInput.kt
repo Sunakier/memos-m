@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
@@ -18,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -70,8 +70,7 @@ fun MemoInput(
     availableTags: Set<String>,
     enabled: Boolean = true,
     autoFocus: Boolean = false,
-    minHeightInLines: Int = 3,
-    maxHeightInLines: Int = Int.MAX_VALUE
+//    maxHeightInLines: Int = Int.MAX_VALUE
 ) {
     val focusRequester = remember { FocusRequester() }
     val scrollState = rememberScrollState()
@@ -127,27 +126,9 @@ fun MemoInput(
         val paddingValues = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
         val textStyle = LocalTextStyle.current
 
-        val maxLimitModifier = remember(maxHeightInLines, density, textStyle, paddingValues) {
-            if (maxHeightInLines == Int.MAX_VALUE) Modifier
-            else {
-                val lineHeight =
-                    if (textStyle.lineHeight.isSpecified && textStyle.lineHeight.type == TextUnitType.Sp) {
-                        textStyle.lineHeight
-                    } else {
-                        textStyle.fontSize * 1.5 // Fallback estimate
-                    }
-                val verticalPadding =
-                    paddingValues.calculateTopPadding() + paddingValues.calculateBottomPadding()
-                val maxHeightDp = with(density) {
-                    (lineHeight.toPx() * maxHeightInLines).toDp() + verticalPadding
-                }
-                Modifier.heightIn(max = maxHeightDp)
-            }
-        }
-
         Box(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(paddingValues)
         ) {
             if (contentState.text.isEmpty()) {
@@ -164,9 +145,8 @@ fun MemoInput(
                     onContentChange(processedValue)
                 },
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .then(maxLimitModifier)
-                    .then(if (maxHeightInLines != Int.MAX_VALUE) Modifier.verticalScroll(scrollState) else Modifier)
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
                     .focusRequester(focusRequester),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 textStyle = textStyle.copy(color = MaterialTheme.colorScheme.onSurface),
@@ -175,6 +155,24 @@ fun MemoInput(
                 visualTransformation = markdownHandler,
                 interactionSource = interactionSource,
             )
+
+            // Auto-scroll to keep cursor visible
+            LaunchedEffect(contentState.selection, contentState.text) {
+//                if (maxHeightInLines == Int.MAX_VALUE) return@LaunchedEffect
+                val layout = textLayoutResult ?: return@LaunchedEffect
+                val cursorIndex = contentState.selection.start.coerceIn(0, layout.layoutInput.text.length)
+                val cursorRect = layout.getCursorRect(cursorIndex)
+                val cursorBottom = cursorRect.bottom.roundToInt()
+                val cursorTop = cursorRect.top.roundToInt()
+                val viewportTop = scrollState.value
+                val viewportBottom = viewportTop + scrollState.viewportSize
+
+                if (cursorBottom > viewportBottom) {
+                    scrollState.animateScrollTo(cursorBottom - scrollState.viewportSize)
+                } else if (cursorTop < viewportTop) {
+                    scrollState.animateScrollTo(cursorTop)
+                }
+            }
 
             if (showTagPopup && filteredTags.isNotEmpty()) {
                 val imeBottom = WindowInsets.ime.getBottom(density)
@@ -191,8 +189,10 @@ fun MemoInput(
                     )
                 }
 
-                val effectiveScrollTop =
-                    if (maxHeightInLines != Int.MAX_VALUE) scrollState.value else 0
+//                val effectiveScrollTop =
+//                    if (maxHeightInLines != Int.MAX_VALUE) scrollState.value else 0
+                val effectiveScrollTop = scrollState.value
+
                 val popupPositionProvider =
                     remember(cursorRect, imeBottom, density, effectiveScrollTop) {
                         CursorPopupPositionProvider(
@@ -237,7 +237,6 @@ fun MemoInput(
                 }
             }
         }
-        HorizontalDivider()
     }
 }
 
@@ -274,12 +273,14 @@ private class CursorPopupPositionProvider(
         val effectiveWindowBottom = windowSize.height - imeBottom
 
         val isSpaceBelow = (targetYBelow + popupContentSize.height) <= effectiveWindowBottom
+        val isSpaceAbove = targetYAbove >= 0
 
-        return if (isSpaceBelow) {
-            IntOffset(targetX, targetYBelow)
-        } else {
-            // Priority is to show above if blocked below
-            IntOffset(targetX, targetYAbove)
+        val y = when {
+            isSpaceBelow -> targetYBelow
+            isSpaceAbove -> targetYAbove
+            else -> targetYBelow.coerceIn(0, (effectiveWindowBottom - popupContentSize.height).coerceAtLeast(0))
         }
+
+        return IntOffset(targetX, y)
     }
 }

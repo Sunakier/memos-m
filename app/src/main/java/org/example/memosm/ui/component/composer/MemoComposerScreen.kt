@@ -1,0 +1,176 @@
+package org.example.memosm.ui.component.composer
+
+import android.net.Uri
+import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import org.example.memosm.R
+import org.example.memosm.model.Attachment
+import org.example.memosm.model.Location
+import org.example.memosm.model.Memo
+import org.example.memosm.model.Visibility
+import org.example.memosm.viewmodel.MemosViewModel
+import kotlin.coroutines.cancellation.CancellationException
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MemoComposerScreen(
+    onDismiss: () -> Unit,
+    viewModel: MemosViewModel,
+    hostUrl: String,
+    title: String,
+    initialMemo: Memo? = null,
+    parentMemo: Memo? = null,
+    placeholder: String = stringResource(R.string.memo_composer_placeholder),
+    initialContent: String = "",
+    initialUris: List<Uri> = emptyList(),
+    initialAttachments: List<Attachment> = emptyList(),
+    initialVisibility: Visibility? = null,
+    initialLocation: Location? = null,
+    mode: ComposerMode = when {
+        initialMemo != null -> ComposerMode.UPDATE
+        parentMemo != null -> ComposerMode.COMMENT
+        else -> ComposerMode.PUBLISH
+    }
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    // Predictive Back Animation State
+    val scale = remember { Animatable(1f) }
+
+    PredictiveBackHandler { progress ->
+        try {
+            progress.collect { backEvent ->
+                scale.snapTo(1f - backEvent.progress * 0.1f)
+            }
+            onDismiss()
+        } catch (e: CancellationException) {
+            scale.animateTo(1f)
+        }
+    }
+
+    Scaffold(
+        modifier = Modifier.graphicsLayer {
+            scaleX = scale.value
+            scaleY = scale.value
+            shape = RoundedCornerShape(28.dp)
+            clip = true
+        },
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                navigationIcon = {
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                            contentDescription = stringResource(R.string.memo_detail_back)
+                        )
+                    }
+                }
+            )
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .imePadding(),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            val effectiveInitialContent = initialMemo?.content ?: initialContent
+
+            MemoComposer(
+                onPublish = { content, visibility, attachments, location ->
+                    when {
+                        initialMemo != null -> {
+                            viewModel.updateMemo(
+                                initialMemo, content, visibility, attachments, location
+                            ) {
+                                onDismiss()
+                            }
+                        }
+
+                        parentMemo != null -> {
+                            viewModel.createComment(parentMemo, content)
+                            onDismiss()
+                        }
+
+                        else -> {
+                            viewModel.createMemo(content, visibility, attachments, location) {
+                                onDismiss()
+                            }
+                        }
+                    }
+                },
+                onUploadFile = { uri, context ->
+                    viewModel.uploadAttachment(uri, context)
+                },
+                onGetLocationName = { lat, lon ->
+                    viewModel.reverseGeocode(lat, lon)
+                },
+                availableTags = uiState.session.userStats?.tagCount?.keys ?: emptySet(),
+                token = uiState.session.token,
+                hostUrl = hostUrl,
+                isPosting = uiState.isPosting,
+                initialContent = effectiveInitialContent,
+                initialVisibility = initialMemo?.visibility ?: initialVisibility
+                ?: parentMemo?.visibility ?: uiState.session.userSettings?.memoVisibility
+                ?: Visibility.PRIVATE,
+                initialAttachments = initialMemo?.attachments ?: initialAttachments,
+                initialUris = if (initialMemo == null) initialUris else emptyList(),
+                initialLocation = initialMemo?.location ?: initialLocation,
+                placeholder = placeholder,
+                autoFocus = true,
+                mode = mode,
+                modifier = Modifier
+                    .widthIn(max = 800.dp)
+                    .fillMaxSize()
+                    .padding(horizontal = 8.dp),
+                onDraftChanged = if (initialMemo == null && parentMemo == null) {
+                    { content, visibility, attachments, location ->
+                        viewModel.saveDraft(content, visibility, attachments, location)
+                    }
+                } else null
+            )
+        }
+    }
+}
+
+@Composable
+fun MemoEditScreen(
+    memo: Memo, onDismiss: () -> Unit, viewModel: MemosViewModel, hostUrl: String
+) {
+    MemoComposerScreen(
+        onDismiss = onDismiss,
+        viewModel = viewModel,
+        hostUrl = hostUrl,
+        title = stringResource(R.string.memo_dialog_edit_title),
+        initialMemo = memo,
+        mode = ComposerMode.UPDATE
+    )
+}

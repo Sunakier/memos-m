@@ -212,7 +212,8 @@ class MemosViewModel(
                 val accountId = account.id
 
                 userMemoManager =
-                    UserMemoListManager(scope = viewModelScope, api = currentApi, filterProvider = {
+                    UserMemoListManager(
+                        scope = viewModelScope, api = currentApi, filterProvider = {
                         val user = _uiState.value.session.currUser
                         val userId = user?.name?.substringAfterLast("/") ?: ""
 
@@ -235,15 +236,16 @@ class MemosViewModel(
                             base
                         }
                     }, pageSizeProvider = { _uiState.value.appSettings.pageSize },
-                    cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
-                        memoCacheRepository.cacheMemos(
-                            accountId, CacheListType.USER, memos
-                        )
-                    }, getCachedData = {
-                        memoCacheRepository.getCachedMemos(
-                            accountId, CacheListType.USER
-                        )
-                    }))
+                        cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
+                            memoCacheRepository.cacheMemos(
+                                accountId, CacheListType.USER, memos
+                            )
+                        }, getCachedData = {
+                            memoCacheRepository.getCachedMemos(
+                                accountId, CacheListType.USER
+                            )
+                        })
+                    )
 
                 exploreMemoManager = ExploreMemoListManager(
                     scope = viewModelScope,
@@ -275,7 +277,10 @@ class MemosViewModel(
                         )
                     })
                 )
-                searchMemoManager = SearchMemoListManager(viewModelScope, currentApi, pageSizeProvider = { _uiState.value.appSettings.pageSize })
+                searchMemoManager = SearchMemoListManager(
+                    viewModelScope,
+                    currentApi,
+                    pageSizeProvider = { _uiState.value.appSettings.pageSize })
                 commentManager = CommentListManager(viewModelScope, currentApi)
                 attachmentManager = AttachmentManager(
                     scope = viewModelScope,

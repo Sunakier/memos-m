@@ -1,5 +1,13 @@
 package org.example.memosm.ui.component
 
+import DeleteConfirmationDialog
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -48,9 +56,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.model.Memo
-import org.example.memosm.ui.component.composer.DeleteConfirmationDialog
-import org.example.memosm.ui.component.composer.MemoComposerDialog
-import org.example.memosm.ui.component.composer.MemoEditDialog
+import org.example.memosm.ui.component.composer.MemoComposerScreen
+import org.example.memosm.ui.component.composer.MemoEditScreen
 import org.example.memosm.ui.component.item.MemoItem
 import org.example.memosm.viewmodel.MemosViewModel
 import org.example.memosm.viewmodel.PaginatedListState
@@ -303,8 +310,22 @@ fun MemoDetailView(
         }
     }
 
-    if (showCommentDialog) {
-        MemoComposerDialog(
+    // Material Expressive easing
+    val enterEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
+    val exitEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
+
+    AnimatedVisibility(
+        visible = showCommentDialog,
+        enter = slideInVertically(
+            animationSpec = tween(400, easing = enterEasing), initialOffsetY = { it }) + fadeIn(
+            animationSpec = tween(400, easing = enterEasing)
+        ),
+        exit = slideOutVertically(
+            animationSpec = tween(200, easing = exitEasing), targetOffsetY = { it }) + fadeOut(
+            animationSpec = tween(200, easing = exitEasing)
+        )
+    ) {
+        MemoComposerScreen(
             onDismiss = { showCommentDialog = false },
             viewModel = viewModel,
             hostUrl = hostUrl,
@@ -314,10 +335,22 @@ fun MemoDetailView(
         )
     }
 
-    memoToEdit?.let { m ->
-        MemoEditDialog(
-            memo = m, onDismiss = { memoToEdit = null }, viewModel = viewModel, hostUrl = hostUrl
+    AnimatedVisibility(
+        visible = memoToEdit != null,
+        enter = slideInVertically(
+            animationSpec = tween(400, easing = enterEasing), initialOffsetY = { it }) + fadeIn(
+            animationSpec = tween(400, easing = enterEasing)
+        ),
+        exit = slideOutVertically(
+            animationSpec = tween(200, easing = exitEasing), targetOffsetY = { it }) + fadeOut(
+            animationSpec = tween(200, easing = exitEasing)
         )
+    ) {
+        memoToEdit?.let { m ->
+            MemoEditScreen(
+                memo = m, onDismiss = { memoToEdit = null }, viewModel = viewModel, hostUrl = hostUrl
+            )
+        }
     }
 
     memoToDelete?.let { m ->

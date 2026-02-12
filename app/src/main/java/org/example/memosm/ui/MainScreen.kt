@@ -3,6 +3,7 @@ package org.example.memosm.ui
 import android.net.Uri
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -70,7 +71,7 @@ import org.example.memosm.model.ShareIntentData
 import org.example.memosm.model.Visibility
 import org.example.memosm.ui.component.LoginDialog
 import org.example.memosm.ui.component.composer.ComposerMode
-import org.example.memosm.ui.component.composer.MemoComposerDialog
+import org.example.memosm.ui.component.composer.MemoComposerScreen
 import org.example.memosm.ui.component.item.media.MemoImage
 import org.example.memosm.ui.component.resolveResourceUrl
 import org.example.memosm.ui.nav.AttachmentsScreen
@@ -200,9 +201,22 @@ fun MainScreen(
         }, onDismiss = { isAddingAccount = false })
     }
 
-    // Share intent composer dialog
-    if (showShareComposerDialog && uiState.session.currUser != null) {
-        MemoComposerDialog(
+    // Share intent composer screen (full-screen with animation)
+    val enterEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
+    val exitEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
+
+    AnimatedVisibility(
+        visible = showShareComposerDialog && uiState.session.currUser != null,
+        enter = slideInVertically(
+            animationSpec = tween(400, easing = enterEasing), initialOffsetY = { it }) + fadeIn(
+            animationSpec = tween(400, easing = enterEasing)
+        ),
+        exit = slideOutVertically(
+            animationSpec = tween(200, easing = exitEasing), targetOffsetY = { it }) + fadeOut(
+            animationSpec = tween(200, easing = exitEasing)
+        )
+    ) {
+        MemoComposerScreen(
             onDismiss = {
                 showShareComposerDialog = false
                 shareText = null

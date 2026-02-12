@@ -70,7 +70,7 @@ import org.example.memosm.ui.component.MemoSearchBar
 import org.example.memosm.ui.component.MemosScaffold
 import org.example.memosm.ui.component.item.DraftsCard
 import org.example.memosm.ui.component.composer.ComposerMode
-import org.example.memosm.ui.component.composer.MemoComposerDialog
+import org.example.memosm.ui.component.composer.MemoComposerScreen
 import org.example.memosm.ui.component.rememberScrollContext
 import org.example.memosm.viewmodel.MemosViewModel
 
@@ -240,8 +240,21 @@ fun MemosScreen(
             })
     }
 
-    // Composer dialog
-    if (showComposerDialog) {
+    // Drafts screen (full-screen)
+    // Material Expressive easing
+    val enterEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
+    val exitEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
+
+    // Composer screen (full-screen with animation)
+    AnimatedVisibility(
+        visible = showComposerDialog, enter = slideInVertically(
+            animationSpec = tween(400, easing = enterEasing), initialOffsetY = { it }) + fadeIn(
+            animationSpec = tween(400, easing = enterEasing)
+        ), exit = slideOutVertically(
+            animationSpec = tween(200, easing = exitEasing), targetOffsetY = { it }) + fadeOut(
+            animationSpec = tween(200, easing = exitEasing)
+        )
+    ) {
         val latestDraft = if (!startFresh) viewModel.getLatestDraft() else null
         val currentDraftId = uiState.draft.currentEditingDraftId
         val draftToLoad = if (!startFresh && currentDraftId != null) {
@@ -252,7 +265,7 @@ fun MemosScreen(
             null
         }
 
-        MemoComposerDialog(
+        MemoComposerScreen(
             onDismiss = {
                 showComposerDialog = false
                 startFresh = false
@@ -260,7 +273,6 @@ fun MemosScreen(
             viewModel = viewModel,
             hostUrl = uiState.session.hostUrl,
             title = stringResource(R.string.memo_composer_fab_new_memo),
-            // Pre-populate with saved draft if available
             initialContent = draftToLoad?.content ?: "",
             initialAttachments = draftToLoad?.attachments ?: emptyList(),
             initialVisibility = draftToLoad?.visibility,
@@ -268,12 +280,6 @@ fun MemosScreen(
             mode = ComposerMode.PUBLISH
         )
     }
-
-    // Drafts screen (full-screen)
-    // Drafts screen (full-screen)
-    // Material Expressive easing
-    val enterEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
-    val exitEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
 
     AnimatedVisibility(
         visible = showDraftsScreen, enter = slideInVertically(

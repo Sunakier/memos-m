@@ -20,7 +20,10 @@ class UserMemoListManager(
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
         val filter = filterProvider()
         val pageSize = pageSizeProvider()
-        Log.d(TAG, "UserMemoListManager fetch: filter=$filter, pageToken=$pageToken, pageSize=$pageSize")
+        Log.d(
+            TAG,
+            "UserMemoListManager fetch: filter=$filter, pageToken=$pageToken, pageSize=$pageSize"
+        )
 
         try {
             val response = api.listMemos(
