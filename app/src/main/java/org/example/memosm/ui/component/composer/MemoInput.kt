@@ -31,6 +31,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -44,11 +46,14 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import kotlin.math.max
+import kotlin.math.min
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import kotlinx.coroutines.delay
 import org.example.memosm.R
 import kotlin.math.roundToInt
+
 
 @Composable
 fun rememberMarkdownLanguageHandler(): MarkdownLanguageHandler {
@@ -124,10 +129,18 @@ fun MemoInput(
         val paddingValues = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
         val textStyle = LocalTextStyle.current
 
+        var boxPositionInWindow by remember { mutableStateOf(IntOffset.Zero) }
+        var boxHeightPx by remember { mutableIntStateOf(0) }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .onGloballyPositioned { coordinates ->
+                    val pos = coordinates.positionInWindow()
+                    boxPositionInWindow = IntOffset(pos.x.roundToInt(), pos.y.roundToInt())
+                    boxHeightPx = coordinates.size.height
+                }
         ) {
             if (contentState.text.isEmpty()) {
                 Text(
@@ -188,9 +201,21 @@ fun MemoInput(
                     )
                 }
 
-//                val effectiveScrollTop =
-//                    if (maxHeightInLines != Int.MAX_VALUE) scrollState.value else 0
                 val effectiveScrollTop = scrollState.value
+
+                // Compute available space below and above the cursor in window coords
+                val cursorBottomInWindow = boxPositionInWindow.y + cursorRect.bottom - effectiveScrollTop
+                val cursorTopInWindow = boxPositionInWindow.y + cursorRect.top - effectiveScrollTop
+                val effectiveWindowBottom = with(density) {
+                    // Use a reasonable estimate; actual window size comes from calculatePosition
+                    // but we need an approximation here for height constraint
+                    (boxPositionInWindow.y + boxHeightPx + with(density) { 12.dp.roundToPx() })
+                }
+                val spaceBelow = max(0, effectiveWindowBottom - cursorBottomInWindow - with(density) { 12.dp.roundToPx() })
+                val spaceAbove = max(0, cursorTopInWindow - with(density) { 4.dp.roundToPx() })
+                val popupMaxHeightPx = max(spaceBelow, spaceAbove)
+                val popupMaxHeightDp = with(density) { popupMaxHeightPx.toDp() }
+                val constrainedMaxHeight = min(popupMaxHeightDp.value, 200f).dp
 
                 val popupPositionProvider =
                     remember(cursorRect, imeBottom, density, effectiveScrollTop) {
@@ -208,7 +233,7 @@ fun MemoInput(
                     Surface(
                         modifier = Modifier
                             .widthIn(min = 100.dp, max = 200.dp)
-                            .heightIn(max = 200.dp),
+                            .heightIn(max = constrainedMaxHeight),
                         shape = RoundedCornerShape(8.dp),
                         tonalElevation = 3.dp,
                         shadowElevation = 3.dp,
@@ -273,14 +298,23 @@ private class CursorPopupPositionProvider(
 
         val isSpaceBelow = (targetYBelow + popupContentSize.height) <= effectiveWindowBottom
         val isSpaceAbove = targetYAbove >= 0
-
         val y = when {
             isSpaceBelow -> targetYBelow
             isSpaceAbove -> targetYAbove
-            else -> targetYBelow.coerceIn(
-                0,
-                (effectiveWindowBottom - popupContentSize.height).coerceAtLeast(0)
-            )
+            else -> {
+                // Neither side fits fully. Pick the side with more room.
+                val cursorBottomInWindow = anchorBounds.top + cursorRect.bottom - scrollTop
+                val cursorTopInWindow = anchorBounds.top + cursorRect.top - scrollTop
+                val spaceBelow = effectiveWindowBottom - cursorBottomInWindow
+                val spaceAbove = cursorTopInWindow
+                if (spaceBelow >= spaceAbove) {
+                    // More space below cursor: place below
+                    targetYBelow
+                } else {
+                    // More space above cursor: place above, clamp to screen top
+                    targetYAbove.coerceAtLeast(0)
+                }
+            }
         }
 
         return IntOffset(targetX, y)
