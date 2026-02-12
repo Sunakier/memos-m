@@ -5,13 +5,11 @@
 
 A feature-rich Android client for Memos.
 
-
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/yamada-sexta/memos-m/canary-build.yml?style=flat-square)
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/yamada-sexta/memos-m/total?style=flat-square)
 ![GitHub License](https://img.shields.io/github/license/yamada-sexta/memos-m?style=flat-square)
 ![GitHub Repo stars](https://img.shields.io/github/stars/yamada-sexta/memos-m?style=flat-square)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/yamada-sexta/memos-m?style=flat-square)
-
 
 </div>
 
