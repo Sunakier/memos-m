@@ -38,6 +38,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
@@ -207,11 +208,11 @@ fun MemoInput(
                 // Compute available space below and above the cursor in window coords
                 val cursorBottomInWindow = boxPositionInWindow.y + cursorRect.bottom - effectiveScrollTop
                 val cursorTopInWindow = boxPositionInWindow.y + cursorRect.top - effectiveScrollTop
-                val effectiveWindowBottom = with(density) {
-                    // Use a reasonable estimate; actual window size comes from calculatePosition
-                    // but we need an approximation here for height constraint
-                    (boxPositionInWindow.y + boxHeightPx + with(density) { 12.dp.roundToPx() })
-                }
+
+                val configuration = LocalConfiguration.current
+                val screenHeight = with(density) { configuration.screenHeightDp.dp.roundToPx() }
+                val effectiveWindowBottom = screenHeight - imeBottom
+
                 val spaceBelow = max(0, effectiveWindowBottom - cursorBottomInWindow - with(density) { 12.dp.roundToPx() })
                 val spaceAbove = max(0, cursorTopInWindow - with(density) { 4.dp.roundToPx() })
                 val popupMaxHeightPx = max(spaceBelow, spaceAbove)
@@ -305,7 +306,7 @@ private class CursorPopupPositionProvider(
         val targetYAbove =
             anchorBounds.top + cursorRect.top - scrollTop - popupContentSize.height + paddingAbove
 
-        val effectiveWindowBottom = windowSize.height - imeBottom
+        val effectiveWindowBottom = windowSize.height
 
         val isSpaceBelow = (targetYBelow + popupContentSize.height) <= effectiveWindowBottom
         val isSpaceAbove = targetYAbove >= 0
