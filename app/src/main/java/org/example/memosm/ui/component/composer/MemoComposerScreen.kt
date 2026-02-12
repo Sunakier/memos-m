@@ -15,7 +15,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -45,7 +44,6 @@ fun MemoComposerScreen(
     title: String,
     initialMemo: Memo? = null,
     parentMemo: Memo? = null,
-    placeholder: String = stringResource(R.string.memo_composer_placeholder),
     initialContent: String = "",
     initialUris: List<Uri> = emptyList(),
     initialAttachments: List<Attachment> = emptyList(),
@@ -130,9 +128,6 @@ fun MemoComposerScreen(
                 onUploadFile = { uri, context ->
                     viewModel.uploadAttachment(uri, context)
                 },
-                onGetLocationName = { lat, lon ->
-                    viewModel.reverseGeocode(lat, lon)
-                },
                 availableTags = uiState.session.userStats?.tagCount?.keys ?: emptySet(),
                 token = uiState.session.token,
                 hostUrl = hostUrl,
@@ -144,8 +139,6 @@ fun MemoComposerScreen(
                 initialAttachments = initialMemo?.attachments ?: initialAttachments,
                 initialUris = if (initialMemo == null) initialUris else emptyList(),
                 initialLocation = initialMemo?.location ?: initialLocation,
-                placeholder = placeholder,
-                autoFocus = true,
                 mode = mode,
                 modifier = Modifier
                     .widthIn(max = 800.dp)

@@ -43,9 +43,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import kotlinx.coroutines.delay
@@ -160,7 +158,8 @@ fun MemoInput(
             LaunchedEffect(contentState.selection, contentState.text) {
 //                if (maxHeightInLines == Int.MAX_VALUE) return@LaunchedEffect
                 val layout = textLayoutResult ?: return@LaunchedEffect
-                val cursorIndex = contentState.selection.start.coerceIn(0, layout.layoutInput.text.length)
+                val cursorIndex =
+                    contentState.selection.start.coerceIn(0, layout.layoutInput.text.length)
                 val cursorRect = layout.getCursorRect(cursorIndex)
                 val cursorBottom = cursorRect.bottom.roundToInt()
                 val cursorTop = cursorRect.top.roundToInt()
@@ -278,7 +277,10 @@ private class CursorPopupPositionProvider(
         val y = when {
             isSpaceBelow -> targetYBelow
             isSpaceAbove -> targetYAbove
-            else -> targetYBelow.coerceIn(0, (effectiveWindowBottom - popupContentSize.height).coerceAtLeast(0))
+            else -> targetYBelow.coerceIn(
+                0,
+                (effectiveWindowBottom - popupContentSize.height).coerceAtLeast(0)
+            )
         }
 
         return IntOffset(targetX, y)

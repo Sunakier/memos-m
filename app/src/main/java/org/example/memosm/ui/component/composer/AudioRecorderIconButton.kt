@@ -1,4 +1,3 @@
-
 package org.example.memosm.ui.component.composer
 
 import android.Manifest
@@ -11,6 +10,9 @@ import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.outlined.MicNone
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -19,20 +21,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.outlined.MicNone
 import androidx.core.net.toUri
-import androidx.compose.foundation.layout.size
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.example.memosm.R
 import org.example.memosm.data.uriToBase64Attachment
-import java.io.File
 import org.example.memosm.model.Attachment
+import java.io.File
 
 class AudioRecorder(
     private val context: Context,
@@ -126,6 +124,8 @@ fun rememberAudioRecorder(
         AudioRecorder(context, scope, onRecordingFinished)
     }
 
+    val toastText = stringResource(R.string.memo_composer_error_microphone_permission)
+
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -134,7 +134,7 @@ fun rememberAudioRecorder(
         } else {
             Toast.makeText(
                 context,
-                context.getString(R.string.memo_composer_error_microphone_permission),
+                toastText,
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -161,7 +161,7 @@ fun AudioRecorderIconButton(
 
     androidx.compose.material3.IconButton(
         onClick = {
-             if (isRecording) {
+            if (isRecording) {
                 recorder.stopRecording()
             } else {
                 permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
@@ -170,13 +170,14 @@ fun AudioRecorderIconButton(
         enabled = enabled,
         modifier = modifier
     ) {
-         androidx.compose.material3.Icon(
+        androidx.compose.material3.Icon(
             imageVector = if (isRecording) androidx.compose.material.icons.Icons.Default.Mic else androidx.compose.material.icons.Icons.Outlined.MicNone,
-            contentDescription = androidx.compose.ui.res.stringResource(R.string.memo_composer_error_microphone_permission).removeSuffix(
-                " required"
-            ),
+            contentDescription = androidx.compose.ui.res.stringResource(R.string.memo_composer_error_microphone_permission)
+                .removeSuffix(
+                    " required"
+                ),
             tint = if (isRecording) androidx.compose.material3.MaterialTheme.colorScheme.error else androidx.compose.material3.LocalContentColor.current,
-            modifier = androidx.compose.ui.Modifier.size(iconSize)
+            modifier = Modifier.size(iconSize)
         )
     }
 }

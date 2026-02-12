@@ -214,28 +214,28 @@ class MemosViewModel(
                 userMemoManager =
                     UserMemoListManager(
                         scope = viewModelScope, api = currentApi, filterProvider = {
-                        val user = _uiState.value.session.currUser
-                        val userId = user?.name?.substringAfterLast("/") ?: ""
+                            val user = _uiState.value.session.currUser
+                            val userId = user?.name?.substringAfterLast("/") ?: ""
 
-                        // Use creator_id and row_status
-                        val base = if (userId.isNotEmpty()) {
-                            "creator_id == $userId"
-                        } else {
-                            ""
-                        }
+                            // Use creator_id and row_status
+                            val base = if (userId.isNotEmpty()) {
+                                "creator_id == $userId"
+                            } else {
+                                ""
+                            }
 
-                        val shortcut = _uiState.value.userMemoList.selectedShortcut
-                        val hashtag = _uiState.value.userMemoList.selectedHashtag
+                            val shortcut = _uiState.value.userMemoList.selectedShortcut
+                            val hashtag = _uiState.value.userMemoList.selectedHashtag
 
-                        if (shortcut != null && !shortcut.filter.isNullOrBlank()) {
-                            "$base && ${shortcut.filter}"
-                        } else if (hashtag != null) {
-                            val tagName = hashtag.removePrefix("#")
-                            "$base && tag in [\"$tagName\"]"
-                        } else {
-                            base
-                        }
-                    }, pageSizeProvider = { _uiState.value.appSettings.pageSize },
+                            if (shortcut != null && !shortcut.filter.isNullOrBlank()) {
+                                "$base && ${shortcut.filter}"
+                            } else if (hashtag != null) {
+                                val tagName = hashtag.removePrefix("#")
+                                "$base && tag in [\"$tagName\"]"
+                            } else {
+                                base
+                            }
+                        }, pageSizeProvider = { _uiState.value.appSettings.pageSize },
                         cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
                             memoCacheRepository.cacheMemos(
                                 accountId, CacheListType.USER, memos

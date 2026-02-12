@@ -331,7 +331,6 @@ fun MemoDetailView(
             hostUrl = hostUrl,
             title = stringResource(R.string.memo_detail_add_comment),
             parentMemo = memo,
-            placeholder = stringResource(R.string.memo_detail_comment_placeholder)
         )
     }
 
@@ -348,7 +347,10 @@ fun MemoDetailView(
     ) {
         memoToEdit?.let { m ->
             MemoEditScreen(
-                memo = m, onDismiss = { memoToEdit = null }, viewModel = viewModel, hostUrl = hostUrl
+                memo = m,
+                onDismiss = { memoToEdit = null },
+                viewModel = viewModel,
+                hostUrl = hostUrl
             )
         }
     }

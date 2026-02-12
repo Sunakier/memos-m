@@ -2,7 +2,6 @@ package org.example.memosm.data.cache
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.google.gson.Gson
 import org.example.memosm.model.Memo
 
 /**

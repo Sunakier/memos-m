@@ -1,69 +1,23 @@
 package org.example.memosm.ui.component.composer
 
-import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.PackageManager
-import android.location.LocationListener
-import android.location.LocationManager
-import android.media.MediaRecorder
 import android.net.Uri
-import android.os.Build
-import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.outlined.ArrowDropDown
-import androidx.compose.material.icons.outlined.ArrowDropUp
-import androidx.compose.material.icons.outlined.AttachFile
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.MicNone
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.InputChip
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -71,7 +25,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
@@ -80,17 +33,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
-import androidx.core.content.ContextCompat
-import androidx.core.net.toUri
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
-import com.google.android.gms.tasks.CancellationTokenSource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.example.memosm.R
@@ -99,13 +44,8 @@ import org.example.memosm.data.uriToBase64Attachment
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Location
 import org.example.memosm.model.Visibility
-import org.example.memosm.ui.VisibilityIcon
-import org.example.memosm.ui.component.item.AttachmentCard
-import org.example.memosm.ui.component.item.AttachmentCompactMode
 import org.example.memosm.ui.findActivity
 import org.example.memosm.ui.getFileSize
-import org.example.memosm.ui.getVisibilityLabel
-import java.io.File
 
 
 /**
@@ -128,7 +68,6 @@ fun MemoComposer(
     modifier: Modifier = Modifier,
     onPublish: (String, Visibility, List<Attachment>, Location?) -> Unit,
     onUploadFile: suspend (Uri, Context) -> Attachment?,
-    onGetLocationName: (suspend (Double, Double) -> String?)? = null,
     availableTags: Set<String>,
     token: String,
     hostUrl: String,
@@ -139,12 +78,15 @@ fun MemoComposer(
     initialAttachments: List<Attachment> = emptyList(),
     initialUris: List<Uri> = emptyList(),
     initialLocation: Location? = null,
-    placeholder: String = stringResource(R.string.memo_composer_placeholder),
-    autoFocus: Boolean = false,
     onDraftChanged: ((String, Visibility, List<Attachment>, Location?) -> Unit)? = null
 ) {
+    // Depending on the Composer Mode there will be different placeholder
+    val placeholder = when (mode) {
+        ComposerMode.PUBLISH -> stringResource(R.string.memo_composer_placeholder)
+        ComposerMode.UPDATE -> stringResource(R.string.memo_composer_placeholder)
+        ComposerMode.COMMENT -> stringResource(R.string.memo_detail_comment_placeholder)
+    }
     val context = LocalContext.current
-    val resources = LocalResources.current
 
     // Changed to TextFieldValue for VisualTransformation support
     var contentState by remember {
@@ -169,21 +111,12 @@ fun MemoComposer(
 
     var draftAttachments by draftAttachmentsState
 
-    var expanded by remember { mutableStateOf(false) }
-    var showLocationEditDialog by remember { mutableStateOf(false) }
-
-    var isUploadingCount by remember { mutableIntStateOf(0) }
     var uploadingUris by remember { mutableStateOf(setOf<Uri>()) }
-    var isFetchingLocation by remember { mutableStateOf(false) }
-    var showActionOverflowMenu by remember { mutableStateOf(false) }
+    var isUploadingCount by remember { mutableIntStateOf(0) }
+    var showLocationEditDialog by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
-
-    val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
-
-
-    // Audio recording logic moved to AudioRecorderIconButton
 
     val pickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -208,131 +141,6 @@ fun MemoComposer(
         }
     }
 
-    val locationPlaceHolder = stringResource(R.string.memo_composer_location_default_placeholder)
-
-    @SuppressLint("MissingPermission")
-    fun fetchLocation() {
-        isFetchingLocation = true
-
-        fun handleAndroidLocation(androidLoc: android.location.Location?) {
-            if (androidLoc != null) {
-                var loc = Location(
-                    latitude = androidLoc.latitude,
-                    longitude = androidLoc.longitude,
-                    placeholder = locationPlaceHolder
-                )
-
-                // Fetch address name
-                val fetcher = onGetLocationName
-                if (fetcher != null) {
-                    scope.launch {
-                        try {
-                            val name = fetcher(androidLoc.latitude, androidLoc.longitude)
-                            if (name != null) {
-                                loc = loc.copy(placeholder = name)
-                            }
-                        } catch (e: Exception) {
-                            Log.e("MemoComposer", "Error in reverse geocoding callback", e)
-                        } finally {
-                            location = loc
-                            isFetchingLocation = false
-                        }
-                    }
-                } else {
-                    location = loc
-                    isFetchingLocation = false
-                }
-            } else {
-                isFetchingLocation = false
-            }
-        }
-
-        fun fetchFallback() {
-            try {
-                val locationManager =
-                    context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-
-
-                // Select provider explicitly instead of using Criteria
-                val provider = when {
-                    // 1. Try Fused: Only valid on Android 12 (S) + and if enabled
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && locationManager.isProviderEnabled(
-                        LocationManager.FUSED_PROVIDER
-                    ) -> {
-                        LocationManager.FUSED_PROVIDER
-                    }
-
-                    // 2. Fallback to Network (Faster, battery efficient)
-                    locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> {
-                        LocationManager.NETWORK_PROVIDER
-                    }
-
-                    // 3. Fallback to GPS (Higher accuracy, slower)
-                    locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) -> {
-                        LocationManager.GPS_PROVIDER
-                    }
-
-                    else -> null
-                }
-
-                if (provider != null) {
-                    // Try last known location first as a quick fallback
-                    val lastKnown = locationManager.getLastKnownLocation(provider)
-                    if (lastKnown != null) {
-                        handleAndroidLocation(lastKnown)
-                        return
-                    }
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        locationManager.getCurrentLocation(
-                            provider, null, ContextCompat.getMainExecutor(context)
-                        ) { loc -> handleAndroidLocation(loc) }
-                    } else {
-                        @Suppress("DEPRECATION") locationManager.requestSingleUpdate(
-                            provider, object : LocationListener {
-                                override fun onLocationChanged(l: android.location.Location) {
-                                    handleAndroidLocation(l)
-                                }
-
-                                @Deprecated("Deprecated in Java")
-                                override fun onStatusChanged(p: String?, s: Int, e: Bundle?) {
-                                }
-
-                                override fun onProviderEnabled(p: String) {}
-                                override fun onProviderDisabled(p: String) {}
-                            }, context.mainLooper
-                        )
-                    }
-                } else {
-                    isFetchingLocation = false
-                }
-            } catch (e: Exception) {
-                Log.e("MemoComposer", "Error in fallback location fetch", e)
-                isFetchingLocation = false
-            }
-        }
-
-        val cancellationTokenSource = CancellationTokenSource()
-        fusedLocationClient.getCurrentLocation(
-            Priority.PRIORITY_BALANCED_POWER_ACCURACY, cancellationTokenSource.token
-        ).addOnSuccessListener { androidLoc ->
-            if (androidLoc != null) {
-                handleAndroidLocation(androidLoc)
-            } else {
-                fetchFallback()
-            }
-        }.addOnFailureListener {
-            fetchFallback()
-        }
-    }
-
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true || permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
-            fetchLocation()
-        }
-    }
     // TRIGGER CACHE UPDATE when local changes occur
     // Debounced to avoid blocking UI on every keystroke
     // Only saves attachments that have already been converted to base64 (non-null)
@@ -423,20 +231,13 @@ fun MemoComposer(
                 else Color.Transparent, RoundedCornerShape(8.dp)
             )
     ) {
-        val showVisibilityLabel = componentWidth > 480.dp || componentWidth == 0.dp
-        val showPublishLabel = componentWidth > 410.dp || componentWidth == 0.dp
-        val isCompact = componentWidth < 380.dp && componentWidth != 0.dp
-
-        val actionIconSize = if (isCompact) 20.dp else 24.dp
-        val actionButtonSize = if (isCompact) 36.dp else 48.dp
-
         MemoInput(
             contentState = contentState,
             onContentChange = { contentState = it },
             placeholder = placeholder,
             availableTags = availableTags,
             enabled = !isPosting,
-            autoFocus = autoFocus,
+            autoFocus = true,
             modifier = Modifier.weight(1f),
         )
 
@@ -446,17 +247,14 @@ fun MemoComposer(
             uploadingUris = uploadingUris,
             location = location,
             isPosting = isPosting,
-            isFetchingLocation = isFetchingLocation,
             visibility = visibility,
             mode = mode,
             componentWidth = componentWidth,
             pickerLauncher = pickerLauncher,
-            locationPermissionLauncher = locationPermissionLauncher,
             token = token,
             hostUrl = hostUrl,
             contentStateText = contentState.text,
             isUploadingCount = isUploadingCount,
-            onFetchLocation = { fetchLocation() },
             onRemoveLocation = { location = null },
             onLocationClick = { showLocationEditDialog = true },
             onVisibilityChange = { visibility = it },
@@ -468,13 +266,16 @@ fun MemoComposer(
             onRecordingFinished = { uri, attachment ->
                 // Add immediately for display if attachment is null (just Uri)
                 // Or update if attachment is ready
-                if (attachment == null) {
-                    draftAttachments = draftAttachments + (uri to null)
+                draftAttachments = if (attachment == null) {
+                    draftAttachments + (uri to null)
                 } else {
-                     draftAttachments = draftAttachments.map { (u, a) ->
+                    draftAttachments.map { (u, a) ->
                         if (u == uri && a == null) uri to attachment else u to a
                     }
                 }
+            },
+            onLocationFounded = { loc ->
+                location = loc
             },
             onPublishClick = {
                 scope.launch {
@@ -490,17 +291,16 @@ fun MemoComposer(
                         isUploadingCount++
 
                         // If it's a restored draft, we first need to convert it to a temp Uri
-                        val uploadUri =
-                            if (uri == Uri.EMPTY && attachment != null) {
-                                base64ToTempUri(
-                                    attachment.content ?: "",
-                                    attachment.filename,
-                                    attachment.type,
-                                    context
-                                )
-                            } else {
-                                uri
-                            }
+                        val uploadUri = if (uri == Uri.EMPTY && attachment != null) {
+                            base64ToTempUri(
+                                attachment.content ?: "",
+                                attachment.filename,
+                                attachment.type,
+                                context
+                            )
+                        } else {
+                            uri
+                        }
 
                         if (uploadUri != null) {
                             uploadingUris = uploadingUris + uploadUri
@@ -522,17 +322,16 @@ fun MemoComposer(
                     // Now collect all valid attachments:
                     // 1. Items that were already valid (non-null attachment with name)
                     // 2. Newly uploaded items are already swapped into draftAttachments by the loop above,
-                    //    OR added to uploadedAttachments if we want to be safe, but the loop upates draftAttachments.
+                    //    OR added to uploadedAttachments if we want to be safe, but the loop updates draftAttachments.
                     // Let's just grab everything from draftAttachments that has a valid server-side attachment (name != null)
-                    val finalAttachments = draftAttachments.mapNotNull { it.second }
-                        .filter { it.name != null }
+                    val finalAttachments =
+                        draftAttachments.mapNotNull { it.second }.filter { it.name != null }
 
                     onPublish(
                         contentState.text, visibility, finalAttachments, location
                     )
                 }
-            }
-        )
+            })
     }
 
     if (showLocationEditDialog && location != null) {

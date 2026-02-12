@@ -1,9 +1,5 @@
-
 package org.example.memosm.ui.component.composer
 
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.compose.foundation.background
@@ -25,8 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.ArrowDropUp
 import androidx.compose.material.icons.outlined.AttachFile
@@ -34,13 +29,14 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Place
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
@@ -62,7 +58,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.core.content.ContextCompat
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Location
@@ -79,25 +74,24 @@ fun MemoComposerBottomBar(
     uploadingUris: Set<Uri>,
     location: Location?,
     isPosting: Boolean,
-    isFetchingLocation: Boolean,
     visibility: Visibility,
     mode: ComposerMode,
     componentWidth: Dp,
     pickerLauncher: ManagedActivityResultLauncher<String, List<Uri>>,
-    locationPermissionLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
     token: String,
     hostUrl: String,
     contentStateText: String,
     isUploadingCount: Int,
-    onFetchLocation: () -> Unit,
+
     onRemoveLocation: () -> Unit,
     onLocationClick: () -> Unit,
     onVisibilityChange: (Visibility) -> Unit,
     onPublishClick: () -> Unit,
     onRemoveAttachment: (Uri, Attachment?) -> Unit,
     onRecordingFinished: (Uri, Attachment?) -> Unit,
+    onLocationFounded: (Location) -> Unit,
 ) {
-    val context = LocalContext.current
+    LocalContext.current
     var showActionOverflowMenu by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
 
@@ -113,18 +107,18 @@ fun MemoComposerBottomBar(
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.Bottom // Align bottom to keep inputs aligned? Or center? usually bottom for chat bars.
+        verticalAlignment = Alignment.CenterVertically
     ) {
         // "Everything else" Card
         Card(
             modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(24.dp),
+            shape = CircleShape,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
-            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
                 // Attachments List
                 if (draftAttachments.isNotEmpty()) {
                     LazyRow(
@@ -214,9 +208,9 @@ fun MemoComposerBottomBar(
                             )
                         })
                 }
-                
+
                 if (draftAttachments.isNotEmpty() || location != null) {
-                     Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
 
                 // Actions Row
@@ -230,7 +224,7 @@ fun MemoComposerBottomBar(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (useOverflowMenu) {
-                             // Show overflow menu button
+                            // Show overflow menu button
                             Box {
                                 IconButton(
                                     onClick = { showActionOverflowMenu = true },
@@ -249,35 +243,35 @@ fun MemoComposerBottomBar(
                                     onDismissRequest = { showActionOverflowMenu = false }) {
                                     DropdownMenuItem(
                                         text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.AttachFile,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Text(stringResource(R.string.memo_composer_attach_file))
-                                        }
-                                    }, onClick = {
-                                        showActionOverflowMenu = false
-                                        pickerLauncher.launch("*/*")
-                                    }, enabled = !isPosting
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.AttachFile,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Text(stringResource(R.string.memo_composer_attach_file))
+                                            }
+                                        }, onClick = {
+                                            showActionOverflowMenu = false
+                                            pickerLauncher.launch("*/*")
+                                        }, enabled = !isPosting
                                     )
                                     DropdownMenuItem(
                                         text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Image,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Text(stringResource(R.string.memo_composer_add_image))
-                                        }
-                                    }, onClick = {
-                                        showActionOverflowMenu = false
-                                        pickerLauncher.launch("image/*")
-                                    }, enabled = !isPosting
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Image,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Text(stringResource(R.string.memo_composer_add_image))
+                                            }
+                                        }, onClick = {
+                                            showActionOverflowMenu = false
+                                            pickerLauncher.launch("image/*")
+                                        }, enabled = !isPosting
                                     )
                                     DropdownMenuItem(
                                         text = {
@@ -307,43 +301,21 @@ fun MemoComposerBottomBar(
                                     )
                                     DropdownMenuItem(
                                         text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            if (isFetchingLocation) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(20.dp),
-                                                    strokeWidth = 2.dp
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                LocationIconButton(
+                                                    onLocationFounded = onLocationFounded,
+                                                    enabled = !isPosting && location == null,
+                                                    iconSize = 20.dp,
+                                                    location = location
                                                 )
-                                            } else {
-                                                Icon(
-                                                    imageVector = if (location != null) Icons.Default.Place else Icons.Outlined.Place,
-                                                    contentDescription = null,
-                                                    tint = if (location != null) MaterialTheme.colorScheme.primary else LocalContentColor.current,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Text(stringResource(R.string.memo_composer_add_location))
                                             }
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Text(stringResource(R.string.memo_composer_add_location))
-                                        }
-                                    }, onClick = {
-                                        showActionOverflowMenu = false
-                                        val hasCoarse = ContextCompat.checkSelfPermission(
-                                            context, Manifest.permission.ACCESS_COARSE_LOCATION
-                                        ) == PackageManager.PERMISSION_GRANTED
-                                        val hasFine = ContextCompat.checkSelfPermission(
-                                            context, Manifest.permission.ACCESS_FINE_LOCATION
-                                        ) == PackageManager.PERMISSION_GRANTED
-
-                                        if (hasCoarse || hasFine) {
-                                            onFetchLocation()
-                                        } else {
-                                            locationPermissionLauncher.launch(
-                                                arrayOf(
-                                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                                    Manifest.permission.ACCESS_COARSE_LOCATION
-                                                )
-                                            )
-                                        }
-                                    }, enabled = !isPosting && !isFetchingLocation
+                                        }, onClick = {
+                                            showActionOverflowMenu = false
+                                            // Same interaction issue as AudioRecorderIconButton.
+                                            // The button handles the click.
+                                        }, enabled = !isPosting && location == null
                                     )
                                 }
                             }
@@ -377,42 +349,13 @@ fun MemoComposerBottomBar(
                                 iconSize = actionIconSize,
                                 onRecordingFinished = onRecordingFinished
                             )
-                            IconButton(
-                                onClick = {
-                                    val hasCoarse = ContextCompat.checkSelfPermission(
-                                        context, Manifest.permission.ACCESS_COARSE_LOCATION
-                                    ) == PackageManager.PERMISSION_GRANTED
-                                    val hasFine = ContextCompat.checkSelfPermission(
-                                        context, Manifest.permission.ACCESS_FINE_LOCATION
-                                    ) == PackageManager.PERMISSION_GRANTED
-
-                                    if (hasCoarse || hasFine) {
-                                        onFetchLocation()
-                                    } else {
-                                        locationPermissionLauncher.launch(
-                                            arrayOf(
-                                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                                Manifest.permission.ACCESS_COARSE_LOCATION
-                                            )
-                                        )
-                                    }
-                                },
-                                enabled = !isPosting && !isFetchingLocation,
-                                modifier = Modifier.size(actionButtonSize)
-                            ) {
-                                if (isFetchingLocation) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(actionIconSize), strokeWidth = 2.dp
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = if (location != null) Icons.Default.Place else Icons.Outlined.Place,
-                                        contentDescription = stringResource(R.string.memo_composer_add_location),
-                                        tint = if (location != null) MaterialTheme.colorScheme.primary else LocalContentColor.current,
-                                        modifier = Modifier.size(actionIconSize)
-                                    )
-                                }
-                            }
+                            LocationIconButton(
+                                enabled = !isPosting && location == null,
+                                modifier = Modifier.size(actionButtonSize),
+                                iconSize = actionIconSize,
+                                location = location,
+                                onLocationFounded = onLocationFounded
+                            )
                         }
                     } // End Left Actions Row
 
@@ -462,68 +405,55 @@ fun MemoComposerBottomBar(
             } // End Column in Tools Card
         } // End Tools Card
 
-        // Publish Button Card
-        Card(
-            shape = RoundedCornerShape(24.dp), // Match the tools card radius or make it circle? "publish button will be on a different card".
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer // Distinct color?
-            ),
-             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-             val label = when (mode) {
-                ComposerMode.PUBLISH -> stringResource(R.string.memo_publish)
-                ComposerMode.UPDATE -> stringResource(R.string.memo_action_update)
-                ComposerMode.COMMENT -> stringResource(R.string.memo_action_post)
-            }
+        // Publish FAB
+        val label = when (mode) {
+            ComposerMode.PUBLISH -> stringResource(R.string.memo_publish)
+            ComposerMode.UPDATE -> stringResource(R.string.memo_action_update)
+            ComposerMode.COMMENT -> stringResource(R.string.memo_action_post)
+        }
 
-            // Using TextButton or Button inside the Card?
-            // Actually, if the Card is the container, I can just put the content (Icon + Text) inside a clickable layout or use a Button with transparent background.
-            // Or just put the Button itself here without a card wrapper if the Button styles match.
-            // But Button has its own elevation/shape. The user asked for a "different card".
-            // If I put a Button inside a Card, I get double elevation/background.
-            // I'll make the Card clickable or use a filled Button that *looks* like a card.
-            // But "Publish button ON a different card" implies Card > Button.
-            // I will use a Box inside the Card that is clickable.
-            
-            // Wait, existing code uses a Button. Button IS a Surface/Card conceptually.
-            // If I just place the Button outside the main card, it is "on a different card" (its own surface).
-            // But maybe the user wants a visual "card" container.
-            // I'll stick to a Button but maybe style it to look "more round"? Default material 3 button is fully rounded (StadiumShape).
-            // "Publish button will be on a different card" might imply a container for the button?
-            // "everything else will be in a more round card" implies the tools are grouped.
-            // So:
-            // [ (Tools) ]  [ (Publish) ]
-            // Tools in Card. Publish in... Card? Or just Button?
-            // If checking the image description "like this", it usually means a small floating toolbar.
-            // I'll put the Button in a Box or just use the Button directly.
-            // BUT, `Button` has `shape`.
-            // I'll use `Button` directly but ensure it has the same height/alignment.
-            
-            Button(
+        if (showPublishLabel) {
+            ExtendedFloatingActionButton(
                 onClick = onPublishClick,
-                enabled = (contentStateText.isNotBlank() || draftAttachments.isNotEmpty()) && !isPosting && isUploadingCount == 0,
-                contentPadding = if (showPublishLabel) ButtonDefaults.ContentPadding else PaddingValues(
-                    horizontal = if (isCompact) 8.dp else 12.dp
-                ),
-                shape = RoundedCornerShape(24.dp), // "More round"
-                modifier = if (isCompact) Modifier.height(actionButtonSize) else Modifier
+                icon = {
+                    if (isPosting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = LocalContentColor.current,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.Send,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                },
+                text = { Text(text = label) },
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                expanded = true
+            )
+        } else {
+            FloatingActionButton(
+                onClick = onPublishClick,
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier
             ) {
                 if (isPosting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(actionIconSize),
+                        modifier = Modifier.size(24.dp),
                         color = LocalContentColor.current,
                         strokeWidth = 2.dp
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = stringResource(R.string.memo_publish),
-                        modifier = Modifier.size(actionIconSize)
+                        imageVector = Icons.AutoMirrored.Outlined.Send,
+                        contentDescription = label,
+                        modifier = Modifier.size(24.dp)
                     )
-                }
-                if (showPublishLabel) {
-                    Spacer(modifier = Modifier.width(if (isCompact) 4.dp else 8.dp))
-                    Text(label)
                 }
             }
         }
