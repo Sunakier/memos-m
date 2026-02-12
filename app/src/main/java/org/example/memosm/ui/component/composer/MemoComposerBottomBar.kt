@@ -52,12 +52,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.zIndex
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
@@ -103,20 +106,24 @@ fun MemoComposerBottomBar(
     val actionIconSize = if (isCompact) 20.dp else 24.dp
     val actionButtonSize = if (isCompact) 36.dp else 48.dp
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+
+    val defaultElevation = 4.dp
+    val pressedElevation = 8.dp
+
+
+    Row(modifier = modifier
+        .fillMaxWidth()
+        .focusProperties { canFocus = false }
+        .padding(horizontal = 8.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+        verticalAlignment = Alignment.CenterVertically) {
         // "Everything else" Card — pill when empty, rounded card when content is present
         val hasContent = draftAttachments.isNotEmpty() || location != null
         val cardShape = if (hasContent) RoundedCornerShape(28.dp) else CircleShape
         Card(
             modifier = Modifier.weight(1f), shape = cardShape, colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            ), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ), elevation = CardDefaults.cardElevation(defaultElevation = defaultElevation)
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
                 // Attachments List
@@ -235,7 +242,9 @@ fun MemoComposerBottomBar(
 
                                 DropdownMenu(
                                     expanded = showActionOverflowMenu,
-                                    onDismissRequest = { showActionOverflowMenu = false }) {
+                                    onDismissRequest = { showActionOverflowMenu = false },
+                                    properties = PopupProperties(focusable = false)
+                                ) {
                                     DropdownMenuItem(
                                         text = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -376,23 +385,28 @@ fun MemoComposerBottomBar(
                                 }
                             }
                             DropdownMenu(
-                                expanded = expanded, onDismissRequest = { expanded = false }) {
-                                Visibility.entries.forEach { option ->
-                                    DropdownMenuItem(text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            VisibilityIcon(
-                                                visibility = option,
-                                                modifier = Modifier.size(18.dp),
-                                                outlined = true
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(text = getVisibilityLabel(option))
-                                        }
-                                    }, onClick = {
-                                        onVisibilityChange(option)
-                                        expanded = false
-                                    })
-                                }
+                                expanded = expanded,
+                                onDismissRequest = { expanded = false },
+                                properties = PopupProperties(focusable = false),
+                                offset = DpOffset(0.dp, 48.dp)
+                            ) {
+                                Visibility.entries.filter { it != Visibility.VISIBILITY_UNSPECIFIED }
+                                    .forEach { option ->
+                                        DropdownMenuItem(text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                VisibilityIcon(
+                                                    visibility = option,
+                                                    modifier = Modifier.size(18.dp),
+                                                    outlined = true
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(text = getVisibilityLabel(option))
+                                            }
+                                        }, onClick = {
+                                            onVisibilityChange(option)
+                                            expanded = false
+                                        })
+                                    }
                             }
                         }
                     }
@@ -406,9 +420,6 @@ fun MemoComposerBottomBar(
             ComposerMode.UPDATE -> stringResource(R.string.memo_action_update)
             ComposerMode.COMMENT -> stringResource(R.string.memo_action_post)
         }
-
-        val defaultElevation = 4.dp
-        val pressedElevation = 8.dp
 
 
         if (showPublishLabel) {
