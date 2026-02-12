@@ -422,26 +422,22 @@ class MemosViewModel(
 
     private suspend fun fetchInstanceSettings() {
         try {
-            val generalSettings = try {
-                api?.getInstanceSetting("settings/GENERAL")
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error fetching GENERAL instance settings", e)
-                null
-            }
-            val memoRelatedSettings = try {
-                api?.getInstanceSetting("settings/MEMO_RELATED")
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error fetching MEMO_RELATED instance settings", e)
-                null
+            val settingNames = listOf("GENERAL", "STORAGE", "MEMO_RELATED")
+            val results = settingNames.associateWith { name ->
+                try {
+                    api?.getInstanceSetting("settings/$name")
+                } catch (e: Exception) {
+                    Log.e("MemosViewModel", "Error fetching $name instance settings", e)
+                    null
+                }
             }
 
-            // Merge both settings into a single InstanceSetting
-            if (generalSettings != null || memoRelatedSettings != null) {
+            // Merge all settings into a single InstanceSetting
+            if (results.values.any { it != null }) {
                 val merged = InstanceSetting(
-                    generalSetting = generalSettings?.generalSetting,
-                    storageSetting = generalSettings?.storageSetting
-                        ?: memoRelatedSettings?.storageSetting,
-                    memoRelatedSetting = memoRelatedSettings?.memoRelatedSetting
+                    generalSetting = results["GENERAL"]?.generalSetting,
+                    storageSetting = results["STORAGE"]?.storageSetting,
+                    memoRelatedSetting = results["MEMO_RELATED"]?.memoRelatedSetting
                 )
                 _uiState.update { it.copy(session = it.session.copy(instanceSettings = merged)) }
             }
