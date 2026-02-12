@@ -182,10 +182,8 @@ fun MemoComposer(
 
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
 
-    // Audio recording state
-    var mediaRecorder by remember { mutableStateOf<MediaRecorder?>(null) }
-    var isRecording by remember { mutableStateOf(false) }
-    var currentRecordFile by remember { mutableStateOf<File?>(null) }
+
+    // Audio recording logic moved to AudioRecorderIconButton
 
     val pickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -335,94 +333,6 @@ fun MemoComposer(
             fetchLocation()
         }
     }
-
-
-    val recordErrorText = stringResource(R.string.memo_composer_error_stop_recording)
-
-    fun stopRecording() {
-        try {
-            mediaRecorder?.stop()
-            mediaRecorder?.reset()
-            mediaRecorder?.release()
-            mediaRecorder = null
-            isRecording = false
-
-            currentRecordFile?.let { file ->
-                val uri = file.toUri()
-                // Add immediately for display
-                draftAttachments = draftAttachments + (uri to null)
-                // Convert to base64 in background
-                scope.launch {
-                    val attachment = uriToBase64Attachment(uri, context)
-                    if (attachment != null) {
-                        draftAttachments = draftAttachments.map { (u, a) ->
-                            if (u == uri && a == null) uri to attachment else u to a
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("MemoComposer", "Error stopping recording", e)
-            Toast.makeText(
-                context, recordErrorText, Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
-    fun startRecording() {
-        try {
-            val file = File(context.cacheDir, "record_${System.currentTimeMillis()}.aac")
-            currentRecordFile = file
-
-            val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                MediaRecorder(context)
-            } else {
-                @Suppress("DEPRECATION") MediaRecorder()
-            }
-
-            recorder.apply {
-                setAudioSource(MediaRecorder.AudioSource.MIC)
-                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-                setOutputFile(file.absolutePath)
-                prepare()
-                start()
-            }
-            mediaRecorder = recorder
-            isRecording = true
-        } catch (e: Exception) {
-            val message =
-                resources.getString(R.string.memo_composer_error_start_recording, e.message ?: "")
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    val audioPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            startRecording()
-        } else {
-            Toast.makeText(
-                context,
-                resources.getString(R.string.memo_composer_error_microphone_permission),
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            if (isRecording) {
-                try {
-                    mediaRecorder?.stop()
-                    mediaRecorder?.release()
-                } catch (_: Exception) {
-                }
-            }
-        }
-    }
-
     // TRIGGER CACHE UPDATE when local changes occur
     // Debounced to avoid blocking UI on every keystroke
     // Only saves attachments that have already been converted to base64 (non-null)
@@ -537,20 +447,16 @@ fun MemoComposer(
             location = location,
             isPosting = isPosting,
             isFetchingLocation = isFetchingLocation,
-            isRecording = isRecording,
             visibility = visibility,
             mode = mode,
             componentWidth = componentWidth,
             pickerLauncher = pickerLauncher,
-            audioPermissionLauncher = audioPermissionLauncher,
             locationPermissionLauncher = locationPermissionLauncher,
             token = token,
             hostUrl = hostUrl,
             contentStateText = contentState.text,
             isUploadingCount = isUploadingCount,
             onFetchLocation = { fetchLocation() },
-            onStartRecording = { startRecording() },
-            onStopRecording = { stopRecording() },
             onRemoveLocation = { location = null },
             onLocationClick = { showLocationEditDialog = true },
             onVisibilityChange = { visibility = it },
@@ -558,6 +464,17 @@ fun MemoComposer(
                 val updated =
                     draftAttachments.filter { it.second != attachment || (it.first != uri && uri != Uri.EMPTY) }
                 draftAttachments = updated
+            },
+            onRecordingFinished = { uri, attachment ->
+                // Add immediately for display if attachment is null (just Uri)
+                // Or update if attachment is ready
+                if (attachment == null) {
+                    draftAttachments = draftAttachments + (uri to null)
+                } else {
+                     draftAttachments = draftAttachments.map { (u, a) ->
+                        if (u == uri && a == null) uri to attachment else u to a
+                    }
+                }
             },
             onPublishClick = {
                 scope.launch {
