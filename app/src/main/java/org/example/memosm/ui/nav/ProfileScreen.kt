@@ -278,7 +278,11 @@ private fun ProfileListPane(
 
     PullToRefreshBox(
         isRefreshing = uiState.isRefreshing,
-        onRefresh = { viewModel.fetchUserMemos(refresh = true) },
+        onRefresh = {
+            viewModel.fetchUserMemos(refresh = true)
+            viewModel.refreshInstanceSettings()
+            viewModel.refreshUserStats()
+        },
         modifier = Modifier.fillMaxSize()
     ) {
         LazyColumn(
@@ -345,7 +349,10 @@ private fun ProfileListPane(
             if (user != null || accounts.any { it.isActive }) {
                 item {
                     Box(itemModifier) {
-                        StatsActivityCard(userStats = stats)
+                        StatsActivityCard(
+                            userStats = stats,
+                            weekStartDayOffset = uiState.session.instanceSettings?.generalSetting?.weekStartDayOffset ?: 0
+                        )
                     }
                 }
 

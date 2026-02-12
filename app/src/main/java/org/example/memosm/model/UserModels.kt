@@ -154,6 +154,9 @@ data class GeneralSetting(
     val additionalScript: String? = null,
     val additionalStyle: String? = null,
     val customProfile: CustomProfile? = null,
+    // week_start_day_offset is the week start day offset from Sunday.
+    // 0: Sunday, 1: Monday, 2: Tuesday, 3: Wednesday, 4: Thursday, 5: Friday, 6: Saturday
+    // Default is Sunday.
     val weekStartDayOffset: Int? = null,
     val disallowChangeUsername: Boolean? = null,
     val disallowChangeNickname: Boolean? = null
@@ -171,12 +174,28 @@ data class MemoRelatedSetting(
     val reactions: List<String>? = null
 )
 
+
 data class StorageSetting(
-    val storageType: String? = null,
+    val storageType: StorageType? = null,
     val filepathTemplate: String? = null,
     val uploadSizeLimitMb: String? = null,
     val s3Config: S3Config? = null
 )
+
+enum class StorageType {
+    @SerializedName("STORAGE_TYPE_UNSPECIFIED")
+    STORAGE_TYPE_UNSPECIFIED,
+
+    @SerializedName("DATABASE")
+    DATABASE,
+
+    @SerializedName("LOCAL")
+    LOCAL,
+
+    @SerializedName("S3")
+    S3
+}
+
 
 data class S3Config(
     val accessKeyId: String,
@@ -233,23 +252,17 @@ data class ListUserSettingsResponse(
 )
 
 data class UserSetting(
-    val name: String? = null,
-    @SerializedName(
+    val name: String? = null, @SerializedName(
         "generalSetting", alternate = ["general_setting", "general", "GENERAL", "GeneralSetting"]
-    ) val generalSetting: UserGeneralSetting? = null,
-    @SerializedName(
-        "webhooksSetting",
-        alternate = ["webhooks_setting"]
+    ) val generalSetting: UserGeneralSetting? = null, @SerializedName(
+        "webhooksSetting", alternate = ["webhooks_setting"]
     ) val webhooksSetting: UserWebhooksSetting? = null
 )
 
 data class UserGeneralSetting(
-    val locale: String? = null,
-    @SerializedName(
-        "memoVisibility",
-        alternate = ["memo_visibility"]
-    ) val memoVisibility: Visibility? = null,
-    val theme: String? = null
+    val locale: String? = null, @SerializedName(
+        "memoVisibility", alternate = ["memo_visibility"]
+    ) val memoVisibility: Visibility? = null, val theme: String? = null
 )
 
 data class UserWebhooksSetting(

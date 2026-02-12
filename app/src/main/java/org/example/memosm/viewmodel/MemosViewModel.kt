@@ -31,6 +31,7 @@ import org.example.memosm.data.cache.MemoCacheRepository
 import org.example.memosm.model.Account
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Draft
+import org.example.memosm.model.InstanceSetting
 import org.example.memosm.model.Location
 import org.example.memosm.model.Memo
 import org.example.memosm.model.MemoState
@@ -421,12 +422,37 @@ class MemosViewModel(
 
     private suspend fun fetchInstanceSettings() {
         try {
-            val settings = api?.getInstanceSetting("settings/MEMO_RELATED")
-            if (settings != null) {
-                _uiState.update { it.copy(session = it.session.copy(instanceSettings = settings)) }
+            val generalSettings = try {
+                api?.getInstanceSetting("settings/GENERAL")
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error fetching GENERAL instance settings", e)
+                null
+            }
+            val memoRelatedSettings = try {
+                api?.getInstanceSetting("settings/MEMO_RELATED")
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error fetching MEMO_RELATED instance settings", e)
+                null
+            }
+
+            // Merge both settings into a single InstanceSetting
+            if (generalSettings != null || memoRelatedSettings != null) {
+                val merged = InstanceSetting(
+                    generalSetting = generalSettings?.generalSetting,
+                    storageSetting = generalSettings?.storageSetting
+                        ?: memoRelatedSettings?.storageSetting,
+                    memoRelatedSetting = memoRelatedSettings?.memoRelatedSetting
+                )
+                _uiState.update { it.copy(session = it.session.copy(instanceSettings = merged)) }
             }
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error fetching instance settings", e)
+        }
+    }
+
+    fun refreshInstanceSettings() {
+        viewModelScope.launch {
+            fetchInstanceSettings()
         }
     }
 

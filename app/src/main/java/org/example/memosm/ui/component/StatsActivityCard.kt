@@ -57,7 +57,7 @@ import java.util.Locale
  */
 @Composable
 fun StatsActivityCard(
-    userStats: UserStats?, modifier: Modifier = Modifier
+    modifier: Modifier = Modifier, userStats: UserStats?, weekStartDayOffset: Int = 0
 ) {
     val timestamps = userStats?.memoDisplayTimestamps ?: emptyList()
 
@@ -90,6 +90,7 @@ fun StatsActivityCard(
                         CalendarMonthView(
                             yearMonth = displayMonth,
                             activityData = activityData,
+                            weekStartDayOffset = weekStartDayOffset,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -123,6 +124,7 @@ fun StatsActivityCard(
                     CalendarMonthView(
                         yearMonth = displayMonth,
                         activityData = activityData,
+                        weekStartDayOffset = weekStartDayOffset,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -239,7 +241,10 @@ private fun StatItem(
 
 @Composable
 private fun CalendarMonthView(
-    yearMonth: YearMonth, activityData: Map<LocalDate, Int>, modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    yearMonth: YearMonth,
+    activityData: Map<LocalDate, Int>,
+    weekStartDayOffset: Int = 0,
 ) {
     val firstDayOfMonth = yearMonth.atDay(1)
     val lastDayOfMonth = yearMonth.atEndOfMonth()
@@ -267,19 +272,23 @@ private fun CalendarMonthView(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        // Weekday headers
+        // Weekday headers - rotate based on weekStartDayOffset
+        // weekStartDayOffset: 0=Sunday, 1=Monday, ..., 6=Saturday
+        val baseDaysOfWeek = listOf(
+            DayOfWeek.SUNDAY,
+            DayOfWeek.MONDAY,
+            DayOfWeek.TUESDAY,
+            DayOfWeek.WEDNESDAY,
+            DayOfWeek.THURSDAY,
+            DayOfWeek.FRIDAY,
+            DayOfWeek.SATURDAY
+        )
+        val safeOffset = weekStartDayOffset.coerceIn(0, 6)
+        val daysOfWeek = baseDaysOfWeek.drop(safeOffset) + baseDaysOfWeek.take(safeOffset)
+
         Row(
             modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            val daysOfWeek = listOf(
-                DayOfWeek.SUNDAY,
-                DayOfWeek.MONDAY,
-                DayOfWeek.TUESDAY,
-                DayOfWeek.WEDNESDAY,
-                DayOfWeek.THURSDAY,
-                DayOfWeek.FRIDAY,
-                DayOfWeek.SATURDAY
-            )
             for (day in daysOfWeek) {
                 Text(
                     text = day.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
@@ -294,8 +303,10 @@ private fun CalendarMonthView(
         Spacer(modifier = Modifier.height(4.dp))
 
         // Calendar grid
-        val firstDayOfWeek = if (firstDayOfMonth.dayOfWeek == DayOfWeek.SUNDAY) 0
-        else firstDayOfMonth.dayOfWeek.value
+        // Calculate offset: how many blank cells before day 1
+        // DayOfWeek.value: Monday=1 … Sunday=7; convert to Sun=0-based index
+        val dayOfWeekSundayBased = firstDayOfMonth.dayOfWeek.value % 7 // Sun=0, Mon=1, ..., Sat=6
+        val firstDayOfWeek = (dayOfWeekSundayBased - safeOffset + 7) % 7
         val daysInMonth = lastDayOfMonth.dayOfMonth
         val totalCells = ((firstDayOfWeek + daysInMonth + 6) / 7) * 7
         val numWeeks = totalCells / 7
