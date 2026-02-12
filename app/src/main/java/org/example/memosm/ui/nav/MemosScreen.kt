@@ -261,6 +261,7 @@ fun MemosScreen(
                 showComposerDialog = false
                 startFresh = false
             },
+            onToggleNavBar = onToggleNavBar,
             viewModel = viewModel,
             hostUrl = uiState.session.hostUrl,
             title = stringResource(R.string.memo_composer_fab_new_memo),

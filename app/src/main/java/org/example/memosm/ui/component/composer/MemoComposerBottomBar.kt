@@ -37,6 +37,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
@@ -109,14 +110,13 @@ fun MemoComposerBottomBar(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // "Everything else" Card
+        // "Everything else" Card — pill when empty, rounded card when content is present
+        val hasContent = draftAttachments.isNotEmpty() || location != null
+        val cardShape = if (hasContent) RoundedCornerShape(28.dp) else CircleShape
         Card(
-            modifier = Modifier.weight(1f),
-            shape = CircleShape,
-            colors = CardDefaults.cardColors(
+            modifier = Modifier.weight(1f), shape = cardShape, colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
                 // Attachments List
@@ -182,31 +182,26 @@ fun MemoComposerBottomBar(
                 // Location Chip
                 location?.let { loc ->
                     Spacer(modifier = Modifier.height(8.dp))
-                    InputChip(
-                        selected = true,
-                        onClick = onLocationClick,
-                        label = {
-                            Text(
-                                text = loc.placeholder ?: "${loc.latitude}, ${loc.longitude}",
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        },
-                        trailingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Close,
-                                contentDescription = stringResource(R.string.memo_composer_remove_location),
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .noRippleClickable { onRemoveLocation() })
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Place,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        })
+                    InputChip(selected = true, onClick = onLocationClick, label = {
+                        Text(
+                            text = loc.placeholder ?: "${loc.latitude}, ${loc.longitude}",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }, trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Close,
+                            contentDescription = stringResource(R.string.memo_composer_remove_location),
+                            modifier = Modifier
+                                .size(18.dp)
+                                .noRippleClickable { onRemoveLocation() })
+                    }, leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Place,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    })
                 }
 
                 if (draftAttachments.isNotEmpty() || location != null) {
@@ -243,79 +238,79 @@ fun MemoComposerBottomBar(
                                     onDismissRequest = { showActionOverflowMenu = false }) {
                                     DropdownMenuItem(
                                         text = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.AttachFile,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Text(stringResource(R.string.memo_composer_attach_file))
-                                            }
-                                        }, onClick = {
-                                            showActionOverflowMenu = false
-                                            pickerLauncher.launch("*/*")
-                                        }, enabled = !isPosting
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.AttachFile,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text(stringResource(R.string.memo_composer_attach_file))
+                                        }
+                                    }, onClick = {
+                                        showActionOverflowMenu = false
+                                        pickerLauncher.launch("*/*")
+                                    }, enabled = !isPosting
                                     )
                                     DropdownMenuItem(
                                         text = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.Image,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Text(stringResource(R.string.memo_composer_add_image))
-                                            }
-                                        }, onClick = {
-                                            showActionOverflowMenu = false
-                                            pickerLauncher.launch("image/*")
-                                        }, enabled = !isPosting
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Image,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text(stringResource(R.string.memo_composer_add_image))
+                                        }
+                                    }, onClick = {
+                                        showActionOverflowMenu = false
+                                        pickerLauncher.launch("image/*")
+                                    }, enabled = !isPosting
                                     )
                                     DropdownMenuItem(
                                         text = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                AudioRecorderIconButton(
-                                                    onRecordingFinished = onRecordingFinished,
-                                                    enabled = !isPosting,
-                                                    iconSize = 20.dp
-                                                )
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Text("Record Audio")
-                                            }
-                                        }, onClick = {
-                                            // Click handled by AudioRecorderIconButton, or we can close menu here
-                                            // But since AudioRecorderIconButton intercepts click, this might not trigger if clicking the button.
-                                            // Clicking the text "Record Audio" will trigger this.
-                                            // Ideally we want the whole row to toggle recording.
-                                            // But AudioRecorderIconButton is self-contained.
-                                            // If we want the menu item to act as the recorder, we need to access recorder state... which we moved out.
-                                            // So for now, let's keep it simple. Clicking the text does nothing useful except maybe show a toast or we can omit separate onClick logic if the button is there.
-                                            // Actually, the button inside needs to be clickable.
-                                            // If we set enabled=false on the DropdownMenuItem it might disable the button too?
-                                            // Let's just close the menu on click, but the user has to click the button to record.
-                                            // This UX is slightly broken for overflow menu, but complies with "self-contained button".
-                                            showActionOverflowMenu = false
-                                        }, enabled = !isPosting
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            AudioRecorderIconButton(
+                                                onRecordingFinished = onRecordingFinished,
+                                                enabled = !isPosting,
+                                                iconSize = 20.dp
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text("Record Audio")
+                                        }
+                                    }, onClick = {
+                                        // Click handled by AudioRecorderIconButton, or we can close menu here
+                                        // But since AudioRecorderIconButton intercepts click, this might not trigger if clicking the button.
+                                        // Clicking the text "Record Audio" will trigger this.
+                                        // Ideally we want the whole row to toggle recording.
+                                        // But AudioRecorderIconButton is self-contained.
+                                        // If we want the menu item to act as the recorder, we need to access recorder state... which we moved out.
+                                        // So for now, let's keep it simple. Clicking the text does nothing useful except maybe show a toast or we can omit separate onClick logic if the button is there.
+                                        // Actually, the button inside needs to be clickable.
+                                        // If we set enabled=false on the DropdownMenuItem it might disable the button too?
+                                        // Let's just close the menu on click, but the user has to click the button to record.
+                                        // This UX is slightly broken for overflow menu, but complies with "self-contained button".
+                                        showActionOverflowMenu = false
+                                    }, enabled = !isPosting
                                     )
                                     DropdownMenuItem(
                                         text = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                LocationIconButton(
-                                                    onLocationFounded = onLocationFounded,
-                                                    enabled = !isPosting && location == null,
-                                                    iconSize = 20.dp,
-                                                    location = location
-                                                )
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Text(stringResource(R.string.memo_composer_add_location))
-                                            }
-                                        }, onClick = {
-                                            showActionOverflowMenu = false
-                                            // Same interaction issue as AudioRecorderIconButton.
-                                            // The button handles the click.
-                                        }, enabled = !isPosting && location == null
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            LocationIconButton(
+                                                onLocationFounded = onLocationFounded,
+                                                enabled = !isPosting && location == null,
+                                                iconSize = 20.dp,
+                                                location = location
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text(stringResource(R.string.memo_composer_add_location))
+                                        }
+                                    }, onClick = {
+                                        showActionOverflowMenu = false
+                                        // Same interaction issue as AudioRecorderIconButton.
+                                        // The button handles the click.
+                                    }, enabled = !isPosting && location == null
                                     )
                                 }
                             }
@@ -412,6 +407,10 @@ fun MemoComposerBottomBar(
             ComposerMode.COMMENT -> stringResource(R.string.memo_action_post)
         }
 
+        val defaultElevation = 4.dp
+        val pressedElevation = 8.dp
+
+
         if (showPublishLabel) {
             ExtendedFloatingActionButton(
                 onClick = onPublishClick,
@@ -433,13 +432,19 @@ fun MemoComposerBottomBar(
                 text = { Text(text = label) },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                expanded = true
+                expanded = true,
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = defaultElevation, pressedElevation = pressedElevation
+                )
             )
         } else {
             FloatingActionButton(
                 onClick = onPublishClick,
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = defaultElevation, pressedElevation = pressedElevation
+                ),
                 modifier = Modifier
             ) {
                 if (isPosting) {

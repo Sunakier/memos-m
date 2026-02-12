@@ -225,6 +225,7 @@ fun MainScreen(
                 shareVisibility = null
                 shareLocation = null
             },
+            onToggleNavBar = toggleNavBar,
             viewModel = viewModel,
             hostUrl = uiState.session.hostUrl,
             title = stringResource(R.string.memo_composer_fab_new_memo),

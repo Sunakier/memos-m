@@ -3,6 +3,7 @@ package org.example.memosm.ui.component.composer
 import android.net.Uri
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.Animatable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,6 +40,7 @@ import kotlin.coroutines.cancellation.CancellationException
 @Composable
 fun MemoComposerScreen(
     onDismiss: () -> Unit,
+    onToggleNavBar: ((Boolean) -> Unit)? = null,
     viewModel: MemosViewModel,
     hostUrl: String,
     title: String,
@@ -56,6 +58,12 @@ fun MemoComposerScreen(
     }
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // Hide bottom nav bar while composer is visible
+    DisposableEffect(Unit) {
+        onToggleNavBar?.invoke(false)
+        onDispose { onToggleNavBar?.invoke(true) }
+    }
 
     // Predictive Back Animation State
     val scale = remember { Animatable(1f) }
@@ -156,10 +164,12 @@ fun MemoComposerScreen(
 
 @Composable
 fun MemoEditScreen(
-    memo: Memo, onDismiss: () -> Unit, viewModel: MemosViewModel, hostUrl: String
+    memo: Memo, onDismiss: () -> Unit, viewModel: MemosViewModel, hostUrl: String,
+    onToggleNavBar: ((Boolean) -> Unit)? = null
 ) {
     MemoComposerScreen(
         onDismiss = onDismiss,
+        onToggleNavBar = onToggleNavBar,
         viewModel = viewModel,
         hostUrl = hostUrl,
         title = stringResource(R.string.memo_dialog_edit_title),
