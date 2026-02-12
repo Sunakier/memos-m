@@ -189,7 +189,7 @@ fun MemoComposerBottomBar(
                 // Location Chip
                 location?.let { loc ->
                     Spacer(modifier = Modifier.height(8.dp))
-                    InputChip(selected = true, onClick = onLocationClick, label = {
+                    InputChip(selected = true, onClick = onLocationClick, shape = CircleShape, label = {
                         Text(
                             text = loc.placeholder ?: "${loc.latitude}, ${loc.longitude}",
                             maxLines = 1,
