@@ -6,6 +6,7 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
+import coil3.svg.SvgDecoder
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import org.example.memosm.data.cache.MemoCacheDatabase
@@ -38,6 +39,7 @@ class MemosApplication : Application(), SingletonImageLoader.Factory {
         return ImageLoader.Builder(context)
             .components {
                 add(OkHttpNetworkFetcherFactory(callFactory = { okHttpClient }))
+                add(SvgDecoder.Factory())
             }
             .crossfade(true)
             .build()
