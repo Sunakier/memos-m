@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -144,9 +145,12 @@ class MainActivity : ComponentActivity() {
             return null
         }
 
+        Log.d("MainActivity", "parseShareIntent: action=$action")
+
         // Extract text content
         val text =
             intent.getStringExtra(Intent.EXTRA_TEXT) ?: intent.getStringExtra(Intent.EXTRA_SUBJECT)
+        Log.d("MainActivity", "parseShareIntent: text=${text?.take(100)}")
 
         // Extract URIs
         val uris = mutableListOf<Uri>()
@@ -159,9 +163,11 @@ class MainActivity : ComponentActivity() {
                 } else {
                     @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_STREAM)
                 }
+                Log.d("MainActivity", "parseShareIntent: SEND singleUri=$singleUri")
                 singleUri?.let { uri ->
-                    takePersistentUriPermission(uri)
-                    uris.add(uri)
+                    val localUri = copyUriToCache(uri)
+                    Log.d("MainActivity", "parseShareIntent: copied to localUri=$localUri")
+                    if (localUri != null) uris.add(localUri)
                 }
             }
 
@@ -172,27 +178,69 @@ class MainActivity : ComponentActivity() {
                 } else {
                     @Suppress("DEPRECATION") intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
                 }
+                Log.d("MainActivity", "parseShareIntent: SEND_MULTIPLE count=${multipleUris?.size}")
                 multipleUris?.forEach { uri ->
-                    takePersistentUriPermission(uri)
-                    uris.add(uri)
+                    val localUri = copyUriToCache(uri)
+                    Log.d("MainActivity", "parseShareIntent: copied $uri -> $localUri")
+                    if (localUri != null) uris.add(localUri)
                 }
             }
         }
 
         val shareData = ShareIntentData(text = text, uris = uris)
+        Log.d("MainActivity", "parseShareIntent: result isEmpty=${shareData.isEmpty}, uriCount=${uris.size}")
         return if (shareData.isEmpty) null else shareData
     }
 
     /**
-     * Takes persistable URI permission for content URIs to ensure
-     * we can access the file later.
+     * Copies a shared URI's content to a local cache file so it remains
+     * accessible after the temporary share-intent permission expires.
+     * Preserves the original filename/extension for proper MIME type detection.
+     * Returns the local file Uri, or null if the copy fails.
      */
-    private fun takePersistentUriPermission(uri: Uri) {
-        try {
-            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-            contentResolver.takePersistableUriPermission(uri, takeFlags)
-        } catch (e: SecurityException) {
-            // Permission may not be grantable for all URIs, ignore
+    private fun copyUriToCache(uri: Uri): Uri? {
+        return try {
+            // Try to get the original display name from ContentResolver
+            var displayName: String? = null
+            if (uri.scheme == "content") {
+                contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val index =
+                            cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        if (index != -1) displayName = cursor.getString(index)
+                    }
+                }
+            }
+
+            // Fallback: derive filename from URI path or MIME type
+            if (displayName.isNullOrBlank()) {
+                val baseName = uri.lastPathSegment ?: "file"
+                val mimeType = contentResolver.getType(uri)
+                val ext = if (mimeType != null) {
+                    android.webkit.MimeTypeMap.getSingleton()
+                        .getExtensionFromMimeType(mimeType)
+                } else null
+                displayName = if (ext != null && !baseName.contains('.')) {
+                    "$baseName.$ext"
+                } else {
+                    baseName
+                }
+            }
+
+            val fileName = "share_${System.currentTimeMillis()}_$displayName"
+            val cacheFile = java.io.File(cacheDir, fileName)
+            contentResolver.openInputStream(uri)?.use { input ->
+                cacheFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            } ?: run {
+                Log.w("MainActivity", "Could not open input stream for shared URI: $uri")
+                return null
+            }
+            Uri.fromFile(cacheFile)
+        } catch (e: Exception) {
+            Log.w("MainActivity", "Failed to copy shared URI to cache: $uri", e)
+            null
         }
     }
 }

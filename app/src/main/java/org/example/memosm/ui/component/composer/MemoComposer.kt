@@ -118,6 +118,21 @@ fun MemoComposer(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
+    // Convert initialUris (from share intent) to base64 attachments in background
+    // This mirrors the picker flow so they persist when the draft is saved
+    LaunchedEffect(Unit) {
+        initialUris.forEach { uri ->
+            scope.launch {
+                val attachment = uriToBase64Attachment(uri, context)
+                if (attachment != null) {
+                    draftAttachments = draftAttachments.map { (u, a) ->
+                        if (u == uri && a == null) uri to attachment else u to a
+                    }
+                }
+            }
+        }
+    }
+
     val pickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
