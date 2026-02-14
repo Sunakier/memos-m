@@ -149,6 +149,7 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    implementation(libs.coil.svg)
 
     // REST Networking (Retrofit)
     implementation(libs.retrofit)

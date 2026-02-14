@@ -129,9 +129,7 @@ fun MainScreen(
     // Track if we've already processed the current share intent
     var processedShareData by remember { mutableStateOf<ShareIntentData?>(null) }
 
-    // Trigger composer when share data is received - APPEND to existing draft
-    // Wait for draft to be loaded before processing to avoid race condition
-    val isDraftLoaded = uiState.draft.isDraftLoaded
+    // Trigger composer when share data is received - CREATE NEW draft
 
     // Switch to Memos tab if widget triggered composer
     LaunchedEffect(shouldOpenComposer) {
@@ -140,36 +138,20 @@ fun MainScreen(
         }
     }
 
-    LaunchedEffect(shareIntentData, isDraftLoaded) {
+    LaunchedEffect(shareIntentData) {
         // Only process if:
         // 1. We have share data
-        // 2. Draft has been loaded
-        // 3. We haven't already processed this exact share data
-        if (shareIntentData != null && !shareIntentData.isEmpty && isDraftLoaded && processedShareData != shareIntentData) {
-            // Use the latest draft if available
-            val latestDraft = uiState.draft.drafts.maxByOrNull { it.updatedAt }
-
-            // Append shared text to existing draft content
-            val existingContent = latestDraft?.content ?: ""
-            val sharedText = shareIntentData.text ?: ""
-            shareText = if (existingContent.isNotBlank() && sharedText.isNotBlank()) {
-                "$existingContent\n\n$sharedText"
-            } else {
-                existingContent + sharedText
-            }
-
-            // Combine shared URIs with existing draft attachments
+        // 2. We haven't already processed this exact share data
+        if (shareIntentData != null && !shareIntentData.isEmpty && processedShareData != shareIntentData) {
+            // Create a fresh new draft with just the shared content
+            shareText = shareIntentData.text ?: ""
             shareUris = shareIntentData.uris
-            shareAttachments = latestDraft?.attachments ?: emptyList()
-            shareVisibility = latestDraft?.visibility
-            shareLocation = latestDraft?.location
+            shareAttachments = emptyList()
+            shareVisibility = null
+            shareLocation = null
 
-            // Set the draft as current editing draft if exists, otherwise initialize new session
-            if (latestDraft != null) {
-                viewModel.setCurrentEditingDraft(latestDraft.id)
-            } else {
-                viewModel.initializeNewDraftSession()
-            }
+            // Always initialize a new draft session for shared content
+            viewModel.initializeNewDraftSession()
 
             processedShareData = shareIntentData
             showShareComposerDialog = true
@@ -201,42 +183,9 @@ fun MainScreen(
         }, onDismiss = { isAddingAccount = false })
     }
 
-    // Share intent composer screen (full-screen with animation)
+    // Share intent composer easing values
     val enterEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
     val exitEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
-
-    AnimatedVisibility(
-        visible = showShareComposerDialog && uiState.session.currUser != null,
-        enter = slideInVertically(
-            animationSpec = tween(400, easing = enterEasing), initialOffsetY = { it }) + fadeIn(
-            animationSpec = tween(400, easing = enterEasing)
-        ),
-        exit = slideOutVertically(
-            animationSpec = tween(200, easing = exitEasing), targetOffsetY = { it }) + fadeOut(
-            animationSpec = tween(200, easing = exitEasing)
-        )
-    ) {
-        MemoComposerScreen(
-            onDismiss = {
-                showShareComposerDialog = false
-                shareText = null
-                shareUris = emptyList()
-                shareAttachments = emptyList()
-                shareVisibility = null
-                shareLocation = null
-            },
-            onToggleNavBar = toggleNavBar,
-            viewModel = viewModel,
-            hostUrl = uiState.session.hostUrl,
-            title = stringResource(R.string.memo_composer_fab_new_memo),
-            initialContent = shareText ?: "",
-            initialUris = shareUris,
-            initialAttachments = shareAttachments,
-            initialVisibility = shareVisibility,
-            initialLocation = shareLocation,
-            mode = ComposerMode.PUBLISH
-        )
-    }
 
     @Composable
     fun NavigationIcon(
@@ -416,5 +365,39 @@ fun MainScreen(
                 }
             }
         }
+    }
+
+    // Share intent composer screen (full-screen OVERLAY — must be AFTER Surface for correct z-order)
+    AnimatedVisibility(
+        visible = showShareComposerDialog,
+        enter = slideInVertically(
+            animationSpec = tween(400, easing = enterEasing), initialOffsetY = { it }) + fadeIn(
+            animationSpec = tween(400, easing = enterEasing)
+        ),
+        exit = slideOutVertically(
+            animationSpec = tween(200, easing = exitEasing), targetOffsetY = { it }) + fadeOut(
+            animationSpec = tween(200, easing = exitEasing)
+        )
+    ) {
+        MemoComposerScreen(
+            onDismiss = {
+                showShareComposerDialog = false
+                shareText = null
+                shareUris = emptyList()
+                shareAttachments = emptyList()
+                shareVisibility = null
+                shareLocation = null
+            },
+            onToggleNavBar = toggleNavBar,
+            viewModel = viewModel,
+            hostUrl = uiState.session.hostUrl,
+            title = stringResource(R.string.memo_composer_fab_new_memo),
+            initialContent = shareText ?: "",
+            initialUris = shareUris,
+            initialAttachments = shareAttachments,
+            initialVisibility = shareVisibility,
+            initialLocation = shareLocation,
+            mode = ComposerMode.PUBLISH
+        )
     }
 }
