@@ -116,6 +116,7 @@ Contributions are welcome in the form of code, bug reports, or feature suggestio
 
 - **Issues:** Open an issue to discuss bugs or design ideas.
 - **Pull Requests:** Focused, easy-to-review PRs are appreciated.
+- **Translations:** Currently there isn't a good contribution workflow, but you can make RPs of the `string.xml`.
 
 ## Related Projects
 
