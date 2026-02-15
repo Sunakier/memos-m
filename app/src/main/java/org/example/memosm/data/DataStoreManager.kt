@@ -10,6 +10,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.example.memosm.model.Account
@@ -19,10 +20,9 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "se
 class DataStoreManager(private val context: Context) {
 
     private val gson = Gson()
+    private var cachedAccounts: List<Account>? = null
 
     companion object {
-        val HOST_URL = stringPreferencesKey("host_url")
-        val ACCESS_TOKEN = stringPreferencesKey("access_token")
         val ACCOUNTS_JSON = stringPreferencesKey("accounts_json")
         val PAGE_SIZE = intPreferencesKey("page_size")
         const val DEFAULT_PAGE_SIZE = 10
@@ -30,60 +30,44 @@ class DataStoreManager(private val context: Context) {
         const val DEFAULT_HEADER_SCALE = 1.0f
     }
 
-    val hostUrl: Flow<String?> = context.dataStore.data.map { preferences ->
-        preferences[HOST_URL]
-    }
-
-    val accessToken: Flow<String?> = context.dataStore.data.map { preferences ->
-        preferences[ACCESS_TOKEN]
-    }
-
-    val accounts: Flow<List<Account>> = context.dataStore.data.map { preferences ->
-        val json = preferences[ACCOUNTS_JSON]
-        if (json.isNullOrEmpty()) {
-            emptyList()
-        } else {
-            val type = object : TypeToken<List<Account>>() {}.type
-            try {
-                val list: List<Account> = gson.fromJson(json, type)
-                list
-            } catch (e: Exception) {
+    val accounts: Flow<List<Account>> = context.dataStore.data
+        .map { it[ACCOUNTS_JSON] }
+        .distinctUntilChanged()
+        .map { json ->
+            if (json.isNullOrEmpty()) {
                 emptyList()
+            } else {
+                val type = object : TypeToken<List<Account>>() {}.type
+                try {
+                    val list: List<Account> = gson.fromJson(json, type)
+                    cachedAccounts = list
+                    list
+                } catch (e: Exception) {
+                    emptyList()
+                }
             }
         }
-    }
 
-    suspend fun saveCredentials(url: String, token: String) {
-        context.dataStore.edit { preferences ->
-            preferences[HOST_URL] = url
-            preferences[ACCESS_TOKEN] = token
-        }
+    val account: Flow<Account?> = accounts.map { list ->
+        list.find { it.isActive }
     }
 
     suspend fun saveAccounts(accounts: List<Account>) {
         context.dataStore.edit { preferences ->
             preferences[ACCOUNTS_JSON] = gson.toJson(accounts)
         }
+        cachedAccounts = accounts
     }
+
 
     // --- Account Helpers ---
 
     suspend fun getAccounts(): List<Account> {
+        cachedAccounts?.let { return it }
+
         val json = context.dataStore.data.map { it[ACCOUNTS_JSON] }.first()
 
-        // If accounts list is empty, but we have legacy credentials, migrate them
         if (json.isNullOrEmpty()) {
-            val legacyHost = context.dataStore.data.map { it[HOST_URL] }.first()
-            val legacyToken = context.dataStore.data.map { it[ACCESS_TOKEN] }.first()
-
-            if (!legacyHost.isNullOrBlank() && !legacyToken.isNullOrBlank()) {
-                val newAccount = Account(
-                    hostUrl = legacyHost, accessToken = legacyToken, isActive = true
-                )
-                val list = listOf(newAccount)
-                saveAccounts(list)
-                return list
-            }
             return emptyList()
         }
 
@@ -119,6 +103,8 @@ class DataStoreManager(private val context: Context) {
 
         if (needsSave) {
             saveAccounts(final)
+        } else {
+            cachedAccounts = final
         }
 
         return final
@@ -126,8 +112,7 @@ class DataStoreManager(private val context: Context) {
 
     suspend fun addAccount(
         hostUrl: String,
-        accessToken: String,
-        cookies: Map<String, String> = emptyMap()
+        accessToken: String
     ) {
         val current = getAccounts().toMutableList()
         // Check if account already exists to avoid duplicates
@@ -144,28 +129,17 @@ class DataStoreManager(private val context: Context) {
                 Account(
                     hostUrl = hostUrl,
                     accessToken = accessToken,
-                    isActive = true,
-                    cookies = cookies
+                    isActive = true
                 )
             )
             saveAccounts(updated)
         }
-
-        // Also update legacy credentials for backward compatibility if needed, 
-        // or just to keep MainScreen working for now.
-        saveCredentials(hostUrl, accessToken)
     }
 
     suspend fun setActiveAccount(id: String) {
         val current = getAccounts()
         val updated = current.map { it.copy(isActive = it.id == id) }
         saveAccounts(updated)
-
-        // Update legacy credentials to the active one
-        val active = updated.find { it.isActive }
-        if (active != null) {
-            saveCredentials(active.hostUrl, active.accessToken)
-        }
     }
 
     suspend fun updateAccountLastUsed(id: String, timestamp: Long) {
@@ -181,10 +155,8 @@ class DataStoreManager(private val context: Context) {
         val updated = current.filterNot { it.id == id }
         saveAccounts(updated)
 
-        // If we deleted the active one, clear legacy credentials or set new active
-        if (updated.isEmpty()) {
-            clearCredentials()
-        } else if (updated.none { it.isActive }) {
+        // If we deleted the active one, set new active
+        if (updated.isNotEmpty() && updated.none { it.isActive }) {
             setActiveAccount(updated.first().id)
         }
     }
@@ -192,25 +164,15 @@ class DataStoreManager(private val context: Context) {
     suspend fun updateAccount(
         id: String,
         hostUrl: String,
-        token: String,
-        cookies: Map<String, String> = emptyMap()
+        token: String
     ) {
         val current = getAccounts()
         val updated = current.map {
             if (it.id == id) {
-                val newAcc = it.copy(hostUrl = hostUrl, accessToken = token, cookies = cookies)
-                if (newAcc.isActive) saveCredentials(hostUrl, token)
-                newAcc
+                it.copy(hostUrl = hostUrl, accessToken = token)
             } else it
         }
         saveAccounts(updated)
-    }
-
-    suspend fun clearCredentials() {
-        context.dataStore.edit { preferences ->
-            preferences.remove(HOST_URL)
-            preferences.remove(ACCESS_TOKEN)
-        }
     }
 
     suspend fun updateAccountUser(id: String, user: org.example.memosm.model.User) {
@@ -230,28 +192,11 @@ class DataStoreManager(private val context: Context) {
         saveAccounts(updated)
     }
 
-    suspend fun updateAccountCookies(id: String, newCookies: Map<String, String>) {
-        val current = getAccounts()
-        val updated = current.map { account ->
-            if (account.id == id) {
-                // Merge existing cookies with new cookies
-                val mergedCookies = account.cookies.toMutableMap()
-                mergedCookies.putAll(newCookies)
-                account.copy(cookies = mergedCookies)
-            } else {
-                account
-            }
-        }
-        saveAccounts(updated)
-    }
-
     suspend fun updateAccountToken(id: String, token: String) {
         val current = getAccounts()
         val updated = current.map {
             if (it.id == id) {
-                val newAcc = it.copy(accessToken = token)
-                if (newAcc.isActive) saveCredentials(newAcc.hostUrl, token)
-                newAcc
+                it.copy(accessToken = token)
             } else it
         }
         saveAccounts(updated)

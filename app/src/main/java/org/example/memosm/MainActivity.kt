@@ -102,9 +102,9 @@ class MainActivity : ComponentActivity() {
                             // If no active account, show login
                             LoginScreen(
                                 modifier = Modifier.padding(innerPadding),
-                                onLoginSuccess = { baseUrl, token, cookies ->
+                                onLoginSuccess = { baseUrl, token ->
                                     scope.launch {
-                                        dataStoreManager.addAccount(baseUrl, token, cookies)
+                                        dataStoreManager.addAccount(baseUrl, token)
                                     }
                                 })
                         }
