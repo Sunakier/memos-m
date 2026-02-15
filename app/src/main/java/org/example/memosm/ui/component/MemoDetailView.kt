@@ -322,6 +322,7 @@ fun MemoDetailView(
             animationSpec = tween(400, easing = enterEasing), initialOffsetY = { it }) + fadeIn(
             animationSpec = tween(400, easing = enterEasing)
         ),
+        
         exit = slideOutVertically(
             animationSpec = tween(200, easing = exitEasing), targetOffsetY = { it }) + fadeOut(
             animationSpec = tween(200, easing = exitEasing)

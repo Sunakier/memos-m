@@ -286,15 +286,20 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                 MarkdownElementTypes.ATX_4 -> typography.titleLarge
                 else -> typography.titleMedium
             }
-            val style = baseStyle.copy(fontSize = baseStyle.fontSize * headerScale)
+            val bodySize = typography.bodyLarge.fontSize
+            val scaledSize = baseStyle.fontSize * headerScale
+            // Ensure header is never smaller than the body text
+            val finalSize = if (scaledSize >= bodySize) scaledSize else bodySize
+            val style = baseStyle.copy(fontSize = finalSize)
+            val headerFontSizePx = with(density) { finalSize.toPx() }
+
             // Headers contain inline elements usually, or just leaf text
             // Retrieve the text content excluding the # characters
             // BUT intellij-markdown structure for headers usually has: 
             // ATX_1 -> [ATX_CONTENT -> [TEXT]]
             // We can just recursively render inline content.
             // But headers are block elements, so we treat them as text with style.
-            // But headers are block elements, so we treat them as text with style.
-            val (styledText, _) = remember(node, content) {
+            val (styledText, _) = remember(node, content, finalSize) {
                 val map = mutableMapOf<String, InlineTextContent>()
                 val text = buildAnnotatedString {
                     // Header content usually doesn't have complex math, but we support it best effort.
@@ -306,7 +311,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
                                 styles,
                                 context,
                                 density,
-                                fontSizePx,
+                                headerFontSizePx,
                                 this,
                                 map,
                                 onHashtagClick
