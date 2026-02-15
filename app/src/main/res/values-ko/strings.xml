@@ -31,6 +31,11 @@
     <string name="profile_settings_locale_edit">로케일 편집</string>
     <string name="profile_settings_locale_label">로케일 (예: ko, en)</string>
     <string name="profile_settings_visibility">기본 메모 공개 범위</string>
+    <string name="profile_app_settings">앱 설정</string>
+    <string name="profile_app_settings_page_size">페이지 크기</string>
+    <string name="profile_app_settings_page_size_hint">페이지당 항목 수</string>
+    <string name="profile_app_settings_header_scale">헤더 스케일</string>
+    <string name="profile_app_settings_header_scale_format">%.1fx</string>
     <string name="profile_archived">보관됨</string>
     <string name="profile_shortcuts">단축키</string>
     <string name="profile_shortcuts_none">설정된 단축키가 없습니다</string>

@@ -31,6 +31,11 @@
     <string name="profile_settings_locale_edit">ロケールの編集</string>
     <string name="profile_settings_locale_label">ロケール (例: ja, en)</string>
     <string name="profile_settings_visibility">デフォルトの公開範囲</string>
+    <string name="profile_app_settings">アプリ設定</string>
+    <string name="profile_app_settings_page_size">ページネーションサイズ</string>
+    <string name="profile_app_settings_page_size_hint">1ページあたりの項目数</string>
+    <string name="profile_app_settings_header_scale">ヘッダースケール</string>
+    <string name="profile_app_settings_header_scale_format">%.1fx</string>
     <string name="profile_archived">アーカイブ</string>
     <string name="profile_shortcuts">ショートカット</string>
     <string name="profile_shortcuts_none">ショートカットが設定されていません</string>

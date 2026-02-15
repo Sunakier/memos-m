@@ -31,6 +31,11 @@
     <string name="profile_settings_locale_edit">Sprache bearbeiten</string>
     <string name="profile_settings_locale_label">Sprache (z.B. en, de)</string>
     <string name="profile_settings_visibility">Standard-Sichtbarkeit für Memos</string>
+    <string name="profile_app_settings">App-Einstellungen</string>
+    <string name="profile_app_settings_page_size">Seitengröße</string>
+    <string name="profile_app_settings_page_size_hint">Einträge pro Seite</string>
+    <string name="profile_app_settings_header_scale">Kopfzeilenskalierung</string>
+    <string name="profile_app_settings_header_scale_format">%.1fx</string>
     <string name="profile_archived">Archiviert</string>
     <string name="profile_shortcuts">Kurzbefehle</string>
     <string name="profile_shortcuts_none">Keine Kurzbefehle konfiguriert</string>

@@ -31,6 +31,11 @@
     <string name="profile_settings_locale_edit">编辑语言</string>
     <string name="profile_settings_locale_label">语言区域 (如 en, zh-Hans)</string>
     <string name="profile_settings_visibility">默认笔记可见性</string>
+    <string name="profile_app_settings">应用设置</string>
+    <string name="profile_app_settings_page_size">分页大小</string>
+    <string name="profile_app_settings_page_size_hint">每页项目数</string>
+    <string name="profile_app_settings_header_scale">标题栏缩放</string>
+    <string name="profile_app_settings_header_scale_format">%.1fx</string>
     <string name="profile_archived">归档</string>
     <string name="profile_shortcuts">快捷方式</string>
     <string name="profile_shortcuts_none">暂无快捷方式</string>

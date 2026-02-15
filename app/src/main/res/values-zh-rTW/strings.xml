@@ -31,6 +31,11 @@
     <string name="profile_settings_locale_edit">編輯語言</string>
     <string name="profile_settings_locale_label">語言區域 (如 en, zh-Hant)</string>
     <string name="profile_settings_visibility">預設筆記可見性</string>
+    <string name="profile_app_settings">應用程式設定</string>
+    <string name="profile_app_settings_page_size">分頁大小</string>
+    <string name="profile_app_settings_page_size_hint">每頁項目數</string>
+    <string name="profile_app_settings_header_scale">標題列縮放</string>
+    <string name="profile_app_settings_header_scale_format">%.1fx</string>
     <string name="profile_archived">歸檔</string>
     <string name="profile_shortcuts">捷徑</string>
     <string name="profile_shortcuts_none">暫無捷徑</string>
