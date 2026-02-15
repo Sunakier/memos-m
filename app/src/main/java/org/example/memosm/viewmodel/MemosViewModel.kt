@@ -84,6 +84,7 @@ class MemosViewModel(
     init {
         updateCurrentAccountInList()
         loadPageSize()
+        loadHeaderScale()
     }
 
     suspend fun reverseGeocode(lat: Double, lon: Double): String? {
@@ -556,6 +557,14 @@ class MemosViewModel(
         }
     }
 
+    private fun loadHeaderScale() {
+        viewModelScope.launch {
+            dataStoreManager.headerScale.collect { scale ->
+                _uiState.update { it.copy(appSettings = it.appSettings.copy(headerScale = scale)) }
+            }
+        }
+    }
+
     fun updatePageSize(size: Int) {
         viewModelScope.launch {
             dataStoreManager.savePageSize(size)
@@ -563,6 +572,13 @@ class MemosViewModel(
             // Refresh all lists with new page size
             userMemoManager?.fetch(refresh = true)
             exploreMemoManager?.fetch(refresh = true)
+        }
+    }
+
+    fun updateHeaderScale(scale: Float) {
+        viewModelScope.launch {
+            dataStoreManager.saveHeaderScale(scale)
+            _uiState.update { it.copy(appSettings = it.appSettings.copy(headerScale = scale)) }
         }
     }
 

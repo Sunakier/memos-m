@@ -126,6 +126,7 @@ val LocalMarkdownContent = compositionLocalOf { "" }
 val LocalOnContentChange = compositionLocalOf<((String) -> Unit)?> { null }
 val LocalForceNoTopPadding = compositionLocalOf { false }
 val LocalOnHashtagClick = compositionLocalOf<((String) -> Unit)?> { null }
+val LocalHeaderScale = compositionLocalOf { 1.0f }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -133,13 +134,15 @@ fun NativeMarkdownNode(
     modifier: Modifier = Modifier,
     node: ASTNode,
     content: String,
+    headerScale: Float,
     onContentChange: ((String) -> Unit)? = null,
     onHashtagClick: ((String) -> Unit)? = null
 ) {
     CompositionLocalProvider(
         LocalMarkdownContent provides content,
         LocalOnContentChange provides onContentChange,
-        LocalOnHashtagClick provides onHashtagClick
+        LocalOnHashtagClick provides onHashtagClick,
+        LocalHeaderScale provides headerScale
     ) {
         Column(modifier = modifier) {
             NativeMarkdownNodeRecursive(node)
@@ -153,6 +156,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
     val content = LocalMarkdownContent.current
     val onContentChange = LocalOnContentChange.current
     val onHashtagClick = LocalOnHashtagClick.current
+    val headerScale = LocalHeaderScale.current
     val context = LocalContext.current
     val density = LocalDensity.current
     val fontSizePx = with(density) { typography.bodyLarge.fontSize.toPx() }
@@ -275,13 +279,14 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
         }
 
         MarkdownElementTypes.ATX_1, MarkdownElementTypes.ATX_2, MarkdownElementTypes.ATX_3, MarkdownElementTypes.ATX_4, MarkdownElementTypes.ATX_5, MarkdownElementTypes.ATX_6 -> {
-            val style = when (node.type) {
+            val baseStyle = when (node.type) {
                 MarkdownElementTypes.ATX_1 -> typography.displaySmall
                 MarkdownElementTypes.ATX_2 -> typography.headlineMedium
                 MarkdownElementTypes.ATX_3 -> typography.headlineSmall
                 MarkdownElementTypes.ATX_4 -> typography.titleLarge
                 else -> typography.titleMedium
             }
+            val style = baseStyle.copy(fontSize = baseStyle.fontSize * headerScale)
             // Headers contain inline elements usually, or just leaf text
             // Retrieve the text content excluding the # characters
             // BUT intellij-markdown structure for headers usually has: 

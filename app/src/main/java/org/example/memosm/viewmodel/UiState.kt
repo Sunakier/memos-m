@@ -73,7 +73,8 @@ data class DetailPaneState(
 // --- App Settings (local) ---
 
 data class AppSettings(
-    val pageSize: Int = 10
+    val pageSize: Int = 10,
+    val headerScale: Float = 1.0f
 )
 
 // --- Main UI State ---

@@ -564,6 +564,7 @@ private fun SearchResultContent(
                         onClick = {
                             onMemoClick(memo)
                         },
+                        headerScale = uiState.appSettings.headerScale,
                         onContentUpdate = if (isOwner) { newContent ->
                             onContentUpdate(memo, newContent)
                         } else null)

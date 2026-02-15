@@ -128,7 +128,8 @@ fun DraftsScreen(
                             onEdit = { draftToEdit = draft },
                             onDelete = { draftToDelete = draft },
                             maxHeight = 400.dp,
-                            modifier = Modifier.widthIn(max = 800.dp)
+                            modifier = Modifier.widthIn(max = 800.dp),
+                            headerScale = uiState.appSettings.headerScale
                         )
                     }
                 }

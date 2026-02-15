@@ -21,6 +21,7 @@ fun NativeComposeMarkdown(
     token: String = "",
     hostUrl: String = "",
     selectable: Boolean = false,
+    headerScale: Float,
     onContentChange: ((String) -> Unit)? = null,
     onHashtagClick: ((String) -> Unit)? = null
 ) {
@@ -57,6 +58,7 @@ fun NativeComposeMarkdown(
                     node = tree,
                     content = content,
                     modifier = modifier,
+                    headerScale = headerScale,
                     onContentChange = onContentChange,
                     onHashtagClick = onHashtagClick
                 )
@@ -66,6 +68,7 @@ fun NativeComposeMarkdown(
                 node = tree,
                 content = content,
                 modifier = modifier,
+                headerScale = headerScale,
                 onContentChange = onContentChange,
                 onHashtagClick = onHashtagClick
             )

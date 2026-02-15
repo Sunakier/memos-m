@@ -115,6 +115,7 @@ fun MemoItem(
     maxHeight: Dp = Dp.Unspecified,
     isDetailView: Boolean = false,
     reactionOptions: List<String> = emptyList(),
+    headerScale: Float,
     onHashtagClick: ((String) -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -472,7 +473,8 @@ fun MemoItem(
                                     unbounded = true,
                                     align = Alignment.Top
                                 ) else Modifier
-                            )
+                            ),
+                        headerScale = headerScale
                     )
                 }
 

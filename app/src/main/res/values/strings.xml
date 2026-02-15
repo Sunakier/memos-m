@@ -36,6 +36,8 @@
     <string name="profile_app_settings">App Settings</string>
     <string name="profile_app_settings_page_size">Pagination Size</string>
     <string name="profile_app_settings_page_size_hint">Items per page</string>
+    <string name="profile_app_settings_header_scale">Header Scale</string>
+    <string name="profile_app_settings_header_scale_format">%.1fx</string>
     <string name="profile_archived">Archived</string>
     <string name="profile_shortcuts">Shortcuts</string>
     <string name="profile_shortcuts_none">No shortcuts configured</string>

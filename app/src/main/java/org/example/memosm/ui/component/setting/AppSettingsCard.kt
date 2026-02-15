@@ -12,6 +12,7 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +35,9 @@ import org.example.memosm.R
 @Composable
 fun AppSettingsCard(
     pageSize: Int,
-    onPageSizeChange: (Int) -> Unit
+    onPageSizeChange: (Int) -> Unit,
+    headerScale: Float,
+    onHeaderScaleChange: (Float) -> Unit
 ) {
     var showPageSizeDialog by remember { mutableStateOf(false) }
 
@@ -59,6 +62,26 @@ fun AppSettingsCard(
                 },
                 trailingContent = { Icon(Icons.Outlined.ChevronRight, contentDescription = null) },
                 modifier = Modifier.clickable { showPageSizeDialog = true },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+            
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.profile_app_settings_header_scale)) },
+                supportingContent = {
+                    Column {
+                        Text(
+                            text = String.format(stringResource(R.string.profile_app_settings_header_scale_format), headerScale),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Slider(
+                            value = headerScale,
+                            onValueChange = onHeaderScaleChange,
+                            valueRange = 0.5f..2.0f,
+                            steps = 14
+                        )
+                    }
+                },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
         }

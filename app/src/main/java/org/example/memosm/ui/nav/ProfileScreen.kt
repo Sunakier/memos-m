@@ -452,7 +452,10 @@ private fun ProfileListPane(
                     Box(itemModifier) {
                         AppSettingsCard(
                             pageSize = uiState.appSettings.pageSize,
-                            onPageSizeChange = { viewModel.updatePageSize(it) })
+                            onPageSizeChange = { viewModel.updatePageSize(it) },
+                            headerScale = uiState.appSettings.headerScale,
+                            onHeaderScaleChange = { viewModel.updateHeaderScale(it) }
+                        )
                     }
                 }
 

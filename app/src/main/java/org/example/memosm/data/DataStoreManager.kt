@@ -26,6 +26,8 @@ class DataStoreManager(private val context: Context) {
         val ACCOUNTS_JSON = stringPreferencesKey("accounts_json")
         val PAGE_SIZE = intPreferencesKey("page_size")
         const val DEFAULT_PAGE_SIZE = 10
+        val HEADER_SCALE = androidx.datastore.preferences.core.floatPreferencesKey("header_scale")
+        const val DEFAULT_HEADER_SCALE = 1.0f
     }
 
     val hostUrl: Flow<String?> = context.dataStore.data.map { preferences ->
@@ -262,6 +264,16 @@ class DataStoreManager(private val context: Context) {
     suspend fun savePageSize(size: Int) {
         context.dataStore.edit { preferences ->
             preferences[PAGE_SIZE] = size
+        }
+    }
+
+    val headerScale: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[HEADER_SCALE] ?: DEFAULT_HEADER_SCALE
+    }
+
+    suspend fun saveHeaderScale(scale: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[HEADER_SCALE] = scale
         }
     }
 }

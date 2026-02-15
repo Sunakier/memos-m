@@ -437,6 +437,7 @@ fun GenericMemosListPane(
                             maxHeight = 400.dp,
                             modifier = Modifier.widthIn(max = 800.dp),
                             onHashtagClick = onHashtagClick,
+                            headerScale = uiState.appSettings.headerScale,
                             reactionOptions = uiState.session.instanceSettings?.memoRelatedSetting?.reactions
                                 ?: emptyList())
 

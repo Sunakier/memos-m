@@ -208,6 +208,7 @@ fun MemoDetailView(
                                 )
                             } else null,
                             isDetailView = true,
+                            headerScale = uiState.appSettings.headerScale,
                             reactionOptions = reactionOptions)
                     }
 
@@ -303,6 +304,7 @@ fun MemoDetailView(
                                 )
                             } else null,
                             isDetailView = true,
+                            headerScale = uiState.appSettings.headerScale,
                             reactionOptions = reactionOptions)
                     }
                 }
