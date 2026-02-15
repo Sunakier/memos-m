@@ -84,8 +84,8 @@ You can also download from [release](https://github.com/yamada-sexta/memos-m/rel
     - [x] Add/Remove reactions
     - [x] Respect server emoji list
 - Notifications
-  - [ ] Display notification
-  - [ ] ~~Fetch notification in the background~~ (bad for battery + no demand)
+  - [ ] View notifications
+  - [ ] ~~Fetch notifications in the background~~ (bad for battery + no demand)
 - Misc
   - [x] Multi language support: English, Japanese, Chinese, Korean, German
   - [x] Sharing intent support
