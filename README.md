@@ -24,6 +24,14 @@ It focuses on providing a native experience, speed, and full support for the lat
 <img height="300"  alt="image" src="https://github.com/user-attachments/assets/aba051d0-0c6d-4d0a-9bd0-9b7d0389d000" />
 <img height="300"  alt="image" src="https://github.com/user-attachments/assets/c1c3ac79-1d17-402a-b538-1eafe6b624e8" />
 
+## Why MemosM?
+
+While other clients like [MoeMemos](https://github.com/mudkipme/MoeMemosAndroid) are available, MemosM was developed to address specific technical and user experience gaps:
+
+- **Native Android Focus:** MemosM is built specifically for Android rather than being a cross-platform port. This ensures better performance and robust tablet support.
+- **Efficiency:** Optimized syncing prevents high data usage and ensures a faster, more responsive experience compared to clients that re-sync entire histories.
+- **Modern Feature Set:** By focusing on recent Memos versions, we avoid the limitations of backward compatibility and can implement modern features like advanced Markdown and Reactions.
+
 ## Downloads
 
 ### Stable Build
@@ -91,24 +99,10 @@ You can also download from [release](https://github.com/yamada-sexta/memos-m/rel
   - [x] Sharing intent support
   - [x] Local cache
 
-## Project Scope
-
-### Non-goals
+## Non-goals
 
 - **Indefinite Backward Compatibility:** We prioritize compatibility with the latest Memos API to leverage modern features. Older versions of Memos will not be supported for long.
 - **Multiplatform Support:** MemosM is built exclusively for Android to ensure a high-quality, native experience.
-
-## Why MemosM?
-
-While other clients like [MoeMemos](https://github.com/mudkipme/MoeMemosAndroid) are available, MemosM was developed to address specific technical and user experience gaps:
-
-- **Native Android Focus:** MemosM is built specifically for Android rather than being a cross-platform port. This ensures better performance and robust tablet support.
-- **Efficiency:** Optimized syncing prevents high data usage and ensures a faster, more responsive experience compared to clients that re-sync entire histories.
-- **Modern Feature Set:** By focusing on recent Memos versions, we avoid the limitations of backward compatibility and can implement modern features like advanced Markdown and Reactions.
-
-## Status
-
-**MemosM is currently a work in progress.** Some core Memos features are still being implemented, and users should expect occasional breaking changes or rough edges. Despite its development status, the app is stable enough for daily basic workflows, and we welcome your feedback.
 
 ## Contributing
 
