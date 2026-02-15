@@ -248,9 +248,9 @@ private fun ProfileListPane(
     // Credential Edit Dialog (local login info)
     accountToEditCredentials?.let { account ->
         LoginDialog(
-            onLoginSuccess = { baseUrl, token, cookies ->
+            onLoginSuccess = { baseUrl, token ->
                 // Update the account with new credentials
-                viewModel.updateAccountCredentials(account, baseUrl, token, cookies)
+                viewModel.updateAccountCredentials(account, baseUrl, token)
                 accountToEditCredentials = null
                 showAccountSwitcher = false
             }, onDismiss = { accountToEditCredentials = null }, editAccount = account

@@ -174,9 +174,9 @@ fun MainScreen(
 
 
     if (isAddingAccount) {
-        LoginDialog(onLoginSuccess = { newBaseUrl, newToken, cookies ->
+        LoginDialog(onLoginSuccess = { newBaseUrl, newToken ->
             scope.launch {
-                dataStoreManager.addAccount(newBaseUrl, newToken, cookies)
+                dataStoreManager.addAccount(newBaseUrl, newToken)
                 viewModel.updateCurrentAccountInList()
                 isAddingAccount = false
             }
