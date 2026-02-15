@@ -1,9 +1,32 @@
 package org.example.memosm.ui.component.composer
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.FormatBold
+import androidx.compose.material.icons.outlined.FormatItalic
+import androidx.compose.material.icons.outlined.FormatQuote
+import androidx.compose.material.icons.outlined.FormatSize
+import androidx.compose.material.icons.outlined.FormatStrikethrough
+import androidx.compose.material.icons.outlined.Tag
+import androidx.compose.material.icons.outlined.Title
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextRange
+import org.intellij.markdown.MarkdownElementTypes
+import org.intellij.markdown.ast.ASTNode
+import org.intellij.markdown.flavours.gfm.GFMFlavourDescriptor
+import org.intellij.markdown.parser.MarkdownParser
+
+data class SuggestionItem(
+    val label: String,
+    val content: String,
+    val icon: ImageVector,
+    val type: SuggestionType
+)
 
 data class SuggestionResult(
-    val suggestions: List<String>,
+    val suggestions: List<SuggestionItem>,
     val startIndex: Int,
     val replacementPrefix: String = "",
     val type: SuggestionType
@@ -12,37 +35,17 @@ data class SuggestionResult(
 enum class SuggestionType(val isAutoShown: Boolean) {
     HASHTAG(true),
     MARKDOWN(false),
-    CODE_LANGUAGE(false)
+    CODE_LANGUAGE(false),
+    FORMATTING(true) // For selection-based
 }
 
 object SuggestionProvider {
-    private val MARKDOWN_SUGGESTIONS = listOf(
-        "- ",
-        "> ",
-        "- [ ] "
-    )
+    private val flavour = GFMFlavourDescriptor()
+    private val parser = MarkdownParser(flavour)
 
     private val CODE_LANGUAGES = listOf(
-        "java",
-        "kotlin",
-        "js",
-        "python",
-        "bash",
-        "go",
-        "rust",
-        "cpp",
-        "c",
-        "html",
-        "css",
-        "sql",
-        "json",
-        "yaml",
-        "xml",
-        "swift",
-        "dart",
-        "php",
-        "ruby",
-        "lua"
+        "java", "kotlin", "js", "python", "bash", "go", "rust", "cpp", "c",
+        "html", "css", "sql", "json", "yaml", "xml", "swift", "dart", "php", "ruby", "lua"
     )
 
     fun getSuggestions(
@@ -50,26 +53,56 @@ object SuggestionProvider {
         selection: TextRange,
         availableTags: Set<String>
     ): SuggestionResult? {
+        // 1. Selection Logic (Formatting)
+        if (!selection.collapsed) {
+            return getFormattingSuggestions(selection)
+        }
+
         val cursorIndex = selection.start
         if (cursorIndex < 0 || cursorIndex > text.length) return null
 
+        // Parse AST
+        val rootNode = parser.buildMarkdownTreeFromString(text)
+        val nodeAtCursor = findNodeAt(rootNode, (cursorIndex - 1).coerceAtLeast(0))
+
+        // 2. Context Checks (Guard against suggestions in Code Blocks)
+        if (isInCodeBlock(nodeAtCursor, cursorIndex)) {
+            // Check if we are in the language declaration part of a fence
+            if (isLanguagePart(nodeAtCursor, cursorIndex, text)) {
+                return getLanguageSuggestions(text, cursorIndex)
+            }
+            return null
+        }
+
         val textBeforeCursor = text.take(cursorIndex)
 
-        // 1. Hashtag Check (Highest Priority if active matches)
+        // 3. Hashtag Check (Highest Priority if active matches)
         val lastHashIndex = textBeforeCursor.lastIndexOf('#')
         if (lastHashIndex != -1) {
             val potentialTag = textBeforeCursor.substring(lastHashIndex + 1)
-            // Ensure no spaces or newlines in the tag being typed
+            // Ensure no spaces or newlines in the tag being typed (simple heuristic still useful)
             if (!potentialTag.contains(' ') && !potentialTag.contains('\n')) {
+                 // Double check we are not inside a link or something else via AST? 
+                 // For now, the isInCodeBlock guard handles the main exclusion.
+                 
                 val filteredTags = if (potentialTag.isEmpty()) {
                     availableTags.toList()
                 } else {
                     availableTags.filter { it.contains(potentialTag, ignoreCase = true) }
                 }
-                
+
                 if (filteredTags.isNotEmpty()) {
+                    val suggestionItems = filteredTags.map { tag ->
+                        SuggestionItem(
+                            label = tag,
+                            content = tag, // No # prefix in content, caller handles prefix? Or we handle replacement logic
+                            icon = Icons.Outlined.Tag,
+                            type = SuggestionType.HASHTAG
+                        )
+                    }
+                    
                     return SuggestionResult(
-                        suggestions = filteredTags,
+                        suggestions = suggestionItems,
                         startIndex = lastHashIndex,
                         replacementPrefix = "#",
                         type = SuggestionType.HASHTAG
@@ -78,48 +111,130 @@ object SuggestionProvider {
             }
         }
 
-        // 2. Start of Line / Markdown Check
-        // Find the start of the current line
+        // 4. Start of Line / Block Context
+        // Check if we are at the start of a line or only whitespace before cursor on the line
         val lastNewlineIndex = textBeforeCursor.lastIndexOf('\n')
         val lineStartIndex = lastNewlineIndex + 1
         val currentLinePrefix = textBeforeCursor.substring(lineStartIndex)
 
-        // If the line is empty (cursor is at start of line), show markdown suggestions
-        if (currentLinePrefix.isEmpty()) {
-             return SuggestionResult(
-                suggestions = MARKDOWN_SUGGESTIONS,
-                startIndex = lineStartIndex,
-                type = SuggestionType.MARKDOWN
-            )
+        if (currentLinePrefix.trim().isEmpty()) {
+            return getBlockSuggestions(lineStartIndex)
         }
-
-        // 3. Code Block Language Check
-        // Check if the line *starts* with ``` and cursor is right after it, OR if user is typing language
-        // Case A: User typed ``` and nothing else yet -> Suggest languages
-        if (currentLinePrefix == "```") {
-             return SuggestionResult(
-                suggestions = CODE_LANGUAGES,
-                startIndex = lineStartIndex + 3, // Start replacing after ```
-                type = SuggestionType.CODE_LANGUAGE
-            )
+        
+        // Header suggestion while typing '#'
+        if (currentLinePrefix.all { it == '#' }) {
+             // User is typing headers
+             // We can suggest changing level
+             val currentLevel = currentLinePrefix.length
+             // Provide suggestions for headers
+             return getHeaderSuggestions(lineStartIndex, currentLevel)
         }
-
-        // Case B: User typed ```la -> Suggest languages starting with 'la'
-        if (currentLinePrefix.startsWith("```")) {
-            val typedLang = currentLinePrefix.substring(3)
-            // Ensure we don't suggest if there's a space (e.g. ``` java ) - though usually lang follows immediately
-            if (!typedLang.contains(' ')) {
-                 val filteredLangs = CODE_LANGUAGES.filter { it.startsWith(typedLang, ignoreCase = true) }
-                 if (filteredLangs.isNotEmpty()) {
-                     return SuggestionResult(
-                        suggestions = filteredLangs,
-                        startIndex = lineStartIndex + 3,
-                        type = SuggestionType.CODE_LANGUAGE
-                    )
-                 }
-            }
-        }
+        
+        // Code Block start
+         if (currentLinePrefix == "```") {
+             return getLanguageSuggestions(text, cursorIndex)
+         }
+         if (currentLinePrefix.startsWith("```")) {
+              val typedLang = currentLinePrefix.substring(3)
+              if (!typedLang.contains(' ')) {
+                   return getLanguageSuggestions(text, cursorIndex, typedLang)
+              }
+         }
 
         return null
+    }
+
+    private fun getFormattingSuggestions(selection: TextRange): SuggestionResult {
+        val items = listOf(
+            SuggestionItem("Bold", "**", Icons.Outlined.FormatBold, SuggestionType.FORMATTING),
+            SuggestionItem("Italic", "_", Icons.Outlined.FormatItalic, SuggestionType.FORMATTING),
+            SuggestionItem("Strike", "~~", Icons.Outlined.FormatStrikethrough, SuggestionType.FORMATTING),
+            SuggestionItem("Code", "`", Icons.Outlined.Code, SuggestionType.FORMATTING)
+        )
+        return SuggestionResult(items, selection.start, "", SuggestionType.FORMATTING)
+    }
+
+    private fun getBlockSuggestions(startIndex: Int): SuggestionResult {
+        val items = listOf(
+            SuggestionItem("Heading 1", "# ", Icons.Outlined.Title, SuggestionType.MARKDOWN),
+            SuggestionItem("Heading 2", "## ", Icons.Outlined.Title, SuggestionType.MARKDOWN),
+            SuggestionItem("Heading 3", "### ", Icons.Outlined.Title, SuggestionType.MARKDOWN),
+            SuggestionItem("Bullet List", "- ", Icons.AutoMirrored.Outlined.List, SuggestionType.MARKDOWN),
+            SuggestionItem("Task List", "- [ ] ", Icons.Outlined.Check, SuggestionType.MARKDOWN),
+            SuggestionItem("Quote", "> ", Icons.Outlined.FormatQuote, SuggestionType.MARKDOWN),
+            SuggestionItem("Code Block", "```\n```", Icons.Outlined.Code, SuggestionType.MARKDOWN)
+        )
+        return SuggestionResult(items, startIndex, "", SuggestionType.MARKDOWN)
+    }
+    
+    private fun getHeaderSuggestions(startIndex: Int, currentLevel: Int): SuggestionResult {
+         // Provide explicit header options
+         val items = (1..6).map { level ->
+             val hashes = "#".repeat(level) + " "
+             SuggestionItem("Heading $level", hashes, Icons.Outlined.FormatSize, SuggestionType.MARKDOWN)
+         }.filter { it.content.trim() != "#".repeat(currentLevel) } // Filter if exact match? Maybe keep to allow fixing spacing
+         
+         return SuggestionResult(items, startIndex, "", SuggestionType.MARKDOWN)
+    }
+
+    private fun getLanguageSuggestions(text: String, cursorIndex: Int, filter: String = ""): SuggestionResult {
+         // Determine start index for replacement. 
+         // If we are ````kotlin`, replacement starts after ```
+         // We need to find where ``` is on this line.
+         val lastNewline = text.lastIndexOf('\n', cursorIndex - 1)
+         val lineStart = lastNewline + 1
+         val fenceStart = text.indexOf("```", lineStart)
+         val replaceStart = if (fenceStart != -1) fenceStart + 3 else cursorIndex
+
+         val filtered = if (filter.isEmpty()) CODE_LANGUAGES else CODE_LANGUAGES.filter { it.startsWith(filter, ignoreCase = true) }
+         
+         val items = filtered.map { 
+             SuggestionItem(it, it, Icons.Outlined.Code, SuggestionType.CODE_LANGUAGE)
+         }
+         return SuggestionResult(items, replaceStart, "", SuggestionType.CODE_LANGUAGE)
+    }
+
+    private fun findNodeAt(node: ASTNode, offset: Int): ASTNode {
+        var current = node
+        while (true) {
+            val child = current.children.find { offset in it.startOffset until it.endOffset }
+            if (child != null) {
+                current = child
+            } else {
+                return current
+            }
+        }
+    }
+
+    private fun isInCodeBlock(node: ASTNode, offset: Int): Boolean {
+        var current: ASTNode? = node
+        while (current != null) {
+            if (current.type == MarkdownElementTypes.CODE_BLOCK || 
+                current.type == MarkdownElementTypes.CODE_FENCE) {
+                return true
+            }
+            current = current.parent
+        }
+        return false
+    }
+
+    private fun isLanguagePart(node: ASTNode, offset: Int, text: String): Boolean {
+        // In a CODE_FENCE, the language is usually matched as text or Fence Lang
+        // Simplest check: Are we on the first line of the fence?
+        var current: ASTNode? = node
+        while (current != null && current.type != MarkdownElementTypes.CODE_FENCE) {
+             current = current.parent
+        }
+        if (current == null) return false // Not in fence
+        
+        // Check if we are on the opening line
+        val fenceStart = current.startOffset
+        val fenceContent = text.substring(current.startOffset, current.endOffset)
+        val firstNewline = fenceContent.indexOf('\n')
+        
+        if (firstNewline == -1) return true // Still typing first line
+        
+        val absoluteNewline = fenceStart + firstNewline
+        return offset <= absoluteNewline
     }
 }
