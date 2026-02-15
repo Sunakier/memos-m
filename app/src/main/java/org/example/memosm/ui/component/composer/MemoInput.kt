@@ -2,7 +2,6 @@ package org.example.memosm.ui.component.composer
 
 import android.util.Log
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.tween
@@ -347,8 +346,7 @@ fun MemoInput(
                                 Surface(
                                     modifier = Modifier
                                         .widthIn(min = 140.dp, max = 240.dp)
-                                        .heightIn(max = constrainedMaxHeight)
-                                        .animateContentSize(animationSpec = tween(150)),
+                                        .heightIn(max = constrainedMaxHeight),
                                     shape = RoundedCornerShape(8.dp),
                                     tonalElevation = 3.dp,
                                     shadowElevation = 3.dp,
@@ -356,54 +354,62 @@ fun MemoInput(
                                 ) {
                                     LazyColumn(modifier = Modifier.fillMaxWidth()) {
                                         items(result.suggestions) { item ->
-                                            DropdownMenuItem(
-                                                text = { 
-                                                    Text(
-                                                        text = item.label,
-                                                        style = MaterialTheme.typography.bodyMedium
-                                                    ) 
-                                                },
-                                                leadingIcon = {
-                                                    Icon(
-                                                        imageVector = item.icon,
-                                                        contentDescription = null,
-                                                        modifier = Modifier.size(20.dp),
-                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            DropdownMenuItem(text = {
+                                                Text(
+                                                    text = item.label,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                            }, leadingIcon = {
+                                                Icon(
+                                                    imageVector = item.icon,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(20.dp),
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }, onClick = {
+                                                if (result.type == SuggestionType.FORMATTING) {
+                                                    // Selection formatting
+                                                    val start = contentState.selection.start
+                                                    val end = contentState.selection.end
+                                                    val selectedText =
+                                                        contentState.text.substring(start, end)
+                                                    val replacement =
+                                                        "${item.content}$selectedText${item.content}"
+                                                    val newText = contentState.text.replaceRange(
+                                                        start, end, replacement
                                                     )
-                                                },
-                                                onClick = {
-                                                    if (result.type == SuggestionType.FORMATTING) {
-                                                        // Selection formatting
-                                                        val start = contentState.selection.start
-                                                        val end = contentState.selection.end
-                                                        val selectedText = contentState.text.substring(start, end)
-                                                        val replacement = "${item.content}$selectedText${item.content}"
-                                                        val newText = contentState.text.replaceRange(start, end, replacement)
-                                                        val newSelection = TextRange(start + replacement.length)
-                                                        onContentChange(contentState.copy(text = newText, selection = newSelection))
-                                                    } else {
-                                                        // Text Insertion
-                                                        val replacement =
-                                                            if (result.type == SuggestionType.HASHTAG) "#${item.content} " else item.content
-
-                                                        val text = contentState.text
-                                                        val replaceStart = result.startIndex
-                                                        val replaceEnd = contentState.selection.start
-
-                                                        val newText = text.replaceRange(
-                                                            replaceStart, replaceEnd, replacement
+                                                    val newSelection =
+                                                        TextRange(start + replacement.length)
+                                                    onContentChange(
+                                                        contentState.copy(
+                                                            text = newText,
+                                                            selection = newSelection
                                                         )
-                                                        val newSelection =
-                                                            TextRange(replaceStart + replacement.length)
-                                                        onContentChange(
-                                                            contentState.copy(
-                                                                text = newText, selection = newSelection
-                                                            )
+                                                    )
+                                                } else {
+                                                    // Text Insertion
+                                                    val replacement =
+                                                        if (result.type == SuggestionType.HASHTAG) "#${item.content} " else item.content
+
+                                                    val text = contentState.text
+                                                    val replaceStart = result.startIndex
+                                                    val replaceEnd = contentState.selection.start
+
+                                                    val newText = text.replaceRange(
+                                                        replaceStart, replaceEnd, replacement
+                                                    )
+                                                    val newSelection =
+                                                        TextRange(replaceStart + replacement.length)
+                                                    onContentChange(
+                                                        contentState.copy(
+                                                            text = newText,
+                                                            selection = newSelection
                                                         )
-                                                    }
-                                                    currentSuggestionResult = null
-                                                    showSuggestionPopup = false
-                                                })
+                                                    )
+                                                }
+                                                currentSuggestionResult = null
+                                                showSuggestionPopup = false
+                                            })
                                         }
                                     }
                                 }
