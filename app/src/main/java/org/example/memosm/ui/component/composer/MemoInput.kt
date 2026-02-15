@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,7 +20,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -80,43 +84,28 @@ fun MemoInput(
     val focusRequester = remember { FocusRequester() }
     val scrollState = rememberScrollState()
 
-    // Tag autocomplete logic
-    var showTagPopup by remember { mutableStateOf(false) }
-    var tagFilter by remember { mutableStateOf("") }
-    var tagStartIndex by remember { mutableIntStateOf(-1) }
+    // Suggestion Logic
+    var currentSuggestionResult by remember { mutableStateOf<SuggestionResult?>(null) }
+    var showSuggestionPopup by remember { mutableStateOf(false) }
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
     val density = LocalDensity.current
 
     val markdownHandler = rememberMarkdownLanguageHandler()
 
+    // Monitor text/selection changes to trigger suggestions
     LaunchedEffect(contentState.text, contentState.selection) {
-        val text = contentState.text
-        val selection = contentState.selection
-        val cursorIndex = selection.start
-        if (cursorIndex > 0 && selection.collapsed) {
-            val textBeforeCursor = text.take(cursorIndex)
-            val lastHashIndex = textBeforeCursor.lastIndexOf('#')
-
-            if (lastHashIndex != -1) {
-                val potentialTag = textBeforeCursor.substring(lastHashIndex + 1)
-                if (!potentialTag.contains(' ') && !potentialTag.contains('\n')) {
-                    showTagPopup = true
-                    tagFilter = potentialTag
-                    tagStartIndex = lastHashIndex
-                } else {
-                    showTagPopup = false
-                }
-            } else {
-                showTagPopup = false
-            }
-        } else {
-            showTagPopup = false
+        val result = SuggestionProvider.getSuggestions(
+            contentState.text,
+            contentState.selection,
+            availableTags
+        )
+        currentSuggestionResult = result
+        if (result != null && result.type.isAutoShown) {
+            showSuggestionPopup = true
+        } else if (result == null) {
+            showSuggestionPopup = false
         }
-    }
-
-    val filteredTags = remember(tagFilter, availableTags) {
-        if (tagFilter.isEmpty()) availableTags.toList()
-        else availableTags.filter { it.contains(tagFilter, ignoreCase = true) }
+        // For non-auto types (Markdown, Code), showSuggestionPopup remains false (showing icon)
     }
 
     if (autoFocus) {
@@ -171,7 +160,6 @@ fun MemoInput(
 
             // Auto-scroll to keep cursor visible
             LaunchedEffect(contentState.selection, contentState.text) {
-//                if (maxHeightInLines == Int.MAX_VALUE) return@LaunchedEffect
                 val layout = textLayoutResult ?: return@LaunchedEffect
                 val cursorIndex =
                     contentState.selection.start.coerceIn(0, layout.layoutInput.text.length)
@@ -188,94 +176,122 @@ fun MemoInput(
                 }
             }
 
-            if (showTagPopup && filteredTags.isNotEmpty()) {
-                val imeBottom = WindowInsets.ime.getBottom(density)
-                val cursorRect = remember(textLayoutResult, contentState.selection) {
-                    val layout = textLayoutResult ?: return@remember IntRect.Zero
-                    val cursorIndex = contentState.selection.start
-                    val safeIndex = cursorIndex.coerceIn(0, layout.layoutInput.text.length)
-                    val rect = layout.getCursorRect(safeIndex)
-                    IntRect(
-                        left = rect.left.roundToInt(),
-                        top = rect.top.roundToInt(),
-                        right = rect.right.roundToInt(),
-                        bottom = rect.bottom.roundToInt()
-                    )
-                }
-
-                val effectiveScrollTop = scrollState.value
-
-                // Compute available space below and above the cursor in window coords
-                val cursorBottomInWindow =
-                    boxPositionInWindow.y + cursorRect.bottom - effectiveScrollTop
-                val cursorTopInWindow = boxPositionInWindow.y + cursorRect.top - effectiveScrollTop
-
-                val configuration = LocalConfiguration.current
-                val screenHeight = with(density) { configuration.screenHeightDp.dp.roundToPx() }
-                val effectiveWindowBottom = screenHeight - imeBottom
-
-                val spaceBelow = max(
-                    0,
-                    effectiveWindowBottom - cursorBottomInWindow - with(density) { 12.dp.roundToPx() })
-                val spaceAbove = max(0, cursorTopInWindow - with(density) { 4.dp.roundToPx() })
-                val popupMaxHeightPx = max(spaceBelow, spaceAbove)
-                val popupMaxHeightDp = with(density) { popupMaxHeightPx.toDp() }
-                val constrainedMaxHeight = min(popupMaxHeightDp.value, 200f).dp
-
-                Log.d("PopupDebug", "=== Height Constraint ===")
-                Log.d("PopupDebug", "cursorRect=$cursorRect")
-                Log.d("PopupDebug", "scrollTop=$effectiveScrollTop")
-                Log.d("PopupDebug", "boxPosInWindow=$boxPositionInWindow, boxHeight=$boxHeightPx")
-                Log.d(
-                    "PopupDebug",
-                    "cursorTopInWindow=$cursorTopInWindow, cursorBottomInWindow=$cursorBottomInWindow"
-                )
-                Log.d("PopupDebug", "effectiveWindowBottom=$effectiveWindowBottom")
-                Log.d("PopupDebug", "spaceBelow=$spaceBelow, spaceAbove=$spaceAbove")
-                Log.d(
-                    "PopupDebug",
-                    "popupMaxHeightPx=$popupMaxHeightPx, constrainedMaxHeight=$constrainedMaxHeight"
-                )
-                Log.d("PopupDebug", "imeBottom=$imeBottom")
-
-                val popupPositionProvider =
-                    remember(cursorRect, imeBottom, density, effectiveScrollTop) {
-                        CursorPopupPositionProvider(
-                            cursorRect = cursorRect,
-                            imeBottom = imeBottom,
-                            density = density,
-                            scrollTop = effectiveScrollTop
+            // Suggestion UI (Popup OR Hint Icon)
+            currentSuggestionResult?.let { result ->
+                if (result.suggestions.isNotEmpty()) {
+                    val imeBottom = WindowInsets.ime.getBottom(density)
+                    val cursorRect = remember(textLayoutResult, contentState.selection) {
+                        val layout = textLayoutResult ?: return@remember IntRect.Zero
+                        val cursorIndex = contentState.selection.start
+                        val safeIndex = cursorIndex.coerceIn(0, layout.layoutInput.text.length)
+                        val rect = layout.getCursorRect(safeIndex)
+                        IntRect(
+                            left = rect.left.roundToInt(),
+                            top = rect.top.roundToInt(),
+                            right = rect.right.roundToInt(),
+                            bottom = rect.bottom.roundToInt()
                         )
                     }
 
-                Popup(
-                    popupPositionProvider = popupPositionProvider
-                ) {
-                    Surface(
-                        modifier = Modifier
-                            .widthIn(min = 100.dp, max = 200.dp)
-                            .heightIn(max = constrainedMaxHeight),
-                        shape = RoundedCornerShape(8.dp),
-                        tonalElevation = 3.dp,
-                        shadowElevation = 3.dp,
-                        color = MaterialTheme.colorScheme.surfaceContainer
-                    ) {
-                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                            items(filteredTags) { tag ->
-                                DropdownMenuItem(text = { Text(text = "#$tag") }, onClick = {
-                                    val replacement = "#$tag "
-                                    val text = contentState.text
-                                    val newText = text.replaceRange(
-                                        tagStartIndex, contentState.selection.start, replacement
-                                    )
-                                    val newSelection = TextRange(tagStartIndex + replacement.length)
-                                    onContentChange(
-                                        contentState.copy(
-                                            text = newText, selection = newSelection
+                    val effectiveScrollTop = scrollState.value
+
+                    // Compute available space below and above the cursor in window coords
+                    val cursorBottomInWindow =
+                        boxPositionInWindow.y + cursorRect.bottom - effectiveScrollTop
+                    val cursorTopInWindow = boxPositionInWindow.y + cursorRect.top - effectiveScrollTop
+
+                    val configuration = LocalConfiguration.current
+                    val screenHeight = with(density) { configuration.screenHeightDp.dp.roundToPx() }
+                    val effectiveWindowBottom = screenHeight - imeBottom
+
+                    val spaceBelow = max(
+                        0,
+                        effectiveWindowBottom - cursorBottomInWindow - with(density) { 12.dp.roundToPx() })
+                    val spaceAbove = max(0, cursorTopInWindow - with(density) { 4.dp.roundToPx() })
+                    
+                    val popupMaxHeightPx = max(spaceBelow, spaceAbove)
+                    val popupMaxHeightDp = with(density) { popupMaxHeightPx.toDp() }
+                    val constrainedMaxHeight = min(popupMaxHeightDp.value, 200f).dp
+
+                    val popupPositionProvider =
+                        remember(cursorRect, imeBottom, density, effectiveScrollTop) {
+                            CursorPopupPositionProvider(
+                                cursorRect = cursorRect,
+                                imeBottom = imeBottom,
+                                density = density,
+                                scrollTop = effectiveScrollTop
+                            )
+                        }
+
+                    if (showSuggestionPopup) {
+                        Popup(
+                            popupPositionProvider = popupPositionProvider,
+                            onDismissRequest = { 
+                                showSuggestionPopup = false
+                                // Clear result if it was auto-shown to avoid sticky state
+                                if (result.type.isAutoShown) currentSuggestionResult = null
+                            }
+                        ) {
+                           Surface(
+                                modifier = Modifier
+                                    .widthIn(min = 100.dp, max = 200.dp)
+                                    .heightIn(max = constrainedMaxHeight),
+                                shape = RoundedCornerShape(8.dp),
+                                tonalElevation = 3.dp,
+                                shadowElevation = 3.dp,
+                                color = MaterialTheme.colorScheme.surfaceContainer
+                            ) {
+                                LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                                    items(result.suggestions) { item ->
+                                        val displayText = if (result.type == SuggestionType.HASHTAG) "#$item" else item
+                                        DropdownMenuItem(
+                                            text = { Text(text = displayText) },
+                                            onClick = {
+                                                val replacement = if (result.type == SuggestionType.HASHTAG) "#$item " else item
+                                                val text = contentState.text
+                                                
+                                                val replaceStart = result.startIndex
+                                                val replaceEnd = contentState.selection.start
+                                                
+                                                val newText = text.replaceRange(
+                                                    replaceStart, replaceEnd, replacement
+                                                )
+                                                val newSelection = TextRange(replaceStart + replacement.length)
+                                                onContentChange(
+                                                    contentState.copy(
+                                                        text = newText, selection = newSelection
+                                                    )
+                                                )
+                                                currentSuggestionResult = null
+                                                showSuggestionPopup = false
+                                            }
                                         )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Show Hint Icon
+                         Popup(
+                            popupPositionProvider = popupPositionProvider
+                        ) {
+                             Surface(
+                                shape = androidx.compose.foundation.shape.CircleShape,
+                                tonalElevation = 6.dp,
+                                shadowElevation = 6.dp,
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .clickable { showSuggestionPopup = true }
+                            ) {
+                                Box(modifier = Modifier.padding(8.dp)) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Add,
+                                        contentDescription = "Show suggestions",
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
-                                    showTagPopup = false
-                                })
+                                }
                             }
                         }
                     }
