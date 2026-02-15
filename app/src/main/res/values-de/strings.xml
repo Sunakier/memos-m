@@ -51,6 +51,7 @@
     <string name="profile_about_version">App-Version</string>
     <string name="profile_about_repo">Quellcode</string>
     <string name="profile_about_issues">Problem melden</string>
+    <string name="profile_about_licenses">Open-Source-Lizenzen</string>
     <string name="profile_add_account">Konto hinzufügen</string>
     <string name="profile_accounts">Konten</string>
     <string name="profile_remove_account_title">Konto entfernen</string>
@@ -207,10 +208,12 @@
     <!-- Activity Map -->
     <string name="profile_activity_map">Aktivitätskarte</string>
     <string name="profile_activity_count">%1$d Aktivitäten</string>
-    <string name="profile_activity_less">Weniger</string>
-    <string name="profile_activity_more">Mehr</string>
     <string name="drafts_delete_all_confirmation_title">Alle Entwürfe löschen?</string>
     <string name="drafts_delete_all_confirmation_message">Sind Sie sicher, dass Sie alle Entwürfe löschen möchten? Dieser Vorgang kann nicht rückgängig gemacht werden.</string>
+    <string name="drafts_publish_all_confirmation_title">Alle Entwürfe veröffentlichen?</string>
+    <string name="drafts_publish_all_confirmation_message">Dies wird alle %1$d Entwürfe als einzelne Memos veröffentlichen. Fortfahren?</string>
+    <string name="drafts_publish_all_success">%1$d Entwürfe veröffentlicht</string>
+    <string name="common_publish">Veröffentlichen</string>
 
     <string name="user_stats_widget_description">Zeigt Benutzerstatistiken an.</string>
 </resources>

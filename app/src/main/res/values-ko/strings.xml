@@ -51,6 +51,7 @@
     <string name="profile_about_version">앱 버전</string>
     <string name="profile_about_repo">소스 코드</string>
     <string name="profile_about_issues">문제 보고</string>
+    <string name="profile_about_licenses">오픈 소스 라이선스</string>
     <string name="profile_add_account">계정 추가</string>
     <string name="profile_accounts">계정</string>
     <string name="profile_remove_account_title">계정 삭제</string>
@@ -207,10 +208,12 @@
     <!-- Activity Map -->
     <string name="profile_activity_map">활동 지도</string>
     <string name="profile_activity_count">활동 %1$d개</string>
-    <string name="profile_activity_less">적음</string>
-    <string name="profile_activity_more">많음</string>
     <string name="drafts_delete_all_confirmation_title">모든 초안을 삭제하시겠습니까?</string>
     <string name="drafts_delete_all_confirmation_message">모든 초안을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.</string>
+    <string name="drafts_publish_all_confirmation_title">모든 초안을 게시하시겠습니까?</string>
+    <string name="drafts_publish_all_confirmation_message">모든 %1$d개의 초안을 개별 메모로 게시합니다. 계속하시겠습니까?</string>
+    <string name="drafts_publish_all_success">초안 %1$d개를 게시했습니다</string>
+    <string name="common_publish">게시</string>
 
     <string name="user_stats_widget_description">사용자 통계를 표시합니다.</string>
 </resources>

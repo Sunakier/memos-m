@@ -52,6 +52,7 @@
     <string name="profile_about_version_copied">已将版本号复制到剪贴板</string>
     <string name="profile_about_repo">源码仓库</string>
     <string name="profile_about_issues">反馈问题</string>
+    <string name="profile_about_licenses">开源许可</string>
     <string name="profile_add_account">添加账号</string>
     <string name="profile_accounts">账号管理</string>
     <string name="profile_remove_account_title">移除账号</string>
@@ -208,10 +209,12 @@
     <!-- Activity Map -->
     <string name="profile_activity_map">活动图</string>
     <string name="profile_activity_count">%1$d 次活动</string>
-    <string name="profile_activity_less">少</string>
-    <string name="profile_activity_more">多</string>
     <string name="drafts_delete_all_confirmation_title">删除所有草稿？</string>
     <string name="drafts_delete_all_confirmation_message">您确定要删除所有草稿吗？此操作无法撤销。</string>
+    <string name="drafts_publish_all_confirmation_title">发布所有草稿？</string>
+    <string name="drafts_publish_all_confirmation_message">这将把所有 %1$d 个草稿作为独立笔记发布。是否继续？</string>
+    <string name="drafts_publish_all_success">已发布 %1$d 个草稿</string>
+    <string name="common_publish">发布</string>
 
     <string name="user_stats_widget_description">显示用户统计信息。</string>
 </resources>
