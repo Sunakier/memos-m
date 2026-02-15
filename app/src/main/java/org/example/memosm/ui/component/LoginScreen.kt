@@ -49,7 +49,6 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.example.memosm.R
-import org.example.memosm.api.GrpcCookieInterceptor
 import org.example.memosm.api.MemosApiFactory
 import org.example.memosm.api.loginAndCreateToken
 import org.example.memosm.model.Account
@@ -60,7 +59,7 @@ enum class LoginMode {
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (String, String, Map<String, String>) -> Unit, modifier: Modifier = Modifier
+    onLoginSuccess: (String, String) -> Unit, modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
@@ -92,7 +91,7 @@ fun LoginScreen(
  */
 @Composable
 fun LoginDialog(
-    onLoginSuccess: (String, String, Map<String, String>) -> Unit,
+    onLoginSuccess: (String, String) -> Unit,
     onDismiss: () -> Unit,
     editAccount: Account? = null
 ) {
@@ -139,7 +138,7 @@ fun LoginDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginContent(
-    onLoginSuccess: (String, String, Map<String, String>) -> Unit,
+    onLoginSuccess: (String, String) -> Unit,
     modifier: Modifier = Modifier,
     editAccount: Account? = null
 ) {
@@ -191,15 +190,8 @@ fun LoginContent(
                 }
 
                 // Use MemosCookieJar to capture cookies using standard JavaNetCookieJar
-                val capturedCookies = mutableMapOf<String, String>()
-                val cookieJar = org.example.memosm.api.MemosCookieJar { newCookies ->
-                    capturedCookies.putAll(newCookies)
-                }
-
                 val client = OkHttpClient.Builder()
                     .addInterceptor(logging)
-                    .addNetworkInterceptor(GrpcCookieInterceptor())
-                    .cookieJar(cookieJar)
                     .build()
 
                 val api = MemosApiFactory.create(baseUrl, client)
@@ -233,7 +225,7 @@ fun LoginContent(
 
                     try {
                         authApi.getCurrentSession()
-                        onLoginSuccess(baseUrl, trimmedToken, capturedCookies)
+                        onLoginSuccess(baseUrl, trimmedToken)
                     } catch (e: Exception) {
                         errorMessage =
                             "Invalid token: ${e.localizedMessage ?: "Verification failed"}"
@@ -249,7 +241,7 @@ fun LoginContent(
                         val token = loginAndCreateToken(
                             api, baseUrl, username.trim(), password
                         )
-                        onLoginSuccess(baseUrl, token, capturedCookies)
+                        onLoginSuccess(baseUrl, token)
 
                     } catch (e: Exception) {
                         Log.e("MemosLogin", "Login failed", e)

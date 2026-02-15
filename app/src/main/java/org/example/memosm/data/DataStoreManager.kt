@@ -126,8 +126,7 @@ class DataStoreManager(private val context: Context) {
 
     suspend fun addAccount(
         hostUrl: String,
-        accessToken: String,
-        cookies: Map<String, String> = emptyMap()
+        accessToken: String
     ) {
         val current = getAccounts().toMutableList()
         // Check if account already exists to avoid duplicates
@@ -144,8 +143,7 @@ class DataStoreManager(private val context: Context) {
                 Account(
                     hostUrl = hostUrl,
                     accessToken = accessToken,
-                    isActive = true,
-                    cookies = cookies
+                    isActive = true
                 )
             )
             saveAccounts(updated)
@@ -192,13 +190,12 @@ class DataStoreManager(private val context: Context) {
     suspend fun updateAccount(
         id: String,
         hostUrl: String,
-        token: String,
-        cookies: Map<String, String> = emptyMap()
+        token: String
     ) {
         val current = getAccounts()
         val updated = current.map {
             if (it.id == id) {
-                val newAcc = it.copy(hostUrl = hostUrl, accessToken = token, cookies = cookies)
+                val newAcc = it.copy(hostUrl = hostUrl, accessToken = token)
                 if (newAcc.isActive) saveCredentials(hostUrl, token)
                 newAcc
             } else it
@@ -230,20 +227,7 @@ class DataStoreManager(private val context: Context) {
         saveAccounts(updated)
     }
 
-    suspend fun updateAccountCookies(id: String, newCookies: Map<String, String>) {
-        val current = getAccounts()
-        val updated = current.map { account ->
-            if (account.id == id) {
-                // Merge existing cookies with new cookies
-                val mergedCookies = account.cookies.toMutableMap()
-                mergedCookies.putAll(newCookies)
-                account.copy(cookies = mergedCookies)
-            } else {
-                account
-            }
-        }
-        saveAccounts(updated)
-    }
+
 
     suspend fun updateAccountToken(id: String, token: String) {
         val current = getAccounts()

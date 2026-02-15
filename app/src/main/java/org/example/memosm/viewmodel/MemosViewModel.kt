@@ -17,13 +17,9 @@ import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import org.example.memosm.api.AuthInterceptor
-import org.example.memosm.api.GrpcCookieInterceptor
-import org.example.memosm.api.GrpcMetadataCookieInterceptor
 import org.example.memosm.api.MemosApi
 import org.example.memosm.api.MemosApiFactory
-import org.example.memosm.api.MemosCookieJar
 import org.example.memosm.api.StreamingAttachmentApi
-import org.example.memosm.api.TokenAuthenticator
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.data.DraftManager
 import org.example.memosm.data.cache.CacheListType
@@ -102,63 +98,13 @@ class MemosViewModel(
 
     private suspend fun createApi(
         baseUrl: String,
-        token: String,
-        cookies: Map<String, String> = emptyMap(),
-        accountId: String? = null
+        token: String
     ): MemosApi {
-        // Create cookie jar using official JavaNetCookieJar via MemosCookieJar wrapper
-        // And set callback to save new cookies to DataStore
-        val cookieJar = MemosCookieJar { newCookies ->
-            if (accountId != null) {
-                viewModelScope.launch {
-                    dataStoreManager.updateAccountCookies(accountId, newCookies)
-                }
-            }
-        }
-
-        if (cookies.isNotEmpty()) {
-            val httpUrl = baseUrl.toHttpUrlOrNull()
-            if (httpUrl != null) {
-                cookieJar.restore(httpUrl, cookies)
-            }
-        }
-
         val authInterceptor = AuthInterceptor(token)
 
-        val authenticator = TokenAuthenticator(
-            baseUrl = baseUrl,
-            cookieJar = cookieJar,
-            onTokenRefreshed = { newToken ->
-                Log.d("MemosViewModel", "Token refreshed, updating state")
-                authInterceptor.updateToken(newToken)
-                viewModelScope.launch {
-                    _uiState.update { it.copy(session = it.session.copy(token = newToken)) }
-                    if (accountId != null) {
-                        dataStoreManager.updateAccountToken(accountId, newToken)
-                    }
-                }
-            },
-            onSessionInvalidated = {
-                Log.w("MemosViewModel", "Session invalidated, clearing session state")
-                viewModelScope.launch {
-                    // Clear the session state to trigger re-login prompt
-                    _uiState.update {
-                        it.copy(
-                            session = SessionState(token = "", currUser = null),
-                            error = "Session expired. Please sign in again."
-                        )
-                    }
-                    // Optionally clear the stored token for this account
-                    if (accountId != null) {
-                        dataStoreManager.updateAccountToken(accountId, "")
-                    }
-                }
-            })
-
-        currentHttpClient = OkHttpClient.Builder().addInterceptor(authInterceptor)
-            .addInterceptor(GrpcMetadataCookieInterceptor())  // Add gRPC metadata cookie header for gRPC-Gateway
-            .addNetworkInterceptor(GrpcCookieInterceptor()).authenticator(authenticator)
-            .cookieJar(cookieJar).build()
+        currentHttpClient = OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
+            .build()
 
         currentBaseUrl = baseUrl
 
@@ -207,7 +153,7 @@ class MemosViewModel(
                 }
                 pendingUserRequests.clear()
 
-                api = createApi(account.hostUrl, account.accessToken, account.cookies, account.id)
+                api = createApi(account.hostUrl, account.accessToken)
                 val currentApi = api!!
 
                 // Initialize Managers with cache callbacks
@@ -817,11 +763,11 @@ class MemosViewModel(
     }
 
     fun updateAccountCredentials(
-        account: Account, hostUrl: String, token: String, cookies: Map<String, String> = emptyMap()
+        account: Account, hostUrl: String, token: String
     ) {
         viewModelScope.launch {
             try {
-                dataStoreManager.updateAccount(account.id, hostUrl, token, cookies)
+                dataStoreManager.updateAccount(account.id, hostUrl, token)
                 updateCurrentAccountInList()
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error updating credentials", e)
@@ -829,14 +775,14 @@ class MemosViewModel(
         }
     }
 
-    fun addAccount(hostUrl: String, token: String, cookies: Map<String, String> = emptyMap()) {
+    fun addAccount(hostUrl: String, token: String) {
         viewModelScope.launch {
             try {
                 Log.d(
                     "MemosViewModel",
-                    "Adding account for $hostUrl with ${cookies.size} cookies: $cookies"
+                    "Adding account for $hostUrl"
                 )
-                dataStoreManager.addAccount(hostUrl, token, cookies)
+                dataStoreManager.addAccount(hostUrl, token)
                 updateCurrentAccountInList()
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
