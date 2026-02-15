@@ -32,11 +32,13 @@ data class SuggestionResult(
     val type: SuggestionType
 )
 
+
 enum class SuggestionType(val isAutoShown: Boolean) {
     HASHTAG(true),
     MARKDOWN(false),
     CODE_LANGUAGE(false),
-    FORMATTING(true) // For selection-based
+    FORMATTING(true), // For selection-based
+    AUTO_MARKDOWN(true)
 }
 
 object SuggestionProvider {
@@ -75,6 +77,9 @@ object SuggestionProvider {
         }
 
         val textBeforeCursor = text.take(cursorIndex)
+        val lastNewlineIndex = textBeforeCursor.lastIndexOf('\n')
+        val lineStartIndex = lastNewlineIndex + 1
+        val currentLinePrefix = textBeforeCursor.substring(lineStartIndex)
 
         // 3. Hashtag Check (Highest Priority if active matches)
         val lastHashIndex = textBeforeCursor.lastIndexOf('#')
@@ -107,16 +112,21 @@ object SuggestionProvider {
                         replacementPrefix = "#",
                         type = SuggestionType.HASHTAG
                     )
+                } else {
+                    // Start of Line Fallback:
+                    // If we are at the start of the line (ignoring the hash we are typing),
+                    // we should still show the block suggestions (Icon).
+                    // Example: "#unknown" -> No tags, but valid block position.
+                    // Check if everything before lastHashIndex on this line is whitespace
+                    val prefixBeforeHash = textBeforeCursor.substring(lineStartIndex, lastHashIndex)
+                    if (prefixBeforeHash.trim().isEmpty()) {
+                         return getBlockSuggestions(lineStartIndex)
+                    }
                 }
             }
         }
 
         // 4. Start of Line / Block Context
-        // Check if we are at the start of a line or only whitespace before cursor on the line
-        val lastNewlineIndex = textBeforeCursor.lastIndexOf('\n')
-        val lineStartIndex = lastNewlineIndex + 1
-        val currentLinePrefix = textBeforeCursor.substring(lineStartIndex)
-
         if (currentLinePrefix.trim().isEmpty()) {
             return getBlockSuggestions(lineStartIndex)
         }
@@ -128,6 +138,11 @@ object SuggestionProvider {
              val currentLevel = currentLinePrefix.length
              // Provide suggestions for headers
              return getHeaderSuggestions(lineStartIndex, currentLevel)
+        }
+
+        // List suggestion while typing '-'
+        if (currentLinePrefix == "-") {
+            return getListSuggestions(lineStartIndex)
         }
         
         // Code Block start
@@ -171,10 +186,18 @@ object SuggestionProvider {
          // Provide explicit header options
          val items = (1..6).map { level ->
              val hashes = "#".repeat(level) + " "
-             SuggestionItem("Heading $level", hashes, Icons.Outlined.FormatSize, SuggestionType.MARKDOWN)
-         }.filter { it.content.trim() != "#".repeat(currentLevel) } // Filter if exact match? Maybe keep to allow fixing spacing
+             SuggestionItem("Heading $level", hashes, Icons.Outlined.FormatSize, SuggestionType.AUTO_MARKDOWN)
+         }
          
-         return SuggestionResult(items, startIndex, "", SuggestionType.MARKDOWN)
+         return SuggestionResult(items, startIndex, "", SuggestionType.AUTO_MARKDOWN)
+    }
+
+    private fun getListSuggestions(startIndex: Int): SuggestionResult {
+        val items = listOf(
+            SuggestionItem("Bullet List", "- ", Icons.AutoMirrored.Outlined.List, SuggestionType.AUTO_MARKDOWN),
+            SuggestionItem("Task List", "- [ ] ", Icons.Outlined.Check, SuggestionType.AUTO_MARKDOWN)
+        )
+        return SuggestionResult(items, startIndex, "", SuggestionType.AUTO_MARKDOWN)
     }
 
     private fun getLanguageSuggestions(text: String, cursorIndex: Int, filter: String = ""): SuggestionResult {
