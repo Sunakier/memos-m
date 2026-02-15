@@ -1,8 +1,7 @@
 package org.example.memosm.ui.component.composer
 
 import android.util.Log
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -253,12 +252,12 @@ fun MemoInput(
                              transitionSpec = {
                                  if (targetState && !initialState) {
                                      // Icon -> List (Expand/Morph)
-                                     (fadeIn() + androidx.compose.animation.expandIn(expandFrom = androidx.compose.ui.Alignment.Center))
-                                         .togetherWith(fadeOut() + androidx.compose.animation.shrinkOut(shrinkTowards = androidx.compose.ui.Alignment.Center))
+                                     (fadeIn(animationSpec = tween(150)) + androidx.compose.animation.expandIn(expandFrom = androidx.compose.ui.Alignment.Center, animationSpec = tween(150)))
+                                         .togetherWith(fadeOut(animationSpec = tween(150)) + androidx.compose.animation.shrinkOut(shrinkTowards = androidx.compose.ui.Alignment.Center, animationSpec = tween(150)))
                                  } else if (!targetState && initialState) {
                                      // List -> Icon (Collapse) - unlikely to happen as dismiss clears, but symmetric
-                                     (fadeIn() + androidx.compose.animation.scaleIn())
-                                         .togetherWith(fadeOut() + androidx.compose.animation.scaleOut())
+                                     (fadeIn(animationSpec = tween(150)) + androidx.compose.animation.scaleIn(animationSpec = tween(150)))
+                                         .togetherWith(fadeOut(animationSpec = tween(150)) + androidx.compose.animation.scaleOut(animationSpec = tween(150)))
                                  } else {
                                      // Initial state or same state
                                       androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
@@ -331,8 +330,8 @@ fun MemoInput(
                                          .padding(4.dp)
                                          .clickable { showSuggestionPopup = true }
                                          .animateEnterExit(
-                                             enter = scaleIn(initialScale = 0.0f) + fadeIn(),
-                                             exit = scaleOut() + fadeOut()
+                                             enter = scaleIn(initialScale = 0.0f, animationSpec = tween(150)) + fadeIn(animationSpec = tween(150)),
+                                             exit = scaleOut(animationSpec = tween(150)) + fadeOut(animationSpec = tween(150))
                                          )
                                  ) {
                                      Box(modifier = Modifier.padding(8.dp)) {
