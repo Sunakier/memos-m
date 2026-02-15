@@ -21,7 +21,7 @@ class SuggestionProviderTest {
         assertEquals(SuggestionType.HASHTAG, result?.type)
         assertEquals("Expected 1 suggestion but got: ${result?.suggestions}", 1, result?.suggestions?.size)
         assertEquals("android", result?.suggestions?.first())
-        assertEquals(text.indexOf("#") + 1, result?.startIndex)
+        assertEquals(text.indexOf("#"), result?.startIndex)
     }
 
     @Test

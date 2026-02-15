@@ -1,6 +1,15 @@
 package org.example.memosm.ui.component.composer
 
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -35,6 +44,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
@@ -222,78 +232,120 @@ fun MemoInput(
                                 scrollTop = effectiveScrollTop
                             )
                         }
+                    
+                    // Determine if we are in "List" mode (Expanded) or "Icon" mode (Collapsed)
+                    // Auto-shown types (Hashtag) start expanded.
+                    // Others start collapsed (Icon) and expand on click.
+                    val isExpanded = result.type.isAutoShown || showSuggestionPopup
 
-                    if (showSuggestionPopup) {
-                        Popup(
-                            popupPositionProvider = popupPositionProvider,
-                            onDismissRequest = { 
-                                showSuggestionPopup = false
-                                // Clear result if it was auto-shown to avoid sticky state
-                                if (result.type.isAutoShown) currentSuggestionResult = null
-                            }
-                        ) {
-                           Surface(
-                                modifier = Modifier
-                                    .widthIn(min = 100.dp, max = 200.dp)
-                                    .heightIn(max = constrainedMaxHeight),
-                                shape = RoundedCornerShape(8.dp),
-                                tonalElevation = 3.dp,
-                                shadowElevation = 3.dp,
-                                color = MaterialTheme.colorScheme.surfaceContainer
-                            ) {
-                                LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                                    items(result.suggestions) { item ->
-                                        val displayText = if (result.type == SuggestionType.HASHTAG) "#$item" else item
-                                        DropdownMenuItem(
-                                            text = { Text(text = displayText) },
-                                            onClick = {
-                                                val replacement = if (result.type == SuggestionType.HASHTAG) "#$item " else item
-                                                val text = contentState.text
-                                                
-                                                val replaceStart = result.startIndex
-                                                val replaceEnd = contentState.selection.start
-                                                
-                                                val newText = text.replaceRange(
-                                                    replaceStart, replaceEnd, replacement
-                                                )
-                                                val newSelection = TextRange(replaceStart + replacement.length)
-                                                onContentChange(
-                                                    contentState.copy(
-                                                        text = newText, selection = newSelection
-                                                    )
-                                                )
-                                                currentSuggestionResult = null
-                                                showSuggestionPopup = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
+                    Popup(
+                        popupPositionProvider = popupPositionProvider,
+                        onDismissRequest = {
+                            showSuggestionPopup = false
+                            if (result.type.isAutoShown) currentSuggestionResult = null
                         }
-                    } else {
-                        // Show Hint Icon
-                         Popup(
-                            popupPositionProvider = popupPositionProvider
-                        ) {
-                             Surface(
-                                shape = androidx.compose.foundation.shape.CircleShape,
-                                tonalElevation = 6.dp,
-                                shadowElevation = 6.dp,
-                                color = MaterialTheme.colorScheme.surfaceContainer,
-                                modifier = Modifier
-                                    .padding(4.dp)
-                                    .clickable { showSuggestionPopup = true }
-                            ) {
-                                Box(modifier = Modifier.padding(8.dp)) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Add,
-                                        contentDescription = "Show suggestions",
-                                        modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
+                    ) {
+                         // Use AnimatedContent to transition between Icon and List
+                         // We need a wrapper to provide scope for animation if needed, but AnimatedContent provides its own scope.
+                         
+                         androidx.compose.animation.AnimatedContent(
+                             targetState = isExpanded,
+                             transitionSpec = {
+                                 if (targetState && !initialState) {
+                                     // Icon -> List (Expand/Morph)
+                                     (fadeIn() + androidx.compose.animation.expandIn(expandFrom = androidx.compose.ui.Alignment.Center))
+                                         .togetherWith(fadeOut() + androidx.compose.animation.shrinkOut(shrinkTowards = androidx.compose.ui.Alignment.Center))
+                                 } else if (!targetState && initialState) {
+                                     // List -> Icon (Collapse) - unlikely to happen as dismiss clears, but symmetric
+                                     (fadeIn() + androidx.compose.animation.scaleIn())
+                                         .togetherWith(fadeOut() + androidx.compose.animation.scaleOut())
+                                 } else {
+                                     // Initial state or same state
+                                      androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
+                                 }
+                             },
+                             label = "SuggestionAnimation"
+                         ) { expanded ->
+                             if (expanded) {
+                                 // LIST CONTENT
+                                 Surface(
+                                     modifier = Modifier
+                                         .widthIn(min = 100.dp, max = 200.dp)
+                                         .heightIn(max = constrainedMaxHeight),
+                                     shape = RoundedCornerShape(8.dp),
+                                     tonalElevation = 3.dp,
+                                     shadowElevation = 3.dp,
+                                     color = MaterialTheme.colorScheme.surfaceContainer
+                                 ) {
+                                     LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                                         items(result.suggestions) { item ->
+                                             val displayText =
+                                                 if (result.type == SuggestionType.HASHTAG) "#$item" else item
+                                             DropdownMenuItem(
+                                                 text = { Text(text = displayText) },
+                                                 onClick = {
+                                                     val replacement =
+                                                         if (result.type == SuggestionType.HASHTAG) "#$item " else item
+                                                     val text = contentState.text
+
+                                                     val replaceStart = result.startIndex
+                                                     val replaceEnd = contentState.selection.start
+
+                                                     val newText = text.replaceRange(
+                                                         replaceStart, replaceEnd, replacement
+                                                     )
+                                                     val newSelection =
+                                                         TextRange(replaceStart + replacement.length)
+                                                     onContentChange(
+                                                         contentState.copy(
+                                                             text = newText, selection = newSelection
+                                                         )
+                                                     )
+                                                     currentSuggestionResult = null
+                                                     showSuggestionPopup = false
+                                                 }
+                                             )
+                                         }
+                                     }
+                                 }
+                             } else {
+                                 // ICON CONTENT
+                                 // Only animate scaleIn for the icon initially if desired, but AnimatedContent handles state change.
+                                 // User asked for "ZoomIn" for circle hint.
+                                 // Since we are inside AnimatedContent, when this becomes visible (false state), it runs its enter transition.
+                                 // But we want a specific initial entry animation for the icon itself when it first appears.
+                                 // AnimatedContent handles transitions *between* states. 
+                                 // If the popup just appeared in "false" state, AnimatedContent emits a generic enter.
+                                 // Let's rely on a separate AnimatedVisibility for the Icon *inside* this branch to ensure it zooms in on creation?
+                                 // Actually, standard AnimatedVisibility inside here might be safer for initial appearance.
+                                 
+                                 // Wait, if we are here, isExpanded is false. 
+                                 // If the popup just appeared, we want the icon to Zoom In.
+                                 
+                                 Surface(
+                                     shape = androidx.compose.foundation.shape.CircleShape,
+                                     tonalElevation = 6.dp,
+                                     shadowElevation = 6.dp,
+                                     color = MaterialTheme.colorScheme.surfaceContainer,
+                                     modifier = Modifier
+                                         .padding(4.dp)
+                                         .clickable { showSuggestionPopup = true }
+                                         .animateEnterExit(
+                                             enter = scaleIn(initialScale = 0.0f) + fadeIn(),
+                                             exit = scaleOut() + fadeOut()
+                                         )
+                                 ) {
+                                     Box(modifier = Modifier.padding(8.dp)) {
+                                         Icon(
+                                             imageVector = Icons.Outlined.Add,
+                                             contentDescription = "Show suggestions",
+                                             modifier = Modifier.size(20.dp),
+                                             tint = MaterialTheme.colorScheme.primary
+                                         )
+                                     }
+                                 }
+                             }
+                         }
                     }
                 }
             }
