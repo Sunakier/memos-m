@@ -280,11 +280,13 @@ fun NativeMarkdownNodeRecursive(node: ASTNode) {
 
         MarkdownElementTypes.ATX_1, MarkdownElementTypes.ATX_2, MarkdownElementTypes.ATX_3, MarkdownElementTypes.ATX_4, MarkdownElementTypes.ATX_5, MarkdownElementTypes.ATX_6 -> {
             val baseStyle = when (node.type) {
-                MarkdownElementTypes.ATX_1 -> typography.displaySmall
-                MarkdownElementTypes.ATX_2 -> typography.headlineMedium
-                MarkdownElementTypes.ATX_3 -> typography.headlineSmall
-                MarkdownElementTypes.ATX_4 -> typography.titleLarge
-                else -> typography.titleMedium
+                MarkdownElementTypes.ATX_1 -> typography.displayLarge    // H1 (Largest)
+                MarkdownElementTypes.ATX_2 -> typography.displayMedium   // H2
+                MarkdownElementTypes.ATX_3 -> typography.headlineLarge   // H3
+                MarkdownElementTypes.ATX_4 -> typography.headlineMedium  // H4
+                MarkdownElementTypes.ATX_5 -> typography.titleLarge      // H5
+                MarkdownElementTypes.ATX_6 -> typography.titleMedium     // H6 (Smallest)
+                else -> typography.bodyLarge                             // Default fallback
             }
             val bodySize = typography.bodyLarge.fontSize
             val scaledSize = baseStyle.fontSize * headerScale
