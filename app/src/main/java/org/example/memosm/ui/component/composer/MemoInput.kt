@@ -88,7 +88,6 @@ fun MemoInput(
     availableTags: Set<String>,
     enabled: Boolean = true,
     autoFocus: Boolean = false,
-//    maxHeightInLines: Int = Int.MAX_VALUE
 ) {
     val focusRequester = remember { FocusRequester() }
     val scrollState = rememberScrollState()
