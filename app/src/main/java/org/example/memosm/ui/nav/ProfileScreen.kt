@@ -351,7 +351,8 @@ private fun ProfileListPane(
                     Box(itemModifier) {
                         StatsActivityCard(
                             userStats = stats,
-                            weekStartDayOffset = uiState.session.instanceSettings?.generalSetting?.weekStartDayOffset ?: 0
+                            weekStartDayOffset = uiState.session.instanceSettings?.generalSetting?.weekStartDayOffset
+                                ?: 0
                         )
                     }
                 }

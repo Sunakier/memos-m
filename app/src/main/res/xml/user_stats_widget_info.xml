@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="org.example.memosm.widget.stats.UserStatsWidgetConfigActivity"
     android:description="@string/user_stats_widget_description"
     android:initialLayout="@layout/glance_loading_placeholder"
     android:minWidth="200dp"
     android:minHeight="100dp"
     android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen"
-    android:configure="org.example.memosm.widget.stats.UserStatsWidgetConfigActivity"
-    android:updatePeriodMillis="3600000" />
+    android:updatePeriodMillis="3600000"
+    android:widgetCategory="home_screen" />

@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -70,7 +69,7 @@ android {
                 "proguard-rules.pro"
             )
             applicationIdSuffix = ".insider"
-            
+
             // Tag format is likely v1.1.1, so we strip the 'v' prefix
             // versionName assignment moved to applicationVariants.all block below
             versionNameSuffix = "-insider"

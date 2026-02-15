@@ -188,7 +188,10 @@ class MainActivity : ComponentActivity() {
         }
 
         val shareData = ShareIntentData(text = text, uris = uris)
-        Log.d("MainActivity", "parseShareIntent: result isEmpty=${shareData.isEmpty}, uriCount=${uris.size}")
+        Log.d(
+            "MainActivity",
+            "parseShareIntent: result isEmpty=${shareData.isEmpty}, uriCount=${uris.size}"
+        )
         return if (shareData.isEmpty) null else shareData
     }
 

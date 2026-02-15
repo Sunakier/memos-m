@@ -12,11 +12,11 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Slider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -64,13 +64,16 @@ fun AppSettingsCard(
                 modifier = Modifier.clickable { showPageSizeDialog = true },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
-            
+
             ListItem(
                 headlineContent = { Text(stringResource(R.string.profile_app_settings_header_scale)) },
                 supportingContent = {
                     Column {
                         Text(
-                            text = String.format(stringResource(R.string.profile_app_settings_header_scale_format), headerScale),
+                            text = String.format(
+                                stringResource(R.string.profile_app_settings_header_scale_format),
+                                headerScale
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

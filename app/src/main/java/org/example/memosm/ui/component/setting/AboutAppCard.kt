@@ -124,7 +124,8 @@ fun AboutAppCard() {
                         currentToast.value = toast
                         toast.show()
                     })
-                    .padding(horizontal = 16.dp, vertical = 8.dp))
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
 
             val repoUrl = stringResource(R.string.profile_about_repo_url)
             val issuesUrl = stringResource(R.string.profile_about_issues_url)
@@ -142,7 +143,8 @@ fun AboutAppCard() {
                         val intent = Intent(Intent.ACTION_VIEW, repoUrl.toUri())
                         context.startActivity(intent)
                     }),
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent))
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
 
             ListItem(
                 headlineContent = { Text(stringResource(R.string.profile_about_issues)) },
@@ -157,14 +159,16 @@ fun AboutAppCard() {
                         val intent = Intent(Intent.ACTION_VIEW, issuesUrl.toUri())
                         context.startActivity(intent)
                     }),
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent))
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
 
             ListItem(
                 headlineContent = { Text(stringResource(R.string.profile_about_licenses)) },
                 leadingContent = { Icon(Icons.Outlined.Balance, contentDescription = null) },
                 modifier = Modifier.combinedClickable(
                     onClick = { showLicensesDialog = true }),
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent))
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
         }
     }
 

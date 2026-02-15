@@ -1,9 +1,6 @@
 package org.example.memosm.ui.component.composer
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.text.input.TextFieldBuffer
-import androidx.compose.ui.text.TextRange
-import org.junit.Assert.assertEquals
 import org.junit.Test
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -86,7 +83,7 @@ class MarkdownListInputTransformationTest {
             expectedCursor = 12 // 8 + 1 + 3 (2. )
         )
     }
-    
+
     @Test
     fun testNestedBullet() {
         testTransformation(
@@ -97,7 +94,7 @@ class MarkdownListInputTransformationTest {
             expectedCursor = 13 // 8 + 1 + 4 (  * )
         )
     }
-    
+
     @Test
     fun testBlockquote() {
         testTransformation(
@@ -105,10 +102,10 @@ class MarkdownListInputTransformationTest {
             insertion = "\n",
             cursorPosition = 7,
             expectedText = "> Quote\n> ",
-            expectedCursor = 10 
+            expectedCursor = 10
         )
     }
-    
+
     @Test
     fun testBrackets() {
         testTransformation(
@@ -119,7 +116,7 @@ class MarkdownListInputTransformationTest {
             expectedCursor = 11
         )
     }
-    
+
     @Test
     fun testParens() {
         testTransformation(
@@ -130,7 +127,7 @@ class MarkdownListInputTransformationTest {
             expectedCursor = 11
         )
     }
-    
+
     @Test
     fun testHeaderNoAutoContinue() {
         testTransformation(
