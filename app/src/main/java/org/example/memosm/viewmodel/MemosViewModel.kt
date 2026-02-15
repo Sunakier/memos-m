@@ -1244,18 +1244,18 @@ class MemosViewModel(
         }
     }
 
-    class Factory(
-        private val dataStoreManager: DataStoreManager,
-        private val draftManager: DraftManager,
-        private val memoCacheRepository: MemoCacheRepository
-    ) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(MemosViewModel::class.java)) {
-                @Suppress("UNCHECKED_CAST") return MemosViewModel(
-                    dataStoreManager, draftManager, memoCacheRepository
-                ) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
-        }
-    }
+//    class Factory(
+//        private val dataStoreManager: DataStoreManager,
+//        private val draftManager: DraftManager,
+//        private val memoCacheRepository: MemoCacheRepository
+//    ) : ViewModelProvider.Factory {
+//        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+//            if (modelClass.isAssignableFrom(MemosViewModel::class.java)) {
+//                @Suppress("UNCHECKED_CAST") return MemosViewModel(
+//                    dataStoreManager, draftManager, memoCacheRepository
+//                ) as T
+//            }
+//            throw IllegalArgumentException("Unknown ViewModel class")
+//        }
+//    }
 }

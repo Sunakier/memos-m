@@ -5,11 +5,6 @@ import okhttp3.Interceptor
 import okhttp3.Response
 
 class AuthInterceptor(private var token: String) : Interceptor {
-
-    fun updateToken(newToken: String) {
-        token = newToken
-    }
-
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
         val builder = original.newBuilder()
