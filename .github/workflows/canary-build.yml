@@ -8,6 +8,13 @@ on:
       - "LICENSE"
       - ".gitignore"
       - ".editorconfig"
+      # Ignore Android Test folder anywhere in the project
+      - "**/androidTest/**"
+      - "app/src/test/**"
+      # Ignore ALL GitHub workflow files
+      - ".github/workflows/**"
+      # ...BUT allow this specific file to trigger a build
+      - "!.github/workflows/canary-build.yml"
 
 jobs:
   build:
