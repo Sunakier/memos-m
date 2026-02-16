@@ -39,26 +39,6 @@ class MemosApiIntegrationTest {
         try {
             // Start Memos v0.26 container
             container = GenericContainer("neosmemo/memos:0.26")
-            
-            val socketPath = "/var/run/docker.sock"
-            System.setProperty("docker.host", "unix://$socketPath")
-            System.setProperty("api.version", "1.46") // Force Docker API version
-            
-            log("DEBUG: Configured docker.host to $socketPath")
-            log("DEBUG: Configured api.version to 1.46")
-            log("DEBUG: Env DOCKER_HOST = ${System.getenv("DOCKER_HOST")}")
-            
-            val socketFile = java.io.File(socketPath)
-            log("DEBUG: Socket '$socketPath' exists: ${socketFile.exists()}")
-            log("DEBUG: Socket '$socketPath' canRead: ${socketFile.canRead()}")
-            log("DEBUG: Socket '$socketPath' canWrite: ${socketFile.canWrite()}")
-
-             // Probe for other socket locations just in case
-            listOf("/run/docker.sock", "/run/user/1000/docker.sock").forEach { path ->
-                 val f = java.io.File(path)
-                 log("DEBUG: Probe '$path' exists: ${f.exists()}")
-            }
-
             log("DEBUG: Attempting container.start()")
             
             container.withExposedPorts(5230)
