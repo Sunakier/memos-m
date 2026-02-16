@@ -283,16 +283,16 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         // We need an ID or name from the created shortcut to delete it.
         // Assuming createdShortcut.name is the resource ID (e.g. "users/1/shortcuts/1")
         if (createdShortcut.name != null) {
-            api.deleteShortcut(userName, createdShortcut.name!!.substringAfterLast("/")) 
+            api.deleteShortcut(userName, createdShortcut.name.substringAfterLast("/"))
             // Note: API definition: deleteShortcut(user, shortcut) where shortcut is likely just the ID or full name?
-            // The retrofit definition usually expects the path parameter. 
-            // If the path is `users/{uid}/shortcuts/{sid}`, and the argument is `shortcut`, 
+            // The retrofit definition usually expects the path parameter.
+            // If the path is `users/{uid}/shortcuts/{sid}`, and the argument is `shortcut`,
             // it depends on how `@Path("shortcut")` is used.
             // Looking at MemosApi (impl not shown but interface):
             // suspend fun deleteShortcut(user: String, shortcut: String)
             // It likely maps to DELETE users/{user}/shortcuts/{shortcut}
-            // So we probably just need the ID part if the path template is hardcoded, 
-            // or full name if it's checking resource name. 
+            // So we probably just need the ID part if the path template is hardcoded,
+            // or full name if it's checking resource name.
             // Usually in this project it seems to be ID.
             // Let's list again to check if it's gone or failed.
         }
@@ -317,7 +317,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         // Delete Webhook
         if (createdWebhook.name != null) {
             // Similarly, extract ID if needed
-             val webhookId = createdWebhook.name!!.substringAfterLast("/") // "1"
+             val webhookId = createdWebhook.name.substringAfterLast("/") // "1"
              // api.deleteUserWebhook(userName, webhookId)
              // Depending on implementation, let's try with ID
              try {
