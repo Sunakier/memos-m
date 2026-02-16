@@ -189,6 +189,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     testImplementation(libs.testcontainers)
     testImplementation(libs.jna)
+    testImplementation(libs.slf4j.simple)
 
 
     // ROOM

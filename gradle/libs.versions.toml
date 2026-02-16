@@ -27,6 +27,7 @@ desugarJdkLibs = "2.1.5"
 roomRuntime = "2.8.4"
 testcontainers = "2.0.3"
 jna = "5.18.1"
+slf4j = "2.0.17"
 
 [libraries]
 android-desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }
@@ -82,6 +83,7 @@ media3-datasource-okhttp = { group = "androidx.media3", name = "media3-datasourc
 aboutlibraries-compose = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutlibraries" }
 testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+slf4j-simple = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
