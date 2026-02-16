@@ -55,7 +55,7 @@ class MemosApiIntegrationTest {
             throw e
         }
         
-        baseUrl = "http://${container.host}:${container.getMappedPort(5230)}"
+        baseUrl = "http://${container.host}:${container.getMappedPort(5230)}/"
     }
 
     @After
@@ -94,17 +94,18 @@ class MemosApiIntegrationTest {
             {
                 "username": "adminuser",
                 "password": "password123",
-                "nickname": "Admin"
+                "displayName": "Admin",
+                "role": "HOST"
             }
         """.trimIndent()
         
         val signupRequest = Request.Builder()
-            .url("${baseUrl}api/v1/auth/signup")
+            .url("${baseUrl}api/v1/users")
             .post(signupJson.toRequestBody("application/json".toMediaType()))
             .build()
             
         client.newCall(signupRequest).execute().use { response ->
-             val body = response.body?.string()
+             val body = response.body.string()
              println("Signup response: $body")
              assertTrue("Signup failed: $body", response.isSuccessful)
         }
