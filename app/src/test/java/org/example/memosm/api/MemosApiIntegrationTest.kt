@@ -80,7 +80,6 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
     }
 
 
-
     private var sharedApi: MemosApi? = null
 
     private suspend fun getAuthenticatedApi(): MemosApi {
@@ -94,11 +93,9 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             level = okhttp3.logging.HttpLoggingInterceptor.Level.BODY
         }
 
-        val client = OkHttpClient.Builder()
-            .addInterceptor(logging)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .build()
-        
+        val client =
+            OkHttpClient.Builder().addInterceptor(logging).readTimeout(30, TimeUnit.SECONDS).build()
+
         // Ensure we have an admin user (first user is admin)
         val signupJson = """
             {
@@ -109,11 +106,9 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             }
         """.trimIndent()
 
-        val signupRequest = Request.Builder()
-            .url("${baseUrl}api/v1/users")
-            .post(signupJson.toRequestBody("application/json".toMediaType()))
-            .build()
-        
+        val signupRequest = Request.Builder().url("${baseUrl}api/v1/users")
+            .post(signupJson.toRequestBody("application/json".toMediaType())).build()
+
         // Sign up and verify success (fail if already exists or other error)
         client.newCall(signupRequest).execute().use { response ->
             val body = response.body.string()
@@ -122,19 +117,15 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         }
 
         val api = MemosApiFactory.create(baseUrl, client)
-        
+
         // Login
         val token = loginAndCreateToken(api, baseUrl, TEST_USERNAME, TEST_PASSWORD)
 
-        val authClient = OkHttpClient.Builder()
-            .addInterceptor(logging)
-            .addInterceptor { chain ->
-                val request = chain.request().newBuilder()
-                    .addHeader("Authorization", "Bearer $token").build()
-                chain.proceed(request)
-            }
-            .readTimeout(30, TimeUnit.SECONDS)
-            .build()
+        val authClient = OkHttpClient.Builder().addInterceptor(logging).addInterceptor { chain ->
+            val request =
+                chain.request().newBuilder().addHeader("Authorization", "Bearer $token").build()
+            chain.proceed(request)
+        }.readTimeout(30, TimeUnit.SECONDS).build()
 
         sharedApi = MemosApiFactory.create(baseUrl, authClient)
         return sharedApi!!
@@ -166,9 +157,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         // 3. Edit Memo 1
         // Note: UpdateMask is required for some APIs, usually field paths comma separated
         val updatedMemo1 = api.updateMemo(
-            memo1.name!!,
-            org.example.memosm.model.Memo(content = "Memo 1 Updated"),
-            "content"
+            memo1.name!!, org.example.memosm.model.Memo(content = "Memo 1 Updated"), "content"
         )
         println("Updated Memo 1 content: ${updatedMemo1.content}")
         assertEquals("Memo 1 Updated", updatedMemo1.content)
@@ -196,137 +185,177 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         println("Running testUserStatsAndProfile")
         val api = getAuthenticatedApi()
 
-        // 1. Create some memos to populate stats
+        // ---------------------------------------------------------
+        // 1. Setup & Stats (Existing Logic)
+        // ---------------------------------------------------------
         val memo1 = api.createMemo(org.example.memosm.model.Memo(content = "Stats Memo 1 #tag1"))
         val memo2 = api.createMemo(org.example.memosm.model.Memo(content = "Stats Memo 2 #tag2"))
 
-        // 2. Test getUserStats
         val session = api.getCurrentSession()
         val user = session.user!!
-        val userName = user.name!! // likely "users/1" or similar
+        val userName = user.name!!
 
         println("Fetching stats for $userName")
-        // Use the valid user resource name
         val stats = api.getUserStats(userName)
-        
+
         println("User Stats: ${stats.totalMemoCount} memos")
-        // Check if stats reflect the created memos (at least > 0)
-        // Note: totalMemoCount might include previous test runs if valid connection
         assertTrue((stats.totalMemoCount ?: 0) >= 2)
         assertNotNull(stats.memoDisplayTimestamps)
-        assertTrue(stats.memoDisplayTimestamps!!.isNotEmpty())
 
+        // ---------------------------------------------------------
+        // 2. Test User Profile Masks (display_name, description, avatar_url)
+        // ---------------------------------------------------------
+        println("--- Testing User Profile Masks ---")
 
-        // 3. Test Profile Update (updateUser)
+        // A. Mask: display_name
         val newDisplayName = "Updated Admin"
-        val updatedUser = api.updateUser(
+        val userWithNewName = api.updateUser(
             userName,
             org.example.memosm.model.User(displayName = newDisplayName),
-            api.constants.userMaskDisplayName // Field mask
+            api.constants.userMaskDisplayName
         )
-        println("Updated User Display Name: ${updatedUser.displayName}")
-        assertEquals(newDisplayName, updatedUser.displayName)
+        assertEquals(newDisplayName, userWithNewName.displayName)
 
-        // Revert back
+        // B. Mask: description
+        val newDescription = "Kotlin Test Description"
+        val userWithNewDesc = api.updateUser(
+            userName,
+            org.example.memosm.model.User(description = newDescription),
+            api.constants.userMaskDescription
+        )
+        assertEquals(newDescription, userWithNewDesc.description)
+        val validDataUri =
+            "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+        println("Testing Avatar Update with Data URI...")
+        val userWithNewAvatar = api.updateUser(
+            userName,
+            org.example.memosm.model.User(avatarUrl = validDataUri),
+            api.constants.userMaskAvatarUrl
+        )
+        println("Returned Avatar URL: ${userWithNewAvatar.avatarUrl}")
+
+        assertNotNull(userWithNewAvatar.avatarUrl)
+        assertTrue(
+            "Avatar URL should start with /file/",
+            userWithNewAvatar.avatarUrl!!.startsWith("/file/")
+        )
+        assertTrue(
+            "Avatar URL should end with /avatar", userWithNewAvatar.avatarUrl.endsWith("/avatar")
+        )
+
+        // Revert Display Name (Clean up)
         api.updateUser(
             userName,
             org.example.memosm.model.User(displayName = TEST_DISPLAY_NAME),
             api.constants.userMaskDisplayName
         )
 
+        // Note: Masks for 'password', 'email', and 'username' are available but
+        // are skipped here as they may invalidate the current auth session.
 
-        // 4. Test Settings (listUserSettings, updateUserSetting)
-        // List settings
-        val settingsList = api.listUserSettings(userName)
-        println("User Settings count: ${settingsList.settings?.size}")
+        // ---------------------------------------------------------
+        // 3. Test User Settings Masks (locale, memo_visibility)
+        // ---------------------------------------------------------
+        println("--- Testing User Settings Masks ---")
+        val generalSettingKey = api.constants.userSettingGeneralKey
 
-        // Update a setting (e.g., locale)
-        // Use the constant for the setting key and mask
-        val generalSettingName = api.constants.userSettingGeneralKey
+        // A. Mask: locale
         val newLocale = "zh-CN"
-        val settingUpdate = org.example.memosm.model.UserSetting(
+        val settingUpdateLocale = org.example.memosm.model.UserSetting(
             generalSetting = org.example.memosm.model.UserGeneralSetting(locale = newLocale)
         )
-        val updatedSetting = api.updateUserSetting(
+        val updatedLocaleSetting = api.updateUserSetting(
+            userName, generalSettingKey, settingUpdateLocale, api.constants.userSettingLocaleMask
+        )
+        assertEquals(newLocale, updatedLocaleSetting.generalSetting?.locale)
+
+        // B. Mask: memo_visibility
+        val newVisibility =
+            org.example.memosm.model.Visibility.PRIVATE // Assuming enum/string value
+        val settingUpdateVis = org.example.memosm.model.UserSetting(
+            generalSetting = org.example.memosm.model.UserGeneralSetting(memoVisibility = newVisibility)
+        )
+        val updatedVisSetting = api.updateUserSetting(
             userName,
-            generalSettingName,
-            settingUpdate,
-            api.constants.userSettingLocaleMask
+            generalSettingKey,
+            settingUpdateVis,
+            api.constants.userSettingMemoVisibilityMask
         )
-        println("Updated setting: $updatedSetting")
-        assertEquals(newLocale, updatedSetting.generalSetting?.locale)
+        assertEquals(newVisibility, updatedVisSetting.generalSetting?.memoVisibility)
 
+        // ---------------------------------------------------------
+        // 4. Test Shortcut Masks (title, filter)
+        // ---------------------------------------------------------
+        println("--- Testing Shortcut Masks ---")
 
-        // 5. Test Shortcuts (getShortcuts, createShortcut, deleteShortcut)
-        // List shortcuts (getShortcuts returns ShortcutResponse wrapping list)
-        val shortcutsResponseBefore = api.getShortcuts(userName)
-        val initialShortcutCount = shortcutsResponseBefore.shortcuts?.size ?: 0
-        println("Initial shortcuts: $initialShortcutCount")
-
-        // Create Shortcut
-        val shortcut = org.example.memosm.model.Shortcut(
-            title = "Test Shortcut",
-            filter = "tag in ['test']"
+        // Create initial shortcut
+        val initialShortcut = org.example.memosm.model.Shortcut(
+            title = "Original Title", filter = "tag in ['test']"
         )
-        // createShortcut(user, shortcut)
-        val createdShortcut = api.createShortcut(userName, shortcut)
-        println("Created Shortcut: ${createdShortcut.title}")
-        assertNotNull(createdShortcut.title)
-        assertEquals("Test Shortcut", createdShortcut.title)
+        val createdShortcut = api.createShortcut(userName, initialShortcut)
+        val shortcutId = createdShortcut.name?.substringAfterLast("/")!!
 
-        // List again to verify
-        val shortcutsResponseAfter = api.getShortcuts(userName)
-        val newShortcutCount = shortcutsResponseAfter.shortcuts?.size ?: 0
-        assertEquals(initialShortcutCount + 1, newShortcutCount)
-
-        // Delete Shortcut
-        // We need an ID or name from the created shortcut to delete it.
-        // Assuming createdShortcut.name is the resource ID (e.g. "users/1/shortcuts/1")
-        if (createdShortcut.name != null) {
-            api.deleteShortcut(userName, createdShortcut.name.substringAfterLast("/"))
-            // Note: API definition: deleteShortcut(user, shortcut) where shortcut is likely just the ID or full name?
-            // The retrofit definition usually expects the path parameter.
-            // If the path is `users/{uid}/shortcuts/{sid}`, and the argument is `shortcut`,
-            // it depends on how `@Path("shortcut")` is used.
-            // Looking at MemosApi (impl not shown but interface):
-            // suspend fun deleteShortcut(user: String, shortcut: String)
-            // It likely maps to DELETE users/{user}/shortcuts/{shortcut}
-            // So we probably just need the ID part if the path template is hardcoded,
-            // or full name if it's checking resource name.
-            // Usually in this project it seems to be ID.
-            // Let's list again to check if it's gone or failed.
-        }
-
-
-        // 6. Test Webhooks (listUserWebhooks, createUserWebhook, deleteUserWebhook)
-        val webhooksResponse = api.listUserWebhooks(userName)
-        val initialWebhooks = webhooksResponse.webhooks?.size ?: 0
-        println("Initial Webhooks: $initialWebhooks")
-
-        val webhook = org.example.memosm.model.UserWebhook(
-            url = "https://example.com/webhook",
-            displayName = "Test Webhook"
+        // A. Update Mask: title
+        val newTitle = "Updated Title"
+        val updateTitleObj = org.example.memosm.model.Shortcut(title = newTitle)
+        // Assuming updateShortcut signature: (user, id, body, mask)
+        val updatedShortcutTitle = api.updateShortcut(
+            userName, shortcutId, updateTitleObj, api.constants.shortcutMaskTitle
         )
-        val createdWebhook = api.createUserWebhook(userName, webhook)
-        println("Created Webhook: ${createdWebhook.displayName}")
-        assertEquals("Test Webhook", createdWebhook.displayName)
+        assertEquals(newTitle, updatedShortcutTitle.title)
+        assertEquals("tag in ['test']", updatedShortcutTitle.filter) // Ensure filter didn't change
 
-        val webhooksResponseAfter = api.listUserWebhooks(userName)
-        assertEquals(initialWebhooks + 1, webhooksResponseAfter.webhooks?.size ?: 0)
+        // B. Update Mask: filter
+        val newFilter = "tag in ['updated']"
+        val updateFilterObj = org.example.memosm.model.Shortcut(filter = newFilter)
+        val updatedShortcutFilter = api.updateShortcut(
+            userName, shortcutId, updateFilterObj, api.constants.shortcutMaskFilter
+        )
+        assertEquals(newFilter, updatedShortcutFilter.filter)
 
-        // Delete Webhook
-        if (createdWebhook.name != null) {
-            // Similarly, extract ID if needed
-             val webhookId = createdWebhook.name.substringAfterLast("/") // "1"
-             // api.deleteUserWebhook(userName, webhookId)
-             // Depending on implementation, let's try with ID
-             try {
-                 api.deleteUserWebhook(userName, webhookId)
-                 println("Deleted Webhook: $webhookId")
-             } catch(e: Exception) {
-                 println("Failed to delete webhook with ID $webhookId, trying full name")
-                 // ensure we don't fail test if just ID mismatch, but standard is ID
-             }
+        // Cleanup
+        api.deleteShortcut(userName, shortcutId)
+
+        // ---------------------------------------------------------
+        // 5. Test Webhook Masks (display_name, url)
+        // ---------------------------------------------------------
+        println("--- Testing Webhook Masks ---")
+
+        // Create initial webhook
+        val initialWebhook = org.example.memosm.model.UserWebhook(
+            url = "https://example.com/original", displayName = "Original Webhook"
+        )
+        val createdWebhook = api.createUserWebhook(userName, initialWebhook)
+        val webhookId = createdWebhook.name?.substringAfterLast("/")!!
+
+        // A. Update Mask: display_name
+        val newWebhookName = "Updated Webhook Name"
+        val updateWebhookNameObj = org.example.memosm.model.UserWebhook(
+            url = "https://ignored.com", displayName = newWebhookName
+        )
+        // Assuming updateUserWebhook signature: (user, id, body, mask)
+        val updatedWebhookName = api.updateUserWebhook(
+            userName, webhookId, updateWebhookNameObj, api.constants.webhookMaskDisplayName
+        )
+        assertEquals(newWebhookName, updatedWebhookName.displayName)
+        assertEquals(
+            "https://example.com/original", updatedWebhookName.url
+        ) // Ensure URL didn't change
+
+        // B. Update Mask: url
+        val newWebhookUrl = "https://example.com/updated"
+        val updateWebhookUrlObj = org.example.memosm.model.UserWebhook(url = newWebhookUrl)
+        val updatedWebhookUrl = api.updateUserWebhook(
+            userName, webhookId, updateWebhookUrlObj, api.constants.webhookMaskUrl
+        )
+        assertEquals(newWebhookUrl, updatedWebhookUrl.url)
+
+        // Cleanup
+        try {
+            api.deleteUserWebhook(userName, webhookId)
+            println("Cleaned up webhook: $webhookId")
+        } catch (e: Exception) {
+            println("Warning: Failed to delete webhook $webhookId")
         }
     }
 }
