@@ -79,81 +79,15 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         container.stop()
     }
 
-    @Test
-    fun testLoginFlow() = runBlocking {
-        println("Running testLoginFlow against $dockerImageName")
-        // 1. Sign up (create admin user)
-        // Since this is a fresh instance, the first user is admin
-        val logging = okhttp3.logging.HttpLoggingInterceptor { message ->
-            println(message)
-        }.apply {
-            level = okhttp3.logging.HttpLoggingInterceptor.Level.BODY
-        }
 
 
-        val client =
-            OkHttpClient.Builder().addInterceptor(logging).readTimeout(30, TimeUnit.SECONDS).build()
-
-        val signupJson = """
-            {
-                "username": "$TEST_USERNAME",
-                "password": "$TEST_PASSWORD",
-                "displayName": "$TEST_DISPLAY_NAME",
-                "role": "HOST"
-            }
-        """.trimIndent()
-
-        val signupRequest = Request.Builder().url("${baseUrl}api/v1/users")
-            .post(signupJson.toRequestBody("application/json".toMediaType())).build()
-
-        client.newCall(signupRequest).execute().use { response ->
-            val body = response.body.string()
-
-            // For 0.25, api/v1/users returns the user object, not empty or different structure?
-            // Step 169 showed it returns the User object.
-            println("Signup response: $body")
-            assertTrue("Signup failed: $body", response.isSuccessful)
-        }
-
-        // 2. Verify Instance Profile
-        val api = MemosApiFactory.create(baseUrl, client)
-        val profile = api.getInstanceProfile()
-        println("Instance version: ${profile.version}")
-        assertNotNull(profile.version)
-        // Adjust assertion based on actual version string format if needed
-        // assertTrue(profile.version!!.startsWith("0.26")) 
-
-        // 3. Login using helper function (simulating LoginScreen behavior)
-        try {
-            // Pass client to share CookieJar
-            val token = loginAndCreateToken(api, baseUrl, TEST_USERNAME, TEST_PASSWORD)
-            println("Generated Token: $token")
-            assertNotNull(token)
-            assertTrue(token.isNotEmpty())
-
-            // 4. Verify Token Login
-            val authClient = OkHttpClient.Builder().addInterceptor { chain ->
-                val request =
-                    chain.request().newBuilder().addHeader("Authorization", "Bearer $token").build()
-                chain.proceed(request)
-            }.build()
-
-            // Re-create API with auth client
-            // We need to cast or access the specific V0260 methods 
-            // relying on MemosApiFactory to return the right implementation wrapping it
-            val authApi = MemosApiFactory.create(baseUrl, authClient)
-
-            val session = authApi.getCurrentSession()
-            println("Session User: ${session.user}")
-            assertEquals(TEST_USERNAME, session.user?.username)
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            throw e
-        }
-    }
+    private var sharedApi: MemosApi? = null
 
     private suspend fun getAuthenticatedApi(): MemosApi {
+        if (sharedApi != null) {
+            return sharedApi!!
+        }
+
         val logging = okhttp3.logging.HttpLoggingInterceptor { message ->
             println(message)
         }.apply {
@@ -180,11 +114,11 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             .post(signupJson.toRequestBody("application/json".toMediaType()))
             .build()
         
-        // Try to sign up, ignore failure if already exists (test re-run capability)
-        try {
-            client.newCall(signupRequest).execute().close()
-        } catch (e: Exception) {
-            // Ignore
+        // Sign up and verify success (fail if already exists or other error)
+        client.newCall(signupRequest).execute().use { response ->
+            val body = response.body.string()
+            println("Signup response: $body")
+            assertTrue("Signup failed: $body", response.isSuccessful)
         }
 
         val api = MemosApiFactory.create(baseUrl, client)
@@ -202,7 +136,8 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             .readTimeout(30, TimeUnit.SECONDS)
             .build()
 
-        return MemosApiFactory.create(baseUrl, authClient)
+        sharedApi = MemosApiFactory.create(baseUrl, authClient)
+        return sharedApi!!
     }
 
     @Test
