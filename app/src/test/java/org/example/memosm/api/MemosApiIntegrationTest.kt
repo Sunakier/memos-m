@@ -5,19 +5,16 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.example.memosm.model.SignInRequestV0260
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.testcontainers.containers.GenericContainer
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import java.util.concurrent.TimeUnit
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import org.testcontainers.containers.GenericContainer
+import java.util.concurrent.TimeUnit
 
 @RunWith(Parameterized::class)
 class MemosApiIntegrationTest(private val dockerImageName: String) {
@@ -48,7 +45,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         val logFile = java.io.File("/tmp/memos_debug.log")
         // Reset log file
         logFile.writeText("DEBUG: setUp() started for $dockerImageName\n")
-        
+
         fun log(msg: String) {
             logFile.appendText("$msg\n")
             println(msg) // Also print to stdout just in case
@@ -56,18 +53,16 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
 
         log("DEBUG: CWD = ${java.io.File(".").absolutePath}")
         log("DEBUG: User = ${System.getProperty("user.name")}")
-        
+
         try {
             // Start Memos container
             container = GenericContainer(dockerImageName)
             log("DEBUG: Attempting container.start() for $dockerImageName")
-            
-            container.withExposedPorts(5230)
-                .withEnv("MEMOS_DRIVER", "sqlite")
-                .start()
-                
+
+            container.withExposedPorts(5230).withEnv("MEMOS_DRIVER", "sqlite").start()
+
             log("DEBUG: container.start() returned")
-            
+
         } catch (e: Exception) {
             log("ERROR: Exception caught in setUp: ${e.message}")
             val sw = java.io.StringWriter()
@@ -75,7 +70,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             log(sw.toString())
             throw e
         }
-        
+
         baseUrl = "http://${container.host}:${container.getMappedPort(5230)}/"
     }
 
@@ -87,7 +82,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
     private fun waitForServer(url: String) {
         val client = OkHttpClient()
         val request = Request.Builder().url(url).build()
-        
+
         var attempts = 0
         while (attempts < 30) {
             try {
@@ -115,11 +110,9 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         }
 
 
-        val client = OkHttpClient.Builder()
-            .addInterceptor(logging)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .build()
-            
+        val client =
+            OkHttpClient.Builder().addInterceptor(logging).readTimeout(30, TimeUnit.SECONDS).build()
+
         val signupJson = """
             {
                 "username": "$TEST_USERNAME",
@@ -128,19 +121,17 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
                 "role": "HOST"
             }
         """.trimIndent()
-        
-        val signupRequest = Request.Builder()
-            .url("${baseUrl}api/v1/users")
-            .post(signupJson.toRequestBody("application/json".toMediaType()))
-            .build()
-            
+
+        val signupRequest = Request.Builder().url("${baseUrl}api/v1/users")
+            .post(signupJson.toRequestBody("application/json".toMediaType())).build()
+
         client.newCall(signupRequest).execute().use { response ->
-             val body = response.body.string()
-             
-             // For 0.25, api/v1/users returns the user object, not empty or different structure?
-             // Step 169 showed it returns the User object.
-             println("Signup response: $body")
-             assertTrue("Signup failed: $body", response.isSuccessful)
+            val body = response.body.string()
+
+            // For 0.25, api/v1/users returns the user object, not empty or different structure?
+            // Step 169 showed it returns the User object.
+            println("Signup response: $body")
+            assertTrue("Signup failed: $body", response.isSuccessful)
         }
 
         // 2. Verify Instance Profile
@@ -158,23 +149,23 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             println("Generated Token: $token")
             assertNotNull(token)
             assertTrue(token.isNotEmpty())
-            
+
             // 4. Verify Token Login
-             val authClient = OkHttpClient.Builder().addInterceptor { chain ->
-                val request = chain.request().newBuilder()
-                    .addHeader("Authorization", "Bearer $token").build()
+            val authClient = OkHttpClient.Builder().addInterceptor { chain ->
+                val request =
+                    chain.request().newBuilder().addHeader("Authorization", "Bearer $token").build()
                 chain.proceed(request)
             }.build()
 
             // Re-create API with auth client
             // We need to cast or access the specific V0260 methods 
             // relying on MemosApiFactory to return the right implementation wrapping it
-             val authApi = MemosApiFactory.create(baseUrl, authClient)
-             
-             val session = authApi.getCurrentSession()
-             println("Session User: ${session.user}")
-             assertEquals(TEST_USERNAME, session.user?.username)
-             
+            val authApi = MemosApiFactory.create(baseUrl, authClient)
+
+            val session = authApi.getCurrentSession()
+            println("Session User: ${session.user}")
+            assertEquals(TEST_USERNAME, session.user?.username)
+
         } catch (e: Exception) {
             e.printStackTrace()
             throw e
