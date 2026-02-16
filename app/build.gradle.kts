@@ -31,6 +31,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     signingConfigs {
         create("release") {
             val keystorePath = providers.environmentVariable("KEYSTORE_PATH")
@@ -184,6 +188,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     testImplementation(libs.testcontainers)
+    testImplementation(libs.jna)
 
 
     // ROOM
