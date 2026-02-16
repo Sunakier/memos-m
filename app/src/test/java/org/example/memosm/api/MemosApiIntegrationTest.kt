@@ -79,25 +79,6 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         container.stop()
     }
 
-    private fun waitForServer(url: String) {
-        val client = OkHttpClient()
-        val request = Request.Builder().url(url).build()
-
-        var attempts = 0
-        while (attempts < 30) {
-            try {
-                client.newCall(request).execute().use { response ->
-                    if (response.isSuccessful) return
-                }
-            } catch (e: Exception) {
-                // Ignore and retry
-            }
-            Thread.sleep(1000)
-            attempts++
-        }
-        throw RuntimeException("Server failed to start")
-    }
-
     @Test
     fun testLoginFlow() = runBlocking {
         println("Running testLoginFlow against $dockerImageName")
@@ -170,5 +151,108 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             e.printStackTrace()
             throw e
         }
+    }
+
+    private suspend fun getAuthenticatedApi(): MemosApi {
+        val logging = okhttp3.logging.HttpLoggingInterceptor { message ->
+            println(message)
+        }.apply {
+            level = okhttp3.logging.HttpLoggingInterceptor.Level.BODY
+        }
+
+        val client = OkHttpClient.Builder()
+            .addInterceptor(logging)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+        
+        // Ensure we have an admin user (first user is admin)
+        val signupJson = """
+            {
+                "username": "$TEST_USERNAME",
+                "password": "$TEST_PASSWORD",
+                "displayName": "$TEST_DISPLAY_NAME",
+                "role": "HOST"
+            }
+        """.trimIndent()
+
+        val signupRequest = Request.Builder()
+            .url("${baseUrl}api/v1/users")
+            .post(signupJson.toRequestBody("application/json".toMediaType()))
+            .build()
+        
+        // Try to sign up, ignore failure if already exists (test re-run capability)
+        try {
+            client.newCall(signupRequest).execute().close()
+        } catch (e: Exception) {
+            // Ignore
+        }
+
+        val api = MemosApiFactory.create(baseUrl, client)
+        
+        // Login
+        val token = loginAndCreateToken(api, baseUrl, TEST_USERNAME, TEST_PASSWORD)
+
+        val authClient = OkHttpClient.Builder()
+            .addInterceptor(logging)
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .addHeader("Authorization", "Bearer $token").build()
+                chain.proceed(request)
+            }
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+        return MemosApiFactory.create(baseUrl, authClient)
+    }
+
+    @Test
+    fun testMemoLifecycle() = runBlocking {
+        println("Running testMemoLifecycle")
+        val api = getAuthenticatedApi()
+
+        // 1. Create Memos
+        val memo1 = api.createMemo(org.example.memosm.model.Memo(content = "Memo 1"))
+        println("Created Memo 1: ${memo1.name}")
+        assertNotNull(memo1.name)
+        assertEquals("Memo 1", memo1.content)
+
+        val memo2 = api.createMemo(org.example.memosm.model.Memo(content = "Memo 2"))
+        println("Created Memo 2: ${memo2.name}")
+        assertNotNull(memo2.name)
+        assertEquals("Memo 2", memo2.content)
+
+        // 2. List Memos
+        val listResponse = api.listMemos()
+        println("List response: ${listResponse.memos?.size} memos")
+        val memos = listResponse.memos ?: emptyList()
+        assertTrue(memos.any { it.name == memo1.name })
+        assertTrue(memos.any { it.name == memo2.name })
+
+        // 3. Edit Memo 1
+        // Note: UpdateMask is required for some APIs, usually field paths comma separated
+        val updatedMemo1 = api.updateMemo(
+            memo1.name!!,
+            org.example.memosm.model.Memo(content = "Memo 1 Updated"),
+            "content"
+        )
+        println("Updated Memo 1 content: ${updatedMemo1.content}")
+        assertEquals("Memo 1 Updated", updatedMemo1.content)
+
+        // 4. List to verify update
+        val listResponse2 = api.listMemos()
+        val memos2 = listResponse2.memos ?: emptyList()
+        val fetchedMemo1 = memos2.find { it.name == memo1.name }
+        assertNotNull(fetchedMemo1)
+        assertEquals("Memo 1 Updated", fetchedMemo1?.content)
+
+        // 5. Delete Memo 2
+        api.deleteMemo(memo2.name!!)
+        println("Deleted Memo 2: ${memo2.name}")
+
+        // 6. Verify Deletion
+        val listResponse3 = api.listMemos()
+        val memos3 = listResponse3.memos ?: emptyList()
+        assertTrue("Memo 2 should be deleted", memos3.none { it.name == memo2.name })
+        assertTrue("Memo 1 should still exist", memos3.any { it.name == memo1.name })
     }
 }
