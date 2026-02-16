@@ -21,13 +21,17 @@ jobs:
           java-version: "21"
           distribution: "temurin"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
+      # 1. Setup Gradle with Enhanced Caching
+      # 'setup-gradle' enables read-only caching for dependencies by default.
+      # We explicitly allow writing to the cache to ensure build artifacts are saved.
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: wrapper
+          cache-read-only: false # Allow the job to write to the cache (important for updating deps)
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Run Integration Tests
         run: ./gradlew :app:testDebugUnitTest --tests org.example.memosm.api.MemosApiIntegrationTest
