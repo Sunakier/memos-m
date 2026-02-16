@@ -46,7 +46,7 @@ open class MemosApiImpl(
     override val constants: ApiConstants = ApiConstants(
         userSettingGeneralKey = "GENERAL",
         userSettingLocaleMask = "locale",
-        userSettingMemoVisibilityMask = "memoVisibility",
+        userSettingMemoVisibilityMask = "memo_visibility",
         userMaskUsername = "username",
         userMaskEmail = "email",
         userMaskDisplayName = "display_name",
