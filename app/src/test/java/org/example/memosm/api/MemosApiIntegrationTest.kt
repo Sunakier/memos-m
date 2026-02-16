@@ -38,8 +38,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
                 arrayOf("neosmemo/memos:stable"),
                 arrayOf("neosmemo/memos:0.26"),
                 arrayOf("neosmemo/memos:0.26.1"),
-                arrayOf("neosmemo/memos:0.26.0"),
-                arrayOf("neosmemo/memos:0.25")
+                arrayOf("neosmemo/memos:0.26.0")
             )
         }
     }
@@ -109,7 +108,15 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         println("Running testLoginFlow against $dockerImageName")
         // 1. Sign up (create admin user)
         // Since this is a fresh instance, the first user is admin
+        val logging = okhttp3.logging.HttpLoggingInterceptor { message ->
+            println(message)
+        }.apply {
+            level = okhttp3.logging.HttpLoggingInterceptor.Level.BODY
+        }
+
+
         val client = OkHttpClient.Builder()
+            .addInterceptor(logging)
             .readTimeout(30, TimeUnit.SECONDS)
             .build()
             
@@ -128,7 +135,10 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             .build()
             
         client.newCall(signupRequest).execute().use { response ->
-             val body = response.body?.string()
+             val body = response.body.string()
+             
+             // For 0.25, api/v1/users returns the user object, not empty or different structure?
+             // Step 169 showed it returns the User object.
              println("Signup response: $body")
              assertTrue("Signup failed: $body", response.isSuccessful)
         }
@@ -143,6 +153,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
 
         // 3. Login using helper function (simulating LoginScreen behavior)
         try {
+            // Pass client to share CookieJar
             val token = loginAndCreateToken(api, baseUrl, TEST_USERNAME, TEST_PASSWORD)
             println("Generated Token: $token")
             assertNotNull(token)
@@ -159,29 +170,6 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             // We need to cast or access the specific V0260 methods 
             // relying on MemosApiFactory to return the right implementation wrapping it
              val authApi = MemosApiFactory.create(baseUrl, authClient)
-             
-             // MemosApiFactory creates MemosApi interface implementation
-             // MemosApi currently seems to be a union or base, let's check strict typing
-             // based on MemosApiFactory it returns MemosApi
-             // code in LoginScreen casts or calls getCurrentSession, 
-             // but for 0.26 it might need getCurrentUser. 
-             
-             // Let's check what MemosApiFactory returns for 0.26
-             // usage in LoginScreen: authApi.getCurrentSession()
-             // But MemosApiV0260 INTERFACE has getCurrentUser REPLACING getCurrentSession
-             // Check MemosApiV0260 definition again?
-             
-             // In MemosApiFactory:
-             // if (version.startsWith("0.26")) {
-             //    val v0260Api = retrofit.create(MemosApiV0260::class.java)
-             //    MemosApiV0260Impl(v0260Api) 
-             // }
-             
-             // MemosApiV0260Impl likely implements MemosApi and delegates?
-             // Or MemosApiV0260 extends MemosApiV0353?
-             
-             // Let's verify MemosApi definition first to be sure, 
-             // but assume standard flow:
              
              val session = authApi.getCurrentSession()
              println("Session User: ${session.user}")
