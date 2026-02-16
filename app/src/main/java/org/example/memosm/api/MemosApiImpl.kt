@@ -43,6 +43,24 @@ open class MemosApiImpl(
     protected val api: MemosApiV0353
 ) : MemosApi {
 
+    override val constants: ApiConstants = ApiConstants(
+        userSettingGeneralKey = "GENERAL",
+        userSettingLocaleMask = "locale",
+        userSettingMemoVisibilityMask = "memoVisibility",
+        userMaskUsername = "username",
+        userMaskEmail = "email",
+        userMaskDisplayName = "display_name",
+        userMaskAvatarUrl = "avatar_url",
+        userMaskDescription = "description",
+        userMaskPassword = "password",
+
+        webhookMaskDisplayName = "display_name",
+        webhookMaskUrl = "url",
+
+        shortcutMaskTitle = "title",
+        shortcutMaskFilter = "filter"
+    )
+
     override suspend fun listActivities(
         pageSize: Int?,
         pageToken: String?

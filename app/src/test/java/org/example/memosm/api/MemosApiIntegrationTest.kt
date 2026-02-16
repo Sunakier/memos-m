@@ -239,24 +239,21 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         // List settings
         val settingsList = api.listUserSettings(userName)
         println("User Settings count: ${settingsList.settings?.size}")
-        
-        // Update a specific setting, e.g., locale in GeneralSetting
-        // The API for updateUserSetting takes (user, setting, settingData, updateMask)
-        // setting name usually is "general" or "users/{id}/settings/general"
-        // Let's rely on standard naming convention or what list returns
-        
-        // Let's try to update general setting
-        val generalSettingName = "general" // or derived from list
-        val newLocale = "ja"
+
+        // Update a setting (e.g., locale)
+        // Use the constant for the setting key and mask
+        val generalSettingName = api.constants.userSettingGeneralKey
+        val newLocale = "zh-CN"
+        val settingUpdate = org.example.memosm.model.UserSetting(
+            generalSetting = org.example.memosm.model.UserGeneralSetting(locale = newLocale)
+        )
         val updatedSetting = api.updateUserSetting(
             userName,
             generalSettingName,
-            org.example.memosm.model.UserSetting(
-                generalSetting = org.example.memosm.model.UserGeneralSetting(locale = newLocale)
-            ),
-            "general_setting.locale"
+            settingUpdate,
+            api.constants.userSettingLocaleMask
         )
-        println("Updated Locale: ${updatedSetting.generalSetting?.locale}")
+        println("Updated setting: $updatedSetting")
         assertEquals(newLocale, updatedSetting.generalSetting?.locale)
 
 

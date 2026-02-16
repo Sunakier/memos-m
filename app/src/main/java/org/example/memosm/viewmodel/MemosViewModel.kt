@@ -96,14 +96,11 @@ class MemosViewModel(
     }
 
     private suspend fun createApi(
-        baseUrl: String,
-        token: String
+        baseUrl: String, token: String
     ): MemosApi {
         val authInterceptor = AuthInterceptor(token)
 
-        currentHttpClient = OkHttpClient.Builder()
-            .addInterceptor(authInterceptor)
-            .build()
+        currentHttpClient = OkHttpClient.Builder().addInterceptor(authInterceptor).build()
 
         currentBaseUrl = baseUrl
 
@@ -111,10 +108,8 @@ class MemosViewModel(
     }
 
     private fun createNominatimApi(): org.example.memosm.api.NominatimApi {
-        return Retrofit.Builder()
-            .baseUrl("https://nominatim.openstreetmap.org/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
+        return Retrofit.Builder().baseUrl("https://nominatim.openstreetmap.org/")
+            .addConverterFactory(GsonConverterFactory.create()).build()
             .create(org.example.memosm.api.NominatimApi::class.java)
     }
 
@@ -158,41 +153,43 @@ class MemosViewModel(
                 // Initialize Managers with cache callbacks
                 val accountId = account.id
 
-                userMemoManager =
-                    UserMemoListManager(
-                        scope = viewModelScope, api = currentApi, filterProvider = {
-                            val user = _uiState.value.session.currUser
-                            val userId = user?.name?.substringAfterLast("/") ?: ""
+                userMemoManager = UserMemoListManager(
+                    scope = viewModelScope,
+                    api = currentApi,
+                    filterProvider = {
+                        val user = _uiState.value.session.currUser
+                        val userId = user?.name?.substringAfterLast("/") ?: ""
 
-                            // Use creator_id and row_status
-                            val base = if (userId.isNotEmpty()) {
-                                "creator_id == $userId"
-                            } else {
-                                ""
-                            }
+                        // Use creator_id and row_status
+                        val base = if (userId.isNotEmpty()) {
+                            "creator_id == $userId"
+                        } else {
+                            ""
+                        }
 
-                            val shortcut = _uiState.value.userMemoList.selectedShortcut
-                            val hashtag = _uiState.value.userMemoList.selectedHashtag
+                        val shortcut = _uiState.value.userMemoList.selectedShortcut
+                        val hashtag = _uiState.value.userMemoList.selectedHashtag
 
-                            if (shortcut != null && !shortcut.filter.isNullOrBlank()) {
-                                "$base && ${shortcut.filter}"
-                            } else if (hashtag != null) {
-                                val tagName = hashtag.removePrefix("#")
-                                "$base && tag in [\"$tagName\"]"
-                            } else {
-                                base
-                            }
-                        }, pageSizeProvider = { _uiState.value.appSettings.pageSize },
-                        cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
-                            memoCacheRepository.cacheMemos(
-                                accountId, CacheListType.USER, memos
-                            )
-                        }, getCachedData = {
-                            memoCacheRepository.getCachedMemos(
-                                accountId, CacheListType.USER
-                            )
-                        })
-                    )
+                        if (shortcut != null && !shortcut.filter.isNullOrBlank()) {
+                            "$base && ${shortcut.filter}"
+                        } else if (hashtag != null) {
+                            val tagName = hashtag.removePrefix("#")
+                            "$base && tag in [\"$tagName\"]"
+                        } else {
+                            base
+                        }
+                    },
+                    pageSizeProvider = { _uiState.value.appSettings.pageSize },
+                    cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
+                        memoCacheRepository.cacheMemos(
+                            accountId, CacheListType.USER, memos
+                        )
+                    }, getCachedData = {
+                        memoCacheRepository.getCachedMemos(
+                            accountId, CacheListType.USER
+                        )
+                    })
+                )
 
                 exploreMemoManager = ExploreMemoListManager(
                     scope = viewModelScope,
@@ -261,11 +258,13 @@ class MemosViewModel(
                     userMemoManager!!.listState,
                     exploreMemoManager!!.listState,
                     archivedMemoManager!!.listState
-                ) { u, e, a -> Triple(u, e, a) }, combine(
+                ) { u, e, a -> Triple(u, e, a) },
+                combine(
                     searchMemoManager!!.listState,
                     commentManager!!.listState,
                     attachmentManager!!.listState
-                ) { s, c, at -> Triple(s, c, at) }, attachmentManager!!.cellWidth,
+                ) { s, c, at -> Triple(s, c, at) },
+                attachmentManager!!.cellWidth,
                 _attachmentAspectRatios
             ) { (userMemos, exploreMemos, archivedMemos), (searchMemos, comments, attachments), cellWidth, aspectRatios ->
                 Log.d(
@@ -469,6 +468,8 @@ class MemosViewModel(
     fun updateUserGeneralSetting(locale: String? = null, memoVisibility: Visibility? = null) {
         viewModelScope.launch {
             try {
+                // Early return if api doesn't exist
+                val api = api ?: return@launch
                 val user = _uiState.value.session.currUser ?: return@launch
                 val currentSetting = _uiState.value.session.userSettings ?: UserGeneralSetting()
                 val newSetting = currentSetting.copy(
@@ -476,16 +477,22 @@ class MemosViewModel(
                     memoVisibility = memoVisibility ?: currentSetting.memoVisibility
                 )
                 val maskParts = mutableListOf<String>()
-                if (locale != null) maskParts.add("locale")
-                if (memoVisibility != null) maskParts.add("memoVisibility")
+                if (locale != null) maskParts.add(api.constants.userSettingLocaleMask)
+                if (memoVisibility != null) maskParts.add(
+                    api.constants.userSettingMemoVisibilityMask
+                )
                 val updateMask = maskParts.joinToString(",")
 
                 if (updateMask.isNotEmpty()) {
-                    api?.updateUserSetting(
-                        user.name!!, "GENERAL", UserSetting(generalSetting = newSetting), updateMask
+                    api.updateUserSetting(
+                        user.name!!,
+                        api.constants.userSettingGeneralKey,
+                        UserSetting(generalSetting = newSetting),
+                        updateMask
                     )
-                    fetchUserSettings(user.name!!)
+                    fetchUserSettings(user.name)
                 }
+
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
@@ -539,6 +546,7 @@ class MemosViewModel(
         viewModelScope.launch {
             try {
                 val currentUser = _uiState.value.session.currUser ?: return@launch
+                val api = api ?: return@launch
                 val update = User(
                     username = username,
                     email = email,
@@ -548,17 +556,22 @@ class MemosViewModel(
                     password = password
                 )
                 val maskParts = mutableListOf<String>()
-                if (username != null) maskParts.add("username")
-                if (email != null) maskParts.add("email")
-                if (displayName != null) maskParts.add("display_name")
-                if (avatarUrl != null) maskParts.add("avatar_url")
-                if (description != null) maskParts.add("description")
-                if (password != null) maskParts.add("password")
+                val constants = api.constants
+                if (username != null) maskParts.add(constants.userMaskUsername)
+                if (email != null) maskParts.add(constants.userMaskEmail)
+                if (displayName != null) maskParts.add(
+                    constants.userMaskDisplayName
+                )
+                if (avatarUrl != null) maskParts.add(constants.userMaskAvatarUrl)
+                if (description != null) maskParts.add(
+                    constants.userMaskDescription
+                )
+                if (password != null) maskParts.add(constants.userMaskPassword)
 
                 val mask = maskParts.joinToString(",")
 
                 if (mask.isNotEmpty()) {
-                    api?.updateUser(currentUser.name!!, update, mask)
+                    api.updateUser(currentUser.name!!, update, mask)
                     fetchCurrentUser()
                     onResult(true)
                 } else {
@@ -592,8 +605,7 @@ class MemosViewModel(
         _uiState.update {
             it.copy(
                 userMemoList = it.userMemoList.copy(
-                    selectedShortcut = newSelection,
-                    selectedHashtag = null
+                    selectedShortcut = newSelection, selectedHashtag = null
                 )
             )
         }
@@ -608,8 +620,7 @@ class MemosViewModel(
         _uiState.update {
             it.copy(
                 userMemoList = it.userMemoList.copy(
-                    selectedHashtag = newSelection,
-                    selectedShortcut = null
+                    selectedHashtag = newSelection, selectedShortcut = null
                 )
             )
         }
@@ -643,13 +654,20 @@ class MemosViewModel(
         viewModelScope.launch {
             try {
                 val user = _uiState.value.session.currUser ?: return@launch
+                val api = api ?: return@launch
                 val update = shortcut.copy(title = title, filter = filter)
                 // shortcut.name is in format "users/{uid}/shortcuts/{id}"
                 // The API expects just the {id} because the path is defined as "api/v1/{user}/shortcuts/{shortcut}"
                 val shortcutId = shortcut.name?.substringAfterLast("/") ?: ""
 
-                api?.updateShortcut(user.name!!, shortcutId, update, "title,filter")
-                fetchShortcuts(user.name!!)
+                val constants = api.constants
+                api.updateShortcut(
+                    user.name!!,
+                    shortcutId,
+                    update,
+                    "${constants.shortcutMaskTitle},${constants.shortcutMaskFilter}"
+                )
+                fetchShortcuts(user.name)
                 onSuccess()
             } catch (e: Exception) {
                 onError(getErrorResponse(e))
@@ -724,11 +742,18 @@ class MemosViewModel(
         viewModelScope.launch {
             try {
                 val user = _uiState.value.session.currUser ?: return@launch
+                val api = api ?: return@launch
                 val update = webhook.copy(displayName = displayName, url = url)
                 val webhookId = webhook.name?.substringAfterLast("/") ?: ""
 
-                api?.updateUserWebhook(user.name!!, webhookId, update, "display_name,url")
-                fetchWebhooks(user.name!!)
+                val constants = api.constants
+                api.updateUserWebhook(
+                    user.name!!,
+                    webhookId,
+                    update,
+                    "${constants.webhookMaskDisplayName},${constants.webhookMaskUrl}"
+                )
+                fetchWebhooks(user.name)
                 onSuccess()
             } catch (e: Exception) {
                 onError(getErrorResponse(e))
@@ -778,8 +803,7 @@ class MemosViewModel(
         viewModelScope.launch {
             try {
                 Log.d(
-                    "MemosViewModel",
-                    "Adding account for $hostUrl"
+                    "MemosViewModel", "Adding account for $hostUrl"
                 )
                 dataStoreManager.addAccount(hostUrl, token)
                 updateCurrentAccountInList()
@@ -858,8 +882,7 @@ class MemosViewModel(
 
     fun updateAttachmentAspectRatio(cellWidth: Float, key: String, ratio: Float) {
         Log.d(
-            "MemosDebug",
-            "ViewModel: Update requested. key=$key, scale=$cellWidth, ratio=$ratio"
+            "MemosDebug", "ViewModel: Update requested. key=$key, scale=$cellWidth, ratio=$ratio"
         )
         _attachmentAspectRatios.update { currentRatios ->
             val currentMapForScale = currentRatios[cellWidth] ?: emptyMap()

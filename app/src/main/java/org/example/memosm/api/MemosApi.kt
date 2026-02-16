@@ -39,7 +39,28 @@ import org.example.memosm.model.UserSetting
 import org.example.memosm.model.UserStats
 import org.example.memosm.model.UserWebhook
 
+data class ApiConstants(
+    val userSettingGeneralKey: String,
+    val userSettingLocaleMask: String,
+    val userSettingMemoVisibilityMask: String,
+
+    val userMaskUsername: String,
+    val userMaskEmail: String,
+    val userMaskDisplayName: String,
+    val userMaskAvatarUrl: String,
+    val userMaskDescription: String,
+    val userMaskPassword: String,
+    
+    val webhookMaskDisplayName: String,
+    val webhookMaskUrl: String,
+    
+    val shortcutMaskTitle: String,
+    val shortcutMaskFilter: String
+)
+
 interface MemosApi {
+
+    val constants: ApiConstants
 
     // --- ActivityService ---
     suspend fun listActivities(
