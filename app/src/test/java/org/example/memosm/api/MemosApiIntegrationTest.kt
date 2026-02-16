@@ -222,7 +222,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         val updatedUser = api.updateUser(
             userName,
             org.example.memosm.model.User(displayName = newDisplayName),
-            "display_name" // Field mask
+            api.constants.userMaskDisplayName // Field mask
         )
         println("Updated User Display Name: ${updatedUser.displayName}")
         assertEquals(newDisplayName, updatedUser.displayName)
@@ -231,7 +231,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         api.updateUser(
             userName,
             org.example.memosm.model.User(displayName = TEST_DISPLAY_NAME),
-            "display_name"
+            api.constants.userMaskDisplayName
         )
 
 
