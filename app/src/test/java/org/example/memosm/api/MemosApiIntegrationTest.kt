@@ -16,17 +16,39 @@ import org.testcontainers.containers.GenericContainer
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 
-class MemosApiIntegrationTest {
+@RunWith(Parameterized::class)
+class MemosApiIntegrationTest(private val dockerImageName: String) {
 
     private lateinit var container: GenericContainer<*>
     private lateinit var baseUrl: String
+
+    companion object {
+        const val TEST_USERNAME = "adminuser"
+        const val TEST_PASSWORD = "password123"
+        const val TEST_DISPLAY_NAME = "Admin"
+
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0}")
+        fun data(): Collection<Array<String>> {
+            return listOf(
+                arrayOf("neosmemo/memos:canary"),
+                arrayOf("neosmemo/memos:stable"),
+                arrayOf("neosmemo/memos:0.26"),
+                arrayOf("neosmemo/memos:0.26.1"),
+                arrayOf("neosmemo/memos:0.26.0"),
+                arrayOf("neosmemo/memos:0.25")
+            )
+        }
+    }
 
     @Before
     fun setUp() {
         val logFile = java.io.File("/tmp/memos_debug.log")
         // Reset log file
-        logFile.writeText("DEBUG: setUp() started\n")
+        logFile.writeText("DEBUG: setUp() started for $dockerImageName\n")
         
         fun log(msg: String) {
             logFile.appendText("$msg\n")
@@ -37,9 +59,9 @@ class MemosApiIntegrationTest {
         log("DEBUG: User = ${System.getProperty("user.name")}")
         
         try {
-            // Start Memos v0.26 container
-            container = GenericContainer("neosmemo/memos:0.26")
-            log("DEBUG: Attempting container.start()")
+            // Start Memos container
+            container = GenericContainer(dockerImageName)
+            log("DEBUG: Attempting container.start() for $dockerImageName")
             
             container.withExposedPorts(5230)
                 .withEnv("MEMOS_DRIVER", "sqlite")
@@ -84,6 +106,7 @@ class MemosApiIntegrationTest {
 
     @Test
     fun testLoginFlow() = runBlocking {
+        println("Running testLoginFlow against $dockerImageName")
         // 1. Sign up (create admin user)
         // Since this is a fresh instance, the first user is admin
         val client = OkHttpClient.Builder()
@@ -92,9 +115,9 @@ class MemosApiIntegrationTest {
             
         val signupJson = """
             {
-                "username": "adminuser",
-                "password": "password123",
-                "displayName": "Admin",
+                "username": "$TEST_USERNAME",
+                "password": "$TEST_PASSWORD",
+                "displayName": "$TEST_DISPLAY_NAME",
                 "role": "HOST"
             }
         """.trimIndent()
@@ -105,7 +128,7 @@ class MemosApiIntegrationTest {
             .build()
             
         client.newCall(signupRequest).execute().use { response ->
-             val body = response.body.string()
+             val body = response.body?.string()
              println("Signup response: $body")
              assertTrue("Signup failed: $body", response.isSuccessful)
         }
@@ -120,7 +143,7 @@ class MemosApiIntegrationTest {
 
         // 3. Login using helper function (simulating LoginScreen behavior)
         try {
-            val token = loginAndCreateToken(api, baseUrl, "adminuser", "password123")
+            val token = loginAndCreateToken(api, baseUrl, TEST_USERNAME, TEST_PASSWORD)
             println("Generated Token: $token")
             assertNotNull(token)
             assertTrue(token.isNotEmpty())
@@ -162,7 +185,7 @@ class MemosApiIntegrationTest {
              
              val session = authApi.getCurrentSession()
              println("Session User: ${session.user}")
-             assertEquals("adminuser", session.user?.username)
+             assertEquals(TEST_USERNAME, session.user?.username)
              
         } catch (e: Exception) {
             e.printStackTrace()
