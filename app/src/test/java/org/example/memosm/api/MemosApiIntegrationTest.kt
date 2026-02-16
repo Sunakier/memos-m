@@ -24,37 +24,55 @@ class MemosApiIntegrationTest {
 
     @Before
     fun setUp() {
-        val file = java.io.File("test_progress.log")
-        val p = java.io.PrintWriter(java.io.FileWriter(file, false))
+        val logFile = java.io.File("/tmp/memos_debug.log")
+        // Reset log file
+        logFile.writeText("DEBUG: setUp() started\n")
+        
+        fun log(msg: String) {
+            logFile.appendText("$msg\n")
+            println(msg) // Also print to stdout just in case
+        }
+
+        log("DEBUG: CWD = ${java.io.File(".").absolutePath}")
+        log("DEBUG: User = ${System.getProperty("user.name")}")
         
         try {
-            p.println("DEBUG: setUp() started")
-            p.flush()
-
             // Start Memos v0.26 container
             container = GenericContainer("neosmemo/memos:0.26")
             
             val socketPath = "/var/run/docker.sock"
             System.setProperty("docker.host", "unix://$socketPath")
+            System.setProperty("api.version", "1.46") // Force Docker API version
             
-            p.println("DEBUG: Configured docker.host")
-            p.println("DEBUG: Attempting container.start()")
-            p.flush()
+            log("DEBUG: Configured docker.host to $socketPath")
+            log("DEBUG: Configured api.version to 1.46")
+            log("DEBUG: Env DOCKER_HOST = ${System.getenv("DOCKER_HOST")}")
+            
+            val socketFile = java.io.File(socketPath)
+            log("DEBUG: Socket '$socketPath' exists: ${socketFile.exists()}")
+            log("DEBUG: Socket '$socketPath' canRead: ${socketFile.canRead()}")
+            log("DEBUG: Socket '$socketPath' canWrite: ${socketFile.canWrite()}")
+
+             // Probe for other socket locations just in case
+            listOf("/run/docker.sock", "/run/user/1000/docker.sock").forEach { path ->
+                 val f = java.io.File(path)
+                 log("DEBUG: Probe '$path' exists: ${f.exists()}")
+            }
+
+            log("DEBUG: Attempting container.start()")
             
             container.withExposedPorts(5230)
                 .withEnv("MEMOS_DRIVER", "sqlite")
                 .start()
                 
-            p.println("DEBUG: container.start() returned")
-            p.flush()
+            log("DEBUG: container.start() returned")
             
         } catch (e: Exception) {
-            p.println("ERROR: Exception caught")
-            e.printStackTrace(p)
-            p.flush()
+            log("ERROR: Exception caught in setUp: ${e.message}")
+            val sw = java.io.StringWriter()
+            e.printStackTrace(java.io.PrintWriter(sw))
+            log(sw.toString())
             throw e
-        } finally {
-            p.close()
         }
         
         baseUrl = "http://${container.host}:${container.getMappedPort(5230)}"
