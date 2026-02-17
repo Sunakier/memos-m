@@ -60,7 +60,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.androidx.compose.koinViewModel
 import kotlinx.coroutines.launch
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
@@ -97,7 +97,7 @@ fun MainScreen(
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(MainDestination.MEMOS) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
-    val viewModel: MemosViewModel = hiltViewModel()
+    val viewModel: MemosViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()

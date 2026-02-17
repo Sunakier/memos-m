@@ -39,9 +39,11 @@ import kotlinx.coroutines.launch
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.model.Account
 import org.example.memosm.ui.component.resolveResourceUrl
+import org.koin.android.ext.android.inject
 
 class UserStatsWidgetConfigActivity : ComponentActivity() {
 
+    private val dataStoreManager: DataStoreManager by inject()
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -70,8 +72,7 @@ class UserStatsWidgetConfigActivity : ComponentActivity() {
                         TopAppBar(title = { Text("Select Account") })
                     }) { padding ->
                     val accounts = produceState<List<Account>>(initialValue = emptyList()) {
-                        val manager = DataStoreManager(this@UserStatsWidgetConfigActivity)
-                        value = manager.getAccounts()
+                        value = dataStoreManager.getAccounts()
                     }
 
                     LazyColumn(

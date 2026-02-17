@@ -6,4 +6,7 @@ plugins {
     id("com.google.devtools.ksp") version "2.3.4" apply false
     id("com.google.dagger.hilt.android") version "2.59.1" apply false
     alias(libs.plugins.aboutlibraries) apply false
+    alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.android.kotlin.multiplatform.library) apply false
+    alias(libs.plugins.android.lint) apply false
 }

@@ -1,12 +1,10 @@
 package org.example.memosm.data
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
@@ -15,9 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.example.memosm.model.Account
 
-val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
-
-class DataStoreManager(private val context: Context) {
+class DataStoreManager(private val dataStore: DataStore<Preferences>) {
 
     private val gson = Gson()
     private var cachedAccounts: List<Account>? = null
@@ -30,7 +26,7 @@ class DataStoreManager(private val context: Context) {
         const val DEFAULT_HEADER_SCALE = 1.0f
     }
 
-    val accounts: Flow<List<Account>> = context.dataStore.data
+    val accounts: Flow<List<Account>> = dataStore.data
         .map { it[ACCOUNTS_JSON] }
         .distinctUntilChanged()
         .map { json ->
@@ -53,7 +49,7 @@ class DataStoreManager(private val context: Context) {
     }
 
     suspend fun saveAccounts(accounts: List<Account>) {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[ACCOUNTS_JSON] = gson.toJson(accounts)
         }
         cachedAccounts = accounts
@@ -65,7 +61,7 @@ class DataStoreManager(private val context: Context) {
     suspend fun getAccounts(): List<Account> {
         cachedAccounts?.let { return it }
 
-        val json = context.dataStore.data.map { it[ACCOUNTS_JSON] }.first()
+        val json = dataStore.data.map { it[ACCOUNTS_JSON] }.first()
 
         if (json.isNullOrEmpty()) {
             return emptyList()
@@ -202,22 +198,22 @@ class DataStoreManager(private val context: Context) {
         saveAccounts(updated)
     }
 
-    val pageSize: Flow<Int> = context.dataStore.data.map { preferences ->
+    val pageSize: Flow<Int> = dataStore.data.map { preferences ->
         preferences[PAGE_SIZE] ?: DEFAULT_PAGE_SIZE
     }
 
     suspend fun savePageSize(size: Int) {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[PAGE_SIZE] = size
         }
     }
 
-    val headerScale: Flow<Float> = context.dataStore.data.map { preferences ->
+    val headerScale: Flow<Float> = dataStore.data.map { preferences ->
         preferences[HEADER_SCALE] ?: DEFAULT_HEADER_SCALE
     }
 
     suspend fun saveHeaderScale(scale: Float) {
-        context.dataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             preferences[HEADER_SCALE] = scale
         }
     }

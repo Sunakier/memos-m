@@ -3,7 +3,6 @@ package org.example.memosm.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,10 +41,8 @@ import org.example.memosm.viewmodel.manager.CommentListManager
 import org.example.memosm.viewmodel.manager.ExploreMemoListManager
 import org.example.memosm.viewmodel.manager.SearchMemoListManager
 import org.example.memosm.viewmodel.manager.UserMemoListManager
-import javax.inject.Inject
 
-@HiltViewModel
-class MemosViewModel @Inject constructor(
+class MemosViewModel(
     private val dataStoreManager: DataStoreManager,
     private val draftManager: DraftManager,
     private val memoCacheRepository: MemoCacheRepository,

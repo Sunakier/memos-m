@@ -25,4 +25,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "MemosM"
 include(":app")
- 
+include(":core")

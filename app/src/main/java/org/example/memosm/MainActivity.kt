@@ -23,7 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.example.memosm.data.DataStoreManager
@@ -32,13 +31,12 @@ import org.example.memosm.ui.MainScreen
 import org.example.memosm.ui.component.LoginScreen
 import org.example.memosm.ui.theme.MemosMTheme
 import org.example.memosm.widget.DraftWidget
-import javax.inject.Inject
 
-@AndroidEntryPoint
+import org.koin.android.ext.android.inject
+
 class MainActivity : ComponentActivity() {
 
-    @Inject
-    lateinit var dataStoreManager: DataStoreManager
+    private val dataStoreManager: DataStoreManager by inject()
 
     // StateFlow to hold pending share data, observable by Compose
     private val pendingShareDataFlow = MutableStateFlow<ShareIntentData?>(null)
