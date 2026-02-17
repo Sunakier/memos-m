@@ -56,7 +56,11 @@ import org.example.memosm.viewmodel.manager.UserMemoListManager
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-class MemosViewModel(
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+
+@HiltViewModel
+class MemosViewModel @Inject constructor(
     private val dataStoreManager: DataStoreManager,
     private val draftManager: DraftManager,
     private val memoCacheRepository: MemoCacheRepository
@@ -445,20 +449,5 @@ class MemosViewModel(
     // --- Draft Management (Delegated) ---
 
 
-    companion object {
-        fun provideFactory(
-            dataStoreManager: DataStoreManager,
-            draftManager: DraftManager,
-            memoCacheRepository: MemoCacheRepository
-        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                if (modelClass.isAssignableFrom(MemosViewModel::class.java)) {
-                    @Suppress("UNCHECKED_CAST") return MemosViewModel(
-                        dataStoreManager, draftManager, memoCacheRepository
-                    ) as T
-                }
-                throw IllegalArgumentException("Unknown ViewModel class")
-            }
-        }
-    }
+
 }

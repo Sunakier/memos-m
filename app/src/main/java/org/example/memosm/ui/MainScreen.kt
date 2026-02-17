@@ -88,10 +88,10 @@ enum class MainDestination(
     )
 }
 
+import androidx.hilt.navigation.compose.hiltViewModel
+
 @Composable
 fun MainScreen(
-    dataStoreManager: DataStoreManager,
-    draftManager: DraftManager,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
     shareIntentData: ShareIntentData? = null,
@@ -101,14 +101,7 @@ fun MainScreen(
 ) {
     var currentDestination by rememberSaveable { mutableStateOf(MainDestination.MEMOS) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
-    val viewModel: MemosViewModel =
-        viewModel(
-            factory = MemosViewModel.provideFactory(
-                dataStoreManager,
-                draftManager,
-                MemosApplication.instance.memoCacheRepository
-            )
-        )
+    val viewModel: MemosViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
@@ -176,7 +169,7 @@ fun MainScreen(
     if (isAddingAccount) {
         LoginDialog(onLoginSuccess = { newBaseUrl, newToken ->
             scope.launch {
-                dataStoreManager.addAccount(newBaseUrl, newToken)
+                viewModel.addAccount(newBaseUrl, newToken)
                 viewModel.updateCurrentAccountInList()
                 isAddingAccount = false
             }

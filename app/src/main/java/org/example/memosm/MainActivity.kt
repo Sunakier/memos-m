@@ -33,7 +33,14 @@ import org.example.memosm.ui.component.LoginScreen
 import org.example.memosm.ui.theme.MemosMTheme
 import org.example.memosm.widget.DraftWidget
 
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var dataStoreManager: DataStoreManager
 
     // StateFlow to hold pending share data, observable by Compose
     private val pendingShareDataFlow = MutableStateFlow<ShareIntentData?>(null)
@@ -56,8 +63,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             MemosMTheme {
                 val context = LocalContext.current
-                val dataStoreManager = remember { DataStoreManager(context) }
-                val draftManager = remember { DraftManager(context) }
                 val scope = rememberCoroutineScope()
 
                 // Observe accounts instead of single credentials
@@ -87,8 +92,6 @@ class MainActivity : ComponentActivity() {
                     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                         if (activeAccount != null) {
                             MainScreen(
-                                dataStoreManager = dataStoreManager,
-                                draftManager = draftManager,
                                 onLogout = {
                                     scope.launch {
                                         dataStoreManager.deleteAccount(activeAccount.id)

@@ -12,6 +12,9 @@ import okhttp3.OkHttpClient
 import org.example.memosm.data.cache.MemoCacheDatabase
 import org.example.memosm.data.cache.MemoCacheRepository
 
+import dagger.hilt.android.HiltAndroidApp
+
+@HiltAndroidApp
 class MemosApplication : Application(), SingletonImageLoader.Factory {
 
     lateinit var memoCacheRepository: MemoCacheRepository

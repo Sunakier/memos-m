@@ -40,15 +40,16 @@ interface UserDelegate {
     fun addAccount(hostUrl: String, token: String)
     fun removeAccount(account: Account)
     fun updateAccountCredentials(account: Account, hostUrl: String, token: String)
-    fun updateCurrentAccountInList(onAccountSwitched: suspend (Account) -> Unit)
-    fun switchAccount(account: Account, onAccountSwitched: suspend (Account) -> Unit)
+    fun updateCurrentAccountInList()
+    fun switchAccount(account: Account)
 }
 
 class UserDelegateImpl(
     private val scope: CoroutineScope,
     private val uiState: MutableStateFlow<MemosUiState>,
     private val apiProvider: () -> MemosApi?,
-    private val dataStoreManager: DataStoreManager
+    private val dataStoreManager: DataStoreManager,
+    private val onAccountSwitched: suspend (Account) -> Unit
 ) : UserDelegate {
 
     private val pendingUserRequests = mutableSetOf<String>()
@@ -337,7 +338,7 @@ class UserDelegateImpl(
         }
     }
 
-    override fun updateCurrentAccountInList(onAccountSwitched: suspend (Account) -> Unit) {
+    override fun updateCurrentAccountInList() {
         scope.launch {
             val accounts = dataStoreManager.getAccounts()
             val activeAccount = accounts.find { it.isActive }
@@ -345,14 +346,14 @@ class UserDelegateImpl(
             uiState.update { it.copy(accounts = accounts) }
 
             if (activeAccount != null) {
-                switchAccount(activeAccount, onAccountSwitched)
+                switchAccount(activeAccount)
             } else {
                 uiState.update { it.copy(error = "No active account found") }
             }
         }
     }
 
-    override fun switchAccount(account: Account, onAccountSwitched: suspend (Account) -> Unit) {
+    override fun switchAccount(account: Account) {
          scope.launch {
             try {
                 dataStoreManager.setActiveAccount(account.id)

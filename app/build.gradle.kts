@@ -128,6 +128,13 @@ dependencies {
     coreLibraryDesugaring(libs.android.desugarJdkLibs)
 
     // ----------------------------
+    // Hilt
+    // ----------------------------
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
+
+    // ----------------------------
     // Android / Compose
     // ----------------------------
     implementation(libs.androidx.core.ktx)
@@ -222,5 +229,4 @@ dependencies {
     implementation(libs.androidx.room.paging)
 
 }
-
 
