@@ -153,11 +153,11 @@ fun DraftsScreen(
         )
     ) {
         if (draftToEdit != null) {
-            viewModel.setCurrentEditingDraft(draftToEdit!!.id)
+            viewModel.draftDelegate.setCurrentEditingDraft(draftToEdit!!.id)
             MemoComposerScreen(
                 onDismiss = {
                     draftToEdit = null
-                    viewModel.setCurrentEditingDraft(null)
+                    viewModel.draftDelegate.setCurrentEditingDraft(null)
                 },
                 viewModel = viewModel,
                 hostUrl = uiState.session.hostUrl,
@@ -181,7 +181,7 @@ fun DraftsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.deleteDraft(draftToDelete!!.id)
+                        viewModel.draftDelegate.deleteDraft(draftToDelete!!.id)
                         draftToDelete = null
                     }, colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error

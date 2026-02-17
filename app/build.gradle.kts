@@ -14,6 +14,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("kotlin-parcelize")
     id("com.google.devtools.ksp")
+    id("com.google.dagger.hilt.android")
     alias(libs.plugins.aboutlibraries)
 }
 
@@ -128,6 +129,13 @@ dependencies {
     coreLibraryDesugaring(libs.android.desugarJdkLibs)
 
     // ----------------------------
+    // Hilt
+    // ----------------------------
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
+
+    // ----------------------------
     // Android / Compose
     // ----------------------------
     implementation(libs.androidx.core.ktx)
@@ -222,5 +230,4 @@ dependencies {
     implementation(libs.androidx.room.paging)
 
 }
-
 

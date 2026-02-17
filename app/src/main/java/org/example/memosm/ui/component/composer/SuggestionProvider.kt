@@ -87,9 +87,9 @@ object SuggestionProvider {
             val potentialTag = textBeforeCursor.substring(lastHashIndex + 1)
             // Ensure no spaces or newlines in the tag being typed (simple heuristic still useful)
             if (!potentialTag.contains(' ') && !potentialTag.contains('\n')) {
-                 // Double check we are not inside a link or something else via AST? 
-                 // For now, the isInCodeBlock guard handles the main exclusion.
-                 
+                // Double check we are not inside a link or something else via AST?
+                // For now, the isInCodeBlock guard handles the main exclusion.
+
                 val filteredTags = if (potentialTag.isEmpty()) {
                     availableTags.toList()
                 } else {
@@ -105,7 +105,7 @@ object SuggestionProvider {
                             type = SuggestionType.HASHTAG
                         )
                     }
-                    
+
                     return SuggestionResult(
                         suggestions = suggestionItems,
                         startIndex = lastHashIndex,
@@ -120,7 +120,7 @@ object SuggestionProvider {
                     // Check if everything before lastHashIndex on this line is whitespace
                     val prefixBeforeHash = textBeforeCursor.substring(lineStartIndex, lastHashIndex)
                     if (prefixBeforeHash.trim().isEmpty()) {
-                         return getBlockSuggestions(lineStartIndex)
+                        return getBlockSuggestions(lineStartIndex)
                     }
                 }
             }
@@ -130,31 +130,31 @@ object SuggestionProvider {
         if (currentLinePrefix.trim().isEmpty()) {
             return getBlockSuggestions(lineStartIndex)
         }
-        
+
         // Header suggestion while typing '#'
         if (currentLinePrefix.all { it == '#' }) {
-             // User is typing headers
-             // We can suggest changing level
-             val currentLevel = currentLinePrefix.length
-             // Provide suggestions for headers
-             return getHeaderSuggestions(lineStartIndex, currentLevel)
+            // User is typing headers
+            // We can suggest changing level
+            val currentLevel = currentLinePrefix.length
+            // Provide suggestions for headers
+            return getHeaderSuggestions(lineStartIndex, currentLevel)
         }
 
         // List suggestion while typing '-'
         if (currentLinePrefix == "-") {
             return getListSuggestions(lineStartIndex)
         }
-        
+
         // Code Block start
-         if (currentLinePrefix == "```") {
-             return getLanguageSuggestions(text, cursorIndex)
-         }
-         if (currentLinePrefix.startsWith("```")) {
-              val typedLang = currentLinePrefix.substring(3)
-              if (!typedLang.contains(' ')) {
-                   return getLanguageSuggestions(text, cursorIndex, typedLang)
-              }
-         }
+        if (currentLinePrefix == "```") {
+            return getLanguageSuggestions(text, cursorIndex)
+        }
+        if (currentLinePrefix.startsWith("```")) {
+            val typedLang = currentLinePrefix.substring(3)
+            if (!typedLang.contains(' ')) {
+                return getLanguageSuggestions(text, cursorIndex, typedLang)
+            }
+        }
 
         return null
     }
@@ -163,7 +163,12 @@ object SuggestionProvider {
         val items = listOf(
             SuggestionItem("Bold", "**", Icons.Outlined.FormatBold, SuggestionType.FORMATTING),
             SuggestionItem("Italic", "_", Icons.Outlined.FormatItalic, SuggestionType.FORMATTING),
-            SuggestionItem("Strike", "~~", Icons.Outlined.FormatStrikethrough, SuggestionType.FORMATTING),
+            SuggestionItem(
+                "Strike",
+                "~~",
+                Icons.Outlined.FormatStrikethrough,
+                SuggestionType.FORMATTING
+            ),
             SuggestionItem("Code", "`", Icons.Outlined.Code, SuggestionType.FORMATTING)
         )
         return SuggestionResult(items, selection.start, "", SuggestionType.FORMATTING)
@@ -174,47 +179,76 @@ object SuggestionProvider {
             SuggestionItem("Heading 1", "# ", Icons.Outlined.Title, SuggestionType.MARKDOWN),
             SuggestionItem("Heading 2", "## ", Icons.Outlined.Title, SuggestionType.MARKDOWN),
             SuggestionItem("Heading 3", "### ", Icons.Outlined.Title, SuggestionType.MARKDOWN),
-            SuggestionItem("Bullet List", "- ", Icons.AutoMirrored.Outlined.List, SuggestionType.MARKDOWN),
+            SuggestionItem(
+                "Bullet List",
+                "- ",
+                Icons.AutoMirrored.Outlined.List,
+                SuggestionType.MARKDOWN
+            ),
             SuggestionItem("Task List", "- [ ] ", Icons.Outlined.Check, SuggestionType.MARKDOWN),
             SuggestionItem("Quote", "> ", Icons.Outlined.FormatQuote, SuggestionType.MARKDOWN),
             SuggestionItem("Code Block", "```\n```", Icons.Outlined.Code, SuggestionType.MARKDOWN)
         )
         return SuggestionResult(items, startIndex, "", SuggestionType.MARKDOWN)
     }
-    
+
     private fun getHeaderSuggestions(startIndex: Int, currentLevel: Int): SuggestionResult {
-         // Provide explicit header options
-         val items = (1..6).map { level ->
-             val hashes = "#".repeat(level) + " "
-             SuggestionItem("Heading $level", hashes, Icons.Outlined.FormatSize, SuggestionType.AUTO_MARKDOWN)
-         }
-         
-         return SuggestionResult(items, startIndex, "", SuggestionType.AUTO_MARKDOWN)
+        // Provide explicit header options
+        val items = (1..6).map { level ->
+            val hashes = "#".repeat(level) + " "
+            SuggestionItem(
+                "Heading $level",
+                hashes,
+                Icons.Outlined.FormatSize,
+                SuggestionType.AUTO_MARKDOWN
+            )
+        }
+
+        return SuggestionResult(items, startIndex, "", SuggestionType.AUTO_MARKDOWN)
     }
 
     private fun getListSuggestions(startIndex: Int): SuggestionResult {
         val items = listOf(
-            SuggestionItem("Bullet List", "- ", Icons.AutoMirrored.Outlined.List, SuggestionType.AUTO_MARKDOWN),
-            SuggestionItem("Task List", "- [ ] ", Icons.Outlined.Check, SuggestionType.AUTO_MARKDOWN)
+            SuggestionItem(
+                "Bullet List",
+                "- ",
+                Icons.AutoMirrored.Outlined.List,
+                SuggestionType.AUTO_MARKDOWN
+            ),
+            SuggestionItem(
+                "Task List",
+                "- [ ] ",
+                Icons.Outlined.Check,
+                SuggestionType.AUTO_MARKDOWN
+            )
         )
         return SuggestionResult(items, startIndex, "", SuggestionType.AUTO_MARKDOWN)
     }
 
-    private fun getLanguageSuggestions(text: String, cursorIndex: Int, filter: String = ""): SuggestionResult {
-         // Determine start index for replacement. 
-         // If we are ````kotlin`, replacement starts after ```
-         // We need to find where ``` is on this line.
-         val lastNewline = text.lastIndexOf('\n', cursorIndex - 1)
-         val lineStart = lastNewline + 1
-         val fenceStart = text.indexOf("```", lineStart)
-         val replaceStart = if (fenceStart != -1) fenceStart + 3 else cursorIndex
+    private fun getLanguageSuggestions(
+        text: String,
+        cursorIndex: Int,
+        filter: String = ""
+    ): SuggestionResult {
+        // Determine start index for replacement.
+        // If we are ````kotlin`, replacement starts after ```
+        // We need to find where ``` is on this line.
+        val lastNewline = text.lastIndexOf('\n', cursorIndex - 1)
+        val lineStart = lastNewline + 1
+        val fenceStart = text.indexOf("```", lineStart)
+        val replaceStart = if (fenceStart != -1) fenceStart + 3 else cursorIndex
 
-         val filtered = if (filter.isEmpty()) CODE_LANGUAGES else CODE_LANGUAGES.filter { it.startsWith(filter, ignoreCase = true) }
-         
-         val items = filtered.map { 
-             SuggestionItem(it, it, Icons.Outlined.Code, SuggestionType.CODE_LANGUAGE)
-         }
-         return SuggestionResult(items, replaceStart, "", SuggestionType.CODE_LANGUAGE)
+        val filtered = if (filter.isEmpty()) CODE_LANGUAGES else CODE_LANGUAGES.filter {
+            it.startsWith(
+                filter,
+                ignoreCase = true
+            )
+        }
+
+        val items = filtered.map {
+            SuggestionItem(it, it, Icons.Outlined.Code, SuggestionType.CODE_LANGUAGE)
+        }
+        return SuggestionResult(items, replaceStart, "", SuggestionType.CODE_LANGUAGE)
     }
 
     private fun findNodeAt(node: ASTNode, offset: Int): ASTNode {
@@ -232,8 +266,9 @@ object SuggestionProvider {
     private fun isInCodeBlock(node: ASTNode, offset: Int): Boolean {
         var current: ASTNode? = node
         while (current != null) {
-            if (current.type == MarkdownElementTypes.CODE_BLOCK || 
-                current.type == MarkdownElementTypes.CODE_FENCE) {
+            if (current.type == MarkdownElementTypes.CODE_BLOCK ||
+                current.type == MarkdownElementTypes.CODE_FENCE
+            ) {
                 return true
             }
             current = current.parent
@@ -246,17 +281,17 @@ object SuggestionProvider {
         // Simplest check: Are we on the first line of the fence?
         var current: ASTNode? = node
         while (current != null && current.type != MarkdownElementTypes.CODE_FENCE) {
-             current = current.parent
+            current = current.parent
         }
         if (current == null) return false // Not in fence
-        
+
         // Check if we are on the opening line
         val fenceStart = current.startOffset
         val fenceContent = text.substring(current.startOffset, current.endOffset)
         val firstNewline = fenceContent.indexOf('\n')
-        
+
         if (firstNewline == -1) return true // Still typing first line
-        
+
         val absoluteNewline = fenceStart + firstNewline
         return offset <= absoluteNewline
     }

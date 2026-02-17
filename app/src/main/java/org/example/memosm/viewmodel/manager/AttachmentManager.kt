@@ -25,8 +25,8 @@ private const val TAG = "AttachmentManager"
 
 class AttachmentManager(
     private val scope: CoroutineScope,
-    private val api: MemosApi,
-    private val streamingApi: StreamingAttachmentApi?,
+    private val apiProvider: () -> MemosApi?,
+    private val streamingApiProvider: () -> StreamingAttachmentApi?,
     initialCellWidth: Float = 120f
 ) : BaseListManager<Attachment>(scope) {
 
@@ -39,6 +39,7 @@ class AttachmentManager(
     }
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Attachment>, String?> {
+        val api = apiProvider() ?: return Pair(emptyList(), null)
         return withContext(Dispatchers.IO) {
             Log.d("AttachmentManager", "fetchFromApi: pageToken=$pageToken")
             val response =
@@ -56,6 +57,8 @@ class AttachmentManager(
      * Uses streaming upload for files > 2MB to prevent OOM.
      */
     suspend fun uploadAttachment(uri: Uri, context: Context): Attachment? {
+        val api = apiProvider() ?: return null
+        val streamingApi = streamingApiProvider()
         try {
             Log.d(TAG, "uploadAttachment: starting upload for uri=$uri")
 
@@ -91,7 +94,7 @@ class AttachmentManager(
             } else {
                 // Use regular upload for small files
                 Log.d(TAG, "uploadAttachment: using REGULAR upload")
-                uploadAttachmentRegular(uri, context, fileName, mimeType)
+                uploadAttachmentRegular(api, uri, context, fileName, mimeType)
             }
 
             if (attachment != null) {
@@ -102,8 +105,7 @@ class AttachmentManager(
                 }
             } else {
                 Log.e(
-                    TAG,
-                    "uploadAttachment: FAILED - returned null (used streaming=$useStreaming)"
+                    TAG, "uploadAttachment: FAILED - returned null (used streaming=$useStreaming)"
                 )
             }
 
@@ -119,10 +121,7 @@ class AttachmentManager(
      * Only used for small files (< 2MB).
      */
     private suspend fun uploadAttachmentRegular(
-        uri: Uri,
-        context: Context,
-        fileName: String,
-        mimeType: String
+        api: MemosApi, uri: Uri, context: Context, fileName: String, mimeType: String
     ): Attachment? {
         val base64Content = withContext(Dispatchers.IO) {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
@@ -136,8 +135,7 @@ class AttachmentManager(
         )
 
         Log.d(
-            "AttachmentManager",
-            "uploadAttachment: sending createAttachment request for $fileName"
+            "AttachmentManager", "uploadAttachment: sending createAttachment request for $fileName"
         )
         return api.createAttachment(attachmentToCreate)
     }

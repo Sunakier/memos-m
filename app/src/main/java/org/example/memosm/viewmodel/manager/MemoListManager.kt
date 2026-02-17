@@ -11,13 +11,14 @@ private const val TAG = "MemoListManager"
 
 class UserMemoListManager(
     scope: CoroutineScope,
-    private val api: MemosApi,
+    private val apiProvider: () -> MemosApi?,
     private val filterProvider: () -> String?,
     private val pageSizeProvider: () -> Int,
     cacheCallbacks: CacheCallbacks<Memo>? = null
 ) : BaseListManager<Memo>(scope, cacheCallbacks = cacheCallbacks) {
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
+        val api = apiProvider() ?: return Pair(emptyList(), null)
         val filter = filterProvider()
         val pageSize = pageSizeProvider()
         Log.d(
@@ -47,12 +48,13 @@ class UserMemoListManager(
 
 class ExploreMemoListManager(
     scope: CoroutineScope,
-    private val api: MemosApi,
+    private val apiProvider: () -> MemosApi?,
     private val pageSizeProvider: () -> Int,
     cacheCallbacks: CacheCallbacks<Memo>? = null
 ) : BaseListManager<Memo>(scope, cacheCallbacks = cacheCallbacks) {
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
+        val api = apiProvider() ?: return Pair(emptyList(), null)
         val filter = "visibility in ['PUBLIC', 'PROTECTED']"
         val pageSize = pageSizeProvider()
         Log.d(TAG, "ExploreMemoListManager fetch: filter=$filter, pageToken=$pageToken")
@@ -76,13 +78,14 @@ class ExploreMemoListManager(
 
 class ArchivedMemoListManager(
     scope: CoroutineScope,
-    private val api: MemosApi,
+    private val apiProvider: () -> MemosApi?,
     private val currentUserProvider: () -> User?,
     private val pageSizeProvider: () -> Int,
     cacheCallbacks: CacheCallbacks<Memo>? = null
 ) : BaseListManager<Memo>(scope, cacheCallbacks = cacheCallbacks) {
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
+        val api = apiProvider() ?: return Pair(emptyList(), null)
         val user = currentUserProvider() ?: return Pair(emptyList(), null)
         val userId = user.name?.substringAfterLast("/") ?: ""
 
@@ -115,17 +118,18 @@ class ArchivedMemoListManager(
 
 class SearchMemoListManager(
     scope: CoroutineScope,
-    private val api: MemosApi,
+    private val apiProvider: () -> MemosApi?,
     private val pageSizeProvider: () -> Int
 ) : BaseListManager<Memo>(scope) {
 
     private var currentFilter: String? = null
 
-    fun updateFilter(filter: String?) {
+    fun updateFilter(filter: String?, orderBy: String?) {
         currentFilter = filter
     }
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
+        val api = apiProvider() ?: return Pair(emptyList(), null)
         if (currentFilter == null) return Pair(emptyList(), null)
 
         val pageSize = pageSizeProvider()

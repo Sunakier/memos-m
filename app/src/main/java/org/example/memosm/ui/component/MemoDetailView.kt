@@ -187,19 +187,19 @@ fun MemoDetailView(
                                 { memoToEdit = memo }
                             } else null,
                             onPin = if (isOwner) { pinned ->
-                                viewModel.updateMemoPinned(memo, pinned)
+                                viewModel.memoActionDelegate.updateMemoPinned(memo, pinned)
                             } else null,
                             onDelete = if (isOwner) {
                                 { memoToDelete = memo }
                             } else null,
                             onUpsertReaction = { emoji ->
-                                viewModel.upsertMemoReaction(memo, emoji)
+                                viewModel.memoActionDelegate.upsertMemoReaction(memo, emoji)
                             },
                             onDeleteReaction = { reaction ->
-                                viewModel.deleteMemoReaction(memo, reaction)
+                                viewModel.memoActionDelegate.deleteMemoReaction(memo, reaction)
                             },
                             onContentUpdate = if (isOwner) { newContent ->
-                                viewModel.updateMemo(
+                                viewModel.memoActionDelegate.updateMemo(
                                     memo,
                                     newContent,
                                     memo.visibility,
@@ -289,13 +289,13 @@ fun MemoDetailView(
                                 { memoToDelete = comment }
                             } else null,
                             onUpsertReaction = { emoji ->
-                                viewModel.upsertMemoReaction(comment, emoji)
+                                viewModel.memoActionDelegate.upsertMemoReaction(comment, emoji)
                             },
                             onDeleteReaction = { reaction ->
-                                viewModel.deleteMemoReaction(comment, reaction)
+                                viewModel.memoActionDelegate.deleteMemoReaction(comment, reaction)
                             },
                             onContentUpdate = if (isCommentOwner) { newContent ->
-                                viewModel.updateMemo(
+                                viewModel.memoActionDelegate.updateMemo(
                                     comment,
                                     newContent,
                                     comment.visibility,
@@ -360,7 +360,7 @@ fun MemoDetailView(
 
     memoToDelete?.let { m ->
         DeleteConfirmationDialog(memo = m, onDismiss = { memoToDelete = null }, onConfirm = {
-            viewModel.deleteMemo(m) {
+            viewModel.memoActionDelegate.deleteMemo(m) {
                 memoToDelete = null
                 if (m == memo) onBack()
             }

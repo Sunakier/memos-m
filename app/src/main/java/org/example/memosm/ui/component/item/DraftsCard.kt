@@ -132,7 +132,7 @@ fun DraftsCard(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.deleteAllDrafts()
+                        viewModel.draftDelegate.deleteAllDrafts()
                         showDeleteAllDialog = false
                     },
                     colors = ButtonDefaults.textButtonColors(
@@ -165,7 +165,7 @@ fun DraftsCard(
                 TextButton(
                     onClick = {
                         showPublishAllDialog = false
-                        viewModel.publishAllDrafts { count ->
+                        viewModel.draftDelegate.publishAllDrafts { count ->
                             Toast.makeText(
                                 context,
                                 context.getString(R.string.drafts_publish_all_success, count),
