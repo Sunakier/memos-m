@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.example.memosm.viewmodel.PaginatedListState
 
-const val TAG = "ListManager"
+private const val TAG = "ListManager"
 
 interface ListManager<T> {
     val listState: StateFlow<PaginatedListState<T>>
