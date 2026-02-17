@@ -151,7 +151,7 @@ fun MainScreen(
             shareLocation = null
 
             // Always initialize a new draft session for shared content
-            viewModel.initializeNewDraftSession()
+            viewModel.draftDelegate.initializeNewDraftSession()
 
             processedShareData = shareIntentData
             showShareComposerDialog = true

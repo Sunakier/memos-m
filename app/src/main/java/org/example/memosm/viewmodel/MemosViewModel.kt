@@ -84,85 +84,79 @@ class MemosViewModel(
         MutableStateFlow<Map<Float, Map<String, Float>>>(emptyMap())
 
     // Delegates
-    private val userDelegate: UserDelegate
-    private val shortcutDelegate: ShortcutDelegate
-    private val webhookDelegate: WebhookDelegate
-    private val appSettingsDelegate: AppSettingsDelegate
-    private val draftDelegate: DraftDelegate
-    private val memoActionDelegate: MemoActionDelegate
+    val userDelegate: UserDelegate = UserDelegateImpl(
+        viewModelScope, _uiState, { api }, dataStoreManager
+    )
+    
+    val shortcutDelegate: ShortcutDelegate = ShortcutDelegateImpl(
+        viewModelScope, _uiState, { api }, { userMemoManager?.fetch(refresh = true) }
+    )
+    
+    val webhookDelegate: WebhookDelegate = WebhookDelegateImpl(
+        viewModelScope, _uiState, { api }
+    )
+    
+    val appSettingsDelegate: AppSettingsDelegate = AppSettingsDelegateImpl(
+        viewModelScope, _uiState, dataStoreManager
+    ) {
+        userMemoManager?.fetch(refresh = true)
+        exploreMemoManager?.fetch(refresh = true)
+    }
+    
+    val draftDelegate: DraftDelegate = DraftDelegateImpl(
+        viewModelScope, _uiState, draftManager, { api }
+    ) { userMemoManager?.fetch(refresh = true) }
+
+    private val memoListUpdater = object : MemoListUpdater {
+        override fun updateMemoInLists(memo: Memo) {
+            updateMemoInState(memo)
+        }
+
+        override fun removeMemoFromLists(memoName: String) {
+            val isSame = { m: Memo -> m.name == memoName }
+            userMemoManager?.remove(isSame)
+            exploreMemoManager?.remove(isSame)
+            archivedMemoManager?.remove(isSame)
+            searchMemoManager?.remove(isSame)
+            commentManager?.remove(isSame)
+        }
+
+        override fun refreshUserMemos() {
+            userMemoManager?.fetch(refresh = true)
+        }
+
+        override fun handleMemoStateChange(memo: Memo, updated: Memo) {
+            val oldState = memo.state ?: "NORMAL"
+            val newState = updated.state ?: "NORMAL"
+            val comparator = compareByDescending<Memo> { it.displayTime }
+
+            if (oldState != newState) {
+                if (newState == "ARCHIVED") {
+                    // Move from User/Explore -> Archived
+                    val isSame = { m: Memo -> m.name == memo.name }
+                    userMemoManager?.remove(isSame)
+                    exploreMemoManager?.remove(isSame)
+
+                    val isSameUpdated = { m: Memo -> m.name == updated.name }
+                    archivedMemoManager?.upsert(updated, isSameUpdated, comparator)
+                } else if (newState == "NORMAL") {
+                    // Move from Archived -> User (and maybe Explore if public, but keep simple for now)
+                    val isSame = { m: Memo -> m.name == memo.name }
+                    archivedMemoManager?.remove(isSame)
+
+                    val isSameUpdated = { m: Memo -> m.name == updated.name }
+                    userMemoManager?.upsert(updated, isSameUpdated, comparator)
+                }
+            }
+        }
+    }
+
+    val memoActionDelegate: MemoActionDelegate = MemoActionDelegateImpl(
+        viewModelScope, _uiState, { api }, memoListUpdater, draftDelegate,
+        { attachmentManager }, { commentManager }
+    )
 
     init {
-        // Initialize Delegates
-        userDelegate = UserDelegateImpl(
-            viewModelScope, _uiState, { api }, dataStoreManager
-        )
-        shortcutDelegate = ShortcutDelegateImpl(
-            viewModelScope, _uiState, { api }, { userMemoManager?.fetch(refresh = true) }
-        )
-        webhookDelegate = WebhookDelegateImpl(
-            viewModelScope, _uiState, { api }
-        )
-        appSettingsDelegate = AppSettingsDelegateImpl(
-            viewModelScope, _uiState, dataStoreManager
-        ) {
-            userMemoManager?.fetch(refresh = true)
-            exploreMemoManager?.fetch(refresh = true)
-        }
-        draftDelegate = DraftDelegateImpl(
-            viewModelScope, _uiState, draftManager, { api }
-        ) { userMemoManager?.fetch(refresh = true) }
-
-        val memoListUpdater = object : MemoListUpdater {
-            override fun updateMemoInLists(memo: Memo) {
-                updateMemoInState(memo)
-            }
-
-            override fun removeMemoFromLists(memoName: String) {
-                val isSame = { m: Memo -> m.name == memoName }
-                userMemoManager?.remove(isSame)
-                exploreMemoManager?.remove(isSame)
-                archivedMemoManager?.remove(isSame)
-                searchMemoManager?.remove(isSame)
-                commentManager?.remove(isSame)
-            }
-
-            override fun refreshUserMemos() {
-                userMemoManager?.fetch(refresh = true)
-            }
-            
-
-
-            override fun handleMemoStateChange(memo: Memo, updated: Memo) {
-                 val oldState = memo.state ?: "NORMAL"
-                 val newState = updated.state ?: "NORMAL"
-                 val comparator = compareByDescending<Memo> { it.displayTime }
-
-                 if (oldState != newState) {
-                     if (newState == "ARCHIVED") {
-                         // Move from User/Explore -> Archived
-                         val isSame = { m: Memo -> m.name == memo.name }
-                         userMemoManager?.remove(isSame)
-                         exploreMemoManager?.remove(isSame)
-
-                         val isSameUpdated = { m: Memo -> m.name == updated.name }
-                         archivedMemoManager?.upsert(updated, isSameUpdated, comparator)
-                     } else if (newState == "NORMAL") {
-                         // Move from Archived -> User (and maybe Explore if public, but keep simple for now)
-                         val isSame = { m: Memo -> m.name == memo.name }
-                         archivedMemoManager?.remove(isSame)
-
-                         val isSameUpdated = { m: Memo -> m.name == updated.name }
-                         userMemoManager?.upsert(updated, isSameUpdated, comparator)
-                     }
-                 }
-            }
-        }
-
-        memoActionDelegate = MemoActionDelegateImpl(
-            viewModelScope, _uiState, { api }, memoListUpdater, draftDelegate,
-            { attachmentManager }, { commentManager }
-        )
-
         userDelegate.updateCurrentAccountInList { account ->
             switchAccount(account)
         }
@@ -200,15 +194,10 @@ class MemosViewModel(
             .create(NominatimApi::class.java)
     }
 
-    fun updateCurrentAccountInList() {
-        userDelegate.updateCurrentAccountInList { account ->
-            switchAccount(account)
-        }
-    }
-
-    fun switchAccount(account: Account) {
+    // Keep this one as it's used by the delegate directly above
+    private fun switchAccount(account: Account) {
         userDelegate.switchAccount(account) { acc ->
-            // Re-create API and Managers
+            // Re-create Api and Managers
              api = createApi(acc.hostUrl, acc.accessToken)
              val currentApi = api!!
 
@@ -365,69 +354,8 @@ class MemosViewModel(
         }
     }
 
-    fun refreshInstanceSettings() = userDelegate.refreshInstanceSettings()
-    fun refreshUserStats() = userDelegate.refreshUserStats()
-    
-    fun updateUserGeneralSetting(locale: String? = null, memoVisibility: Visibility? = null) =
-        userDelegate.updateUserGeneralSetting(locale, memoVisibility)
-
-    fun updateUserProfile(
-        username: String? = null,
-        email: String? = null,
-        displayName: String? = null,
-        avatarUrl: String? = null,
-        description: String? = null,
-        password: String? = null,
-        onResult: (Boolean) -> Unit = {}
-    ) = userDelegate.updateUserProfile(
-        username, email, displayName, avatarUrl, description, password, onResult
-    )
-
-    // --- App Settings (Delegated) ---
-    fun updatePageSize(size: Int) = appSettingsDelegate.updatePageSize(size)
-    fun updateHeaderScale(scale: Float) = appSettingsDelegate.updateHeaderScale(scale)
-
-    // --- Shortcuts (Delegated) ---
-    fun toggleShortcutFilter(shortcut: Shortcut) = shortcutDelegate.toggleShortcutFilter(shortcut)
-    fun toggleHashtagFilter(tag: String) = shortcutDelegate.toggleHashtagFilter(tag)
-    fun createShortcut(
-        title: String, filter: String, onSuccess: () -> Unit, onError: (String) -> Unit
-    ) = shortcutDelegate.createShortcut(title, filter, onSuccess, onError)
-
-    fun updateShortcut(
-        shortcut: Shortcut,
-        title: String,
-        filter: String,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) = shortcutDelegate.updateShortcut(shortcut, title, filter, onSuccess, onError)
-
-    fun deleteShortcut(shortcut: Shortcut) = shortcutDelegate.deleteShortcut(shortcut)
-
-    // --- Webhooks (Delegated) ---
-    fun createWebhook(
-        displayName: String, url: String, onSuccess: () -> Unit, onError: (String) -> Unit
-    ) = webhookDelegate.createWebhook(displayName, url, onSuccess, onError)
-
-    fun updateWebhook(
-        webhook: UserWebhook,
-        displayName: String,
-        url: String,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) = webhookDelegate.updateWebhook(webhook, displayName, url, onSuccess, onError)
-
-    fun deleteWebhook(webhook: UserWebhook) = webhookDelegate.deleteWebhook(webhook)
-
-    // --- Account (Delegated) ---
-    fun removeAccount(account: Account) = userDelegate.removeAccount(account)
-    fun updateAccountCredentials(
-        account: Account, hostUrl: String, token: String
-    ) = userDelegate.updateAccountCredentials(account, hostUrl, token)
-    
-    fun addAccount(hostUrl: String, token: String) = userDelegate.addAccount(hostUrl, token)
-
     // --- List Fetches ---
+
 
     fun fetchUserMemos(refresh: Boolean = false) {
         if (refresh) updateRefreshTrigger(RefreshSource.USerMemos)
@@ -496,31 +424,9 @@ class MemosViewModel(
         attachmentManager?.updateCellWidth(width)
     }
     
-    // Kept in VM for now as it's purely UI logic
-    fun updateAttachmentAspectRatio(cellWidth: Float, key: String, ratio: Float) {
-        // ... Log debug ...
-        _attachmentAspectRatios.update { currentRatios ->
-            val currentMapForScale = currentRatios[cellWidth] ?: emptyMap()
-            if (currentMapForScale[key] == ratio) {
-                return@update currentRatios
-            }
-            val newMapForScale = currentMapForScale + (key to ratio)
-            currentRatios + (cellWidth to newMapForScale)
-        }
-    }
-
     // --- Detail & CRUD (Delegated) ---
-    fun selectMemo(memo: Memo?) = memoActionDelegate.selectMemo(memo)
-    fun clearSelectedMemo() = memoActionDelegate.clearSelectedMemo()
+    // All actions are now via memoActionDelegate properties
     
-    fun createMemo(
-        content: String,
-        visibility: Visibility,
-        attachments: List<Attachment>? = null,
-        location: Location? = null,
-        onSuccess: () -> Unit = {}
-    ) = memoActionDelegate.createMemo(content, visibility, attachments, location, onSuccess)
-
     private fun updateMemoInState(updatedMemo: Memo) {
         val isSame = { m: Memo -> m.name == updatedMemo.name }
         userMemoManager?.replace(updatedMemo, isSame)
@@ -536,51 +442,8 @@ class MemosViewModel(
         }
     }
 
-    fun updateMemo(
-        memo: Memo,
-        content: String,
-        visibility: Visibility,
-        attachments: List<Attachment>,
-        location: Location? = null,
-        state: MemoState? = null,
-        onSuccess: () -> Unit = {}
-    ) = memoActionDelegate.updateMemo(memo, content, visibility, attachments, location, state, onSuccess)
-
-    fun deleteMemo(memo: Memo, onSuccess: () -> Unit = {}) = 
-        memoActionDelegate.deleteMemo(memo, onSuccess)
-
-    fun updateMemoPinned(memo: Memo, pinned: Boolean, onSuccess: () -> Unit = {}) =
-        memoActionDelegate.updateMemoPinned(memo, pinned, onSuccess)
-
-    fun createComment(parentMemo: Memo, content: String, onSuccess: () -> Unit = {}) =
-        memoActionDelegate.createComment(parentMemo, content, onSuccess)
-
-    suspend fun uploadAttachment(uri: Uri, context: Context): Attachment? =
-        memoActionDelegate.uploadAttachment(uri, context)
-        
-    fun upsertMemoReaction(memo: Memo, reactionType: String) =
-        memoActionDelegate.upsertMemoReaction(memo, reactionType)
-
-    fun deleteMemoReaction(memo: Memo, reaction: Reaction) =
-        memoActionDelegate.deleteMemoReaction(memo, reaction)
-
     // --- Draft Management (Delegated) ---
-    
-    fun saveDraft(
-        content: String,
-        visibility: Visibility,
-        attachments: List<Attachment>,
-        location: Location? = null,
-        draftId: String? = null
-    ) = draftDelegate.saveDraft(content, visibility, attachments, location, draftId)
 
-    fun deleteDraft(draftId: String) = draftDelegate.deleteDraft(draftId)
-    fun deleteAllDrafts() = draftDelegate.deleteAllDrafts()
-    fun publishAllDrafts(onResult: (Int) -> Unit = {}) = draftDelegate.publishAllDrafts(onResult)
-    fun setCurrentEditingDraft(draftId: String?) = draftDelegate.setCurrentEditingDraft(draftId)
-    fun initializeNewDraftSession() = draftDelegate.initializeNewDraftSession()
-    fun getLatestDraft() = draftDelegate.getLatestDraft()
-    fun clearCurrentEditingDraft() = draftDelegate.clearCurrentEditingDraft()
 
     companion object {
         fun provideFactory(
