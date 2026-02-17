@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.android.lint)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -62,6 +63,8 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.kotlin.stdlib)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.coroutines.core)
                 // Add KMP dependencies here
             }
         }
@@ -78,9 +81,10 @@ kotlin {
                 // commonMain by default and will correctly pull the Android artifacts of any KMP
                 // dependencies declared in commonMain.
                 api(libs.retrofit)
-                api(libs.retrofit.gson)
+                api(libs.retrofit.kotlinx.serialization)
                 api(libs.okhttp.logging)
                 api(libs.okhttp.java.net.cookiejar)
+                implementation(libs.kotlinx.serialization.json)
             }
         }
 
@@ -90,6 +94,7 @@ kotlin {
                 implementation(libs.testcontainers)
                 implementation(libs.jna)
                 implementation(libs.slf4j.simple)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
