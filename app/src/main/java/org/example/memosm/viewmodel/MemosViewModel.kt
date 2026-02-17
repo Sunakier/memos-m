@@ -15,7 +15,6 @@ import okhttp3.OkHttpClient
 import org.example.memosm.api.AuthInterceptor
 import org.example.memosm.api.MemosApi
 import org.example.memosm.api.MemosApiFactory
-import org.example.memosm.api.NominatimApi
 import org.example.memosm.api.StreamingAttachmentApi
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.data.DraftManager
@@ -23,7 +22,6 @@ import org.example.memosm.data.cache.CacheListType
 import org.example.memosm.data.cache.MemoCacheRepository
 import org.example.memosm.model.Account
 import org.example.memosm.model.Memo
-import org.example.memosm.model.UserWebhook
 import org.example.memosm.viewmodel.delegates.AppSettingsDelegate
 import org.example.memosm.viewmodel.delegates.AppSettingsDelegateImpl
 import org.example.memosm.viewmodel.delegates.DraftDelegate
@@ -44,8 +42,6 @@ import org.example.memosm.viewmodel.manager.CommentListManager
 import org.example.memosm.viewmodel.manager.ExploreMemoListManager
 import org.example.memosm.viewmodel.manager.SearchMemoListManager
 import org.example.memosm.viewmodel.manager.UserMemoListManager
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Inject
 
 @HiltViewModel
@@ -92,52 +88,60 @@ class MemosViewModel @Inject constructor(
         },
         pageSizeProvider = { _uiState.value.appSettings.pageSize },
         cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
-            val accountId = _uiState.value.accounts.find { it.isActive }?.id ?: return@CacheCallbacks
+            val accountId =
+                _uiState.value.accounts.find { it.isActive }?.id ?: return@CacheCallbacks
             memoCacheRepository.cacheMemos(
                 accountId, CacheListType.USER, memos
             )
         }, getCachedData = {
-            val accountId = _uiState.value.accounts.find { it.isActive }?.id ?: return@CacheCallbacks emptyList()
+            val accountId = _uiState.value.accounts.find { it.isActive }?.id
+                ?: return@CacheCallbacks emptyList()
             memoCacheRepository.getCachedMemos(
                 accountId, CacheListType.USER
             )
         })
     )
 
-    private val exploreMemoManager: ExploreMemoListManager = ExploreMemoListManager(
-        scope = viewModelScope,
-        apiProvider = { api },
-        pageSizeProvider = { _uiState.value.appSettings.pageSize },
-        cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
-            val accountId = _uiState.value.accounts.find { it.isActive }?.id ?: return@CacheCallbacks
-            memoCacheRepository.cacheMemos(
-                accountId, CacheListType.EXPLORE, memos
-            )
-        }, getCachedData = {
-            val accountId = _uiState.value.accounts.find { it.isActive }?.id ?: return@CacheCallbacks emptyList()
-            memoCacheRepository.getCachedMemos(
-                accountId, CacheListType.EXPLORE
-            )
-        })
-    )
+    private val exploreMemoManager: ExploreMemoListManager =
+        ExploreMemoListManager(
+            scope = viewModelScope,
+            apiProvider = { api },
+            pageSizeProvider = { _uiState.value.appSettings.pageSize },
+            cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
+                val accountId =
+                    _uiState.value.accounts.find { it.isActive }?.id ?: return@CacheCallbacks
+                memoCacheRepository.cacheMemos(
+                    accountId, CacheListType.EXPLORE, memos
+                )
+            }, getCachedData = {
+                val accountId = _uiState.value.accounts.find { it.isActive }?.id
+                    ?: return@CacheCallbacks emptyList()
+                memoCacheRepository.getCachedMemos(
+                    accountId, CacheListType.EXPLORE
+                )
+            })
+        )
 
-    private val archivedMemoManager: ArchivedMemoListManager = ArchivedMemoListManager(
-        scope = viewModelScope,
-        apiProvider = { api },
-        currentUserProvider = { _uiState.value.session.currUser },
-        pageSizeProvider = { _uiState.value.appSettings.pageSize },
-        cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
-            val accountId = _uiState.value.accounts.find { it.isActive }?.id ?: return@CacheCallbacks
-            memoCacheRepository.cacheMemos(
-                accountId, CacheListType.ARCHIVED, memos
-            )
-        }, getCachedData = {
-            val accountId = _uiState.value.accounts.find { it.isActive }?.id ?: return@CacheCallbacks emptyList()
-            memoCacheRepository.getCachedMemos(
-                accountId, CacheListType.ARCHIVED
-            )
-        })
-    )
+    private val archivedMemoManager: ArchivedMemoListManager =
+        ArchivedMemoListManager(
+            scope = viewModelScope,
+            apiProvider = { api },
+            currentUserProvider = { _uiState.value.session.currUser },
+            pageSizeProvider = { _uiState.value.appSettings.pageSize },
+            cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
+                val accountId =
+                    _uiState.value.accounts.find { it.isActive }?.id ?: return@CacheCallbacks
+                memoCacheRepository.cacheMemos(
+                    accountId, CacheListType.ARCHIVED, memos
+                )
+            }, getCachedData = {
+                val accountId = _uiState.value.accounts.find { it.isActive }?.id
+                    ?: return@CacheCallbacks emptyList()
+                memoCacheRepository.getCachedMemos(
+                    accountId, CacheListType.ARCHIVED
+                )
+            })
+        )
 
     private val searchMemoManager: SearchMemoListManager = SearchMemoListManager(
         viewModelScope,
@@ -146,16 +150,14 @@ class MemosViewModel @Inject constructor(
 
     private val commentManager: CommentListManager = CommentListManager(viewModelScope, { api })
 
-    private val attachmentManager: AttachmentManager = AttachmentManager(
-        scope = viewModelScope,
-        apiProvider = { api },
-        streamingApiProvider = {
+    private val attachmentManager: AttachmentManager =
+        AttachmentManager(
+            scope = viewModelScope, apiProvider = { api }, streamingApiProvider = {
             currentHttpClient?.let {
                 StreamingAttachmentApi(it, currentBaseUrl ?: "")
             }
-        },
-        initialCellWidth = _uiState.value.attachmentList.cellWidth
-    )
+        }, initialCellWidth = _uiState.value.attachmentList.cellWidth
+        )
 
     private var collectionJob: Job? = null
 
@@ -176,7 +178,9 @@ class MemosViewModel @Inject constructor(
         { userMemoManager.fetch(refresh = true) })
 
     val webhookDelegate: WebhookDelegate = WebhookDelegateImpl(
-        viewModelScope, _uiState, { api })
+        viewModelScope, _uiState
+    ) { api }
+
 
     val appSettingsDelegate: AppSettingsDelegate = AppSettingsDelegateImpl(
         viewModelScope, _uiState, dataStoreManager
@@ -245,7 +249,7 @@ class MemosViewModel @Inject constructor(
         userDelegate.updateCurrentAccountInList()
         appSettingsDelegate.loadPageSize()
         appSettingsDelegate.loadHeaderScale()
-        
+
         startStateCollection()
     }
 
@@ -258,12 +262,6 @@ class MemosViewModel @Inject constructor(
         currentBaseUrl = baseUrl
 
         return MemosApiFactory.create(baseUrl, currentHttpClient!!)
-    }
-
-    private fun createNominatimApi(): NominatimApi {
-        return Retrofit.Builder().baseUrl("https://nominatim.openstreetmap.org/")
-            .addConverterFactory(GsonConverterFactory.create()).build()
-            .create(NominatimApi::class.java)
     }
 
     // Keep this one as it's used by the delegate directly above
@@ -339,9 +337,6 @@ class MemosViewModel @Inject constructor(
         }
     }
 
-    // --- List Fetches ---
-
-
     fun fetchUserMemos(refresh: Boolean = false) {
         if (refresh) updateRefreshTrigger(RefreshSource.USerMemos)
         userMemoManager.fetch(refresh)
@@ -375,7 +370,7 @@ class MemosViewModel @Inject constructor(
     fun loadMoreSearchMemos() = searchMemoManager.loadMore()
 
     fun searchMemos(isExplore: Boolean, filter: String?, orderBy: String? = null) {
-        searchMemoManager.updateFilter(filter)
+        searchMemoManager.updateFilter(filter, orderBy)
         fetchSearchMemos(refresh = true)
     }
 

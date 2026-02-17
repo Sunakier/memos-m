@@ -249,11 +249,11 @@ private fun ProfileListPane(
     accountToEditCredentials?.let { account ->
         LoginDialog(
             onLoginSuccess = { baseUrl, token ->
-            // Update the account with new credentials
-            viewModel.userDelegate.updateAccountCredentials(account, baseUrl, token)
-            accountToEditCredentials = null
-            showAccountSwitcher = false
-        }, onDismiss = { accountToEditCredentials = null }, editAccount = account
+                // Update the account with new credentials
+                viewModel.userDelegate.updateAccountCredentials(account, baseUrl, token)
+                accountToEditCredentials = null
+                showAccountSwitcher = false
+            }, onDismiss = { accountToEditCredentials = null }, editAccount = account
         )
     }
 
@@ -327,12 +327,12 @@ private fun ProfileListPane(
 
                             ProfileHeader(
                                 user = User(
-                                name = activeAccount.name?.let { "users/$it" },
-                                username = activeAccount.name ?: "",
-                                displayName = activeAccount.displayName,
-                                avatarUrl = avatarUrl,
-                                token = uiState.session.token
-                            ),
+                                    name = activeAccount.name?.let { "users/$it" },
+                                    username = activeAccount.name ?: "",
+                                    displayName = activeAccount.displayName,
+                                    avatarUrl = avatarUrl,
+                                    token = uiState.session.token
+                                ),
                                 onClick = { showAccountSwitcher = true },
                                 onEditClick = { showEditDialog = true })
                         } else if (uiState.userMemoList.list.isLoading) {
@@ -375,16 +375,16 @@ private fun ProfileListPane(
                             ) {
                                 ListItem(
                                     headlineContent = {
-                                    Text(
-                                        stringResource(R.string.profile_archived),
-                                        modifier = Modifier.sharedBounds(
-                                            rememberSharedContentState(key = "archive_text"),
-                                            animatedVisibilityScope = animatedVisibilityScope,
-                                            boundsTransform = { _, _ ->
-                                                tween(durationMillis = 300)
-                                            })
-                                    )
-                                },
+                                        Text(
+                                            stringResource(R.string.profile_archived),
+                                            modifier = Modifier.sharedBounds(
+                                                rememberSharedContentState(key = "archive_text"),
+                                                animatedVisibilityScope = animatedVisibilityScope,
+                                                boundsTransform = { _, _ ->
+                                                    tween(durationMillis = 300)
+                                                })
+                                        )
+                                    },
                                     leadingContent = {
                                         Icon(
                                             Icons.Outlined.Archive, contentDescription = null

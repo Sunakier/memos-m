@@ -124,7 +124,7 @@ class SearchMemoListManager(
 
     private var currentFilter: String? = null
 
-    fun updateFilter(filter: String?) {
+    fun updateFilter(filter: String?, orderBy: String?) {
         currentFilter = filter
     }
 
