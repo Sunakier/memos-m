@@ -23,9 +23,9 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
     private lateinit var baseUrl: String
 
     companion object {
-        const val TEST_USERNAME = "adminuser"
-        const val TEST_PASSWORD = "password123"
-        const val TEST_DISPLAY_NAME = "Admin"
+        const val TEST_USERNAME = "AdminUser"
+        const val TEST_PASSWORD = "nsDevM5ETS8"
+        const val TEST_DISPLAY_NAME = "Admin Display"
 
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
