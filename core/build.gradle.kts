@@ -77,10 +77,23 @@ kotlin {
                 // Add Android-specific dependencies here. Note that this source set depends on
                 // commonMain by default and will correctly pull the Android artifacts of any KMP
                 // dependencies declared in commonMain.
+                api(libs.retrofit)
+                api(libs.retrofit.gson)
+                api(libs.okhttp.logging)
+                api(libs.okhttp.java.net.cookiejar)
             }
         }
 
-        getByName("androidDeviceTest") {
+        val androidHostTest by getting {
+            dependencies {
+                implementation(libs.junit)
+                implementation(libs.testcontainers)
+                implementation(libs.jna)
+                implementation(libs.slf4j.simple)
+            }
+        }
+
+        val androidDeviceTest by getting {
             dependencies {
                 implementation(libs.androidx.runner)
                 implementation(libs.androidx.core)
