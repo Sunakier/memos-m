@@ -52,7 +52,8 @@ import javax.inject.Inject
 class MemosViewModel @Inject constructor(
     private val dataStoreManager: DataStoreManager,
     private val draftManager: DraftManager,
-    private val memoCacheRepository: MemoCacheRepository
+    private val memoCacheRepository: MemoCacheRepository,
+    private val okHttpClient: OkHttpClient
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MemosUiState())
@@ -63,12 +64,98 @@ class MemosViewModel @Inject constructor(
     private var currentBaseUrl: String? = null
 
     // Managers
-    private var userMemoManager: UserMemoListManager? = null
-    private var exploreMemoManager: ExploreMemoListManager? = null
-    private var archivedMemoManager: ArchivedMemoListManager? = null
-    private var searchMemoManager: SearchMemoListManager? = null
-    private var commentManager: CommentListManager? = null
-    private var attachmentManager: AttachmentManager? = null
+    private val userMemoManager: UserMemoListManager = UserMemoListManager(
+        scope = viewModelScope,
+        apiProvider = { api },
+        filterProvider = {
+            val user = _uiState.value.session.currUser
+            val userId = user?.name?.substringAfterLast("/") ?: ""
+
+            // Use creator_id and row_status
+            val base = if (userId.isNotEmpty()) {
+                "creator_id == $userId"
+            } else {
+                ""
+            }
+
+            val shortcut = _uiState.value.userMemoList.selectedShortcut
+            val hashtag = _uiState.value.userMemoList.selectedHashtag
+
+            if (shortcut != null && !shortcut.filter.isNullOrBlank()) {
+                "$base && ${shortcut.filter}"
+            } else if (hashtag != null) {
+                val tagName = hashtag.removePrefix("#")
+                "$base && tag in [\"$tagName\"]"
+            } else {
+                base
+            }
+        },
+        pageSizeProvider = { _uiState.value.appSettings.pageSize },
+        cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
+            val accountId = _uiState.value.accounts.find { it.isActive }?.id ?: return@CacheCallbacks
+            memoCacheRepository.cacheMemos(
+                accountId, CacheListType.USER, memos
+            )
+        }, getCachedData = {
+            val accountId = _uiState.value.accounts.find { it.isActive }?.id ?: return@CacheCallbacks emptyList()
+            memoCacheRepository.getCachedMemos(
+                accountId, CacheListType.USER
+            )
+        })
+    )
+
+    private val exploreMemoManager: ExploreMemoListManager = ExploreMemoListManager(
+        scope = viewModelScope,
+        apiProvider = { api },
+        pageSizeProvider = { _uiState.value.appSettings.pageSize },
+        cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
+            val accountId = _uiState.value.accounts.find { it.isActive }?.id ?: return@CacheCallbacks
+            memoCacheRepository.cacheMemos(
+                accountId, CacheListType.EXPLORE, memos
+            )
+        }, getCachedData = {
+            val accountId = _uiState.value.accounts.find { it.isActive }?.id ?: return@CacheCallbacks emptyList()
+            memoCacheRepository.getCachedMemos(
+                accountId, CacheListType.EXPLORE
+            )
+        })
+    )
+
+    private val archivedMemoManager: ArchivedMemoListManager = ArchivedMemoListManager(
+        scope = viewModelScope,
+        apiProvider = { api },
+        currentUserProvider = { _uiState.value.session.currUser },
+        pageSizeProvider = { _uiState.value.appSettings.pageSize },
+        cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
+            val accountId = _uiState.value.accounts.find { it.isActive }?.id ?: return@CacheCallbacks
+            memoCacheRepository.cacheMemos(
+                accountId, CacheListType.ARCHIVED, memos
+            )
+        }, getCachedData = {
+            val accountId = _uiState.value.accounts.find { it.isActive }?.id ?: return@CacheCallbacks emptyList()
+            memoCacheRepository.getCachedMemos(
+                accountId, CacheListType.ARCHIVED
+            )
+        })
+    )
+
+    private val searchMemoManager: SearchMemoListManager = SearchMemoListManager(
+        viewModelScope,
+        { api },
+        pageSizeProvider = { _uiState.value.appSettings.pageSize })
+
+    private val commentManager: CommentListManager = CommentListManager(viewModelScope, { api })
+
+    private val attachmentManager: AttachmentManager = AttachmentManager(
+        scope = viewModelScope,
+        apiProvider = { api },
+        streamingApiProvider = {
+            currentHttpClient?.let {
+                StreamingAttachmentApi(it, currentBaseUrl ?: "")
+            }
+        },
+        initialCellWidth = _uiState.value.attachmentList.cellWidth
+    )
 
     private var collectionJob: Job? = null
 
@@ -86,7 +173,7 @@ class MemosViewModel @Inject constructor(
         viewModelScope,
         _uiState,
         { api },
-        { userMemoManager?.fetch(refresh = true) })
+        { userMemoManager.fetch(refresh = true) })
 
     val webhookDelegate: WebhookDelegate = WebhookDelegateImpl(
         viewModelScope, _uiState, { api })
@@ -94,12 +181,12 @@ class MemosViewModel @Inject constructor(
     val appSettingsDelegate: AppSettingsDelegate = AppSettingsDelegateImpl(
         viewModelScope, _uiState, dataStoreManager
     ) {
-        userMemoManager?.fetch(refresh = true)
-        exploreMemoManager?.fetch(refresh = true)
+        userMemoManager.fetch(refresh = true)
+        exploreMemoManager.fetch(refresh = true)
     }
 
     val draftDelegate: DraftDelegate = DraftDelegateImpl(
-        viewModelScope, _uiState, draftManager, { api }) { userMemoManager?.fetch(refresh = true) }
+        viewModelScope, _uiState, draftManager, { api }) { userMemoManager.fetch(refresh = true) }
 
     private val memoListUpdater = object : MemoListUpdater {
         override fun updateMemoInLists(memo: Memo) {
@@ -108,15 +195,15 @@ class MemosViewModel @Inject constructor(
 
         override fun removeMemoFromLists(memoName: String) {
             val isSame = { m: Memo -> m.name == memoName }
-            userMemoManager?.remove(isSame)
-            exploreMemoManager?.remove(isSame)
-            archivedMemoManager?.remove(isSame)
-            searchMemoManager?.remove(isSame)
-            commentManager?.remove(isSame)
+            userMemoManager.remove(isSame)
+            exploreMemoManager.remove(isSame)
+            archivedMemoManager.remove(isSame)
+            searchMemoManager.remove(isSame)
+            commentManager.remove(isSame)
         }
 
         override fun refreshUserMemos() {
-            userMemoManager?.fetch(refresh = true)
+            userMemoManager.fetch(refresh = true)
         }
 
         override fun handleMemoStateChange(memo: Memo, updated: Memo) {
@@ -128,18 +215,18 @@ class MemosViewModel @Inject constructor(
                 if (newState == "ARCHIVED") {
                     // Move from User/Explore -> Archived
                     val isSame = { m: Memo -> m.name == memo.name }
-                    userMemoManager?.remove(isSame)
-                    exploreMemoManager?.remove(isSame)
+                    userMemoManager.remove(isSame)
+                    exploreMemoManager.remove(isSame)
 
                     val isSameUpdated = { m: Memo -> m.name == updated.name }
-                    archivedMemoManager?.upsert(updated, isSameUpdated, comparator)
+                    archivedMemoManager.upsert(updated, isSameUpdated, comparator)
                 } else if (newState == "NORMAL") {
                     // Move from Archived -> User (and maybe Explore if public, but keep simple for now)
                     val isSame = { m: Memo -> m.name == memo.name }
-                    archivedMemoManager?.remove(isSame)
+                    archivedMemoManager.remove(isSame)
 
                     val isSameUpdated = { m: Memo -> m.name == updated.name }
-                    userMemoManager?.upsert(updated, isSameUpdated, comparator)
+                    userMemoManager.upsert(updated, isSameUpdated, comparator)
                 }
             }
         }
@@ -158,6 +245,8 @@ class MemosViewModel @Inject constructor(
         userDelegate.updateCurrentAccountInList()
         appSettingsDelegate.loadPageSize()
         appSettingsDelegate.loadHeaderScale()
+        
+        startStateCollection()
     }
 
     private suspend fun createApi(
@@ -165,7 +254,7 @@ class MemosViewModel @Inject constructor(
     ): MemosApi {
         val authInterceptor = AuthInterceptor(token)
 
-        currentHttpClient = OkHttpClient.Builder().addInterceptor(authInterceptor).build()
+        currentHttpClient = okHttpClient.newBuilder().addInterceptor(authInterceptor).build()
         currentBaseUrl = baseUrl
 
         return MemosApiFactory.create(baseUrl, currentHttpClient!!)
@@ -182,95 +271,11 @@ class MemosViewModel @Inject constructor(
         // Re-create Api and Managers
         viewModelScope.launch {
             api = createApi(account.hostUrl, account.accessToken)
-            val currentApi = api!!
 
-            // Initialize Managers with cache callbacks
-            val accountId = account.id
-
-            userMemoManager = UserMemoListManager(
-                scope = viewModelScope,
-                api = currentApi,
-                filterProvider = {
-                    val user = _uiState.value.session.currUser
-                    val userId = user?.name?.substringAfterLast("/") ?: ""
-
-                    // Use creator_id and row_status
-                    val base = if (userId.isNotEmpty()) {
-                        "creator_id == $userId"
-                    } else {
-                        ""
-                    }
-
-                    val shortcut = _uiState.value.userMemoList.selectedShortcut
-                    val hashtag = _uiState.value.userMemoList.selectedHashtag
-
-                    if (shortcut != null && !shortcut.filter.isNullOrBlank()) {
-                        "$base && ${shortcut.filter}"
-                    } else if (hashtag != null) {
-                        val tagName = hashtag.removePrefix("#")
-                        "$base && tag in [\"$tagName\"]"
-                    } else {
-                        base
-                    }
-                },
-                pageSizeProvider = { _uiState.value.appSettings.pageSize },
-                cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
-                    memoCacheRepository.cacheMemos(
-                        accountId, CacheListType.USER, memos
-                    )
-                }, getCachedData = {
-                    memoCacheRepository.getCachedMemos(
-                        accountId, CacheListType.USER
-                    )
-                })
-            )
-
-            exploreMemoManager = ExploreMemoListManager(
-                scope = viewModelScope,
-                api = currentApi,
-                pageSizeProvider = { _uiState.value.appSettings.pageSize },
-                cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
-                    memoCacheRepository.cacheMemos(
-                        accountId, CacheListType.EXPLORE, memos
-                    )
-                }, getCachedData = {
-                    memoCacheRepository.getCachedMemos(
-                        accountId, CacheListType.EXPLORE
-                    )
-                })
-            )
-
-            archivedMemoManager = ArchivedMemoListManager(
-                scope = viewModelScope,
-                api = currentApi,
-                currentUserProvider = { _uiState.value.session.currUser },
-                pageSizeProvider = { _uiState.value.appSettings.pageSize },
-                cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->
-                    memoCacheRepository.cacheMemos(
-                        accountId, CacheListType.ARCHIVED, memos
-                    )
-                }, getCachedData = {
-                    memoCacheRepository.getCachedMemos(
-                        accountId, CacheListType.ARCHIVED
-                    )
-                })
-            )
-            searchMemoManager = SearchMemoListManager(
-                viewModelScope,
-                currentApi,
-                pageSizeProvider = { _uiState.value.appSettings.pageSize })
-            commentManager = CommentListManager(viewModelScope, currentApi)
-            attachmentManager = AttachmentManager(
-                scope = viewModelScope, api = currentApi, streamingApi = currentHttpClient?.let {
-                    StreamingAttachmentApi(it, currentBaseUrl ?: "")
-                }, initialCellWidth = _uiState.value.attachmentList.cellWidth
-            )
-
-            startStateCollection()
             fetchCurrentUser()
-            exploreMemoManager?.fetch()
+            exploreMemoManager.fetch()
             if (account.user != null) {
-                userMemoManager?.fetch()
+                userMemoManager.fetch()
             }
             draftDelegate.loadDraftsForAccount(account.id)
         }
@@ -281,16 +286,16 @@ class MemosViewModel @Inject constructor(
         collectionJob = viewModelScope.launch {
             combine(
                 combine(
-                    userMemoManager!!.listState,
-                    exploreMemoManager!!.listState,
-                    archivedMemoManager!!.listState
+                    userMemoManager.listState,
+                    exploreMemoManager.listState,
+                    archivedMemoManager.listState
                 ) { u, e, a -> Triple(u, e, a) },
                 combine(
-                    searchMemoManager!!.listState,
-                    commentManager!!.listState,
-                    attachmentManager!!.listState
+                    searchMemoManager.listState,
+                    commentManager.listState,
+                    attachmentManager.listState
                 ) { s, c, at -> Triple(s, c, at) },
-                attachmentManager!!.cellWidth,
+                attachmentManager.cellWidth,
                 _attachmentAspectRatios
             ) { (userMemos, exploreMemos, archivedMemos), (searchMemos, comments, attachments), cellWidth, aspectRatios ->
                 Log.d(
@@ -330,7 +335,7 @@ class MemosViewModel @Inject constructor(
             viewModelScope.launch { webhookDelegate.fetchWebhooks(name) }
 
             // Refresh user memos now that we have the numeric userId
-            userMemoManager?.fetch(refresh = true)
+            userMemoManager.fetch(refresh = true)
         }
     }
 
@@ -339,38 +344,38 @@ class MemosViewModel @Inject constructor(
 
     fun fetchUserMemos(refresh: Boolean = false) {
         if (refresh) updateRefreshTrigger(RefreshSource.USerMemos)
-        userMemoManager?.fetch(refresh)
+        userMemoManager.fetch(refresh)
         if (refresh) clearRefreshingState()
     }
 
-    fun loadMoreUserMemos() = userMemoManager?.loadMore()
+    fun loadMoreUserMemos() = userMemoManager.loadMore()
 
     fun fetchExploreMemos(refresh: Boolean = false) {
         if (refresh) updateRefreshTrigger(RefreshSource.ExploreMemos)
-        exploreMemoManager?.fetch(refresh)
+        exploreMemoManager.fetch(refresh)
         if (refresh) clearRefreshingState()
     }
 
-    fun loadMoreExploreMemos() = exploreMemoManager?.loadMore()
+    fun loadMoreExploreMemos() = exploreMemoManager.loadMore()
 
     fun fetchArchivedMemos(refresh: Boolean = false) {
         if (refresh) updateRefreshTrigger(RefreshSource.ArchivedMemos)
-        archivedMemoManager?.fetch(refresh)
+        archivedMemoManager.fetch(refresh)
         if (refresh) clearRefreshingState()
     }
 
-    fun loadMoreArchivedMemos() = archivedMemoManager?.loadMore()
+    fun loadMoreArchivedMemos() = archivedMemoManager.loadMore()
 
     fun fetchSearchMemos(refresh: Boolean = false) {
         if (refresh) updateRefreshTrigger(RefreshSource.SearchMemos)
-        searchMemoManager?.fetch(refresh)
+        searchMemoManager.fetch(refresh)
         if (refresh) clearRefreshingState()
     }
 
-    fun loadMoreSearchMemos() = searchMemoManager?.loadMore()
+    fun loadMoreSearchMemos() = searchMemoManager.loadMore()
 
     fun searchMemos(isExplore: Boolean, filter: String?, orderBy: String? = null) {
-        searchMemoManager?.updateFilter(filter)
+        searchMemoManager.updateFilter(filter)
         fetchSearchMemos(refresh = true)
     }
 
@@ -392,25 +397,25 @@ class MemosViewModel @Inject constructor(
 
     fun fetchAttachments(refresh: Boolean = false) {
         if (refresh) updateRefreshTrigger(RefreshSource.Attachments)
-        attachmentManager?.fetch(refresh = refresh, softRefresh = refresh)
+        attachmentManager.fetch(refresh = refresh, softRefresh = refresh)
         if (refresh) clearRefreshingState()
     }
 
     fun loadMoreAttachments() {
-        attachmentManager?.loadMore()
+        attachmentManager.loadMore()
     }
 
     fun updateAttachmentCellWidth(width: Float) {
-        attachmentManager?.updateCellWidth(width)
+        attachmentManager.updateCellWidth(width)
     }
 
     private fun updateMemoInState(updatedMemo: Memo) {
         val isSame = { m: Memo -> m.name == updatedMemo.name }
-        userMemoManager?.replace(updatedMemo, isSame)
-        exploreMemoManager?.replace(updatedMemo, isSame)
-        archivedMemoManager?.replace(updatedMemo, isSame)
-        searchMemoManager?.replace(updatedMemo, isSame)
-        commentManager?.replace(updatedMemo, isSame)
+        userMemoManager.replace(updatedMemo, isSame)
+        exploreMemoManager.replace(updatedMemo, isSame)
+        archivedMemoManager.replace(updatedMemo, isSame)
+        searchMemoManager.replace(updatedMemo, isSame)
+        commentManager.replace(updatedMemo, isSame)
 
         if (_uiState.value.detailPane.selectedMemo?.name == updatedMemo.name) {
             _uiState.update {

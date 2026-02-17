@@ -8,7 +8,7 @@ private const val COMMENT_PAGE_SIZE = 100 // Comments usually loaded all or in l
 
 class CommentListManager(
     scope: CoroutineScope,
-    private val api: MemosApi
+    private val apiProvider: () -> MemosApi?
 ) : BaseListManager<Memo>(scope) {
 
     private var currentMemoName: String? = null
@@ -22,6 +22,7 @@ class CommentListManager(
     }
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
+        val api = apiProvider() ?: return Pair(emptyList(), null)
         val parent = currentMemoName ?: return Pair(emptyList(), null)
 
         val response = api.listMemoComments(
