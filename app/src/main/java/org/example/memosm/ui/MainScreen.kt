@@ -1,5 +1,6 @@
 package org.example.memosm.ui
 
+
 import android.net.Uri
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -59,12 +60,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
-import org.example.memosm.MemosApplication
 import org.example.memosm.R
-import org.example.memosm.data.DataStoreManager
-import org.example.memosm.data.DraftManager
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Location
 import org.example.memosm.model.ShareIntentData
@@ -87,8 +85,6 @@ enum class MainDestination(
         R.string.nav_profile
     )
 }
-
-import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun MainScreen(
@@ -161,6 +157,7 @@ fun MainScreen(
     val layoutType = NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(adaptiveInfo)
     val isMobile = layoutType == NavigationSuiteType.NavigationBar
 
+
     val toggleNavBar: ((Boolean) -> Unit)? = if (isMobile) {
         { isNavBarVisible = it }
     } else null
@@ -169,8 +166,8 @@ fun MainScreen(
     if (isAddingAccount) {
         LoginDialog(onLoginSuccess = { newBaseUrl, newToken ->
             scope.launch {
-                viewModel.addAccount(newBaseUrl, newToken)
-                viewModel.updateCurrentAccountInList()
+                viewModel.userDelegate.addAccount(newBaseUrl, newToken)
+                viewModel.userDelegate.updateCurrentAccountInList()
                 isAddingAccount = false
             }
         }, onDismiss = { isAddingAccount = false })

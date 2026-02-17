@@ -28,6 +28,7 @@ interface MemoActionDelegate {
         location: Location? = null,
         onSuccess: () -> Unit = {}
     )
+
     fun updateMemo(
         memo: Memo,
         content: String,
@@ -37,6 +38,7 @@ interface MemoActionDelegate {
         state: MemoState? = null,
         onSuccess: () -> Unit = {}
     )
+
     fun deleteMemo(memo: Memo, onSuccess: () -> Unit = {})
     fun updateMemoPinned(memo: Memo, pinned: Boolean, onSuccess: () -> Unit = {})
     fun createComment(parentMemo: Memo, content: String, onSuccess: () -> Unit = {})

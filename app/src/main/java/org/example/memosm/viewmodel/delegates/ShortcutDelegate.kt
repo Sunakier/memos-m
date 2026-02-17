@@ -7,8 +7,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.example.memosm.api.MemosApi
-import org.example.memosm.viewmodel.MemosUiState
 import org.example.memosm.model.Shortcut
+import org.example.memosm.viewmodel.MemosUiState
 
 interface ShortcutDelegate {
     suspend fun fetchShortcuts(userResourceName: String)
@@ -17,6 +17,7 @@ interface ShortcutDelegate {
     fun createShortcut(
         title: String, filter: String, onSuccess: () -> Unit, onError: (String) -> Unit
     )
+
     fun updateShortcut(
         shortcut: Shortcut,
         title: String,
@@ -24,6 +25,7 @@ interface ShortcutDelegate {
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     )
+
     fun deleteShortcut(shortcut: Shortcut)
 }
 

@@ -23,6 +23,7 @@ interface DraftDelegate {
         location: Location? = null,
         draftId: String? = null
     )
+
     fun deleteDraft(draftId: String)
     fun deleteAllDrafts()
     fun publishAllDrafts(onResult: (Int) -> Unit = {})

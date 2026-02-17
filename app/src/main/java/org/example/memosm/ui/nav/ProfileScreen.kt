@@ -227,7 +227,7 @@ private fun ProfileListPane(
             onDismiss = { showEditDialog = false },
             onSave = { update ->
                 isSavingProfile = true
-                viewModel.updateUserProfile(
+                viewModel.userDelegate.updateUserProfile(
                     username = update.username,
                     email = update.email,
                     displayName = update.displayName,
@@ -249,11 +249,11 @@ private fun ProfileListPane(
     accountToEditCredentials?.let { account ->
         LoginDialog(
             onLoginSuccess = { baseUrl, token ->
-                // Update the account with new credentials
-                viewModel.updateAccountCredentials(account, baseUrl, token)
-                accountToEditCredentials = null
-                showAccountSwitcher = false
-            }, onDismiss = { accountToEditCredentials = null }, editAccount = account
+            // Update the account with new credentials
+            viewModel.userDelegate.updateAccountCredentials(account, baseUrl, token)
+            accountToEditCredentials = null
+            showAccountSwitcher = false
+        }, onDismiss = { accountToEditCredentials = null }, editAccount = account
         )
     }
 
@@ -263,27 +263,30 @@ private fun ProfileListPane(
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ) {
             AccountsList(
-                accounts = accounts, onSwitchAccount = {
-                    viewModel.switchAccount(it)
+                accounts = accounts,
+                onSwitchAccount = {
+                    viewModel.userDelegate.switchAccount(it)
                     showAccountSwitcher = false
-                }, onLogoutAccount = { viewModel.removeAccount(it) }, onEditAccount = { account ->
+                },
+                onLogoutAccount = { viewModel.userDelegate.removeAccount(it) },
+                onEditAccount = { account ->
                     accountToEditCredentials = account
-                }, onAddAccount = {
+                },
+                onAddAccount = {
                     onAddAccount()
                     showAccountSwitcher = false
-                }, modifier = Modifier.padding(bottom = 32.dp)
+                },
+                modifier = Modifier.padding(bottom = 32.dp)
             )
         }
     }
 
     PullToRefreshBox(
-        isRefreshing = uiState.isRefreshing,
-        onRefresh = {
+        isRefreshing = uiState.isRefreshing, onRefresh = {
             viewModel.fetchUserMemos(refresh = true)
-            viewModel.refreshInstanceSettings()
-            viewModel.refreshUserStats()
-        },
-        modifier = Modifier.fillMaxSize()
+            viewModel.userDelegate.refreshInstanceSettings()
+            viewModel.userDelegate.refreshUserStats()
+        }, modifier = Modifier.fillMaxSize()
     ) {
         LazyColumn(
             state = listState,
@@ -324,12 +327,12 @@ private fun ProfileListPane(
 
                             ProfileHeader(
                                 user = User(
-                                    name = activeAccount.name?.let { "users/$it" },
-                                    username = activeAccount.name ?: "",
-                                    displayName = activeAccount.displayName,
-                                    avatarUrl = avatarUrl,
-                                    token = uiState.session.token
-                                ),
+                                name = activeAccount.name?.let { "users/$it" },
+                                username = activeAccount.name ?: "",
+                                displayName = activeAccount.displayName,
+                                avatarUrl = avatarUrl,
+                                token = uiState.session.token
+                            ),
                                 onClick = { showAccountSwitcher = true },
                                 onEditClick = { showEditDialog = true })
                         } else if (uiState.userMemoList.list.isLoading) {
@@ -372,16 +375,16 @@ private fun ProfileListPane(
                             ) {
                                 ListItem(
                                     headlineContent = {
-                                        Text(
-                                            stringResource(R.string.profile_archived),
-                                            modifier = Modifier.sharedBounds(
-                                                rememberSharedContentState(key = "archive_text"),
-                                                animatedVisibilityScope = animatedVisibilityScope,
-                                                boundsTransform = { _, _ ->
-                                                    tween(durationMillis = 300)
-                                                })
-                                        )
-                                    },
+                                    Text(
+                                        stringResource(R.string.profile_archived),
+                                        modifier = Modifier.sharedBounds(
+                                            rememberSharedContentState(key = "archive_text"),
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            boundsTransform = { _, _ ->
+                                                tween(durationMillis = 300)
+                                            })
+                                    )
+                                },
                                     leadingContent = {
                                         Icon(
                                             Icons.Outlined.Archive, contentDescription = null
@@ -404,7 +407,7 @@ private fun ProfileListPane(
                         SettingsCard(
                             settings = userSettings ?: UserGeneralSetting(),
                             onUpdate = { locale, visibility ->
-                                viewModel.updateUserGeneralSetting(locale, visibility)
+                                viewModel.userDelegate.updateUserGeneralSetting(locale, visibility)
                             })
                     }
                 }
@@ -414,14 +417,20 @@ private fun ProfileListPane(
                         ShortcutsCard(
                             shortcuts = shortcuts,
                             onCreate = { title, filter, onSuccess, onError ->
-                                viewModel.createShortcut(title, filter, onSuccess, onError)
+                                viewModel.shortcutDelegate.createShortcut(
+                                    title, filter, onSuccess, onError
+                                )
                             },
                             onUpdate = { shortcut, title, filter, onSuccess, onError ->
-                                viewModel.updateShortcut(
+                                viewModel.shortcutDelegate.updateShortcut(
                                     shortcut, title, filter, onSuccess, onError
                                 )
                             },
-                            onDelete = { shortcut -> viewModel.deleteShortcut(shortcut) })
+                            onDelete = { shortcut ->
+                                viewModel.shortcutDelegate.deleteShortcut(
+                                    shortcut
+                                )
+                            })
                     }
                 }
 
@@ -430,22 +439,22 @@ private fun ProfileListPane(
                         WebhooksCard(
                             webhooks = webhooks,
                             onCreate = { displayName, url, onSuccess, onError ->
-                                viewModel.createWebhook(displayName, url, onSuccess, onError)
+                                viewModel.webhookDelegate.createWebhook(
+                                    displayName, url, onSuccess, onError
+                                )
                             },
                             onUpdate = { webhook, displayName, url, onSuccess, onError ->
-                                viewModel.updateWebhook(
+                                viewModel.webhookDelegate.updateWebhook(
                                     webhook, displayName, url, onSuccess, onError
                                 )
                             },
-                            onDelete = { webhook -> viewModel.deleteWebhook(webhook) })
+                            onDelete = { webhook -> viewModel.webhookDelegate.deleteWebhook(webhook) })
                     }
                 }
 
-                if (instance != null) {
-                    item {
-                        Box(itemModifier) {
-                            InstanceCard(instance)
-                        }
+                item {
+                    Box(itemModifier) {
+                        InstanceCard(instance ?: InstanceProfile())
                     }
                 }
 
@@ -453,10 +462,13 @@ private fun ProfileListPane(
                     Box(itemModifier) {
                         AppSettingsCard(
                             pageSize = uiState.appSettings.pageSize,
-                            onPageSizeChange = { viewModel.updatePageSize(it) },
+                            onPageSizeChange = { viewModel.appSettingsDelegate.updatePageSize(it) },
                             headerScale = uiState.appSettings.headerScale,
-                            onHeaderScaleChange = { viewModel.updateHeaderScale(it) }
-                        )
+                            onHeaderScaleChange = {
+                                viewModel.appSettingsDelegate.updateHeaderScale(
+                                    it
+                                )
+                            })
                     }
                 }
 

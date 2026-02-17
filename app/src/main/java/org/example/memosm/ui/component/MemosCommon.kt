@@ -119,11 +119,11 @@ fun MemosScaffold(
                     (it.name ?: it.content.hashCode().toString()) == currentMemoKey.id
                 }
                 if (memo != null) {
-                    viewModel.selectMemo(memo)
+                    viewModel.memoActionDelegate.selectMemo(memo)
                 }
             }
         } else if (uiState.detailPane.selectedMemo != null) {
-            viewModel.clearSelectedMemo()
+            viewModel.memoActionDelegate.clearSelectedMemo()
         }
     }
 
@@ -389,44 +389,42 @@ fun GenericMemosListPane(
                             } else null,
                             onArchive = if (isOwner) {
                                 {
-                                    viewModel.updateMemo(
+                                    viewModel.memoActionDelegate.updateMemo(
                                         memo,
                                         memo.content,
                                         memo.visibility,
                                         memo.attachments ?: emptyList(),
                                         memo.location,
-//                                        "ARCHIVED"
                                         MemoState.ARCHIVED
                                     )
                                 }
                             } else null,
                             onUnarchive = if (isOwner) {
                                 {
-                                    viewModel.updateMemo(
+                                    viewModel.memoActionDelegate.updateMemo(
                                         memo,
                                         memo.content,
                                         memo.visibility,
                                         memo.attachments ?: emptyList(),
                                         memo.location,
-//                                        "NORMAL"
                                         MemoState.NORMAL
                                     )
                                 }
                             } else null,
                             onPin = if (isOwner) { pinned ->
-                                viewModel.updateMemoPinned(memo, pinned)
+                                viewModel.memoActionDelegate.updateMemoPinned(memo, pinned)
                             } else null,
                             onDelete = if (isOwner) {
                                 { memoToDelete = memo }
                             } else null,
                             onUpsertReaction = { emoji ->
-                                viewModel.upsertMemoReaction(memo, emoji)
+                                viewModel.memoActionDelegate.upsertMemoReaction(memo, emoji)
                             },
                             onDeleteReaction = { reaction ->
-                                viewModel.deleteMemoReaction(memo, reaction)
+                                viewModel.memoActionDelegate.deleteMemoReaction(memo, reaction)
                             },
                             onContentUpdate = if (isOwner) { newContent ->
-                                viewModel.updateMemo(
+                                viewModel.memoActionDelegate.updateMemo(
                                     memo,
                                     newContent,
                                     memo.visibility,
@@ -502,7 +500,7 @@ fun GenericMemosListPane(
 
     memoToDelete?.let { memo ->
         DeleteConfirmationDialog(memo = memo, onDismiss = { memoToDelete = null }, onConfirm = {
-            viewModel.deleteMemo(memo)
+            viewModel.memoActionDelegate.deleteMemo(memo)
             memoToDelete = null
         })
     }

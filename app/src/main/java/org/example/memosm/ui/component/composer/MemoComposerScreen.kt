@@ -116,7 +116,7 @@ fun MemoComposerScreen(
                 onPublish = { content, visibility, attachments, location ->
                     when {
                         initialMemo != null -> {
-                            viewModel.updateMemo(
+                            viewModel.memoActionDelegate.updateMemo(
                                 initialMemo, content, visibility, attachments, location
                             ) {
                                 onDismiss()
@@ -124,19 +124,24 @@ fun MemoComposerScreen(
                         }
 
                         parentMemo != null -> {
-                            viewModel.createComment(parentMemo, content)
+                            viewModel.memoActionDelegate.createComment(parentMemo, content)
                             onDismiss()
                         }
 
                         else -> {
-                            viewModel.createMemo(content, visibility, attachments, location) {
+                            viewModel.memoActionDelegate.createMemo(
+                                content,
+                                visibility,
+                                attachments,
+                                location
+                            ) {
                                 onDismiss()
                             }
                         }
                     }
                 },
                 onUploadFile = { uri, context ->
-                    viewModel.uploadAttachment(uri, context)
+                    viewModel.memoActionDelegate.uploadAttachment(uri, context)
                 },
                 availableTags = uiState.session.userStats?.tagCount?.keys ?: emptySet(),
                 token = uiState.session.token,
@@ -156,7 +161,12 @@ fun MemoComposerScreen(
                     .padding(horizontal = 8.dp),
                 onDraftChanged = if (initialMemo == null && parentMemo == null) {
                     { content, visibility, attachments, location ->
-                        viewModel.saveDraft(content, visibility, attachments, location)
+                        viewModel.draftDelegate.saveDraft(
+                            content,
+                            visibility,
+                            attachments,
+                            location
+                        )
                     }
                 } else null
             )

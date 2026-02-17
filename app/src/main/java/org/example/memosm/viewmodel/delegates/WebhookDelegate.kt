@@ -7,14 +7,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.example.memosm.api.MemosApi
-import org.example.memosm.viewmodel.MemosUiState
 import org.example.memosm.model.UserWebhook
+import org.example.memosm.viewmodel.MemosUiState
 
 interface WebhookDelegate {
     suspend fun fetchWebhooks(userResourceName: String)
     fun createWebhook(
         displayName: String, url: String, onSuccess: () -> Unit, onError: (String) -> Unit
     )
+
     fun updateWebhook(
         webhook: UserWebhook,
         displayName: String,
@@ -22,6 +23,7 @@ interface WebhookDelegate {
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     )
+
     fun deleteWebhook(webhook: UserWebhook)
 }
 

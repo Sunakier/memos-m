@@ -307,10 +307,10 @@ fun MemoInput(
                                 )
                             } else if (initialState == SuggestionUIState.List && targetState == SuggestionUIState.Icon) {
                                 // Morph: List -> Icon (Collapse)
-                                (fadeIn(animationSpec = tweenFloat) + androidx.compose.animation.scaleIn(
+                                (fadeIn(animationSpec = tweenFloat) + scaleIn(
                                     animationSpec = tweenFloat
                                 )).togetherWith(
-                                    fadeOut(animationSpec = tweenFloat) + androidx.compose.animation.scaleOut(
+                                    fadeOut(animationSpec = tweenFloat) + scaleOut(
                                         animationSpec = tweenFloat
                                     )
                                 )

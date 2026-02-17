@@ -130,7 +130,7 @@ fun MemoSearchBar(
         if (expanded) {
             // Debounce the search to prevent excessive API calls while typing
             delay(300)
-            viewModel.refreshUserStats()
+            viewModel.userDelegate.refreshUserStats()
 
             val filters = mutableListOf<String>()
 
@@ -227,7 +227,7 @@ fun MemoSearchBar(
                     onMemoClick(memo)
                 },
                 onContentUpdate = { memo, newContent ->
-                    viewModel.updateMemo(
+                    viewModel.memoActionDelegate.updateMemo(
                         memo,
                         newContent,
                         memo.visibility,

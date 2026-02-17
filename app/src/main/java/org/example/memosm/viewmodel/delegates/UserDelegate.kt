@@ -20,6 +20,7 @@ interface UserDelegate {
     fun fetchCurrentUser(
         onUserFetched: suspend (User) -> Unit = {}
     )
+
     suspend fun fetchInstanceProfile()
     suspend fun fetchInstanceSettings()
     fun refreshInstanceSettings()
@@ -37,6 +38,7 @@ interface UserDelegate {
         password: String? = null,
         onResult: (Boolean) -> Unit = {}
     )
+
     fun addAccount(hostUrl: String, token: String)
     fun removeAccount(account: Account)
     fun updateAccountCredentials(account: Account, hostUrl: String, token: String)
@@ -102,9 +104,9 @@ class UserDelegateImpl(
                     val resourceName = user.name ?: ""
                     if (resourceName.isNotBlank()) {
 
-                         launch { fetchUserSettings(resourceName) }
-                         launch { fetchUserStats(resourceName) }
-                         launch { fetchActivities() }
+                        launch { fetchUserSettings(resourceName) }
+                        launch { fetchUserStats(resourceName) }
+                        launch { fetchActivities() }
                     }
 
                     fetchInstanceProfile()
@@ -208,7 +210,7 @@ class UserDelegateImpl(
     }
 
     override fun updateUserGeneralSetting(locale: String?, memoVisibility: Visibility?) {
-         scope.launch {
+        scope.launch {
             try {
                 // Early return if api doesn't exist
                 val currentApi = api ?: return@launch
@@ -279,16 +281,16 @@ class UserDelegateImpl(
                     // Note: fetchCurrentUser is async/launch, so we can't await it easily unless we modify it
                     // But here we want onResult to be called after
                     val user = currentApi.getCurrentSession().user
-                     if (user != null) {
+                    if (user != null) {
                         uiState.update {
                             it.copy(session = it.session.copy(currUser = user))
                         }
-                         // Store user in local account for offline access
+                        // Store user in local account for offline access
                         val activeAccount = uiState.value.accounts.find { it.isActive }
                         if (activeAccount != null) {
                             dataStoreManager.updateAccountUser(activeAccount.id, user)
                         }
-                     }
+                    }
                     onResult(true)
                 } else {
                     onResult(true)
@@ -354,7 +356,7 @@ class UserDelegateImpl(
     }
 
     override fun switchAccount(account: Account) {
-         scope.launch {
+        scope.launch {
             try {
                 dataStoreManager.setActiveAccount(account.id)
                 dataStoreManager.updateAccountLastUsed(account.id, System.currentTimeMillis())

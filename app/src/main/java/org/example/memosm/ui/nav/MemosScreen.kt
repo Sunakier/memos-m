@@ -108,7 +108,7 @@ fun MemosScreen(
             if (uiState.draft.drafts.isNotEmpty()) {
                 showDraftPrompt = true
             } else {
-                viewModel.initializeNewDraftSession()
+                viewModel.draftDelegate.initializeNewDraftSession()
                 startFresh = true
                 showComposerDialog = true
             }
@@ -142,7 +142,7 @@ fun MemosScreen(
                     start = 16.dp, top = 88.dp, end = 16.dp, bottom = bottomPadding
                 ),
                 onDraftsCardClick = { showDraftsScreen = true },
-                onHashtagClick = { tag -> viewModel.toggleHashtagFilter(tag) }
+                onHashtagClick = { tag -> viewModel.shortcutDelegate.toggleHashtagFilter(tag) }
             )
         },
         overlay = { onMemoClick, showSearchBar, isSearchExpanded, onSearchExpandedChange, isDualPane, isDetailVisible ->
@@ -173,7 +173,7 @@ fun MemosScreen(
                             showDraftPrompt = true
                         } else {
                             // Start fresh with a new draft session ID
-                            viewModel.initializeNewDraftSession()
+                            viewModel.draftDelegate.initializeNewDraftSession()
                             startFresh = true
                             showComposerDialog = true
                         }
@@ -207,9 +207,9 @@ fun MemosScreen(
                     onClick = {
                         showDraftPrompt = false
                         // Load latest draft
-                        val latestDraft = viewModel.getLatestDraft()
+                        val latestDraft = viewModel.draftDelegate.getLatestDraft()
                         if (latestDraft != null) {
-                            viewModel.setCurrentEditingDraft(latestDraft.id)
+                            viewModel.draftDelegate.setCurrentEditingDraft(latestDraft.id)
                         }
                         startFresh = false
                         showComposerDialog = true
@@ -222,7 +222,7 @@ fun MemosScreen(
                     onClick = {
                         showDraftPrompt = false
                         // Start fresh with a new draft session ID
-                        viewModel.initializeNewDraftSession()
+                        viewModel.draftDelegate.initializeNewDraftSession()
                         startFresh = true
                         showComposerDialog = true
                     }) {
@@ -246,7 +246,7 @@ fun MemosScreen(
             animationSpec = tween(200, easing = exitEasing)
         )
     ) {
-        val latestDraft = if (!startFresh) viewModel.getLatestDraft() else null
+        val latestDraft = if (!startFresh) viewModel.draftDelegate.getLatestDraft() else null
         val currentDraftId = uiState.draft.currentEditingDraftId
         val draftToLoad = if (!startFresh && currentDraftId != null) {
             uiState.draft.drafts.find { it.id == currentDraftId }
@@ -378,7 +378,7 @@ private fun MemosListPane(
                                         FilterChip(
                                             selected = true,
                                             onClick = {
-                                                viewModel.toggleHashtagFilter(
+                                                viewModel.shortcutDelegate.toggleHashtagFilter(
                                                     selectedHashtag
                                                 )
                                             },
@@ -413,7 +413,11 @@ private fun MemosListPane(
                                         uiState.userMemoList.selectedShortcut?.name == shortcut.name
                                     FilterChip(
                                         selected = isSelected,
-                                        onClick = { viewModel.toggleShortcutFilter(shortcut) },
+                                        onClick = {
+                                            viewModel.shortcutDelegate.toggleShortcutFilter(
+                                                shortcut
+                                            )
+                                        },
                                         label = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Icon(

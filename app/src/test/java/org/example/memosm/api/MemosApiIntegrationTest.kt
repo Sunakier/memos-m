@@ -188,8 +188,8 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         // ---------------------------------------------------------
         // 1. Setup & Stats (Existing Logic)
         // ---------------------------------------------------------
-        val memo1 = api.createMemo(org.example.memosm.model.Memo(content = "Stats Memo 1 #tag1"))
-        val memo2 = api.createMemo(org.example.memosm.model.Memo(content = "Stats Memo 2 #tag2"))
+        api.createMemo(org.example.memosm.model.Memo(content = "Stats Memo 1 #tag1"))
+        api.createMemo(org.example.memosm.model.Memo(content = "Stats Memo 2 #tag2"))
 
         val session = api.getCurrentSession()
         val user = session.user!!

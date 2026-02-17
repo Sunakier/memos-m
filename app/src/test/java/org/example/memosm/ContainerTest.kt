@@ -4,7 +4,6 @@ import org.junit.Test
 import org.testcontainers.containers.GenericContainer
 
 
-
 class ContainerTest {
     @Test
     fun testContainer() {

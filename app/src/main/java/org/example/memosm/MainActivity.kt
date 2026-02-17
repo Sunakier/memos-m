@@ -23,17 +23,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.example.memosm.data.DataStoreManager
-import org.example.memosm.data.DraftManager
 import org.example.memosm.model.ShareIntentData
 import org.example.memosm.ui.MainScreen
 import org.example.memosm.ui.component.LoginScreen
 import org.example.memosm.ui.theme.MemosMTheme
 import org.example.memosm.widget.DraftWidget
-
-import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -62,7 +60,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MemosMTheme {
-                val context = LocalContext.current
+                LocalContext.current
                 val scope = rememberCoroutineScope()
 
                 // Observe accounts instead of single credentials

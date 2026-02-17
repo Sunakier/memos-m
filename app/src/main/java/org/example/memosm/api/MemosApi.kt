@@ -50,10 +50,10 @@ data class ApiConstants(
     val userMaskAvatarUrl: String,
     val userMaskDescription: String,
     val userMaskPassword: String,
-    
+
     val webhookMaskDisplayName: String,
     val webhookMaskUrl: String,
-    
+
     val shortcutMaskTitle: String,
     val shortcutMaskFilter: String
 )
