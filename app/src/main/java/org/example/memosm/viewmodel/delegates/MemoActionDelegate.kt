@@ -146,8 +146,8 @@ class MemoActionDelegateImpl(
                     onSuccess()
 
                     // Handle local list moves if state changed
-                    val oldState = memo.state ?: "NORMAL"
-                    val newState = updated.state ?: "NORMAL"
+                    val oldState = memo.state ?: MemoState.NORMAL
+                    val newState = updated.state ?: MemoState.NORMAL
 
                     if (oldState != newState) {
                         listUpdater.handleMemoStateChange(memo, updated)
