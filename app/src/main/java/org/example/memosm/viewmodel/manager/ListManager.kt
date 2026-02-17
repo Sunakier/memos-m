@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.example.memosm.viewmodel.PaginatedListState
 
+const val TAG = "ListManager"
+
 interface ListManager<T> {
     val listState: StateFlow<PaginatedListState<T>>
 
@@ -56,7 +58,7 @@ abstract class BaseListManager<T>(
 
     override fun fetch(refresh: Boolean, softRefresh: Boolean) {
         android.util.Log.d(
-            "MemosListManager",
+            TAG,
             "fetch: refresh=$refresh, softRefresh=$softRefresh, currentItems=${_listState.value.items.size}"
         )
         if (refresh && !softRefresh) {
@@ -65,7 +67,7 @@ abstract class BaseListManager<T>(
 
         // If already loading, skip
         if (_listState.value.isLoading) {
-            android.util.Log.d("MemosListManager", "fetch: already loading, skipping")
+            android.util.Log.d(TAG, "fetch: already loading, skipping")
             return
         }
 
@@ -74,7 +76,7 @@ abstract class BaseListManager<T>(
         // This prevents resetting the list to page 1 when navigating back to a screen that has data.
         if (!refresh && _listState.value.items.isNotEmpty()) {
             android.util.Log.d(
-                "MemosListManager", "fetch: items exist and not refreshing, skipping"
+                TAG, "fetch: items exist and not refreshing, skipping"
             )
             return
         }
@@ -84,7 +86,7 @@ abstract class BaseListManager<T>(
 
     override fun loadMore() {
         android.util.Log.d(
-            "MemosListManager",
+            TAG,
             "loadMore: isLoading=${_listState.value.isLoading}, nextToken=${_listState.value.nextPageToken}"
         )
         if (_listState.value.isLoading || _listState.value.nextPageToken.isNullOrBlank()) return
@@ -92,7 +94,7 @@ abstract class BaseListManager<T>(
     }
 
     override fun reset() {
-        android.util.Log.d("MemosListManager", "reset")
+        android.util.Log.d(TAG, "reset")
         _listState.value = initialState
     }
 
@@ -144,7 +146,7 @@ abstract class BaseListManager<T>(
     private fun loadInternal(pageToken: String?) {
         scope.launch {
             try {
-                android.util.Log.d("MemosListManager", "loadInternal: pageToken=$pageToken")
+                android.util.Log.d(TAG, "loadInternal: pageToken=$pageToken")
                 _listState.value = _listState.value.copy(isLoading = true, isOffline = false)
 
                 val (newItems, rawNextToken) = fetchFromApi(pageToken)
@@ -153,7 +155,7 @@ abstract class BaseListManager<T>(
                 val processedItems = newItems.map { processItem(it) }
 
                 android.util.Log.d(
-                    "MemosListManager",
+                    TAG,
                     "loadInternal: fetched ${newItems.size} items, rawToken='$rawNextToken' -> nextToken=$nextToken"
                 )
 
@@ -173,13 +175,13 @@ abstract class BaseListManager<T>(
                     try {
                         cacheCallbacks.onFetchSuccess(updatedItems)
                     } catch (e: Exception) {
-                        android.util.Log.e("MemosListManager", "Error caching data", e)
+                        android.util.Log.e(TAG, "Error caching data", e)
                     }
                 }
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                android.util.Log.e("MemosListManager", "loadInternal error", e)
+                android.util.Log.e(TAG, "loadInternal error", e)
 
                 // Extract a user-friendly error message
                 val errorMessage = e.message ?: e.toString()
@@ -190,8 +192,7 @@ abstract class BaseListManager<T>(
                         val cachedItems = cacheCallbacks.getCachedData()
                         if (cachedItems.isNotEmpty()) {
                             android.util.Log.d(
-                                "MemosListManager",
-                                "Loaded ${cachedItems.size} items from cache"
+                                TAG, "Loaded ${cachedItems.size} items from cache"
                             )
                             _listState.value = _listState.value.copy(
                                 items = cachedItems,
@@ -203,9 +204,7 @@ abstract class BaseListManager<T>(
                         }
                     } catch (cacheError: Exception) {
                         android.util.Log.e(
-                            "MemosListManager",
-                            "Error loading from cache",
-                            cacheError
+                            TAG, "Error loading from cache", cacheError
                         )
                     }
                 }
