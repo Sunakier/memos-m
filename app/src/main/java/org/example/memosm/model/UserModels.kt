@@ -1,6 +1,6 @@
 package org.example.memosm.model
 
-import org.example.memosm.api.annotations.SerializedName
+import com.google.gson.annotations.SerializedName
 
 data class CurrentSessionResponse(
     val user: User?

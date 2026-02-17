@@ -1,6 +1,6 @@
 package org.example.memosm.model
 
-import org.example.memosm.api.annotations.SerializedName
+import com.google.gson.annotations.SerializedName
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.time.Instant
