@@ -166,6 +166,21 @@ fun MemosScaffold(
 
     var memoToEdit by remember { mutableStateOf<Memo?>(null) }
     var memoToComment by remember { mutableStateOf<Memo?>(null) }
+    
+    // Hold onto the memo object while the exit animation plays
+    var activeMemoToEdit by remember { mutableStateOf<Memo?>(null) }
+    LaunchedEffect(memoToEdit) {
+        if (memoToEdit != null) {
+            activeMemoToEdit = memoToEdit
+        }
+    }
+    
+    var activeMemoToComment by remember { mutableStateOf<Memo?>(null) }
+    LaunchedEffect(memoToComment) {
+        if (memoToComment != null) {
+            activeMemoToComment = memoToComment
+        }
+    }
 
     CompositionLocalProvider(
         LocalMemoEditor provides { memoToEdit = it },
@@ -299,7 +314,7 @@ fun MemosScaffold(
                         animationSpec = tween(200, easing = exitEasing)
                     )
                 ) {
-                    memoToEdit?.let { memo ->
+                    activeMemoToEdit?.let { memo ->
                         MemoEditScreen(
                             memo = memo,
                             onDismiss = { memoToEdit = null },
@@ -323,7 +338,7 @@ fun MemosScaffold(
                         animationSpec = tween(200, easing = exitEasing)
                     )
                 ) {
-                    memoToComment?.let { parentMemo ->
+                    activeMemoToComment?.let { parentMemo ->
                         MemoComposerScreen(
                             onDismiss = { memoToComment = null },
                             onToggleNavBar = if (isNavBarVisible) onToggleNavBar else null,
