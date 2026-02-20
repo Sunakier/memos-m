@@ -53,6 +53,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -68,8 +70,12 @@ import org.example.memosm.model.MemoState
 import org.example.memosm.model.User
 import org.example.memosm.ui.MemoKey
 import org.example.memosm.ui.component.composer.MemoEditScreen
+import org.example.memosm.ui.component.composer.MemoComposerScreen
 import org.example.memosm.ui.component.item.MemoItem
 import org.example.memosm.viewmodel.MemosViewModel
+
+val LocalMemoEditor = compositionLocalOf<(Memo) -> Unit> { { } }
+val LocalMemoCommenter = compositionLocalOf<(Memo) -> Unit> { { } }
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
@@ -158,354 +164,398 @@ fun MemosScaffold(
         derivedStateOf { showNavBarByScroll }
     }
 
-    Scaffold(
-        topBar = { topBar(isDetailVisible, isDualPane) }) { paddingValues ->
-        NavigableListDetailPaneScaffold(
-            modifier = Modifier
-                .padding(paddingValues)
-                .focusRequester(focusRequester)
-                .focusable(),
-            navigator = navigator,
-            listPane = {
-                AnimatedPane {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        listPane { memo ->
-                            focusManager.clearFocus()
-                            scope.launch {
-                                val id = memo.name ?: memo.content.hashCode().toString()
-                                navigator.navigateTo(
-                                    ListDetailPaneScaffoldRole.Detail, MemoKey(id)
+    var memoToEdit by remember { mutableStateOf<Memo?>(null) }
+    var memoToComment by remember { mutableStateOf<Memo?>(null) }
+
+    CompositionLocalProvider(
+        LocalMemoEditor provides { memoToEdit = it },
+        LocalMemoCommenter provides { memoToComment = it }
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            Scaffold(
+                topBar = { topBar(isDetailVisible, isDualPane) }) { paddingValues ->
+                NavigableListDetailPaneScaffold(
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .focusRequester(focusRequester)
+                        .focusable(),
+                    navigator = navigator,
+                    listPane = {
+                        AnimatedPane {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                listPane { memo ->
+                                    focusManager.clearFocus()
+                                    scope.launch {
+                                        val id = memo.name ?: memo.content.hashCode().toString()
+                                        navigator.navigateTo(
+                                            ListDetailPaneScaffoldRole.Detail, MemoKey(id)
+                                        )
+                                    }
+                                }
+
+                                overlay(
+                                    { memo ->
+                                        focusManager.clearFocus()
+                                        scope.launch {
+                                            val id = memo.name ?: memo.content.hashCode().toString()
+                                            navigator.navigateTo(
+                                                ListDetailPaneScaffoldRole.Detail,
+                                                MemoKey(id, fromSearch = true)
+                                            )
+                                        }
+                                    },
+                                    showSearchBar,
+                                    isSearchExpanded,
+                                    { isSearchExpanded = it },
+                                    isDualPane,
+                                    isDetailVisible
                                 )
                             }
                         }
+                    },
+                    detailPane = {
+                        AnimatedPane {
+                            val currentMemoKey = navigator.currentDestination?.contentKey
 
-                        overlay(
-                            { memo ->
-                                focusManager.clearFocus()
-                                scope.launch {
-                                    val id = memo.name ?: memo.content.hashCode().toString()
-                                    navigator.navigateTo(
-                                        ListDetailPaneScaffoldRole.Detail,
-                                        MemoKey(id, fromSearch = true)
+                            AnimatedContent(
+                                targetState = currentMemoKey, transitionSpec = {
+                                    if (isDualPane) {
+                                        if (initialState == null) {
+                                            (fadeIn(
+                                                animationSpec = tween(
+                                                    220,
+                                                    delayMillis = 90
+                                                )
+                                            ) + scaleIn(
+                                                initialScale = 0.92f,
+                                                animationSpec = tween(220, delayMillis = 90)
+                                            )).togetherWith(fadeOut(animationSpec = tween(90)))
+                                        } else {
+                                            fadeIn(animationSpec = tween(300)).togetherWith(
+                                                fadeOut(animationSpec = tween(300))
+                                            )
+                                        }
+                                    } else {
+                                        (slideInVertically(
+                                            initialOffsetY = { it }, animationSpec = tween(300)
+                                        ) + fadeIn()).togetherWith(
+                                            slideOutVertically(
+                                                targetOffsetY = { it }, animationSpec = tween(300)
+                                            ) + fadeOut()
+                                        )
+                                    }
+                                }, label = "DetailPaneTransition"
+                            ) { memoKey ->
+                                val memo =
+                                    remember(memoKey, memos, uiState.searchMemoList.list.items) {
+                                        memoKey?.let { key ->
+                                            val pool =
+                                                if (key.fromSearch) uiState.searchMemoList.list.items else memos
+                                            pool.find {
+                                                (it.name ?: it.content.hashCode()
+                                                    .toString()) == key.id
+                                            }
+                                        }
+                                    }
+
+                                if (memo != null) {
+                                    MemoDetailView(
+                                        memo = memo,
+                                        comments = uiState.detailPane.comments,
+                                        token = uiState.session.token,
+                                        hostUrl = uiState.session.hostUrl,
+                                        showBackButton = navigator.canNavigateBack(),
+                                        onBack = {
+                                            focusManager.clearFocus()
+                                            scope.launch {
+                                                navigator.navigateBack()
+                                            }
+                                        },
+                                        viewModel = viewModel,
+                                        reactionOptions = uiState.session.instanceSettings?.memoRelatedSetting?.reactions
+                                            ?: emptyList()
                                     )
+                                } else if (isDualPane) {
+                                    MemoDetailPlaceholder()
                                 }
-                            },
-                            showSearchBar,
-                            isSearchExpanded,
-                            { isSearchExpanded = it },
-                            isDualPane,
-                            isDetailVisible
+                            }
+                        }
+                    })
+                }
+
+                val enterEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
+                val exitEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
+
+                AnimatedVisibility(
+                    visible = memoToEdit != null,
+                    enter = slideInVertically(
+                        animationSpec = tween(400, easing = enterEasing),
+                        initialOffsetY = { it }) + fadeIn(
+                        animationSpec = tween(400, easing = enterEasing)
+                    ),
+                    exit = slideOutVertically(
+                        animationSpec = tween(200, easing = exitEasing),
+                        targetOffsetY = { it }) + fadeOut(
+                        animationSpec = tween(200, easing = exitEasing)
+                    )
+                ) {
+                    memoToEdit?.let { memo ->
+                        MemoEditScreen(
+                            memo = memo,
+                            onDismiss = { memoToEdit = null },
+                            viewModel = viewModel,
+                            hostUrl = uiState.session.hostUrl,
+                            onToggleNavBar = if (isNavBarVisible) onToggleNavBar else null
                         )
                     }
                 }
-            },
-            detailPane = {
-                AnimatedPane {
-                    val currentMemoKey = navigator.currentDestination?.contentKey
 
-                    AnimatedContent(
-                        targetState = currentMemoKey, transitionSpec = {
-                            if (isDualPane) {
-                                if (initialState == null) {
-                                    (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(
-                                        initialScale = 0.92f,
-                                        animationSpec = tween(220, delayMillis = 90)
-                                    )).togetherWith(fadeOut(animationSpec = tween(90)))
-                                } else {
-                                    fadeIn(animationSpec = tween(300)).togetherWith(
-                                        fadeOut(animationSpec = tween(300))
-                                    )
-                                }
-                            } else {
-                                (slideInVertically(
-                                    initialOffsetY = { it }, animationSpec = tween(300)
-                                ) + fadeIn()).togetherWith(
-                                    slideOutVertically(
-                                        targetOffsetY = { it }, animationSpec = tween(300)
-                                    ) + fadeOut()
-                                )
-                            }
-                        }, label = "DetailPaneTransition"
-                    ) { memoKey ->
-                        val memo = remember(memoKey, memos, uiState.searchMemoList.list.items) {
-                            memoKey?.let { key ->
-                                val pool =
-                                    if (key.fromSearch) uiState.searchMemoList.list.items else memos
-                                pool.find {
-                                    (it.name ?: it.content.hashCode().toString()) == key.id
-                                }
-                            }
-                        }
-
-                        if (memo != null) {
-                            MemoDetailView(
-                                memo = memo,
-                                comments = uiState.detailPane.comments,
-                                token = uiState.session.token,
-                                hostUrl = uiState.session.hostUrl,
-                                showBackButton = navigator.canNavigateBack(),
-                                onBack = {
-                                    focusManager.clearFocus()
-                                    scope.launch {
-                                        navigator.navigateBack()
-                                    }
-                                },
-                                viewModel = viewModel,
-                                reactionOptions = uiState.session.instanceSettings?.memoRelatedSetting?.reactions
-                                    ?: emptyList()
-                            )
-                        } else if (isDualPane) {
-                            MemoDetailPlaceholder()
-                        }
+                AnimatedVisibility(
+                    visible = memoToComment != null,
+                    enter = slideInVertically(
+                        animationSpec = tween(400, easing = enterEasing),
+                        initialOffsetY = { it }) + fadeIn(
+                        animationSpec = tween(400, easing = enterEasing)
+                    ),
+                    exit = slideOutVertically(
+                        animationSpec = tween(200, easing = exitEasing),
+                        targetOffsetY = { it }) + fadeOut(
+                        animationSpec = tween(200, easing = exitEasing)
+                    )
+                ) {
+                    memoToComment?.let { parentMemo ->
+                        MemoComposerScreen(
+                            onDismiss = { memoToComment = null },
+                            onToggleNavBar = if (isNavBarVisible) onToggleNavBar else null,
+                            viewModel = viewModel,
+                            hostUrl = uiState.session.hostUrl,
+                            title = stringResource(R.string.memo_detail_add_comment),
+                            parentMemo = parentMemo,
+                        )
                     }
                 }
-            })
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun GenericMemosListPane(
-    viewModel: MemosViewModel,
-    memos: List<Memo>,
-    isLoading: Boolean,
-    isRefreshing: Boolean,
-    nextPageToken: String?,
-    onLoadMore: () -> Unit,
-    onRefresh: () -> Unit,
-    onMemoClick: (Memo) -> Unit,
-    modifier: Modifier = Modifier,
-    listState: LazyListState = rememberLazyListState(),
-    userProvider: (Memo) -> User? = { null },
-    header: (LazyListScope.() -> Unit)? = null,
-    contentPadding: PaddingValues = PaddingValues(
-        start = 16.dp, top = 88.dp, end = 16.dp, bottom = 80.dp
-    ),
-    errorTitle: String = stringResource(R.string.common_error_failed_to_load),
-    isOffline: Boolean = false,
-    errorMessage: String? = null,
-    onHashtagClick: ((String) -> Unit)? = null
-) {
-    val uiState by viewModel.uiState.collectAsState()
-    val focusManager = LocalFocusManager.current
-
-    var memoToEdit by remember { mutableStateOf<Memo?>(null) }
-    var memoToDelete by remember { mutableStateOf<Memo?>(null) }
-
-    LaunchedEffect(listState, isLoading, nextPageToken) {
-        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }.collect { lastIndex ->
-            if (lastIndex != null && !isLoading && nextPageToken != null && lastIndex >= listState.layoutInfo.totalItemsCount - 5) {
-                onLoadMore()
             }
         }
     }
 
-    val pullToRefreshState = rememberPullToRefreshState()
-    PullToRefreshBox(
-        isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
-        state = pullToRefreshState,
-        modifier = modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = {
-                    focusManager.clearFocus()
-                })
-            },
-        indicator = {
-            PullToRefreshDefaults.Indicator(
-                state = pullToRefreshState,
-                isRefreshing = isRefreshing,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 8.dp)
-            )
-        }) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = contentPadding,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Show offline indicator card at the top when displaying cached data
-            if (isOffline) {
-                item(key = "offline_indicator") {
-                    NetworkErrorCard(
-                        onRetry = onRefresh,
-                        errorMessage = errorMessage,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp)
-                    )
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun GenericMemosListPane(
+        viewModel: MemosViewModel,
+        memos: List<Memo>,
+        isLoading: Boolean,
+        isRefreshing: Boolean,
+        nextPageToken: String?,
+        onLoadMore: () -> Unit,
+        onRefresh: () -> Unit,
+        onMemoClick: (Memo) -> Unit,
+        modifier: Modifier = Modifier,
+        listState: LazyListState = rememberLazyListState(),
+        userProvider: (Memo) -> User? = { null },
+        header: (LazyListScope.() -> Unit)? = null,
+        contentPadding: PaddingValues = PaddingValues(
+            start = 16.dp, top = 88.dp, end = 16.dp, bottom = 80.dp
+        ),
+        errorTitle: String = stringResource(R.string.common_error_failed_to_load),
+        isOffline: Boolean = false,
+        errorMessage: String? = null,
+        onHashtagClick: ((String) -> Unit)? = null
+    ) {
+        val uiState by viewModel.uiState.collectAsState()
+        val focusManager = LocalFocusManager.current
+
+        val onEditMemo = LocalMemoEditor.current
+        var memoToDelete by remember { mutableStateOf<Memo?>(null) }
+
+        LaunchedEffect(listState, isLoading, nextPageToken) {
+            snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }.collect { lastIndex ->
+                if (lastIndex != null && !isLoading && nextPageToken != null && lastIndex >= listState.layoutInfo.totalItemsCount - 5) {
+                    onLoadMore()
                 }
             }
+        }
 
-            header?.invoke(this)
-
-            if (isLoading && memos.isEmpty() && !isRefreshing) {
-                item {
-                    Box(
-                        modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-            } else if (uiState.error != null && memos.isEmpty()) {
-                item {
-                    ErrorView(
-                        title = errorTitle,
-                        message = uiState.error!!,
-                        onRetry = onRefresh,
-                        modifier = Modifier.fillParentMaxHeight(0.7f)
-                    )
-                }
-            } else {
-                items(memos, key = {
-                    it.name.takeUnless { n -> n.isNullOrBlank() }
-                        ?: "${it.content.hashCode()}_${it.createTime}"
-                }) { memo ->
-                    Box(
-                        modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
-                    ) {
-                        val isOwner = memo.creator == uiState.session.currUser?.name
-                        MemoItem(
-                            memo = memo,
-                            user = userProvider(memo),
-                            currentUser = uiState.session.currUser,
-                            token = uiState.session.token,
-                            hostUrl = uiState.session.hostUrl,
-                            colors = if (memo.name != null && memo.name == uiState.detailPane.selectedMemo?.name) {
-                                CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                            } else {
-                                CardDefaults.cardColors()
-                            },
-                            onClick = {
-                                focusManager.clearFocus()
-                                onMemoClick(memo)
-                            },
-                            onEdit = if (isOwner) {
-                                { memoToEdit = memo }
-                            } else null,
-                            onArchive = if (isOwner) {
-                                {
-                                    viewModel.memoActionDelegate.updateMemo(
-                                        memo,
-                                        memo.content,
-                                        memo.visibility,
-                                        memo.attachments ?: emptyList(),
-                                        memo.location,
-                                        MemoState.ARCHIVED
-                                    )
-                                }
-                            } else null,
-                            onUnarchive = if (isOwner) {
-                                {
-                                    viewModel.memoActionDelegate.updateMemo(
-                                        memo,
-                                        memo.content,
-                                        memo.visibility,
-                                        memo.attachments ?: emptyList(),
-                                        memo.location,
-                                        MemoState.NORMAL
-                                    )
-                                }
-                            } else null,
-                            onPin = if (isOwner) { pinned ->
-                                viewModel.memoActionDelegate.updateMemoPinned(memo, pinned)
-                            } else null,
-                            onDelete = if (isOwner) {
-                                { memoToDelete = memo }
-                            } else null,
-                            onUpsertReaction = { emoji ->
-                                viewModel.memoActionDelegate.upsertMemoReaction(memo, emoji)
-                            },
-                            onDeleteReaction = { reaction ->
-                                viewModel.memoActionDelegate.deleteMemoReaction(memo, reaction)
-                            },
-                            onContentUpdate = if (isOwner) { newContent ->
-                                viewModel.memoActionDelegate.updateMemo(
-                                    memo,
-                                    newContent,
-                                    memo.visibility,
-                                    memo.attachments ?: emptyList(),
-                                    memo.location
-                                )
-                            } else null,
-                            maxHeight = 400.dp,
-                            modifier = Modifier.widthIn(max = 800.dp),
-                            onHashtagClick = onHashtagClick,
-                            headerScale = uiState.appSettings.headerScale,
-                            reactionOptions = uiState.session.instanceSettings?.memoRelatedSetting?.reactions
-                                ?: emptyList())
-
-                    }
-                }
-
-                if (isLoading && memos.isNotEmpty()) {
-                    item {
-                        Box(
+        val pullToRefreshState = rememberPullToRefreshState()
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            state = pullToRefreshState,
+            modifier = modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        focusManager.clearFocus()
+                    })
+                },
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    state = pullToRefreshState,
+                    isRefreshing = isRefreshing,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 8.dp)
+                )
+            }) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = contentPadding,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Show offline indicator card at the top when displaying cached data
+                if (isOffline) {
+                    item(key = "offline_indicator") {
+                        NetworkErrorCard(
+                            onRetry = onRefresh,
+                            errorMessage = errorMessage,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(bottom = 8.dp)
+                        )
+                    }
+                }
+
+                header?.invoke(this)
+
+                if (isLoading && memos.isEmpty() && !isRefreshing) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillParentMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator()
                         }
                     }
-                } else if (!isLoading && nextPageToken == null && memos.isNotEmpty()) {
+                } else if (uiState.error != null && memos.isEmpty()) {
                     item {
+                        ErrorView(
+                            title = errorTitle,
+                            message = uiState.error!!,
+                            onRetry = onRefresh,
+                            modifier = Modifier.fillParentMaxHeight(0.7f)
+                        )
+                    }
+                } else {
+                    items(memos, key = {
+                        it.name.takeUnless { n -> n.isNullOrBlank() }
+                            ?: "${it.content.hashCode()}_${it.createTime}"
+                    }) { memo ->
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 32.dp, horizontal = 16.dp),
-                            contentAlignment = Alignment.Center
+                            modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = stringResource(R.string.memo_list_end),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline
-                            )
+                            val isOwner = memo.creator == uiState.session.currUser?.name
+                            MemoItem(
+                                memo = memo,
+                                user = userProvider(memo),
+                                currentUser = uiState.session.currUser,
+                                token = uiState.session.token,
+                                hostUrl = uiState.session.hostUrl,
+                                colors = if (memo.name != null && memo.name == uiState.detailPane.selectedMemo?.name) {
+                                    CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                                } else {
+                                    CardDefaults.cardColors()
+                                },
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    onMemoClick(memo)
+                                },
+                                onEdit = if (isOwner) {
+                                    { onEditMemo(memo) }
+                                } else null,
+                                onArchive = if (isOwner) {
+                                    {
+                                        viewModel.memoActionDelegate.updateMemo(
+                                            memo,
+                                            memo.content,
+                                            memo.visibility,
+                                            memo.attachments ?: emptyList(),
+                                            memo.location,
+                                            MemoState.ARCHIVED
+                                        )
+                                    }
+                                } else null,
+                                onUnarchive = if (isOwner) {
+                                    {
+                                        viewModel.memoActionDelegate.updateMemo(
+                                            memo,
+                                            memo.content,
+                                            memo.visibility,
+                                            memo.attachments ?: emptyList(),
+                                            memo.location,
+                                            MemoState.NORMAL
+                                        )
+                                    }
+                                } else null,
+                                onPin = if (isOwner) { pinned ->
+                                    viewModel.memoActionDelegate.updateMemoPinned(memo, pinned)
+                                } else null,
+                                onDelete = if (isOwner) {
+                                    { memoToDelete = memo }
+                                } else null,
+                                onUpsertReaction = { emoji ->
+                                    viewModel.memoActionDelegate.upsertMemoReaction(memo, emoji)
+                                },
+                                onDeleteReaction = { reaction ->
+                                    viewModel.memoActionDelegate.deleteMemoReaction(memo, reaction)
+                                },
+                                onContentUpdate = if (isOwner) { newContent ->
+                                    viewModel.memoActionDelegate.updateMemo(
+                                        memo,
+                                        newContent,
+                                        memo.visibility,
+                                        memo.attachments ?: emptyList(),
+                                        memo.location
+                                    )
+                                } else null,
+                                maxHeight = 400.dp,
+                                modifier = Modifier.widthIn(max = 800.dp),
+                                onHashtagClick = onHashtagClick,
+                                headerScale = uiState.appSettings.headerScale,
+                                reactionOptions = uiState.session.instanceSettings?.memoRelatedSetting?.reactions
+                                    ?: emptyList())
+
+                        }
+                    }
+
+                    if (isLoading && memos.isNotEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    } else if (!isLoading && nextPageToken == null && memos.isNotEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp, horizontal = 16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.memo_list_end),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
-    // Material Expressive easing
-    val enterEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
-    val exitEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
-
-    AnimatedVisibility(
-        visible = memoToEdit != null,
-        enter = slideInVertically(
-            animationSpec = tween(400, easing = enterEasing), initialOffsetY = { it }) + fadeIn(
-            animationSpec = tween(400, easing = enterEasing)
-        ),
-        exit = slideOutVertically(
-            animationSpec = tween(200, easing = exitEasing), targetOffsetY = { it }) + fadeOut(
-            animationSpec = tween(200, easing = exitEasing)
-        )
-    ) {
-        memoToEdit?.let { memo ->
-            MemoEditScreen(
-                memo = memo,
-                onDismiss = { memoToEdit = null },
-                viewModel = viewModel,
-                hostUrl = uiState.session.hostUrl
-            )
+        memoToDelete?.let { memo ->
+            DeleteConfirmationDialog(memo = memo, onDismiss = { memoToDelete = null }, onConfirm = {
+                viewModel.memoActionDelegate.deleteMemo(memo)
+                memoToDelete = null
+            })
         }
     }
-
-    memoToDelete?.let { memo ->
-        DeleteConfirmationDialog(memo = memo, onDismiss = { memoToDelete = null }, onConfirm = {
-            viewModel.memoActionDelegate.deleteMemo(memo)
-            memoToDelete = null
-        })
-    }
-}
-
 fun resolveResourceUrl(hostUrl: String, relativeUrl: String?): String? {
     if (relativeUrl.isNullOrBlank()) return null
     if (relativeUrl.startsWith("http")) return relativeUrl

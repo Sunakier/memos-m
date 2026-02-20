@@ -77,8 +77,8 @@ fun MemoDetailView(
     reactionOptions: List<String> = emptyList(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var showCommentDialog by remember { mutableStateOf(false) }
-    var memoToEdit by remember { mutableStateOf<Memo?>(null) }
+    val onCommentMemo = LocalMemoCommenter.current
+    val onEditMemo = LocalMemoEditor.current
     var memoToDelete by remember { mutableStateOf<Memo?>(null) }
 
     val listState = rememberLazyListState()
@@ -142,7 +142,7 @@ fun MemoDetailView(
             }, floatingActionButton = {
                 if (uiState.session.currUser != null) {
                     ExtendedFloatingActionButton(
-                        onClick = { showCommentDialog = true },
+                        onClick = { onCommentMemo(memo) },
                         expanded = isFabExpanded,
                         icon = {
                             Icon(
@@ -184,7 +184,7 @@ fun MemoDetailView(
                             hostUrl = hostUrl,
                             colors = CardDefaults.cardColors(),
                             onEdit = if (isOwner) {
-                                { memoToEdit = memo }
+                                { onEditMemo(memo) }
                             } else null,
                             onPin = if (isOwner) { pinned ->
                                 viewModel.memoActionDelegate.updateMemoPinned(memo, pinned)
@@ -283,7 +283,7 @@ fun MemoDetailView(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
                             ),
                             onEdit = if (isCommentOwner) {
-                                { memoToEdit = comment }
+                                { onEditMemo(comment) }
                             } else null,
                             onDelete = if (isCommentOwner) {
                                 { memoToDelete = comment }
@@ -309,52 +309,6 @@ fun MemoDetailView(
                     }
                 }
             }
-        }
-    }
-
-    // Material Expressive easing
-    val enterEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
-    val exitEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
-
-    AnimatedVisibility(
-        visible = showCommentDialog,
-        enter = slideInVertically(
-            animationSpec = tween(400, easing = enterEasing), initialOffsetY = { it }) + fadeIn(
-            animationSpec = tween(400, easing = enterEasing)
-        ),
-
-        exit = slideOutVertically(
-            animationSpec = tween(200, easing = exitEasing), targetOffsetY = { it }) + fadeOut(
-            animationSpec = tween(200, easing = exitEasing)
-        )
-    ) {
-        MemoComposerScreen(
-            onDismiss = { showCommentDialog = false },
-            viewModel = viewModel,
-            hostUrl = hostUrl,
-            title = stringResource(R.string.memo_detail_add_comment),
-            parentMemo = memo,
-        )
-    }
-
-    AnimatedVisibility(
-        visible = memoToEdit != null,
-        enter = slideInVertically(
-            animationSpec = tween(400, easing = enterEasing), initialOffsetY = { it }) + fadeIn(
-            animationSpec = tween(400, easing = enterEasing)
-        ),
-        exit = slideOutVertically(
-            animationSpec = tween(200, easing = exitEasing), targetOffsetY = { it }) + fadeOut(
-            animationSpec = tween(200, easing = exitEasing)
-        )
-    ) {
-        memoToEdit?.let { m ->
-            MemoEditScreen(
-                memo = m,
-                onDismiss = { memoToEdit = null },
-                viewModel = viewModel,
-                hostUrl = hostUrl
-            )
         }
     }
 
