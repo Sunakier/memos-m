@@ -85,7 +85,7 @@ fun MemoInput(
     contentState: androidx.compose.ui.text.input.TextFieldValue,
     onContentChange: (androidx.compose.ui.text.input.TextFieldValue) -> Unit,
     placeholder: String = stringResource(R.string.memo_composer_placeholder),
-    availableTags: Set<String>,
+    availableTags: Map<String, Int>,
     enabled: Boolean = true,
     autoFocus: Boolean = false,
 ) {

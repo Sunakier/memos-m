@@ -68,7 +68,7 @@ fun MemoComposer(
     modifier: Modifier = Modifier,
     onPublish: (String, Visibility, List<Attachment>, Location?) -> Unit,
     onUploadFile: suspend (Uri, Context) -> Attachment?,
-    availableTags: Set<String>,
+    availableTags: Map<String, Int>,
     token: String,
     hostUrl: String,
     mode: ComposerMode,

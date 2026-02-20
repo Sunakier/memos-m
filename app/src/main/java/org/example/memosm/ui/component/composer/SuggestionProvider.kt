@@ -53,7 +53,7 @@ object SuggestionProvider {
     fun getSuggestions(
         text: String,
         selection: TextRange,
-        availableTags: Set<String>
+        availableTags: Map<String, Int>
     ): SuggestionResult? {
         // 1. Selection Logic (Formatting)
         if (!selection.collapsed) {
@@ -93,11 +93,11 @@ object SuggestionProvider {
                 val filteredTags = if (potentialTag.isEmpty()) {
                     availableTags.toList()
                 } else {
-                    availableTags.filter { it.contains(potentialTag, ignoreCase = true) }
-                }
+                    availableTags.filterKeys { it.contains(potentialTag, ignoreCase = true) }.toList()
+                }.sortedByDescending { it.second }
 
                 if (filteredTags.isNotEmpty()) {
-                    val suggestionItems = filteredTags.map { tag ->
+                    val suggestionItems = filteredTags.map { (tag, _) ->
                         SuggestionItem(
                             label = tag,
                             content = tag, // No # prefix in content, caller handles prefix? Or we handle replacement logic
