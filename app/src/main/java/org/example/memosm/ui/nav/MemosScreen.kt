@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -405,10 +406,11 @@ private fun MemosListPane(
                                     }
                                 }
 
-                                items(uiState.userMemoList.shortcuts, key = {
-                                    it.name.takeUnless { n -> n.isNullOrBlank() }
+                                itemsIndexed(uiState.userMemoList.shortcuts, key = { index, it ->
+                                    val baseKey = it.name.takeUnless { n -> n.isNullOrBlank() }
                                         ?: "${it.title?.hashCode() ?: 0}_${it.filter?.hashCode() ?: 0}"
-                                }) { shortcut ->
+                                    "${baseKey}_$index"
+                                }) { index, shortcut ->
                                     val isSelected =
                                         uiState.userMemoList.selectedShortcut?.name == shortcut.name
                                     FilterChip(

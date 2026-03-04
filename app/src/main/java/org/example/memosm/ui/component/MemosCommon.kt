@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -452,10 +453,11 @@ fun MemosScaffold(
                         )
                     }
                 } else {
-                    items(memos, key = {
-                        it.name.takeUnless { n -> n.isNullOrBlank() }
+                    itemsIndexed(memos, key = { index, it ->
+                        val baseKey = it.name.takeUnless { n -> n.isNullOrBlank() }
                             ?: "${it.content.hashCode()}_${it.createTime}"
-                    }) { memo ->
+                        "${baseKey}_$index"
+                    }) { index, memo ->
                         Box(
                             modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center
                         ) {

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -269,9 +270,9 @@ fun MemoDetailView(
                         }
                     }
 
-                    items(
+                    itemsIndexed(
                         comments.items,
-                        key = { "comment_${it.name ?: it.content.hashCode()}" }) { comment ->
+                        key = { index, it -> "comment_${it.name ?: it.content.hashCode()}_$index" }) { index, comment ->
                         val isCommentOwner = comment.creator == uiState.session.currUser?.name
                         MemoItem(
                             memo = comment,

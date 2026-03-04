@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
@@ -549,10 +550,11 @@ private fun SearchResultContent(
                 }
             }
         } else {
-            items(filteredMemos, key = {
-                it.name.takeUnless { n -> n.isNullOrBlank() }
+            itemsIndexed(filteredMemos, key = { index, it ->
+                val baseKey = it.name.takeUnless { n -> n.isNullOrBlank() }
                     ?: "${it.content.hashCode()}_${it.createTime}"
-            }) { memo ->
+                "${baseKey}_$index"
+            }) { index, memo ->
                 Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
                     val isOwner = memo.creator == uiState.session.currUser?.name
                     MemoItem(

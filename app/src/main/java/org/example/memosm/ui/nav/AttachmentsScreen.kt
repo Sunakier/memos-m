@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -175,9 +176,9 @@ fun AttachmentsScreen(
                     verticalItemSpacing = 12.dp,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(
+                    itemsIndexed(
                         items = uiState.attachmentList.list.items,
-                        key = { it.name ?: it.filename }) { attachment ->
+                        key = { index, it -> "${it.name ?: it.filename}_$index" }) { index, attachment ->
                         val key = attachment.name ?: attachment.filename
                         val currentScale = uiState.attachmentList.cellWidth
                         val cachedRatio =

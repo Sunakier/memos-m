@@ -273,10 +273,11 @@ fun MemoComposer(
             onRemoveLocation = { location = null },
             onLocationClick = { showLocationEditDialog = true },
             onVisibilityChange = { visibility = it },
-            onRemoveAttachment = { uri, attachment ->
-                val updated =
-                    draftAttachments.filter { it.second != attachment || (it.first != uri && uri != Uri.EMPTY) }
-                draftAttachments = updated
+            onRemoveAttachment = { index ->
+                if (index in draftAttachments.indices) {
+                    val updated = draftAttachments.toMutableList().apply { removeAt(index) }
+                    draftAttachments = updated
+                }
             },
             onRecordingFinished = { uri, attachment ->
                 // Add immediately for display if attachment is null (just Uri)
@@ -294,15 +295,18 @@ fun MemoComposer(
             },
             onPublishClick = {
                 scope.launch {
-                    val pendingUploads = draftAttachments.filter {
+                    val pendingUploads = draftAttachments.withIndex().filter { indexedValue ->
+                        val pair = indexedValue.value
                         // Case 1: New local file (Uri is not EMPTY, Attachment is null)
-                        (it.second == null && it.first != Uri.EMPTY) ||
+                        (pair.second == null && pair.first != Uri.EMPTY) ||
                                 // Case 2: Restored draft (Uri is EMPTY, Attachment has content but no name on server)
-                                (it.second != null && it.second!!.name == null && it.second!!.content != null)
+                                (pair.second != null && pair.second!!.name == null && pair.second!!.content != null)
                     }
                     val uploadedAttachments = mutableListOf<Attachment>()
 
-                    for ((uri, attachment) in pendingUploads) {
+                    for (indexedValue in pendingUploads) {
+                        val index = indexedValue.index
+                        val (uri, attachment) = indexedValue.value
                         isUploadingCount++
 
                         // If it's a restored draft, we first need to convert it to a temp Uri
@@ -325,9 +329,9 @@ fun MemoComposer(
                             if (uploaded != null) {
                                 uploadedAttachments.add(uploaded)
                                 // Update local draft state immediately as we upload
-                                // We match by the ORIGINAL pair to replace it
-                                draftAttachments = draftAttachments.map {
-                                    if (it == (uri to attachment)) uploadUri to uploaded else it
+                                // We match by the index to replace it safely
+                                draftAttachments = draftAttachments.mapIndexed { i, item ->
+                                    if (i == index) uploadUri to uploaded else item
                                 }
                             }
                         }

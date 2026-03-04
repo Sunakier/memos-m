@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -91,7 +92,7 @@ fun MemoComposerBottomBar(
     onLocationClick: () -> Unit,
     onVisibilityChange: (Visibility) -> Unit,
     onPublishClick: () -> Unit,
-    onRemoveAttachment: (Uri, Attachment?) -> Unit,
+    onRemoveAttachment: (Int) -> Unit,
     onRecordingFinished: (Uri, Attachment?) -> Unit,
     onLocationFounded: (Location) -> Unit,
 ) {
@@ -134,10 +135,11 @@ fun MemoComposerBottomBar(
                         verticalAlignment = Alignment.CenterVertically,
                         contentPadding = PaddingValues(top = 8.dp, end = 8.dp, bottom = 8.dp)
                     ) {
-                        items(draftAttachments, key = { (uri, attachment) ->
-                            if (uri != Uri.EMPTY) uri.toString()
+                        itemsIndexed(draftAttachments, key = { index, (uri, attachment) ->
+                            val baseKey = if (uri != Uri.EMPTY) uri.toString()
                             else "${attachment?.name ?: "unknown"}_${attachment?.filename ?: "unknown"}_${attachment?.createTime ?: System.currentTimeMillis()}"
-                        }) { (uri, attachment) ->
+                            "${baseKey}_$index"
+                        }) { index, (uri, attachment) ->
                             val isUploading = uri in uploadingUris
 
                             Box(modifier = Modifier.size(80.dp, 80.dp)) {
@@ -167,12 +169,13 @@ fun MemoComposerBottomBar(
                                 }
 
                                 IconButton(
-                                    onClick = { onRemoveAttachment(uri, attachment) },
+                                    onClick = { onRemoveAttachment(index) },
+                                    enabled = !isPosting,
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
                                         .offset(x = 4.dp, y = (-4).dp)
                                         .size(24.dp)
-                                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                        .background(if (!isPosting) Color.Black.copy(alpha = 0.5f) else Color.Gray.copy(alpha = 0.5f), CircleShape)
                                         .zIndex(1f)
                                 ) {
                                     Icon(
