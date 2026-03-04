@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -581,9 +582,9 @@ fun MemoItem(
                                         )
                                     }
                                 }) {
-                            items(
+                            itemsIndexed(
                                 attachments,
-                                key = { "${it.externalLink ?: "link"}_${it.filename}_${it.createTime ?: 0}" }) { attachment ->
+                                key = { index, it -> "${it.externalLink ?: "link"}_${it.filename}_${it.createTime ?: 0}_$index" }) { index, attachment ->
                                 AttachmentCard(
                                     attachment = attachment,
                                     token = token,
