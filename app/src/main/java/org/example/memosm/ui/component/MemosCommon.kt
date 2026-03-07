@@ -100,6 +100,13 @@ fun MemosScaffold(
     val navigator = rememberListDetailPaneScaffoldNavigator<MemoKey>(
         scaffoldDirective = scaffoldDirective
     )
+
+    // Workaround for Compose Material 3 Adaptive Navigator not automatically updating the inner state
+    // when scaffoldValue changes (e.g. on window resize).
+    LaunchedEffect(navigator.scaffoldValue) {
+        (navigator.scaffoldState as? androidx.compose.material3.adaptive.layout.MutableThreePaneScaffoldState)?.snapTo(navigator.scaffoldValue)
+    }
+
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
 
@@ -193,6 +200,7 @@ fun MemosScaffold(
                 NavigableListDetailPaneScaffold(
                     modifier = Modifier
                         .padding(paddingValues)
+                        .fillMaxSize()
                         .focusRequester(focusRequester)
                         .focusable(),
                     navigator = navigator,
