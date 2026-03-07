@@ -38,9 +38,6 @@ import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -56,6 +53,7 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -153,9 +151,19 @@ fun MainScreen(
         onDispose { }
     }
 
-    val adaptiveInfo = currentWindowAdaptiveInfo()
-    val layoutType = NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(adaptiveInfo)
-    val isMobile = layoutType == NavigationSuiteType.NavigationBar
+    val configuration = LocalConfiguration.current
+    val isMobile = configuration.screenWidthDp < 600
+
+    android.util.Log.d(
+        "MemosScaffoldResize",
+        "MainScreen recomposing: screenWidthDp=${configuration.screenWidthDp} isMobile=$isMobile"
+    )
+
+    val adaptiveInfo = androidx.compose.material3.adaptive.currentWindowAdaptiveInfo()
+    android.util.Log.d(
+        "MemosScaffoldResize",
+        "MainScreen adaptiveInfo: windowSizeClass=${adaptiveInfo.windowSizeClass}"
+    )
 
 
     val toggleNavBar: ((Boolean) -> Unit)? = if (isMobile) {
