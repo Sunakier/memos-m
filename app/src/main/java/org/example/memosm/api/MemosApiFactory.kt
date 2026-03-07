@@ -29,6 +29,10 @@ object MemosApiFactory {
                 Log.i("MemosApiFactory", "Using v0.26.0 API implementation")
                 val v0260Api = retrofit.create(MemosApiV0260::class.java)
                 MemosApiV0260Impl(v0260Api)
+            } else if (version.startsWith("0.27")) {
+                Log.i("MemosApiFactory", "Using v0.27.0 API implementation")
+                val v0270Api = retrofit.create(MemosApiV0270::class.java)
+                MemosApiV0270Impl(v0270Api)
             } else {
                 // Default to V1/0.3.53
                 MemosApiImpl(v1Api)
