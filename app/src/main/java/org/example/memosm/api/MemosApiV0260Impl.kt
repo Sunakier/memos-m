@@ -5,7 +5,7 @@ import org.example.memosm.model.SignInRequest
 import org.example.memosm.model.SignInRequestV0260
 import org.example.memosm.model.SignInResponse
 
-class MemosApiV0260Impl(
+open class MemosApiV0260Impl(
     private val apiV0260: MemosApiV0260
 ) : MemosApiImpl(apiV0260) {
 
