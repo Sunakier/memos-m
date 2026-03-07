@@ -58,7 +58,8 @@ fun DraftsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val drafts = uiState.draft.drafts
 
-    var draftToEdit by remember { mutableStateOf<Draft?>(null) }
+    var showComposer by remember { mutableStateOf(false) }
+    var activeDraft by remember { mutableStateOf<Draft?>(null) }
     var draftToDelete by remember { mutableStateOf<Draft?>(null) }
 
     // Predictive Back Animation State
@@ -124,8 +125,16 @@ fun DraftsScreen(
                             memo = draft.toMemo(),
                             token = uiState.session.token,
                             hostUrl = uiState.session.hostUrl,
-                            onClick = { draftToEdit = draft },
-                            onEdit = { draftToEdit = draft },
+                            onClick = {
+                                activeDraft = draft
+                                showComposer = true
+                                viewModel.draftDelegate.setCurrentEditingDraft(draft.id)
+                            },
+                            onEdit = {
+                                activeDraft = draft
+                                showComposer = true
+                                viewModel.draftDelegate.setCurrentEditingDraft(draft.id)
+                            },
                             onDelete = { draftToDelete = draft },
                             maxHeight = 400.dp,
                             modifier = Modifier.widthIn(max = 800.dp),
@@ -142,7 +151,7 @@ fun DraftsScreen(
     val exitEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
 
     AnimatedVisibility(
-        visible = draftToEdit != null,
+        visible = showComposer,
         enter = slideInVertically(
             animationSpec = tween(400, easing = enterEasing), initialOffsetY = { it }) + fadeIn(
             animationSpec = tween(400, easing = enterEasing)
@@ -152,20 +161,19 @@ fun DraftsScreen(
             animationSpec = tween(200, easing = exitEasing)
         )
     ) {
-        if (draftToEdit != null) {
-            viewModel.draftDelegate.setCurrentEditingDraft(draftToEdit!!.id)
+        if (activeDraft != null) {
             MemoComposerScreen(
                 onDismiss = {
-                    draftToEdit = null
+                    showComposer = false
                     viewModel.draftDelegate.setCurrentEditingDraft(null)
                 },
                 viewModel = viewModel,
                 hostUrl = uiState.session.hostUrl,
                 title = stringResource(R.string.drafts_action_edit),
-                initialContent = draftToEdit!!.content,
-                initialAttachments = draftToEdit!!.attachments,
-                initialVisibility = draftToEdit!!.visibility,
-                initialLocation = draftToEdit!!.location,
+                initialContent = activeDraft!!.content,
+                initialAttachments = activeDraft!!.attachments,
+                initialVisibility = activeDraft!!.visibility,
+                initialLocation = activeDraft!!.location,
                 mode = ComposerMode.PUBLISH
             )
         }
