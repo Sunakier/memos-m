@@ -26,6 +26,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.activity.compose.PredictiveBackHandler
+import kotlinx.coroutines.flow.catch
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -73,18 +75,40 @@ fun FullScreenAttachmentViewer(
 
         // Vertical drag to dismiss
         val dismissOffset = remember { Animatable(0f) }
+
+        // Predictive back gesture state
+        val backProgress = remember { Animatable(0f) }
+        val backEdgeProgress = remember { Animatable(0f) }
+
         val dismissDragProgress = (abs(dismissOffset.value) / 300f).coerceIn(0f, 1f)
-        val backgroundAlpha = (1f - dismissDragProgress).coerceIn(0f, 1f)
-        val dismissScale = (1f - (abs(dismissOffset.value) / 1000f)).coerceIn(0.6f, 1f)
+
+        // Combine background alpha and scale from both gestures
+        val combinedAlpha = ((1f - dismissDragProgress) * (1f - backProgress.value * 0.5f)).coerceIn(0f, 1f)
+        val combinedScale = ((1f - (abs(dismissOffset.value) / 1000f)) * (1f - backProgress.value * 0.1f)).coerceIn(0.6f, 1f)
 
         LaunchedEffect(pagerState.currentPage) {
             onPageChanged?.invoke(pagerState.currentPage)
         }
 
+        PredictiveBackHandler { progress ->
+            try {
+                progress.collect { backEvent ->
+                    backProgress.snapTo(backEvent.progress)
+                    // Edge 0 is left, 1 is right
+                    backEdgeProgress.snapTo(if (backEvent.swipeEdge == 0) 1f else -1f)
+                }
+                onDismiss()
+            } catch (e: Exception) {
+                // Cancelled
+                backProgress.animateTo(0f)
+                backEdgeProgress.animateTo(0f)
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = backgroundAlpha))
+                .background(Color.Black.copy(alpha = combinedAlpha))
         ) {
             Box(
                 modifier = Modifier
@@ -109,9 +133,11 @@ fun FullScreenAttachmentViewer(
                         )
                     }
                     .graphicsLayer {
-                        scaleX = dismissScale
-                        scaleY = dismissScale
+                        scaleX = combinedScale
+                        scaleY = combinedScale
                         translationY = dismissOffset.value
+                        // Shift horizontally slightly based on predictive back edge
+                        translationX = backProgress.value * 100f * backEdgeProgress.value
                     }
             ) {
                 HorizontalPager(
@@ -145,7 +171,7 @@ fun FullScreenAttachmentViewer(
                     .align(Alignment.TopEnd)
                     .padding(16.dp)
                     .statusBarsPadding()
-                    .graphicsLayer { alpha = backgroundAlpha }) {
+                    .graphicsLayer { alpha = combinedAlpha }) {
                 IconButton(
                     onClick = onDismiss,
                     modifier = Modifier.background(Color.Black.copy(alpha = 0.4f), CircleShape)
