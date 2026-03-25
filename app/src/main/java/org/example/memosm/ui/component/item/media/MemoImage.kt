@@ -28,6 +28,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
 import coil3.compose.AsyncImage
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
@@ -50,7 +53,8 @@ fun MemoImage(
     isRound: Boolean = false,
     placeholderIcon: ImageVector? = null,
     onRatioAvailable: (Float) -> Unit = {},
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    isFullScreen: Boolean = false
 ) {
     val context = LocalContext.current
     val modelState = produceState<Any?>(initialValue = null, uri, attachment, hostUrl) {
@@ -114,14 +118,32 @@ fun MemoImage(
         modifier = modifier, contentAlignment = Alignment.Center
     ) {
         if (model != null) {
+            val imgModifier = Modifier
+                .fillMaxSize()
+                .then(if (isRound) Modifier.clip(CircleShape) else Modifier)
+                .then(if (onClick != null && !isFullScreen) Modifier.clickable { onClick() } else Modifier)
+
             AsyncImage(
                 model = imageRequest,
                 contentDescription = filename,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(if (isRound) Modifier.clip(CircleShape) else Modifier)
-                    .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
-                contentScale = ContentScale.Crop,
+                modifier = if (isFullScreen) {
+                    var scale by remember { androidx.compose.runtime.mutableFloatStateOf(1f) }
+                    var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+                    imgModifier
+                        .pointerInput(Unit) {
+                            detectTransformGestures { _, pan, zoom, _ ->
+                                scale = (scale * zoom).coerceIn(1f, 5f)
+                                offset = if (scale > 1f) offset + pan else androidx.compose.ui.geometry.Offset.Zero
+                            }
+                        }
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = offset.x,
+                            translationY = offset.y
+                        )
+                } else imgModifier,
+                contentScale = if (isFullScreen) ContentScale.Fit else ContentScale.Crop,
                 onLoading = { isLoading = true; isError = false },
                 onSuccess = { state ->
                     isLoading = false

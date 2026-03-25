@@ -24,6 +24,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -48,6 +51,8 @@ fun VideoPlayer(
     url: String,
     token: String?,
     modifier: Modifier = Modifier,
+    isFullScreen: Boolean = false,
+    onClick: (() -> Unit)? = null,
     onRatioAvailable: (Float) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -105,6 +110,9 @@ fun VideoPlayer(
         modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
+        var scale by remember { androidx.compose.runtime.mutableFloatStateOf(1f) }
+        var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
@@ -113,16 +121,43 @@ fun VideoPlayer(
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
                     setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    setFullscreenButtonClickListener { isFullscreen = true }
+                    if (isFullScreen) {
+                        setFullscreenButtonClickListener { /* disabled */ }
+                        controllerShowTimeoutMs = 3000
+                    } else {
+                        setFullscreenButtonClickListener { isFullscreen = true }
+                    }
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
                     )
+
+                    if (!isFullScreen && onClick != null) {
+                        setOnClickListener { onClick() }
+                    }
                 }
             }, update = { view ->
                 view.player = if (isFullscreen) null else exoPlayer
-            }, modifier = Modifier
-                .fillMaxSize()
-                .alpha(if (isReady) 1f else 0f)
+            }, modifier = if (isFullScreen) {
+                Modifier
+                    .fillMaxSize()
+                    .alpha(if (isReady) 1f else 0f)
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            scale = (scale * zoom).coerceIn(1f, 5f)
+                            offset = if (scale > 1f) offset + pan else androidx.compose.ui.geometry.Offset.Zero
+                        }
+                    }
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offset.x,
+                        translationY = offset.y
+                    )
+            } else {
+                Modifier
+                    .fillMaxSize()
+                    .alpha(if (isReady) 1f else 0f)
+            }
         )
         if (!isReady) CircularProgressIndicator(modifier = Modifier.size(32.dp))
     }
