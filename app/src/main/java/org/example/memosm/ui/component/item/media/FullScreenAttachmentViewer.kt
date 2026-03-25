@@ -133,7 +133,8 @@ fun FullScreenAttachmentViewer(
                         showSize = false,
                         showFilename = false,
                         compactMode = AttachmentCompactMode.Never,
-                        isFullScreen = true
+                        isFullScreen = true,
+                        onDismiss = onDismiss
                     )
                 }
             }

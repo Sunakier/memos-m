@@ -53,6 +53,7 @@ fun VideoPlayer(
     modifier: Modifier = Modifier,
     isFullScreen: Boolean = false,
     onClick: (() -> Unit)? = null,
+    onDismiss: (() -> Unit)? = null,
     onRatioAvailable: (Float) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -110,9 +111,6 @@ fun VideoPlayer(
         modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center
     ) {
-        var scale by remember { androidx.compose.runtime.mutableFloatStateOf(1f) }
-        var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
-
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
@@ -137,27 +135,10 @@ fun VideoPlayer(
                 }
             }, update = { view ->
                 view.player = if (isFullscreen) null else exoPlayer
-            }, modifier = if (isFullScreen) {
-                Modifier
-                    .fillMaxSize()
-                    .alpha(if (isReady) 1f else 0f)
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(1f, 5f)
-                            offset = if (scale > 1f) offset + pan else androidx.compose.ui.geometry.Offset.Zero
-                        }
-                    }
-                    .graphicsLayer(
-                        scaleX = scale,
-                        scaleY = scale,
-                        translationX = offset.x,
-                        translationY = offset.y
-                    )
-            } else {
-                Modifier
-                    .fillMaxSize()
-                    .alpha(if (isReady) 1f else 0f)
-            }
+            }, modifier = Modifier
+                .fillMaxSize()
+                .alpha(if (isReady) 1f else 0f)
+                .zoomable(isFullScreen, onDismiss)
         )
         if (!isReady) CircularProgressIndicator(modifier = Modifier.size(32.dp))
     }

@@ -54,7 +54,8 @@ fun MemoImage(
     placeholderIcon: ImageVector? = null,
     onRatioAvailable: (Float) -> Unit = {},
     onClick: (() -> Unit)? = null,
-    isFullScreen: Boolean = false
+    isFullScreen: Boolean = false,
+    onDismiss: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val modelState = produceState<Any?>(initialValue = null, uri, attachment, hostUrl) {
@@ -126,23 +127,7 @@ fun MemoImage(
             AsyncImage(
                 model = imageRequest,
                 contentDescription = filename,
-                modifier = if (isFullScreen) {
-                    var scale by remember { androidx.compose.runtime.mutableFloatStateOf(1f) }
-                    var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
-                    imgModifier
-                        .pointerInput(Unit) {
-                            detectTransformGestures { _, pan, zoom, _ ->
-                                scale = (scale * zoom).coerceIn(1f, 5f)
-                                offset = if (scale > 1f) offset + pan else androidx.compose.ui.geometry.Offset.Zero
-                            }
-                        }
-                        .graphicsLayer(
-                            scaleX = scale,
-                            scaleY = scale,
-                            translationX = offset.x,
-                            translationY = offset.y
-                        )
-                } else imgModifier,
+                modifier = imgModifier.zoomable(isFullScreen, onDismiss),
                 contentScale = if (isFullScreen) ContentScale.Fit else ContentScale.Crop,
                 onLoading = { isLoading = true; isError = false },
                 onSuccess = { state ->
