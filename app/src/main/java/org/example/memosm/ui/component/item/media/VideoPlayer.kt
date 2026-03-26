@@ -24,6 +24,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -48,6 +51,9 @@ fun VideoPlayer(
     url: String,
     token: String?,
     modifier: Modifier = Modifier,
+    isFullScreen: Boolean = false,
+    onClick: (() -> Unit)? = null,
+    onDismiss: (() -> Unit)? = null,
     onRatioAvailable: (Float) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -113,16 +119,26 @@ fun VideoPlayer(
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
                     setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    setFullscreenButtonClickListener { isFullscreen = true }
+                    if (isFullScreen) {
+                        setFullscreenButtonClickListener { /* disabled */ }
+                        controllerShowTimeoutMs = 3000
+                    } else {
+                        setFullscreenButtonClickListener { isFullscreen = true }
+                    }
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
                     )
+
+                    if (!isFullScreen && onClick != null) {
+                        setOnClickListener { onClick() }
+                    }
                 }
             }, update = { view ->
                 view.player = if (isFullscreen) null else exoPlayer
             }, modifier = Modifier
                 .fillMaxSize()
                 .alpha(if (isReady) 1f else 0f)
+                .zoomable(isFullScreen, onDismiss)
         )
         if (!isReady) CircularProgressIndicator(modifier = Modifier.size(32.dp))
     }

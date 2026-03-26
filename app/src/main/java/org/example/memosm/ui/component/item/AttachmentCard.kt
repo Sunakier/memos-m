@@ -93,6 +93,9 @@ fun AttachmentCard(
     showSize: Boolean = true,
     showFilename: Boolean = true,
     compactMode: AttachmentCompactMode = AttachmentCompactMode.Area,
+    isFullScreen: Boolean = false,
+    onClick: (() -> Unit)? = null,
+    onDismiss: (() -> Unit)? = null,
     onRatioAvailable: (Float, Boolean) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
@@ -303,7 +306,10 @@ fun AttachmentCard(
                                 intrinsicRatio = it
                                 isIntrinsicExact = true
                             },
-                            onClick = { showFullScreenImage = true })
+                            onClick = if (isFullScreen) null else { onClick ?: { showFullScreenImage = true } },
+                            isFullScreen = isFullScreen,
+                            onDismiss = onDismiss
+                        )
                     } else if (isVideo) {
                         val videoUrl =
                             if (uri != Uri.EMPTY) uri.toString() else AttachmentManager.getAttachmentUrl(
@@ -314,6 +320,9 @@ fun AttachmentCard(
                                 url = videoUrl,
                                 token = token,
                                 modifier = Modifier.fillMaxSize(),
+                                isFullScreen = isFullScreen,
+                                onClick = if (isFullScreen) null else onClick,
+                                onDismiss = onDismiss,
                                 onRatioAvailable = {
                                     intrinsicRatio = it
                                     isIntrinsicExact = true
@@ -325,6 +334,7 @@ fun AttachmentCard(
                             filename = filename,
                             token = token,
                             mode = when {
+                                    isFullScreen -> AudioPlayerMode.NORMAL
                                 isWide -> AudioPlayerMode.WIDE
                                 isCompact -> AudioPlayerMode.COMPACT
                                 else -> AudioPlayerMode.NORMAL
@@ -350,17 +360,21 @@ fun AttachmentCard(
                                 filename = filename,
                                 isRound = true,
                                 modifier = Modifier.fillMaxSize(),
-                                onClick = { showFullScreenImage = true })
+                                onClick = if (isFullScreen) null else { onClick ?: { showFullScreenImage = true } },
+                                isFullScreen = isFullScreen,
+                                onDismiss = onDismiss
+                            )
                         } else {
                             FileThumbnail(
                                 displayType = displayType,
                                 filename = filename,
                                 mode = when {
+                                    isFullScreen -> FileThumbnailMode.NORMAL
                                     isWide -> FileThumbnailMode.WIDE
                                     isCompact -> FileThumbnailMode.COMPACT
                                     else -> FileThumbnailMode.NORMAL
                                 },
-                                onClick = { showInfoDialog = true },
+                                onClick = if (isFullScreen) { {} } else { onClick ?: { showInfoDialog = true } },
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
@@ -596,7 +610,7 @@ fun AttachmentCard(
             }
         }
 
-        if (model != null) {
+        if (model != null && !isFullScreen) {
             FullScreenImageViewer(
                 model = model,
                 filename = filename,

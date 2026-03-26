@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -41,6 +42,7 @@ import org.example.memosm.R
 import org.example.memosm.ui.component.ErrorView
 import org.example.memosm.ui.component.item.AttachmentCard
 import org.example.memosm.ui.component.item.AttachmentCompactMode
+import org.example.memosm.ui.component.item.media.FullScreenAttachmentViewer
 import org.example.memosm.ui.component.rememberStaggeredGridScrollContext
 import org.example.memosm.viewmodel.MemosViewModel
 
@@ -53,6 +55,9 @@ fun AttachmentsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyStaggeredGridState()
+
+    var showFullScreenViewer by remember { mutableStateOf(false) }
+    var fullScreenInitialIndex by remember { mutableStateOf(0) }
 
     // Limits for zooming
     val minCellWidth = 100.dp
@@ -196,6 +201,10 @@ fun AttachmentsScreen(
                                 .fillMaxWidth()
                                 .aspectRatio(ratio)
                                 .animateItem(),
+                            onClick = {
+                                fullScreenInitialIndex = index
+                                showFullScreenViewer = true
+                            },
                             onRatioAvailable = { newRatio, isExact ->
                                 if (isExact) {
                                     viewModel.updateAttachmentAspectRatio(
@@ -235,5 +244,20 @@ fun AttachmentsScreen(
                 }
             }
         }
+    }
+
+    if (showFullScreenViewer) {
+        FullScreenAttachmentViewer(
+            attachments = uiState.attachmentList.list.items,
+            initialIndex = fullScreenInitialIndex,
+            token = uiState.session.token,
+            hostUrl = uiState.session.hostUrl,
+            onDismiss = { showFullScreenViewer = false },
+            onPageChanged = { index ->
+                if (index >= uiState.attachmentList.list.items.size - 5 && uiState.attachmentList.list.nextPageToken != null && !uiState.attachmentList.list.isLoading) {
+                    viewModel.loadMoreAttachments()
+                }
+            }
+        )
     }
 }

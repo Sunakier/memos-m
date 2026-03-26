@@ -63,6 +63,7 @@ fun NativeMarkdownAttachmentImage(content: String, node: ASTNode) {
         showSize = false,
         showFilename = false,
         compactMode = AttachmentCompactMode.Never,
+        onClick = null, // Defaults to showFullScreenImage inside AttachmentCard which is acceptable for isolated markdown images.
         onRatioAvailable = { ratio, _ ->
             if (ratio > 0) {
                 aspectRatio = ratio

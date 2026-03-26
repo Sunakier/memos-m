@@ -91,6 +91,7 @@ import org.example.memosm.model.Reaction
 import org.example.memosm.model.User
 import org.example.memosm.ui.VisibilityIcon
 import org.example.memosm.ui.component.item.markdown.NativeComposeMarkdown
+import org.example.memosm.ui.component.item.media.FullScreenAttachmentViewer
 import org.example.memosm.ui.component.resolveResourceUrl
 
 
@@ -122,6 +123,8 @@ fun MemoItem(
     var showMenu by remember { mutableStateOf(false) }
     var showReactionPicker by remember { mutableStateOf(false) }
     var showRawTextDialog by remember { mutableStateOf(false) }
+    var showFullScreenViewer by remember { mutableStateOf(false) }
+    var fullScreenInitialIndex by remember { mutableStateOf(0) }
     val context = LocalContext.current
 
     val unknownTime = stringResource(R.string.memo_unknown_time)
@@ -533,7 +536,7 @@ fun MemoItem(
                                 .fillMaxWidth()
                                 .padding(end = 8.dp)
                         ) {
-                            attachments.forEach { attachment ->
+                            attachments.forEachIndexed { index, attachment ->
                                 var aspectRatio by remember(
                                     attachment.name ?: attachment.filename
                                 ) {
@@ -547,6 +550,10 @@ fun MemoItem(
                                         .fillMaxWidth()
                                         .aspectRatio(aspectRatio),
                                     compactMode = AttachmentCompactMode.Never,
+                                    onClick = {
+                                        fullScreenInitialIndex = index
+                                        showFullScreenViewer = true
+                                    },
                                     onRatioAvailable = { ratio, _ -> aspectRatio = ratio })
                             }
                         }
@@ -591,7 +598,11 @@ fun MemoItem(
                                     hostUrl = hostUrl,
                                     modifier = Modifier.size(width = 240.dp, height = 160.dp),
                                     showInfo = false,
-                                    compactMode = AttachmentCompactMode.Area
+                                    compactMode = AttachmentCompactMode.Area,
+                                    onClick = {
+                                        fullScreenInitialIndex = index
+                                        showFullScreenViewer = true
+                                    }
                                 )
                             }
                         }
@@ -685,6 +696,17 @@ fun MemoItem(
                     Text(stringResource(R.string.common_close))
                 }
             })
+    }
+
+    if (showFullScreenViewer) {
+        val attachments = remember(memo.attachments) { memo.attachments ?: emptyList() }
+        FullScreenAttachmentViewer(
+            attachments = attachments,
+            initialIndex = fullScreenInitialIndex,
+            token = token,
+            hostUrl = hostUrl,
+            onDismiss = { showFullScreenViewer = false }
+        )
     }
 }
 
