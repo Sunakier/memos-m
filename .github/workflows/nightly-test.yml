@@ -21,6 +21,9 @@ jobs:
           java-version: "21"
           distribution: "temurin"
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       # 1. Setup Gradle with Enhanced Caching
       # 'setup-gradle' enables read-only caching for dependencies by default.
       # We explicitly allow writing to the cache to ensure build artifacts are saved.
@@ -40,9 +43,6 @@ jobs:
           # Nightly should validate the current canary API surface, not a pinned image.
           docker pull neosmemo/memos:canary
           docker image ls neosmemo/memos
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
 
       - name: Run Integration Tests
         run: ./gradlew :app:testDebugUnitTest --tests org.example.memosm.api.MemosApiIntegrationTest
