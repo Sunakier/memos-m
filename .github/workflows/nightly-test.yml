@@ -25,10 +25,21 @@ jobs:
       # 'setup-gradle' enables read-only caching for dependencies by default.
       # We explicitly allow writing to the cache to ensure build artifacts are saved.
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: wrapper
           cache-read-only: false # Allow the job to write to the cache (important for updating deps)
+
+      - name: Verify Docker Environment
+        run: |
+          docker version
+          docker info
+
+      - name: Pull Latest Canary Image
+        run: |
+          # Nightly should validate the current canary API surface, not a pinned image.
+          docker pull neosmemo/memos:canary
+          docker image ls neosmemo/memos
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
