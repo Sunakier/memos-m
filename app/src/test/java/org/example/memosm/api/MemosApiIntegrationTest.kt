@@ -23,7 +23,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
     private lateinit var baseUrl: String
 
     companion object {
-        const val TEST_USERNAME = "AdminUser"
+        const val TEST_USERNAME = "admin"
         const val TEST_PASSWORD = "nsDevM5ETS8"
         const val TEST_DISPLAY_NAME = "Admin Display"
 
@@ -271,8 +271,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         assertEquals(newLocale, updatedLocaleSetting.generalSetting?.locale)
 
         // B. Mask: memo_visibility
-        val newVisibility =
-            org.example.memosm.model.Visibility.PRIVATE // Assuming enum/string value
+        val newVisibility = org.example.memosm.model.Visibility.PRIVATE
         val settingUpdateVis = org.example.memosm.model.UserSetting(
             generalSetting = org.example.memosm.model.UserGeneralSetting(memoVisibility = newVisibility)
         )
