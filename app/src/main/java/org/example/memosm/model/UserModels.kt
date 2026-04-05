@@ -262,7 +262,7 @@ data class UserSetting(
 data class UserGeneralSetting(
     val locale: String? = null, @SerializedName(
         "memoVisibility", alternate = ["memo_visibility"]
-    ) val memoVisibility: String? = null, val theme: String? = null
+    ) val memoVisibility: Visibility? = null, val theme: String? = null
 )
 
 data class UserWebhooksSetting(

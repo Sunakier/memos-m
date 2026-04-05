@@ -218,7 +218,7 @@ class UserDelegateImpl(
                 val currentSetting = uiState.value.session.userSettings ?: UserGeneralSetting()
                 val newSetting = currentSetting.copy(
                     locale = locale ?: currentSetting.locale,
-                    memoVisibility = memoVisibility?.name ?: currentSetting.memoVisibility
+                    memoVisibility = memoVisibility ?: currentSetting.memoVisibility
                 )
                 val maskParts = mutableListOf<String>()
                 if (locale != null) maskParts.add(currentApi.constants.userSettingLocaleMask)

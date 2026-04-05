@@ -149,7 +149,8 @@ fun MemoComposerScreen(
                 isPosting = uiState.isPosting,
                 initialContent = effectiveInitialContent,
                 initialVisibility = initialMemo?.visibility ?: initialVisibility
-                ?: parentMemo?.visibility ?: try { Visibility.valueOf(uiState.session.userSettings?.memoVisibility ?: "PRIVATE") } catch (e: Exception) { Visibility.PRIVATE },
+                ?: parentMemo?.visibility ?: uiState.session.userSettings?.memoVisibility
+                ?: Visibility.PRIVATE,
                 initialAttachments = initialMemo?.attachments ?: initialAttachments,
                 initialUris = if (initialMemo == null) initialUris else emptyList(),
                 initialLocation = initialMemo?.location ?: initialLocation,

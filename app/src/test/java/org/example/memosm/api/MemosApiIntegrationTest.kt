@@ -271,7 +271,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         assertEquals(newLocale, updatedLocaleSetting.generalSetting?.locale)
 
         // B. Mask: memo_visibility
-        val newVisibility = "PRIVATE"
+        val newVisibility = org.example.memosm.model.Visibility.PRIVATE
         val settingUpdateVis = org.example.memosm.model.UserSetting(
             generalSetting = org.example.memosm.model.UserGeneralSetting(memoVisibility = newVisibility)
         )
