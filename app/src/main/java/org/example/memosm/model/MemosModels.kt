@@ -44,9 +44,9 @@ data class Memo(
     val name: String? = null,
     val state: MemoState? = null,
     val creator: String? = null,
-    val createTime: Instant? = null,
-    val updateTime: Instant? = null,
-    val displayTime: Instant? = null,
+    @SerializedName("createTime", alternate = ["create_time"]) val createTime: Instant? = null,
+    @SerializedName("updateTime", alternate = ["update_time"]) val updateTime: Instant? = null,
+    @SerializedName("displayTime", alternate = ["display_time"]) val displayTime: Instant? = null,
     val content: String,
     val visibility: Visibility = Visibility.PRIVATE,
     val tags: List<String>? = null,
@@ -62,7 +62,7 @@ data class Memo(
 
 data class Attachment(
     val name: String? = null,
-    val createTime: Instant? = null,
+    @SerializedName("createTime", alternate = ["create_time"]) val createTime: Instant? = null,
     val filename: String,
     val content: String? = null,
     val externalLink: String? = null,
@@ -125,7 +125,7 @@ data class Activity(
     val creator: String? = null,
     val type: String? = null,
     val level: String? = null,
-    val createTime: Instant? = null,
+    @SerializedName("createTime", alternate = ["create_time"]) val createTime: Instant? = null,
     val payload: ActivityPayload? = null
 )
 
