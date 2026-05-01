@@ -86,7 +86,7 @@ interface MemosApiV0353 {
 
 
     // --- AuthService ---
-    @GET("api/v1/auth/sessions/current")
+    @GET("api/v1/auth/me")
     suspend fun getCurrentSession(): CurrentSessionResponse
 
     @POST("api/v1/auth/refresh")

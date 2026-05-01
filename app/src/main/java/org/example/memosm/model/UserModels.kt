@@ -43,6 +43,7 @@ data class User(
 
 data class UserStats(
     val name: String? = null,
+    @SerializedName(value = "memoDisplayTimestamps", alternate = ["memoCreatedTimestamps"])
     val memoDisplayTimestamps: List<String>? = null,
     val memoTypeStats: MemoTypeStats? = null,
     val tagCount: Map<String, Int>? = null,
