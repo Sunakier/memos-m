@@ -86,6 +86,7 @@ class MemoActionDelegateImpl(
         location: Location?,
         onSuccess: () -> Unit
     ) {
+        val draftIdToDelete = uiState.value.draft.currentEditingDraftId
         scope.launch {
             try {
                 uiState.update { it.copy(isPosting = true) }
@@ -97,10 +98,12 @@ class MemoActionDelegateImpl(
                 )
                 val created = api?.createMemo(memo)
                 if (created != null) {
+                    draftIdToDelete?.let(draftDelegate::deleteDraft)
+                    if (uiState.value.draft.currentEditingDraftId == draftIdToDelete) {
+                        draftDelegate.setCurrentEditingDraft(null)
+                    }
                     onSuccess()
                     listUpdater.refreshUserMemos()
-                    // Delete the draft that was just published
-                    draftDelegate.clearCurrentEditingDraft()
                     uiState.update {
                         it.copy(
                             draft = it.draft.copy(
