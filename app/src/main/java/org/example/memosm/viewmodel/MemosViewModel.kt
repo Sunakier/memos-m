@@ -41,6 +41,7 @@ import org.example.memosm.viewmodel.manager.CommentListManager
 import org.example.memosm.viewmodel.manager.ExploreMemoListManager
 import org.example.memosm.viewmodel.manager.SearchMemoListManager
 import org.example.memosm.viewmodel.manager.UserMemoListManager
+import org.example.memosm.model.UserNotification
 
 class MemosViewModel(
     private val dataStoreManager: DataStoreManager,
@@ -399,6 +400,35 @@ class MemosViewModel(
 
     fun updateAttachmentCellWidth(width: Float) {
         attachmentManager.updateCellWidth(width)
+    }
+
+    suspend fun listCurrentUserNotifications(maxItems: Int = 100): List<UserNotification> {
+        val currentApi = api ?: throw IllegalStateException("Unable to access notifications.")
+        val userName = _uiState.value.session.currUser?.name
+            ?: throw IllegalStateException("User information not available.")
+
+        val notifications = mutableListOf<UserNotification>()
+        var nextPageToken: String? = null
+
+        while (true) {
+            val remaining = (maxItems - notifications.size).coerceAtMost(50)
+            if (remaining <= 0) break
+
+            val response = currentApi.listUserNotifications(
+                user = userName,
+                pageSize = remaining,
+                pageToken = nextPageToken
+            )
+            val pageNotifications = response.notifications.orEmpty()
+            notifications += pageNotifications
+            nextPageToken = response.nextPageToken?.takeIf { it.isNotBlank() }
+
+            if (pageNotifications.isEmpty() || nextPageToken == null || notifications.size >= maxItems) {
+                break
+            }
+        }
+
+        return notifications
     }
 
     private fun updateMemoInState(updatedMemo: Memo) {

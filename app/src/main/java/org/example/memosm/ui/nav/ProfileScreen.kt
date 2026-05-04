@@ -39,6 +39,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -71,9 +72,11 @@ import org.example.memosm.model.Account
 import org.example.memosm.model.InstanceProfile
 import org.example.memosm.model.User
 import org.example.memosm.model.UserGeneralSetting
+import org.example.memosm.ui.ProfileDetailKey
 import org.example.memosm.ui.component.ArchivedMemosScreen
 import org.example.memosm.ui.component.ErrorView
 import org.example.memosm.ui.component.LoginDialog
+import org.example.memosm.ui.component.NotificationsScreen
 import org.example.memosm.ui.component.ProfileHeader
 import org.example.memosm.ui.component.StatsActivityCard
 import org.example.memosm.ui.component.rememberScrollContext
@@ -95,26 +98,26 @@ fun ProfileScreen(
     onToggleNavBar: ((Boolean) -> Unit)? = null,
     isNavBarVisible: Boolean = true
 ) {
-    var isArchivedVisible by rememberSaveable { mutableStateOf(false) }
+    var activeDetail by rememberSaveable { mutableStateOf<ProfileDetailKey?>(null) }
     val listState = rememberLazyListState()
 
-    val transitionState = remember { SeekableTransitionState(isArchivedVisible) }
+    val transitionState = remember { SeekableTransitionState<ProfileDetailKey?>(activeDetail) }
 
-    LaunchedEffect(isArchivedVisible) {
-        if (isArchivedVisible != transitionState.targetState) {
-            transitionState.animateTo(isArchivedVisible)
+    LaunchedEffect(activeDetail) {
+        if (activeDetail != transitionState.targetState) {
+            transitionState.animateTo(activeDetail)
         }
     }
 
-    PredictiveBackHandler(enabled = isArchivedVisible) { progress ->
+    PredictiveBackHandler(enabled = activeDetail != null) { progress ->
         try {
             progress.collect { backEvent ->
-                transitionState.seekTo(backEvent.progress, targetState = false)
+                transitionState.seekTo(backEvent.progress, targetState = null)
             }
-            transitionState.animateTo(false)
-            isArchivedVisible = false
+            transitionState.animateTo(null)
+            activeDetail = null
         } catch (e: CancellationException) {
-            transitionState.animateTo(true)
+            transitionState.animateTo(activeDetail)
         }
     }
 
@@ -122,7 +125,7 @@ fun ProfileScreen(
         val transition = rememberTransition(transitionState, label = "ProfileArchiveTransition")
         transition.AnimatedContent(
             transitionSpec = {
-                if (targetState) {
+                if (targetState != null) {
                     (fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + scaleIn(
                         initialScale = 0.97f, animationSpec = spring(
                             dampingRatio = Spring.DampingRatioLowBouncy,
@@ -137,11 +140,11 @@ fun ProfileScreen(
                         )
                     )
                 }
-            }) { showArchived ->
-            if (showArchived) {
-                ArchivedMemosScreen(
+            }) { detail ->
+            when (detail) {
+                ProfileDetailKey.Archived -> ArchivedMemosScreen(
                     viewModel = viewModel,
-                    onBack = { isArchivedVisible = false },
+                    onBack = { activeDetail = null },
                     onToggleNavBar = onToggleNavBar,
                     animatedVisibilityScope = this@AnimatedContent,
                     modifier = Modifier.sharedBounds(
@@ -151,12 +154,19 @@ fun ProfileScreen(
                             spring(dampingRatio = 0.8f, stiffness = 380f)
                         })
                 )
-            } else {
-                ProfileListPane(
+
+                ProfileDetailKey.Notifications -> NotificationsScreen(
+                    viewModel = viewModel,
+                    onBack = { activeDetail = null },
+                    onToggleNavBar = onToggleNavBar
+                )
+
+                null -> ProfileListPane(
                     viewModel = viewModel,
                     onLogout = onLogout,
                     onAddAccount = onAddAccount,
-                    onShowArchived = { isArchivedVisible = true },
+                    onShowArchived = { activeDetail = ProfileDetailKey.Archived },
+                    onShowNotifications = { activeDetail = ProfileDetailKey.Notifications },
                     animatedVisibilityScope = this@AnimatedContent,
                     sharedTransitionScope = this@SharedTransitionLayout,
                     onToggleNavBar = onToggleNavBar,
@@ -175,6 +185,7 @@ private fun ProfileListPane(
     onLogout: () -> Unit,
     onAddAccount: () -> Unit,
     onShowArchived: () -> Unit,
+    onShowNotifications: () -> Unit,
     animatedVisibilityScope: AnimatedVisibilityScope,
     sharedTransitionScope: SharedTransitionScope,
     onToggleNavBar: ((Boolean) -> Unit)? = null,
@@ -357,6 +368,34 @@ private fun ProfileListPane(
                             weekStartDayOffset = uiState.session.instanceSettings?.generalSetting?.weekStartDayOffset
                                 ?: 0
                         )
+                    }
+                }
+
+                item {
+                    Box(itemModifier) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = onShowNotifications
+                        ) {
+                            ListItem(
+                                headlineContent = {
+                                    Text(stringResource(R.string.profile_notifications))
+                                },
+                                leadingContent = {
+                                    Icon(
+                                        Icons.Outlined.Notifications,
+                                        contentDescription = null
+                                    )
+                                },
+                                trailingContent = {
+                                    Icon(
+                                        Icons.Outlined.ChevronRight,
+                                        contentDescription = null
+                                    )
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                            )
+                        }
                     }
                 }
 

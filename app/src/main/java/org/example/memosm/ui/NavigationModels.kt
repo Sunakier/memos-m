@@ -10,4 +10,7 @@ data class MemoKey(val id: String, val fromSearch: Boolean = false) : Parcelable
 sealed class ProfileDetailKey : Parcelable {
     @Parcelize
     object Archived : ProfileDetailKey()
+
+    @Parcelize
+    object Notifications : ProfileDetailKey()
 }
