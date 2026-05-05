@@ -33,6 +33,8 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             return listOf(
                 arrayOf("neosmemo/memos:canary"),
                 arrayOf("neosmemo/memos:stable"),
+                arrayOf("neosmemo/memos:0.27.1"),
+                arrayOf("neosmemo/memos:0.27.0"),
                 arrayOf("neosmemo/memos:0.26"),
                 arrayOf("neosmemo/memos:0.26.2"),
                 arrayOf("neosmemo/memos:0.26.1"),
@@ -179,6 +181,49 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         val memos3 = listResponse3.memos ?: emptyList()
         assertTrue("Memo 2 should be deleted", memos3.none { it.name == memo2.name })
         assertTrue("Memo 1 should still exist", memos3.any { it.name == memo1.name })
+    }
+
+    @Test
+    fun testListMemosCreatorFilterPaginationCompatibility() = runBlocking {
+        println("Running testListMemosCreatorFilterPaginationCompatibility")
+        val api = getAuthenticatedApi()
+        val currentUser = api.getCurrentSession().user
+
+        val creatorFilter = api.buildMemoCreatorFilter(currentUser)
+        assertNotNull("Expected current session user to produce a creator filter", creatorFilter)
+
+        val expectedMemoNames = listOf(
+            api.createMemo(org.example.memosm.model.Memo(content = "Paged Memo 1")).name,
+            api.createMemo(org.example.memosm.model.Memo(content = "Paged Memo 2")).name
+        ).filterNotNull().toSet()
+
+        val collectedMemoNames = linkedSetOf<String>()
+        var nextPageToken: String? = null
+        var pageCount = 0
+
+        do {
+            val response = api.listMemos(
+                pageSize = 1,
+                pageToken = nextPageToken,
+                filter = creatorFilter,
+                orderBy = "pinned desc, display_time desc"
+            )
+
+            response.memos.orEmpty()
+                .mapNotNullTo(collectedMemoNames) { it.name }
+
+            nextPageToken = response.nextPageToken?.takeIf { it.isNotBlank() }
+            pageCount += 1
+        } while (nextPageToken != null && pageCount < 10 && collectedMemoNames.size < expectedMemoNames.size)
+
+        assertTrue(
+            "Expected pagination to return created memos for $dockerImageName using filter=$creatorFilter, collected=$collectedMemoNames",
+            collectedMemoNames.containsAll(expectedMemoNames)
+        )
+        assertTrue(
+            "Expected at least one follow-up page for $dockerImageName",
+            pageCount >= 2 || expectedMemoNames.size <= 1
+        )
     }
 
     @Test
