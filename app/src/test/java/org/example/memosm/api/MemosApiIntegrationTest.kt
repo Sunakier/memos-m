@@ -14,6 +14,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.testcontainers.containers.GenericContainer
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.concurrent.TimeUnit
 
 @RunWith(Parameterized::class)
@@ -246,7 +253,18 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
 
         println("User Stats: ${stats.totalMemoCount} memos")
         assertTrue((stats.totalMemoCount ?: 0) >= 2)
-        assertNotNull(stats.memoDisplayTimestamps)
+        val timestamps = stats.memoDisplayTimestamps.orEmpty()
+        assertTrue("Expected non-empty stats timestamps for $dockerImageName", timestamps.isNotEmpty())
+        assertTrue(
+            "Expected at least one parseable stats timestamp for $dockerImageName: $timestamps",
+            timestamps.any { parseStatsDate(it) != null }
+        )
+        assertNotNull(stats.memoTypeStats)
+        assertNotNull(stats.tagCount)
+        assertTrue(
+            "Expected stats tagCount to include created tags for $dockerImageName: ${stats.tagCount}",
+            stats.tagCount?.keys?.containsAll(listOf("tag1", "tag2")) == true
+        )
 
         // ---------------------------------------------------------
         // 2. Test User Profile Masks (display_name, description, avatar_url)
@@ -401,6 +419,30 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             println("Cleaned up webhook: $webhookId")
         } catch (e: Exception) {
             println("Warning: Failed to delete webhook $webhookId")
+        }
+    }
+
+    private fun parseStatsDate(timestamp: String): LocalDate? {
+        return try {
+            ZonedDateTime.parse(timestamp, DateTimeFormatter.ISO_DATE_TIME).toLocalDate()
+        } catch (_: DateTimeParseException) {
+            try {
+                OffsetDateTime.parse(timestamp, DateTimeFormatter.ISO_DATE_TIME).toLocalDate()
+            } catch (_: DateTimeParseException) {
+                try {
+                    Instant.parse(timestamp).atOffset(java.time.ZoneOffset.UTC).toLocalDate()
+                } catch (_: DateTimeParseException) {
+                    try {
+                        LocalDateTime.parse(timestamp, DateTimeFormatter.ISO_DATE_TIME).toLocalDate()
+                    } catch (_: DateTimeParseException) {
+                        try {
+                            LocalDate.parse(timestamp.take(10))
+                        } catch (_: Exception) {
+                            null
+                        }
+                    }
+                }
+            }
         }
     }
 }

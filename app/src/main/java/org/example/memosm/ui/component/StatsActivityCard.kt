@@ -42,7 +42,10 @@ import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.model.UserStats
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.time.YearMonth
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -391,19 +394,37 @@ private fun calculateActivityDataFromTimestamps(timestamps: List<String>): Map<L
     val activityCounts = mutableMapOf<LocalDate, Int>()
 
     timestamps.forEach { timestamp ->
-        try {
-            val date = ZonedDateTime.parse(timestamp, DateTimeFormatter.ISO_DATE_TIME).toLocalDate()
+        val date = parseActivityDate(timestamp)
+        if (date != null) {
             activityCounts[date] = (activityCounts[date] ?: 0) + 1
-        } catch (e: DateTimeParseException) {
-            try {
-                val date = LocalDate.parse(timestamp.take(10))
-                activityCounts[date] = (activityCounts[date] ?: 0) + 1
-            } catch (e2: Exception) {
-                Log.w("StatsActivityCard", "Failed to parse timestamp e2: $timestamp, $e2")
-            }
-            Log.w("StatsActivityCard", "Failed to parse timestamp e: $timestamp, $e")
+        } else {
+            Log.w("StatsActivityCard", "Failed to parse timestamp: $timestamp")
         }
     }
 
     return activityCounts
+}
+
+private fun parseActivityDate(timestamp: String): LocalDate? {
+    return try {
+        ZonedDateTime.parse(timestamp, DateTimeFormatter.ISO_DATE_TIME).toLocalDate()
+    } catch (_: DateTimeParseException) {
+        try {
+            OffsetDateTime.parse(timestamp, DateTimeFormatter.ISO_DATE_TIME).toLocalDate()
+        } catch (_: DateTimeParseException) {
+            try {
+                Instant.parse(timestamp).atOffset(java.time.ZoneOffset.UTC).toLocalDate()
+            } catch (_: DateTimeParseException) {
+                try {
+                    LocalDateTime.parse(timestamp, DateTimeFormatter.ISO_DATE_TIME).toLocalDate()
+                } catch (_: DateTimeParseException) {
+                    try {
+                        LocalDate.parse(timestamp.take(10))
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+            }
+        }
+    }
 }

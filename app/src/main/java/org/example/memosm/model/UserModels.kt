@@ -43,18 +43,33 @@ data class User(
 
 data class UserStats(
     val name: String? = null,
-    @SerializedName(value = "memoDisplayTimestamps", alternate = ["memoCreatedTimestamps"])
+    @SerializedName(
+        value = "memoDisplayTimestamps",
+        alternate = [
+            "memoCreatedTimestamps",
+            "memo_display_timestamps",
+            "memo_created_timestamps"
+        ]
+    )
     val memoDisplayTimestamps: List<String>? = null,
+    @SerializedName(value = "memoTypeStats", alternate = ["memo_type_stats"])
     val memoTypeStats: MemoTypeStats? = null,
+    @SerializedName(value = "tagCount", alternate = ["tag_count"])
     val tagCount: Map<String, Int>? = null,
+    @SerializedName(value = "pinnedMemos", alternate = ["pinned_memos"])
     val pinnedMemos: List<String>? = null,
+    @SerializedName(value = "totalMemoCount", alternate = ["total_memo_count"])
     val totalMemoCount: Int? = null
 )
 
 data class MemoTypeStats(
+    @SerializedName(value = "linkCount", alternate = ["link_count"])
     val linkCount: Int? = null,
+    @SerializedName(value = "codeCount", alternate = ["code_count"])
     val codeCount: Int? = null,
+    @SerializedName(value = "todoCount", alternate = ["todo_count"])
     val todoCount: Int? = null,
+    @SerializedName(value = "undoCount", alternate = ["undo_count"])
     val undoCount: Int? = null
 )
 
