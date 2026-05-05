@@ -15,6 +15,7 @@ import org.example.memosm.api.AuthInterceptor
 import org.example.memosm.api.MemosApi
 import org.example.memosm.api.MemosApiFactory
 import org.example.memosm.api.StreamingAttachmentApi
+import org.example.memosm.api.buildMemoCreatorFilter
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.data.DraftManager
 import org.example.memosm.data.cache.CacheListType
@@ -63,26 +64,23 @@ class MemosViewModel(
         apiProvider = { api },
         filterProvider = {
             val user = _uiState.value.session.currUser
-            val userId = user?.name?.substringAfterLast("/") ?: ""
-
-            // Use creator_id and row_status
-            val base = if (userId.isNotEmpty()) {
-                "creator_id == $userId"
-            } else {
-                ""
-            }
+            val base = api?.buildMemoCreatorFilter(user)
 
             val shortcut = _uiState.value.userMemoList.selectedShortcut
             val hashtag = _uiState.value.userMemoList.selectedHashtag
+            val extraFilter = when {
+                shortcut != null && !shortcut.filter.isNullOrBlank() -> shortcut.filter
+                hashtag != null -> {
+                    val tagName = hashtag.removePrefix("#")
+                    "tag in [\"$tagName\"]"
+                }
 
-            if (shortcut != null && !shortcut.filter.isNullOrBlank()) {
-                "$base && ${shortcut.filter}"
-            } else if (hashtag != null) {
-                val tagName = hashtag.removePrefix("#")
-                "$base && tag in [\"$tagName\"]"
-            } else {
-                base
+                else -> null
             }
+
+            listOfNotNull(base?.takeIf { it.isNotBlank() }, extraFilter?.takeIf { it.isNotBlank() })
+                .joinToString(" && ")
+                .ifBlank { null }
         },
         pageSizeProvider = { _uiState.value.appSettings.pageSize },
         cacheCallbacks = CacheCallbacks(onFetchSuccess = { memos ->

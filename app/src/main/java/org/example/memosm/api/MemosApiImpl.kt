@@ -47,6 +47,7 @@ open class MemosApiImpl(
         userSettingGeneralKey = "GENERAL",
         userSettingLocaleMask = "locale",
         userSettingMemoVisibilityMask = "memo_visibility",
+        memoCreatorFilterStyle = MemoCreatorFilterStyle.RESOURCE_NAME,
         userMaskUsername = "username",
         userMaskEmail = "email",
         userMaskDisplayName = "display_name",

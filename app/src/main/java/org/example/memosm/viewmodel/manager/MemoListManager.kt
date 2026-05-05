@@ -3,6 +3,7 @@ package org.example.memosm.viewmodel.manager
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import org.example.memosm.api.MemosApi
+import org.example.memosm.api.buildMemoCreatorFilter
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User
 import retrofit2.HttpException
@@ -87,18 +88,14 @@ class ArchivedMemoListManager(
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
         val api = apiProvider() ?: return Pair(emptyList(), null)
         val user = currentUserProvider() ?: return Pair(emptyList(), null)
-        val userId = user.name?.substringAfterLast("/") ?: ""
-
-        // Use creator_id and row_status
-        val filter = if (userId.isNotEmpty()) {
-            "creator_id == $userId"
-        } else {
-            Log.e(TAG, "ArchivedMemoListManager failed: userId=$userId")
+        val filter = api.buildMemoCreatorFilter(user)
+        if (filter.isNullOrBlank()) {
+            Log.e(TAG, "ArchivedMemoListManager failed: user=${user.name}")
             return Pair(emptyList(), null)
         }
 
         val pageSize = pageSizeProvider()
-        Log.d(TAG, "ArchivedMemoListManager fetch: filter=$filter, userId=$userId")
+        Log.d(TAG, "ArchivedMemoListManager fetch: filter=$filter, user=${user.name}")
 
         try {
             val response = api.listMemos(
@@ -150,4 +147,3 @@ class SearchMemoListManager(
         }
     }
 }
-

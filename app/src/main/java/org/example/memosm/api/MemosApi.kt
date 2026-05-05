@@ -43,6 +43,7 @@ data class ApiConstants(
     val userSettingGeneralKey: String,
     val userSettingLocaleMask: String,
     val userSettingMemoVisibilityMask: String,
+    val memoCreatorFilterStyle: MemoCreatorFilterStyle,
 
     val userMaskUsername: String,
     val userMaskEmail: String,
@@ -57,6 +58,30 @@ data class ApiConstants(
     val shortcutMaskTitle: String,
     val shortcutMaskFilter: String
 )
+
+enum class MemoCreatorFilterStyle {
+    LEGACY_ID,
+    RESOURCE_NAME
+}
+
+fun MemosApi.buildMemoCreatorFilter(user: User?): String? {
+    val userName = user?.name?.trim().orEmpty()
+    if (userName.isBlank()) {
+        return null
+    }
+
+    return when (constants.memoCreatorFilterStyle) {
+        MemoCreatorFilterStyle.LEGACY_ID -> {
+            val userId = userName.substringAfterLast("/")
+            if (userId.isBlank()) null else "creator_id == $userId"
+        }
+
+        MemoCreatorFilterStyle.RESOURCE_NAME -> {
+            val escapedUserName = userName.replace("\"", "\\\"")
+            "creator == \"$escapedUserName\""
+        }
+    }
+}
 
 interface MemosApi {
 

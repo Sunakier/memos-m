@@ -9,6 +9,10 @@ open class MemosApiV0260Impl(
     private val apiV0260: MemosApiV0260
 ) : MemosApiImpl(apiV0260) {
 
+    override val constants = super.constants.copy(
+        memoCreatorFilterStyle = MemoCreatorFilterStyle.LEGACY_ID
+    )
+
     override suspend fun getCurrentSession(): CurrentSessionResponse {
         // v0.26.0+ uses auth/me instead of auth/sessions/current
         val userResponse = apiV0260.getCurrentUser()
