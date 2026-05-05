@@ -16,16 +16,25 @@ object MemosApiFactory {
         val retrofit = Retrofit.Builder().baseUrl(normalizedBaseUrl).client(client)
             .addConverterFactory(GsonConverterFactory.create(GsonProvider.gson)).build()
 
-        // Create the standard V1 implementation
-        val v1Api = retrofit.create(MemosApiV0353::class.java)
+        // Create the v0.35.3 API used for version probing.
+        val v0353Api = retrofit.create(MemosApiV0353::class.java)
+        fun latestApiImplementation(): MemosApi {
+            val v0280Api = retrofit.create(MemosApiV0280::class.java)
+            return MemosApiV0280Impl(v0280Api)
+        }
+
         fun latestApiFallback(reason: String, exception: Exception? = null): MemosApi {
-            Log.w("MemosApiFactory", "$reason, falling back to latest API implementation", exception)
-            return MemosApiImpl(v1Api)
+            Log.w(
+                "MemosApiFactory",
+                "$reason, falling back to latest v0.28.0 API implementation",
+                exception
+            )
+            return latestApiImplementation()
         }
 
         // Probe for version
         return try {
-            val profile = v1Api.getInstanceProfile()
+            val profile = v0353Api.getInstanceProfile()
             val version = profile.version ?: "Unknown"
             Log.i("MemosApiFactory", "Detected Memos server version: $version")
 
@@ -37,6 +46,9 @@ object MemosApiFactory {
                 Log.i("MemosApiFactory", "Using v0.27.0 API implementation")
                 val v0270Api = retrofit.create(MemosApiV0270::class.java)
                 MemosApiV0270Impl(v0270Api)
+            } else if (version.startsWith("0.28")) {
+                Log.i("MemosApiFactory", "Using v0.28.0 API implementation")
+                latestApiImplementation()
             } else {
                 latestApiFallback("Unsupported or unknown Memos server version: $version")
             }
