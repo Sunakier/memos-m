@@ -4,7 +4,6 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import org.example.memosm.api.MemosApi
 import org.example.memosm.api.MemoOrderBy
-import org.example.memosm.api.buildMemoCreatorFilter
 import org.example.memosm.api.resolveMemoOrderBy
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User

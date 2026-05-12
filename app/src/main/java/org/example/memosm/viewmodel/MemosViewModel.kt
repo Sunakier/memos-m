@@ -16,7 +16,6 @@ import org.example.memosm.api.MemosApi
 import org.example.memosm.api.MemosApiFactory
 import org.example.memosm.api.MemoOrderBy
 import org.example.memosm.api.StreamingAttachmentApi
-import org.example.memosm.api.buildMemoCreatorFilter
 import org.example.memosm.data.DataStoreManager
 import org.example.memosm.data.DraftManager
 import org.example.memosm.data.cache.CacheListType

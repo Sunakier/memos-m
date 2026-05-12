@@ -73,25 +73,6 @@ enum class MemoOrderBy {
     OLDEST
 }
 
-fun MemosApi.buildMemoCreatorFilter(user: User?): String? {
-    val userName = user?.name?.trim().orEmpty()
-    if (userName.isBlank()) {
-        return null
-    }
-
-    return when (constants.memoCreatorFilterStyle) {
-        MemoCreatorFilterStyle.LEGACY_ID -> {
-            val userId = userName.substringAfterLast("/")
-            if (userId.isBlank()) null else "creator_id == $userId"
-        }
-
-        MemoCreatorFilterStyle.RESOURCE_NAME -> {
-            val escapedUserName = userName.replace("\"", "\\\"")
-            "creator == \"$escapedUserName\""
-        }
-    }
-}
-
 fun MemosApi.resolveMemoOrderBy(orderBy: MemoOrderBy?): String? {
     return when (orderBy) {
         MemoOrderBy.PINNED_DESC -> constants.memoOrderByPinnedDesc
@@ -104,6 +85,10 @@ fun MemosApi.resolveMemoOrderBy(orderBy: MemoOrderBy?): String? {
 interface MemosApi {
 
     val constants: ApiConstants
+
+    fun getUserResourceName(user: User?): String?
+
+    fun buildMemoCreatorFilter(user: User?): String?
 
     // --- ActivityService ---
     suspend fun listActivities(

@@ -192,6 +192,49 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
     }
 
     @Test
+    fun testCurrentUserNameCompatibility() = runBlocking {
+        println("Running testCurrentUserNameCompatibility")
+        val api = getAuthenticatedApi()
+        val currentUser = api.getCurrentSession().user
+        assertNotNull("Expected current session user for $dockerImageName", currentUser)
+        val user = currentUser!!
+
+        val currentUserName = api.getUserResourceName(user)
+        assertNotNull("Expected current session user name for $dockerImageName", currentUserName)
+        assertEquals(user.name, currentUserName)
+        assertEquals(TEST_USERNAME, user.username)
+        assertEquals(TEST_DISPLAY_NAME, user.displayName)
+        assertTrue(
+            "Expected user resource name for $dockerImageName, got $currentUserName",
+            currentUserName!!.startsWith("users/")
+        )
+
+        val creatorFilter = api.buildMemoCreatorFilter(user)
+        assertNotNull("Expected creator filter for $dockerImageName", creatorFilter)
+
+        val fetchedUser = api.getUser(currentUserName)
+        assertEquals(currentUserName, fetchedUser.name)
+        assertEquals(TEST_USERNAME, fetchedUser.username)
+
+        val listedUser = api.listUsers().users.orEmpty().find { it.username == TEST_USERNAME }
+        assertNotNull("Expected listUsers to include $TEST_USERNAME for $dockerImageName", listedUser)
+        assertEquals(currentUserName, listedUser?.name)
+
+        val memo = api.createMemo(org.example.memosm.model.Memo(content = "User Name Memo"))
+        assertEquals(
+            "Expected created memo owner to match current user name for $dockerImageName",
+            currentUserName,
+            memo.creator
+        )
+
+        val filteredMemos = api.listMemos(filter = creatorFilter)
+        assertTrue(
+            "Expected creator filter to find memo for $dockerImageName using $creatorFilter",
+            filteredMemos.memos.orEmpty().any { it.name == memo.name }
+        )
+    }
+
+    @Test
     fun testHomeMemoListFetchCompatibility() = runBlocking {
         println("Running testHomeMemoListFetchCompatibility")
         val api = getAuthenticatedApi()
