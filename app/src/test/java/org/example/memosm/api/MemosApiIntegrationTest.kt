@@ -244,6 +244,34 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         assertEquals("Expected post author display name for $dockerImageName", TEST_DISPLAY_NAME, postAuthor.displayName)
         assertEquals("Expected post author avatar URL for $dockerImageName", userWithAvatar.avatarUrl, postAuthor.avatarUrl)
 
+        val visibleMemos = api.listMemos(filter = creatorFilter).memos.orEmpty()
+        val visibleCreators = visibleMemos.mapNotNull { it.creator }.distinct()
+        val usersByCreator = visibleCreators.associateWith { creator -> api.getUser(creator) }
+        val memoListAuthor = usersByCreator[memo.creator]
+        assertNotNull(
+            "Expected memo list author map to include ${memo.creator} for $dockerImageName",
+            memoListAuthor
+        )
+        assertEquals(
+            "Expected memo list author display name for $dockerImageName",
+            TEST_DISPLAY_NAME,
+            memoListAuthor?.displayName
+        )
+        assertEquals(
+            "Expected memo list author username for $dockerImageName",
+            TEST_USERNAME,
+            memoListAuthor?.username
+        )
+        assertEquals(
+            "Expected memo list author avatar URL for $dockerImageName",
+            userWithAvatar.avatarUrl,
+            memoListAuthor?.avatarUrl
+        )
+        assertTrue(
+            "Expected memo list author avatar URL to be non-empty for $dockerImageName",
+            !memoListAuthor?.avatarUrl.isNullOrBlank()
+        )
+
         val filteredMemos = api.listMemos(filter = creatorFilter)
         assertTrue(
             "Expected creator filter to find memo for $dockerImageName using $creatorFilter",

@@ -316,6 +316,7 @@ private fun MemosListPane(
         errorTitle = stringResource(R.string.common_error_failed_to_load_memos),
         isOffline = uiState.userMemoList.list.isOffline,
         errorMessage = uiState.userMemoList.list.errorMessage,
+        userProvider = { memo -> uiState.users[memo.creator] },
         onHashtagClick = onHashtagClick,
         header = {
             val hasShortcuts = uiState.userMemoList.shortcuts.isNotEmpty()
@@ -450,4 +451,3 @@ private fun MemosListPane(
         })
 
 }
-
