@@ -40,6 +40,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             return listOf(
                 arrayOf("neosmemo/memos:canary"),
                 arrayOf("neosmemo/memos:stable"),
+                arrayOf("neosmemo/memos:0.28.0"),
                 arrayOf("neosmemo/memos:0.27.1"),
                 arrayOf("neosmemo/memos:0.27.0"),
                 arrayOf("neosmemo/memos:0.26"),
