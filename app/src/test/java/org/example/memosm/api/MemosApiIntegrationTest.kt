@@ -192,6 +192,28 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
     }
 
     @Test
+    fun testHomeMemoListFetchCompatibility() = runBlocking {
+        println("Running testHomeMemoListFetchCompatibility")
+        val api = getAuthenticatedApi()
+        val currentUser = api.getCurrentSession().user
+        val creatorFilter = api.buildMemoCreatorFilter(currentUser)
+        assertNotNull("Expected current session user to produce a creator filter", creatorFilter)
+
+        val memo = api.createMemo(org.example.memosm.model.Memo(content = "Home Memo"))
+        val orderBy = api.resolveMemoOrderBy(MemoOrderBy.PINNED_DESC)
+        val response = api.listMemos(
+            pageSize = 20,
+            filter = creatorFilter,
+            orderBy = orderBy
+        )
+
+        assertTrue(
+            "Expected home memo list fetch to include created memo for $dockerImageName using filter=$creatorFilter orderBy=$orderBy",
+            response.memos.orEmpty().any { it.name == memo.name }
+        )
+    }
+
+    @Test
     fun testListMemosCreatorFilterPaginationCompatibility() = runBlocking {
         println("Running testListMemosCreatorFilterPaginationCompatibility")
         val api = getAuthenticatedApi()
@@ -206,6 +228,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         ).filterNotNull().toSet()
 
         val collectedMemoNames = linkedSetOf<String>()
+        val orderBy = api.resolveMemoOrderBy(MemoOrderBy.PINNED_DESC)
         var nextPageToken: String? = null
         var pageCount = 0
 
@@ -214,7 +237,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
                 pageSize = 1,
                 pageToken = nextPageToken,
                 filter = creatorFilter,
-                orderBy = "pinned desc, display_time desc"
+                orderBy = orderBy
             )
 
             response.memos.orEmpty()

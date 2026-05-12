@@ -14,6 +14,7 @@ import okhttp3.OkHttpClient
 import org.example.memosm.api.AuthInterceptor
 import org.example.memosm.api.MemosApi
 import org.example.memosm.api.MemosApiFactory
+import org.example.memosm.api.MemoOrderBy
 import org.example.memosm.api.StreamingAttachmentApi
 import org.example.memosm.api.buildMemoCreatorFilter
 import org.example.memosm.data.DataStoreManager
@@ -365,7 +366,7 @@ class MemosViewModel(
 
     fun loadMoreSearchMemos() = searchMemoManager.loadMore()
 
-    fun searchMemos(isExplore: Boolean, filter: String?, orderBy: String? = null) {
+    fun searchMemos(isExplore: Boolean, filter: String?, orderBy: MemoOrderBy? = null) {
         searchMemoManager.updateFilter(filter, orderBy)
         fetchSearchMemos(refresh = true)
     }

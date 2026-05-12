@@ -10,7 +10,10 @@ open class MemosApiV0260Impl(
 ) : MemosApiImpl(apiV0260) {
 
     override val constants = super.constants.copy(
-        memoCreatorFilterStyle = MemoCreatorFilterStyle.LEGACY_ID
+        memoCreatorFilterStyle = MemoCreatorFilterStyle.LEGACY_ID,
+        memoOrderByPinnedDesc = "pinned desc, display_time desc",
+        memoOrderByNewest = "display_time desc",
+        memoOrderByOldest = "display_time asc"
     )
 
     override suspend fun getCurrentSession(): CurrentSessionResponse {

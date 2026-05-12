@@ -44,6 +44,9 @@ data class ApiConstants(
     val userSettingLocaleMask: String,
     val userSettingMemoVisibilityMask: String,
     val memoCreatorFilterStyle: MemoCreatorFilterStyle,
+    val memoOrderByPinnedDesc: String,
+    val memoOrderByNewest: String,
+    val memoOrderByOldest: String,
 
     val userMaskUsername: String,
     val userMaskEmail: String,
@@ -64,6 +67,12 @@ enum class MemoCreatorFilterStyle {
     RESOURCE_NAME
 }
 
+enum class MemoOrderBy {
+    PINNED_DESC,
+    NEWEST,
+    OLDEST
+}
+
 fun MemosApi.buildMemoCreatorFilter(user: User?): String? {
     val userName = user?.name?.trim().orEmpty()
     if (userName.isBlank()) {
@@ -80,6 +89,15 @@ fun MemosApi.buildMemoCreatorFilter(user: User?): String? {
             val escapedUserName = userName.replace("\"", "\\\"")
             "creator == \"$escapedUserName\""
         }
+    }
+}
+
+fun MemosApi.resolveMemoOrderBy(orderBy: MemoOrderBy?): String? {
+    return when (orderBy) {
+        MemoOrderBy.PINNED_DESC -> constants.memoOrderByPinnedDesc
+        MemoOrderBy.NEWEST -> constants.memoOrderByNewest
+        MemoOrderBy.OLDEST -> constants.memoOrderByOldest
+        null -> null
     }
 }
 

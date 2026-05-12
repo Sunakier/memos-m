@@ -3,7 +3,9 @@ package org.example.memosm.viewmodel.manager
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import org.example.memosm.api.MemosApi
+import org.example.memosm.api.MemoOrderBy
 import org.example.memosm.api.buildMemoCreatorFilter
+import org.example.memosm.api.resolveMemoOrderBy
 import org.example.memosm.model.Memo
 import org.example.memosm.model.User
 import retrofit2.HttpException
@@ -32,7 +34,7 @@ class UserMemoListManager(
                 pageSize = pageSize,
                 pageToken = pageToken,
                 filter = filter,
-                orderBy = "pinned desc, display_time desc"
+                orderBy = api.resolveMemoOrderBy(MemoOrderBy.PINNED_DESC)
             )
             Log.d(TAG, "UserMemoListManager success: count=${response.memos?.size ?: 0}")
             return Pair(response.memos ?: emptyList(), response.nextPageToken)
@@ -120,9 +122,11 @@ class SearchMemoListManager(
 ) : BaseListManager<Memo>(scope) {
 
     private var currentFilter: String? = null
+    private var currentOrderBy: MemoOrderBy? = null
 
-    fun updateFilter(filter: String?, orderBy: String?) {
+    fun updateFilter(filter: String?, orderBy: MemoOrderBy?) {
         currentFilter = filter
+        currentOrderBy = orderBy
     }
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
@@ -134,7 +138,10 @@ class SearchMemoListManager(
 
         try {
             val response = api.listMemos(
-                pageSize = pageSize, pageToken = pageToken, filter = currentFilter
+                pageSize = pageSize,
+                pageToken = pageToken,
+                filter = currentFilter,
+                orderBy = api.resolveMemoOrderBy(currentOrderBy)
             )
             return Pair(response.memos ?: emptyList(), response.nextPageToken)
         } catch (e: HttpException) {

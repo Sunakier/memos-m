@@ -9,7 +9,10 @@ open class MemosApiV0270Impl(
     private val apiV0270: MemosApiV0270
 ) : MemosApiV0260Impl(apiV0270) {
     override val constants = super.constants.copy(
-        memoCreatorFilterStyle = MemoCreatorFilterStyle.RESOURCE_NAME
+        memoCreatorFilterStyle = MemoCreatorFilterStyle.RESOURCE_NAME,
+        memoOrderByPinnedDesc = "pinned desc, display_time desc",
+        memoOrderByNewest = "display_time desc",
+        memoOrderByOldest = "display_time asc"
     )
 
     // We inherit all the updated endpoints from v0.26.0

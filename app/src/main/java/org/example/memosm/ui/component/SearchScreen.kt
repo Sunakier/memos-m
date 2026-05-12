@@ -78,6 +78,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
 import org.example.memosm.R
+import org.example.memosm.api.MemoOrderBy
 import org.example.memosm.model.Memo
 import org.example.memosm.ui.component.item.MemoItem
 import org.example.memosm.viewmodel.MemosUiState
@@ -106,7 +107,7 @@ fun MemoSearchBar(
     var searchSelectedTags by rememberSaveable { mutableStateOf(setOf<String>()) }
     var startDateMillis by rememberSaveable { mutableStateOf<Long?>(null) }
     var endDateMillis by rememberSaveable { mutableStateOf<Long?>(null) }
-    var orderBy by rememberSaveable { mutableStateOf("display_time desc") }
+    var orderBy by rememberSaveable { mutableStateOf(MemoOrderBy.NEWEST) }
 
     // Aggregate tags from the search pool to be context-accurate
     val availableTags =
@@ -248,14 +249,14 @@ private fun SearchResultContent(
     selectedTags: Set<String>,
     startDateMillis: Long?,
     endDateMillis: Long?,
-    orderBy: String,
+    orderBy: MemoOrderBy,
     availableTags: Map<String, Int>,
     filteredMemos: List<Memo>,
     uiState: MemosUiState,
     onTagClick: (String) -> Unit,
     onStartDateSelected: (Long?) -> Unit,
     onEndDateSelected: (Long?) -> Unit,
-    onOrderByChange: (String) -> Unit,
+    onOrderByChange: (MemoOrderBy) -> Unit,
     onMemoClick: (Memo) -> Unit,
     onContentUpdate: (Memo, String) -> Unit
 ) {
@@ -444,13 +445,13 @@ private fun SearchResultContent(
                 ExposedDropdownMenuBox(
                     expanded = showSortMenu, onExpandedChange = { showSortMenu = it }) {
                     val sortLabel = when (orderBy) {
-                        "display_time desc" -> stringResource(R.string.search_sort_newest)
-                        "display_time asc" -> stringResource(R.string.search_sort_oldest)
+                        MemoOrderBy.NEWEST -> stringResource(R.string.search_sort_newest)
+                        MemoOrderBy.OLDEST -> stringResource(R.string.search_sort_oldest)
                         else -> stringResource(R.string.search_sort_title)
                     }
                     val sortIcon = when (orderBy) {
-                        "display_time desc" -> Icons.Outlined.ArrowDownward
-                        "display_time asc" -> Icons.Outlined.ArrowUpward
+                        MemoOrderBy.NEWEST -> Icons.Outlined.ArrowDownward
+                        MemoOrderBy.OLDEST -> Icons.Outlined.ArrowUpward
                         else -> Icons.AutoMirrored.Outlined.Sort
                     }
 
@@ -495,7 +496,7 @@ private fun SearchResultContent(
                                     Icons.Outlined.ArrowDownward, null, Modifier.size(18.dp)
                                 )
                             }, onClick = {
-                                onOrderByChange("display_time desc"); showSortMenu = false
+                                onOrderByChange(MemoOrderBy.NEWEST); showSortMenu = false
                             }, contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                         )
                         DropdownMenuItem(
@@ -510,7 +511,7 @@ private fun SearchResultContent(
                                     Icons.Outlined.ArrowUpward, null, Modifier.size(18.dp)
                                 )
                             },
-                            onClick = { onOrderByChange("display_time asc"); showSortMenu = false },
+                            onClick = { onOrderByChange(MemoOrderBy.OLDEST); showSortMenu = false },
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                         )
                     }
