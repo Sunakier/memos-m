@@ -311,7 +311,7 @@ class MemosViewModel(
 
                 // Fetch missing users for all visible lists
                 val allCreators =
-                    (newState.userMemoList.list.items + newState.exploreMemoList.list.items + newState.searchMemoList.list.items + newState.archivedMemoList.list.items).mapNotNull { it.creator }
+                    (newState.userMemoList.list.items + newState.exploreMemoList.list.items + newState.searchMemoList.list.items + newState.archivedMemoList.list.items + newState.detailPane.comments.items).mapNotNull { it.creator }
                         .distinct()
                 userDelegate.fetchUsers(allCreators)
             }

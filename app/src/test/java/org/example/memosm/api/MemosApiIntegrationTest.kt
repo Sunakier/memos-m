@@ -142,6 +142,30 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         return sharedApi!!
     }
 
+    private suspend fun createAuthenticatedApi(
+        username: String,
+        password: String
+    ): MemosApi {
+        val logging = okhttp3.logging.HttpLoggingInterceptor { message ->
+            println(message)
+        }.apply {
+            level = okhttp3.logging.HttpLoggingInterceptor.Level.BODY
+        }
+
+        val client =
+            OkHttpClient.Builder().addInterceptor(logging).readTimeout(30, TimeUnit.SECONDS).build()
+        val api = MemosApiFactory.create(baseUrl, client)
+        val token = loginAndCreateToken(api, baseUrl, username, password)
+
+        val authClient = OkHttpClient.Builder().addInterceptor(logging).addInterceptor { chain ->
+            val request =
+                chain.request().newBuilder().addHeader("Authorization", "Bearer $token").build()
+            chain.proceed(request)
+        }.readTimeout(30, TimeUnit.SECONDS).build()
+
+        return MemosApiFactory.create(baseUrl, authClient)
+    }
+
     @Test
     fun testMemoLifecycle() = runBlocking {
         println("Running testMemoLifecycle")
@@ -244,38 +268,116 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         assertEquals("Expected post author display name for $dockerImageName", TEST_DISPLAY_NAME, postAuthor.displayName)
         assertEquals("Expected post author avatar URL for $dockerImageName", userWithAvatar.avatarUrl, postAuthor.avatarUrl)
 
-        val visibleMemos = api.listMemos(filter = creatorFilter).memos.orEmpty()
-        val visibleCreators = visibleMemos.mapNotNull { it.creator }.distinct()
-        val usersByCreator = visibleCreators.associateWith { creator -> api.getUser(creator) }
-        val memoListAuthor = usersByCreator[memo.creator]
-        assertNotNull(
-            "Expected memo list author map to include ${memo.creator} for $dockerImageName",
-            memoListAuthor
-        )
-        assertEquals(
-            "Expected memo list author display name for $dockerImageName",
-            TEST_DISPLAY_NAME,
-            memoListAuthor?.displayName
-        )
-        assertEquals(
-            "Expected memo list author username for $dockerImageName",
-            TEST_USERNAME,
-            memoListAuthor?.username
-        )
-        assertEquals(
-            "Expected memo list author avatar URL for $dockerImageName",
-            userWithAvatar.avatarUrl,
-            memoListAuthor?.avatarUrl
-        )
-        assertTrue(
-            "Expected memo list author avatar URL to be non-empty for $dockerImageName",
-            !memoListAuthor?.avatarUrl.isNullOrBlank()
-        )
-
         val filteredMemos = api.listMemos(filter = creatorFilter)
         assertTrue(
             "Expected creator filter to find memo for $dockerImageName using $creatorFilter",
             filteredMemos.memos.orEmpty().any { it.name == memo.name }
+        )
+    }
+
+    @Test
+    fun testNonCurrentMemoAuthorUserCompatibility() = runBlocking {
+        println("Running testNonCurrentMemoAuthorUserCompatibility")
+        val adminApi = getAuthenticatedApi()
+        val otherUsername = "other"
+        val otherPassword = "otherPassword123"
+        val otherDisplayName = "Other Display"
+        val validDataUri =
+            "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+
+        val createdOtherUser = adminApi.createUser(
+            org.example.memosm.model.UserSnapshot(
+                username = otherUsername,
+                password = otherPassword,
+                displayName = otherDisplayName
+            )
+        )
+        val otherUserName = adminApi.getUserResourceName(createdOtherUser)
+        assertNotNull("Expected created non-current user resource name for $dockerImageName", otherUserName)
+
+        val otherWithAvatar = adminApi.updateUser(
+            otherUserName!!,
+            org.example.memosm.model.UserSnapshot(avatarUrl = validDataUri),
+            adminApi.constants.userMaskAvatarUrl
+        )
+
+        val otherApi = createAuthenticatedApi(otherUsername, otherPassword)
+        val otherMemo = otherApi.createMemo(
+            org.example.memosm.model.Memo(
+                content = "Non-current author memo",
+                visibility = org.example.memosm.model.Visibility.PUBLIC
+            )
+        )
+        assertEquals(
+            "Expected memo creator to be the non-current user for $dockerImageName",
+            otherUserName,
+            otherMemo.creator
+        )
+
+        val fetchedAuthor = adminApi.getUser(otherMemo.creator!!)
+        assertEquals(
+            "Expected fetched non-current author resource name for $dockerImageName",
+            otherMemo.creator,
+            fetchedAuthor.name
+        )
+        assertEquals(
+            "Expected fetched non-current author username for $dockerImageName",
+            otherUsername,
+            fetchedAuthor.username
+        )
+        assertEquals(
+            "Expected fetched non-current author display name for $dockerImageName",
+            otherDisplayName,
+            fetchedAuthor.displayName
+        )
+        assertEquals(
+            "Expected fetched non-current author avatar URL for $dockerImageName",
+            otherWithAvatar.avatarUrl,
+            fetchedAuthor.avatarUrl
+        )
+        assertTrue(
+            "Expected fetched non-current author avatar URL to be non-empty for $dockerImageName",
+            !fetchedAuthor.avatarUrl.isNullOrBlank()
+        )
+
+        val parentMemo = adminApi.createMemo(
+            org.example.memosm.model.Memo(
+                content = "Parent memo for non-current comment",
+                visibility = org.example.memosm.model.Visibility.PUBLIC
+            )
+        )
+        val parentMemoName = parentMemo.name!!
+        val otherComment = otherApi.createMemoComment(
+            parentMemoName,
+            org.example.memosm.model.Memo(
+                content = "Non-current author comment",
+                visibility = org.example.memosm.model.Visibility.PUBLIC
+            )
+        )
+        val listedComment = adminApi.listMemoComments(parentMemoName)
+            .memos
+            .orEmpty()
+            .firstOrNull { it.name == otherComment.name }
+        assertNotNull(
+            "Expected non-current author comment to be listed for $dockerImageName",
+            listedComment
+        )
+
+        val fetchedCommentAuthor = adminApi.getUser(listedComment!!.creator!!)
+        assertEquals(
+            "Expected fetched non-current comment author resource name for $dockerImageName",
+            listedComment.creator,
+            fetchedCommentAuthor.name
+        )
+        assertEquals(
+            "Expected fetched non-current comment author display name for $dockerImageName",
+            otherDisplayName,
+            fetchedCommentAuthor.displayName
+        )
+        assertEquals(
+            "Expected fetched non-current comment author avatar URL for $dockerImageName",
+            otherWithAvatar.avatarUrl,
+            fetchedCommentAuthor.avatarUrl
         )
     }
 
