@@ -71,18 +71,19 @@ class WebhookDelegateImpl(
         scope.launch {
             try {
                 val user = uiState.value.session.currUser ?: return@launch
+                val userName = user.name ?: return@launch
                 val currentApi = api ?: return@launch
                 val update = webhook.copy(displayName = displayName, url = url)
                 val webhookId = webhook.name?.substringAfterLast("/") ?: ""
 
                 val constants = currentApi.constants
                 currentApi.updateUserWebhook(
-                    user.name!!,
+                    userName,
                     webhookId,
                     update,
                     "${constants.webhookMaskDisplayName},${constants.webhookMaskUrl}"
                 )
-                fetchWebhooks(user.name)
+                fetchWebhooks(userName)
                 onSuccess()
             } catch (e: Exception) {
                 onError(getErrorResponse(e))

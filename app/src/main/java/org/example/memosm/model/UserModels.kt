@@ -26,19 +26,49 @@ enum class UseRole {
 }
 
 
-data class User(
-    val name: String? = null,
-    val role: UseRole? = null,
-    val username: String? = null,
-    val email: String? = null,
-    val displayName: String? = null,
-    val avatarUrl: String? = null,
-    val description: String? = null,
-    val password: String? = null,
-    val state: UseState? = null,
-    val createTime: String? = null,
-    val updateTime: String? = null,
-    val token: String? = null
+interface User {
+    val name: String?
+    val role: UseRole?
+    val username: String?
+    val email: String?
+    val displayName: String?
+    val avatarUrl: String?
+    val description: String?
+    val password: String?
+    val state: UseState?
+    val createTime: String?
+    val updateTime: String?
+    val token: String?
+}
+
+data class UserSnapshot(
+    override val name: String? = null,
+    override val role: UseRole? = null,
+    override val username: String? = null,
+    override val email: String? = null,
+    override val displayName: String? = null,
+    override val avatarUrl: String? = null,
+    override val description: String? = null,
+    override val password: String? = null,
+    override val state: UseState? = null,
+    override val createTime: String? = null,
+    override val updateTime: String? = null,
+    override val token: String? = null
+) : User
+
+fun User.toUserSnapshot(token: String? = this.token): UserSnapshot = UserSnapshot(
+    name = name,
+    role = role,
+    username = username,
+    email = email,
+    displayName = displayName,
+    avatarUrl = avatarUrl,
+    description = description,
+    password = password,
+    state = state,
+    createTime = createTime,
+    updateTime = updateTime,
+    token = token
 )
 
 data class UserStats(
@@ -87,7 +117,7 @@ data class InstanceProfile(
     val mode: String? = null, // Deprecated in v0.26.0
     val instanceUrl: String? = null,
     val demo: Boolean? = null, // Added in v0.26.0
-    val admin: User? = null // Added in v0.26.0
+    val admin: UserSnapshot? = null // Added in v0.26.0
 )
 
 // --- Auth Models ---

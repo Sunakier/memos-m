@@ -215,10 +215,21 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         val fetchedUser = api.getUser(currentUserName)
         assertEquals(currentUserName, fetchedUser.name)
         assertEquals(TEST_USERNAME, fetchedUser.username)
+        assertEquals(TEST_DISPLAY_NAME, fetchedUser.displayName)
 
         val listedUser = api.listUsers().users.orEmpty().find { it.username == TEST_USERNAME }
         assertNotNull("Expected listUsers to include $TEST_USERNAME for $dockerImageName", listedUser)
         assertEquals(currentUserName, listedUser?.name)
+        assertEquals(TEST_DISPLAY_NAME, listedUser?.displayName)
+
+        val validDataUri =
+            "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+        val userWithAvatar = api.updateUser(
+            currentUserName,
+            org.example.memosm.model.UserSnapshot(avatarUrl = validDataUri),
+            api.constants.userMaskAvatarUrl
+        )
+        assertNotNull("Expected avatar update to return avatar URL for $dockerImageName", userWithAvatar.avatarUrl)
 
         val memo = api.createMemo(org.example.memosm.model.Memo(content = "User Name Memo"))
         assertEquals(
@@ -226,6 +237,12 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             currentUserName,
             memo.creator
         )
+
+        val postAuthor = api.getUser(memo.creator!!)
+        assertEquals("Expected post author resource lookup to use memo.creator for $dockerImageName", memo.creator, postAuthor.name)
+        assertEquals("Expected post author username for $dockerImageName", TEST_USERNAME, postAuthor.username)
+        assertEquals("Expected post author display name for $dockerImageName", TEST_DISPLAY_NAME, postAuthor.displayName)
+        assertEquals("Expected post author avatar URL for $dockerImageName", userWithAvatar.avatarUrl, postAuthor.avatarUrl)
 
         val filteredMemos = api.listMemos(filter = creatorFilter)
         assertTrue(
@@ -342,7 +359,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         val newDisplayName = "Updated Admin"
         val userWithNewName = api.updateUser(
             userName,
-            org.example.memosm.model.User(displayName = newDisplayName),
+            org.example.memosm.model.UserSnapshot(displayName = newDisplayName),
             api.constants.userMaskDisplayName
         )
         assertEquals(newDisplayName, userWithNewName.displayName)
@@ -351,7 +368,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         val newDescription = "Kotlin Test Description"
         val userWithNewDesc = api.updateUser(
             userName,
-            org.example.memosm.model.User(description = newDescription),
+            org.example.memosm.model.UserSnapshot(description = newDescription),
             api.constants.userMaskDescription
         )
         assertEquals(newDescription, userWithNewDesc.description)
@@ -360,24 +377,25 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
         println("Testing Avatar Update with Data URI...")
         val userWithNewAvatar = api.updateUser(
             userName,
-            org.example.memosm.model.User(avatarUrl = validDataUri),
+            org.example.memosm.model.UserSnapshot(avatarUrl = validDataUri),
             api.constants.userMaskAvatarUrl
         )
         println("Returned Avatar URL: ${userWithNewAvatar.avatarUrl}")
 
-        assertNotNull(userWithNewAvatar.avatarUrl)
+        val updatedAvatarUrl = userWithNewAvatar.avatarUrl
+        assertNotNull(updatedAvatarUrl)
         assertTrue(
             "Avatar URL should start with /file/",
-            userWithNewAvatar.avatarUrl!!.startsWith("/file/")
+            updatedAvatarUrl!!.startsWith("/file/")
         )
         assertTrue(
-            "Avatar URL should end with /avatar", userWithNewAvatar.avatarUrl.endsWith("/avatar")
+            "Avatar URL should end with /avatar", updatedAvatarUrl.endsWith("/avatar")
         )
 
         // Revert Display Name (Clean up)
         api.updateUser(
             userName,
-            org.example.memosm.model.User(displayName = TEST_DISPLAY_NAME),
+            org.example.memosm.model.UserSnapshot(displayName = TEST_DISPLAY_NAME),
             api.constants.userMaskDisplayName
         )
 

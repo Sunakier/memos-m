@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.example.memosm.model.Account
+import org.example.memosm.model.User
+import org.example.memosm.model.toUserSnapshot
 
 class DataStoreManager(private val dataStore: DataStore<Preferences>) {
 
@@ -171,12 +173,12 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
         saveAccounts(updated)
     }
 
-    suspend fun updateAccountUser(id: String, user: org.example.memosm.model.User) {
+    suspend fun updateAccountUser(id: String, user: User) {
         val current = getAccounts()
         val updated = current.map {
             if (it.id == id) {
                 it.copy(
-                    user = user,
+                    user = user.toUserSnapshot(),
                     name = user.username,
                     displayName = user.displayName,
                     avatarUrl = user.avatarUrl,

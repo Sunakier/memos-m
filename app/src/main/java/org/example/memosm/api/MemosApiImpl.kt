@@ -38,6 +38,7 @@ import org.example.memosm.model.UserNotification
 import org.example.memosm.model.UserSetting
 import org.example.memosm.model.UserStats
 import org.example.memosm.model.UserWebhook
+import org.example.memosm.model.toUserSnapshot
 
 open class MemosApiImpl(
     protected val api: MemosApiV0353
@@ -135,7 +136,7 @@ open class MemosApiImpl(
     }
 
     override suspend fun getCurrentSession(): CurrentSessionResponse {
-        return api.getCurrentSession()
+        return api.getCurrentSession().toModel()
     }
 
     override suspend fun refreshToken(request: RefreshTokenRequest): RefreshTokenResponse {
@@ -143,7 +144,7 @@ open class MemosApiImpl(
     }
 
     override suspend fun signIn(request: SignInRequest): SignInResponse {
-        return api.signIn(request)
+        return api.signIn(request).toModel()
     }
 
     override suspend fun signOut() {
@@ -282,7 +283,7 @@ open class MemosApiImpl(
         filter: String?,
         showDeleted: Boolean?
     ): ListUsersResponse {
-        return api.listUsers(pageSize, pageToken, filter, showDeleted)
+        return api.listUsers(pageSize, pageToken, filter, showDeleted).toModel()
     }
 
     override suspend fun createUser(
@@ -291,7 +292,7 @@ open class MemosApiImpl(
         validateOnly: Boolean?,
         requestId: String?
     ): User {
-        return api.createUser(user, userId, validateOnly, requestId)
+        return api.createUser(user.toUserSnapshot(), userId, validateOnly, requestId)
     }
 
     override suspend fun getUser(user: String, readMask: String?): User {
@@ -308,7 +309,7 @@ open class MemosApiImpl(
         updateMask: String,
         allowMissing: Boolean?
     ): User {
-        return api.updateUser(user, userData, updateMask, allowMissing)
+        return api.updateUser(user, userData.toUserSnapshot(), updateMask, allowMissing)
     }
 
     override suspend fun listUserNotifications(

@@ -71,7 +71,9 @@ import org.example.memosm.R
 import org.example.memosm.model.Account
 import org.example.memosm.model.InstanceProfile
 import org.example.memosm.model.User
+import org.example.memosm.model.UserSnapshot
 import org.example.memosm.model.UserGeneralSetting
+import org.example.memosm.model.toUserSnapshot
 import org.example.memosm.ui.ProfileDetailKey
 import org.example.memosm.ui.component.ArchivedMemosScreen
 import org.example.memosm.ui.component.ErrorView
@@ -326,7 +328,9 @@ private fun ProfileListPane(
                         )
 
                         ProfileHeader(
-                            user = user.copy(avatarUrl = avatarUrl, token = uiState.session.token),
+                            user = user.toUserSnapshot(
+                                token = uiState.session.token
+                            ).copy(avatarUrl = avatarUrl),
                             onClick = { showAccountSwitcher = true },
                             onEditClick = { showEditDialog = true })
                     } else {
@@ -337,7 +341,7 @@ private fun ProfileListPane(
                             )
 
                             ProfileHeader(
-                                user = User(
+                                user = UserSnapshot(
                                     name = activeAccount.name?.let { "users/$it" },
                                     username = activeAccount.name ?: "",
                                     displayName = activeAccount.displayName,

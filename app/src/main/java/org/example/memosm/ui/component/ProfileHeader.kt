@@ -76,10 +76,11 @@ fun ProfileHeader(
                         }
                     }
                 }
-                if (!user?.description.isNullOrBlank()) {
+                val description = user?.description
+                if (!description.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = user.description, style = MaterialTheme.typography.bodyMedium
+                        text = description, style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }

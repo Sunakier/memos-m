@@ -27,6 +27,6 @@ open class MemosApiV0260Impl(
         val v0260Request = SignInRequestV0260(
             passwordCredentials = request.passwordCredentials
         )
-        return apiV0260.signIn(v0260Request)
+        return apiV0260.signIn(v0260Request).toModel()
     }
 }

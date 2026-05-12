@@ -1,9 +1,12 @@
 package org.example.memosm.api
 
 import org.example.memosm.model.CurrentSessionResponse
+import org.example.memosm.model.ListUsersResponse
 import org.example.memosm.model.SignInRequest
 import org.example.memosm.model.SignInRequestV0260
 import org.example.memosm.model.SignInResponse
+import org.example.memosm.model.User
+import org.example.memosm.model.toUserSnapshot
 
 open class MemosApiV0270Impl(
     private val apiV0270: MemosApiV0270
@@ -15,6 +18,45 @@ open class MemosApiV0270Impl(
         memoOrderByOldest = "display_time asc"
     )
 
-    // We inherit all the updated endpoints from v0.26.0
-    // Currently, v0.27 shares the same signIn and getCurrentUser structures
+    override suspend fun getCurrentSession(): CurrentSessionResponse {
+        return apiV0270.getCurrentUserV0270().toModel()
+    }
+
+    override suspend fun signIn(request: SignInRequest): SignInResponse {
+        val v0260Request = SignInRequestV0260(
+            passwordCredentials = request.passwordCredentials
+        )
+        return apiV0270.signInV0270(v0260Request).toModel()
+    }
+
+    override suspend fun listUsers(
+        pageSize: Int?,
+        pageToken: String?,
+        filter: String?,
+        showDeleted: Boolean?
+    ): ListUsersResponse {
+        return apiV0270.listUsersV0270(pageSize, pageToken, filter, showDeleted).toModel()
+    }
+
+    override suspend fun createUser(
+        user: User,
+        userId: String?,
+        validateOnly: Boolean?,
+        requestId: String?
+    ): User {
+        return apiV0270.createUserV0270(user.toUserSnapshot(), userId, validateOnly, requestId)
+    }
+
+    override suspend fun getUser(user: String, readMask: String?): User {
+        return apiV0270.getUserV0270(user, readMask)
+    }
+
+    override suspend fun updateUser(
+        user: String,
+        userData: User,
+        updateMask: String,
+        allowMissing: Boolean?
+    ): User {
+        return apiV0270.updateUserV0270(user, userData.toUserSnapshot(), updateMask, allowMissing)
+    }
 }

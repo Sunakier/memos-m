@@ -33,7 +33,10 @@ import org.example.memosm.model.ShortcutResponse
 import org.example.memosm.model.SignInRequest
 import org.example.memosm.model.SignInResponse
 import org.example.memosm.model.UpsertMemoReactionRequest
+import org.example.memosm.model.UseRole
+import org.example.memosm.model.UseState
 import org.example.memosm.model.User
+import org.example.memosm.model.UserSnapshot
 import org.example.memosm.model.UserNotification
 import org.example.memosm.model.UserSetting
 import org.example.memosm.model.UserStats
@@ -87,13 +90,13 @@ interface MemosApiV0353 {
 
     // --- AuthService ---
     @GET("api/v1/auth/me")
-    suspend fun getCurrentSession(): CurrentSessionResponse
+    suspend fun getCurrentSession(): CurrentSessionResponseV0353
 
     @POST("api/v1/auth/refresh")
     suspend fun refreshToken(@Body request: RefreshTokenRequest): RefreshTokenResponse
 
     @POST("/api/v1/auth/signin")
-    suspend fun signIn(@Body request: SignInRequest): SignInResponse
+    suspend fun signIn(@Body request: SignInRequest): SignInResponseV0353
 
     @POST("api/v1/auth/signout")
     suspend fun signOut()
@@ -242,20 +245,20 @@ interface MemosApiV0353 {
         @Query("pageToken") pageToken: String? = null,
         @Query("filter") filter: String? = null,
         @Query("showDeleted") showDeleted: Boolean? = null
-    ): ListUsersResponse
+    ): ListUsersResponseV0353
 
     @POST("api/v1/users")
     suspend fun createUser(
-        @Body user: User,
+        @Body user: UserSnapshot,
         @Query("userId") userId: String? = null,
         @Query("validateOnly") validateOnly: Boolean? = null,
         @Query("requestId") requestId: String? = null
-    ): User
+    ): UserV0353
 
     @GET("api/v1/{user}")
     suspend fun getUser(
         @Path("user", encoded = true) user: String, @Query("readMask") readMask: String? = null
-    ): User
+    ): UserV0353
 
     @DELETE("api/v1/{user}")
     suspend fun deleteUser(
@@ -265,10 +268,10 @@ interface MemosApiV0353 {
     @PATCH("api/v1/{user}")
     suspend fun updateUser(
         @Path("user", encoded = true) user: String,
-        @Body userData: User,
+        @Body userData: UserSnapshot,
         @Query("updateMask") updateMask: String,
         @Query("allowMissing") allowMissing: Boolean? = null
-    ): User
+    ): UserV0353
 
     @GET("api/v1/{user}/notifications")
     suspend fun listUserNotifications(
@@ -384,4 +387,47 @@ interface MemosApiV0353 {
 
     @GET("api/v1/users:stats")
     suspend fun listAllUserStats(): ListAllUserStatsResponse
+}
+
+data class UserV0353(
+    override val name: String? = null,
+    override val role: UseRole? = null,
+    override val username: String? = null,
+    override val email: String? = null,
+    override val displayName: String? = null,
+    override val avatarUrl: String? = null,
+    override val description: String? = null,
+    override val password: String? = null,
+    override val state: UseState? = null,
+    override val createTime: String? = null,
+    override val updateTime: String? = null,
+    override val token: String? = null
+) : User
+
+data class CurrentSessionResponseV0353(val user: UserV0353?) {
+    fun toModel(): CurrentSessionResponse = CurrentSessionResponse(user = user)
+}
+
+data class SignInResponseV0353(
+    val user: UserV0353,
+    val accessToken: String,
+    val accessTokenExpiresAt: String
+) {
+    fun toModel(): SignInResponse = SignInResponse(
+        user = user,
+        accessToken = accessToken,
+        accessTokenExpiresAt = accessTokenExpiresAt
+    )
+}
+
+data class ListUsersResponseV0353(
+    val users: List<UserV0353>?,
+    val nextPageToken: String? = null,
+    val totalSize: Int? = null
+) {
+    fun toModel(): ListUsersResponse = ListUsersResponse(
+        users = users,
+        nextPageToken = nextPageToken,
+        totalSize = totalSize
+    )
 }

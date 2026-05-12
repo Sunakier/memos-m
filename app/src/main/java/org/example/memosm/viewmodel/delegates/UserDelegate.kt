@@ -175,8 +175,9 @@ class UserDelegateImpl(
     override fun refreshUserStats() {
         scope.launch {
             val user = uiState.value.session.currUser
-            if (user?.name != null) {
-                fetchUserStats(user.name)
+            val userName = user?.name
+            if (userName != null) {
+                fetchUserStats(userName)
             }
         }
     }
@@ -215,6 +216,7 @@ class UserDelegateImpl(
                 // Early return if api doesn't exist
                 val currentApi = api ?: return@launch
                 val user = uiState.value.session.currUser ?: return@launch
+                val userName = user.name ?: return@launch
                 val currentSetting = uiState.value.session.userSettings ?: UserGeneralSetting()
                 val newSetting = currentSetting.copy(
                     locale = locale ?: currentSetting.locale,
@@ -229,12 +231,12 @@ class UserDelegateImpl(
 
                 if (updateMask.isNotEmpty()) {
                     currentApi.updateUserSetting(
-                        user.name!!,
+                        userName,
                         currentApi.constants.userSettingGeneralKey,
                         UserSetting(generalSetting = newSetting),
                         updateMask
                     )
-                    fetchUserSettings(user.name)
+                    fetchUserSettings(userName)
                 }
 
             } catch (e: Exception) {
@@ -256,7 +258,7 @@ class UserDelegateImpl(
             try {
                 val currentUser = uiState.value.session.currUser ?: return@launch
                 val currentApi = api ?: return@launch
-                val update = User(
+                val update = org.example.memosm.model.UserSnapshot(
                     username = username,
                     email = email,
                     displayName = displayName,

@@ -106,6 +106,7 @@ class ShortcutDelegateImpl(
         scope.launch {
             try {
                 val user = uiState.value.session.currUser ?: return@launch
+                val userName = user.name ?: return@launch
                 val currentApi = api ?: return@launch
                 val update = shortcut.copy(title = title, filter = filter)
                 // shortcut.name is in format "users/{uid}/shortcuts/{id}"
@@ -113,12 +114,12 @@ class ShortcutDelegateImpl(
 
                 val constants = currentApi.constants
                 currentApi.updateShortcut(
-                    user.name!!,
+                    userName,
                     shortcutId,
                     update,
                     "${constants.shortcutMaskTitle},${constants.shortcutMaskFilter}"
                 )
-                fetchShortcuts(user.name)
+                fetchShortcuts(userName)
                 onSuccess()
             } catch (e: Exception) {
                 onError(getErrorResponse(e))
