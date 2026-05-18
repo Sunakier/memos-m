@@ -1,9 +1,11 @@
 package org.example.memosm.ui.component.item.markdown
 
 import android.content.Context
+import android.graphics.Paint
 import android.view.View.MeasureSpec
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -13,11 +15,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -65,6 +73,7 @@ import org.intellij.markdown.ast.findChildOfType
 import org.intellij.markdown.flavours.gfm.GFMElementTypes
 import org.intellij.markdown.flavours.gfm.GFMTokenTypes
 import java.util.UUID
+import kotlin.math.max
 
 // Helper data class for styles
 data class MarkdownStyles(
@@ -75,6 +84,9 @@ data class MarkdownStyles(
     val italicStyle: SpanStyle,
     val codeFontFamily: FontFamily
 )
+
+private val hashtagRegex = Regex("#[^\\s#]+")
+private val InlineHashtagChipMinHeight: Dp = 32.dp
 
 @Composable
 fun MarkdownText(
@@ -556,24 +568,13 @@ fun AnnotatedString.Builder.appendInlineChildren(
 ) {
     if (node.children.isEmpty()) {
         val text = node.getTextInNode(content).toString()
-        // Check for hashtags
-        val hashtagRegex = Regex("#[^\\s#]+")
-        var lastIndex = 0
-        hashtagRegex.findAll(text).forEach { match ->
-            if (match.range.first > lastIndex) {
-                append(text.substring(lastIndex, match.range.first))
-            }
-            val tag = match.value
-            pushLink(LinkAnnotation.Clickable(tag) { onHashtagClick?.invoke(tag) })
-            withStyle(SpanStyle(color = styles.linkColor, textDecoration = TextDecoration.None)) {
-                append(tag)
-            }
-            pop()
-            lastIndex = match.range.last + 1
-        }
-        if (lastIndex < text.length) {
-            append(text.substring(lastIndex))
-        }
+        appendTextWithHashtagChips(
+            text = text,
+            density = density,
+            fontSizePx = fontSizePx,
+            inlineContent = inlineContent,
+            onHashtagClick = onHashtagClick
+        )
         return
     }
 
@@ -588,6 +589,113 @@ fun AnnotatedString.Builder.appendInlineChildren(
             this,
             inlineContent,
             onHashtagClick
+        )
+    }
+}
+
+private fun AnnotatedString.Builder.appendTextWithHashtagChips(
+    text: String,
+    density: Density,
+    fontSizePx: Float,
+    inlineContent: MutableMap<String, InlineTextContent>,
+    onHashtagClick: ((String) -> Unit)?
+) {
+    var lastIndex = 0
+    hashtagRegex.findAll(text).forEach { match ->
+        if (match.range.first > lastIndex) {
+            append(text.substring(lastIndex, match.range.first))
+        }
+        appendHashtagChip(
+            tag = match.value,
+            density = density,
+            fontSizePx = fontSizePx,
+            inlineContent = inlineContent,
+            onHashtagClick = onHashtagClick
+        )
+        lastIndex = match.range.last + 1
+    }
+    if (lastIndex < text.length) {
+        append(text.substring(lastIndex))
+    }
+}
+
+private fun AnnotatedString.Builder.appendHashtagChip(
+    tag: String,
+    density: Density,
+    fontSizePx: Float,
+    inlineContent: MutableMap<String, InlineTextContent>,
+    onHashtagClick: ((String) -> Unit)?
+) {
+    val id = "hashtag_${UUID.randomUUID()}"
+    val label = tag.removePrefix("#")
+    val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = fontSizePx
+    }
+    val horizontalPaddingPx = with(density) { 12.dp.toPx() }
+    val verticalPaddingPx = with(density) { 4.dp.toPx() }
+    val iconSizePx = with(density) { 16.dp.toPx() }
+    val spacingPx = with(density) { 4.dp.toPx() }
+    val sideMarginPx = with(density) { 4.dp.toPx() }
+    val textWidthPx = textPaint.measureText(label)
+    val widthPx =
+        (horizontalPaddingPx * 2) + iconSizePx + spacingPx + textWidthPx + (sideMarginPx * 2)
+    val heightPx = max(
+        with(density) { InlineHashtagChipMinHeight.toPx() },
+        max(fontSizePx + (verticalPaddingPx * 2), iconSizePx + (verticalPaddingPx * 2))
+    )
+
+    inlineContent[id] = InlineTextContent(
+        Placeholder(
+            width = (widthPx / fontSizePx).em,
+            height = (heightPx / fontSizePx).em,
+            placeholderVerticalAlign = PlaceholderVerticalAlign.Center
+        )
+    ) {
+        InlineHashtagChip(
+            tag = tag,
+            fontSizePx = fontSizePx,
+            onClick = onHashtagClick
+        )
+    }
+
+    appendInlineContent(id, tag)
+}
+
+@Composable
+private fun InlineHashtagChip(
+    tag: String,
+    fontSizePx: Float,
+    onClick: ((String) -> Unit)?
+) {
+    val density = LocalDensity.current
+    val textSize = with(density) { fontSizePx.toSp() }
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+        FilterChip(
+            selected = false,
+            onClick = { onClick?.invoke(tag) },
+            enabled = onClick != null,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+            modifier = Modifier.padding(horizontal = 2.dp),
+            label = {
+                Row(
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Tag,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = tag.removePrefix("#"),
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontSize = textSize,
+                            fontWeight = FontWeight.Normal
+                        ),
+                        maxLines = 1
+                    )
+                }
+            }
         )
     }
 }
