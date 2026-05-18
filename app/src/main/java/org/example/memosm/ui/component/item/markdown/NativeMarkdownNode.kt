@@ -668,14 +668,14 @@ private fun InlineHashtagChip(
     onClick: ((String) -> Unit)?
 ) {
     val density = LocalDensity.current
-    val textSize = with(density) { fontSizePx.toSp() }
+    val textSize = with(density) { (fontSizePx * 0.9f).toSp() }
     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
         FilterChip(
             selected = false,
             onClick = { onClick?.invoke(tag) },
             enabled = onClick != null,
             shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-            modifier = Modifier.padding(horizontal = 2.dp),
+            modifier = Modifier.padding(horizontal = 2.dp, vertical = 3.dp),
             label = {
                 Row(
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
