@@ -1,5 +1,6 @@
 package org.example.memosm.api
 
+import android.util.Log
 import org.example.memosm.model.CurrentSessionResponse
 import org.example.memosm.model.ListMemoCommentsResponse
 import org.example.memosm.model.ListMemosResponse
@@ -47,10 +48,26 @@ class MemosApiV0280Impl(
         requestId: String?
     ): User {
         return apiV0280.createUserV0280(user.toUserSnapshot(), userId, validateOnly, requestId)
+            .normalized()
     }
 
     override suspend fun getUser(user: String, readMask: String?): User {
-        return apiV0280.getUserV0280(user, readMask)
+        Log.d("MemosApiV0280", "getUser request: user=$user readMask=$readMask")
+        val response = apiV0280.getUserV0280(user, readMask).normalized()
+        Log.d(
+            "MemosApiV0280",
+            "getUser response: request=$user name=${response.name} username=${response.username} displayName=${response.displayName} avatarUrl=${response.avatarUrl}"
+        )
+        if (response.name.isNullOrBlank()) {
+            Log.w("MemosApiV0280", "getUser parse: missing name for request=$user")
+        }
+        if (response.displayName == null && !response.username.isNullOrBlank()) {
+            Log.w(
+                "MemosApiV0280",
+                "getUser parse: blank displayName normalized to null for request=$user, username=${response.username}"
+            )
+        }
+        return response
     }
 
     override suspend fun updateUser(
@@ -60,6 +77,7 @@ class MemosApiV0280Impl(
         allowMissing: Boolean?
     ): User {
         return apiV0280.updateUserV0280(user, userData.toUserSnapshot(), updateMask, allowMissing)
+            .normalized()
     }
 
     override suspend fun listMemos(

@@ -253,6 +253,10 @@ interface MemosApi {
         user: String, readMask: String? = null
     ): User
 
+    suspend fun getUsers(
+        users: List<String>
+    ): Map<String, User>
+
     suspend fun deleteUser(
         user: String, force: Boolean? = null
     )

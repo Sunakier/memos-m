@@ -1,5 +1,6 @@
 package org.example.memosm.api
 
+import android.util.Log
 import org.example.memosm.model.Activity
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.CreatePersonalAccessTokenRequest
@@ -297,6 +298,28 @@ open class MemosApiImpl(
 
     override suspend fun getUser(user: String, readMask: String?): User {
         return api.getUser(user, readMask)
+    }
+
+    override suspend fun getUsers(users: List<String>): Map<String, User> {
+        if (users.isEmpty()) return emptyMap()
+
+        Log.d("MemosApi", "getUsers: requested=$users")
+        val resolved = LinkedHashMap<String, User>(users.size)
+        for (name in users.distinct()) {
+            runCatching {
+                getUser(name)
+            }.onFailure { error ->
+                Log.w("MemosApi", "getUsers: getUser failed for name=$name", error)
+            }.getOrNull()?.let { user ->
+                resolved[name] = user
+            }
+        }
+        val unresolved = users.distinct().filter { it !in resolved }
+        if (unresolved.isNotEmpty()) {
+            Log.w("MemosApi", "getUsers: unresolved=$unresolved")
+        }
+        Log.d("MemosApi", "getUsers: resolved=${resolved.keys}")
+        return resolved
     }
 
     override suspend fun deleteUser(user: String, force: Boolean?) {

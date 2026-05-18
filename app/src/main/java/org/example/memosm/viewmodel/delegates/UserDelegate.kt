@@ -61,21 +61,25 @@ class UserDelegateImpl(
     override suspend fun fetchUsers(names: List<String>) {
         val currentUsers = uiState.value.users
         val toFetch = names.filter { it !in currentUsers && it !in pendingUserRequests }
+        Log.d("MemosUsers", "fetchUsers: requested=$names cached=${currentUsers.keys} toFetch=$toFetch")
         if (toFetch.isEmpty()) return
 
-        toFetch.forEach { name ->
-            pendingUserRequests.add(name)
-            scope.launch {
-                try {
-                    val user = api?.getUser(name)
-                    if (user != null) {
-                        uiState.update { it.copy(users = it.users + (name to user)) }
-                    }
-                } catch (e: Exception) {
-                    Log.e("MemosViewModel", "Error fetching user $name", e)
-                } finally {
-                    pendingUserRequests.remove(name)
+        pendingUserRequests.addAll(toFetch)
+        scope.launch {
+            try {
+                val fetchedUsers = api?.getUsers(toFetch).orEmpty()
+                Log.d("MemosUsers", "fetchUsers: resolved=${fetchedUsers.keys}")
+                if (fetchedUsers.isNotEmpty()) {
+                    uiState.update { it.copy(users = it.users + fetchedUsers) }
                 }
+                val unresolved = toFetch.filter { it !in fetchedUsers }
+                if (unresolved.isNotEmpty()) {
+                    Log.w("MemosUsers", "fetchUsers: unresolved=$unresolved")
+                }
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Error fetching users $toFetch", e)
+            } finally {
+                pendingUserRequests.removeAll(toFetch.toSet())
             }
         }
     }
