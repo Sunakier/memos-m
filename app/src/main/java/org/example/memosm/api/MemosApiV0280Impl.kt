@@ -1,7 +1,10 @@
 package org.example.memosm.api
 
 import org.example.memosm.model.CurrentSessionResponse
+import org.example.memosm.model.ListMemoCommentsResponse
+import org.example.memosm.model.ListMemosResponse
 import org.example.memosm.model.ListUsersResponse
+import org.example.memosm.model.Memo
 import org.example.memosm.model.SignInRequest
 import org.example.memosm.model.SignInRequestV0260
 import org.example.memosm.model.SignInResponse
@@ -57,5 +60,52 @@ class MemosApiV0280Impl(
         allowMissing: Boolean?
     ): User {
         return apiV0280.updateUserV0280(user, userData.toUserSnapshot(), updateMask, allowMissing)
+    }
+
+    override suspend fun listMemos(
+        pageSize: Int?,
+        pageToken: String?,
+        state: String?,
+        orderBy: String?,
+        filter: String?,
+        showDeleted: Boolean?
+    ): ListMemosResponse {
+        return apiV0280.listMemosV0280(
+            pageSize = pageSize,
+            pageToken = pageToken,
+            state = state,
+            orderBy = orderBy,
+            filter = filter,
+            showDeleted = showDeleted
+        ).toModel()
+    }
+
+    override suspend fun createMemo(memo: Memo, memoId: String?): Memo {
+        return apiV0280.createMemoV0280(MemoV0280.fromModel(memo), memoId).toModel()
+    }
+
+    override suspend fun getMemo(memo: String): Memo {
+        return apiV0280.getMemoV0280(memo).toModel()
+    }
+
+    override suspend fun updateMemo(memo: String, memoData: Memo, updateMask: String): Memo {
+        return apiV0280.updateMemoV0280(memo, MemoV0280.fromModel(memoData), updateMask).toModel()
+    }
+
+    override suspend fun listMemoComments(
+        memo: String,
+        pageSize: Int?,
+        pageToken: String?,
+        orderBy: String?
+    ): ListMemoCommentsResponse {
+        return apiV0280.listMemoCommentsV0280(memo, pageSize, pageToken, orderBy).toModel()
+    }
+
+    override suspend fun createMemoComment(memo: String, comment: Memo, commentId: String?): Memo {
+        return apiV0280.createMemoCommentV0280(
+            memo = memo,
+            comment = MemoV0280.fromModel(comment),
+            commentId = commentId
+        ).toModel()
     }
 }
