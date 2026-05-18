@@ -103,7 +103,7 @@ fun MemosScaffold(
 
     // Workaround for Compose Material 3 Adaptive Navigator not automatically updating the inner state
     // when scaffoldValue changes (e.g. on window resize).
-    LaunchedEffect(navigator.scaffoldValue) {
+    LaunchedEffect(scaffoldDirective) {
         (navigator.scaffoldState as? androidx.compose.material3.adaptive.layout.MutableThreePaneScaffoldState)?.snapTo(navigator.scaffoldValue)
     }
 
@@ -118,6 +118,17 @@ fun MemosScaffold(
     LaunchedEffect(navigator.currentDestination) {
         focusManager.clearFocus()
     }
+
+    // Scroll direction tracking for search bar visibility
+    val scrollContext = rememberScrollContext(
+        listState = listState
+    )
+
+    val isDetailVisible =
+        navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
+    val isListVisible =
+        navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
+    val isDualPane = isListVisible && isDetailVisible
 
     // Sync selected memo with navigator
     // We add memos and search items as dependencies to ensure selectedMemo is updated if the items in the list change (e.g. after an edit)
@@ -140,17 +151,6 @@ fun MemosScaffold(
             viewModel.memoActionDelegate.clearSelectedMemo()
         }
     }
-
-    // Scroll direction tracking for search bar visibility
-    val scrollContext = rememberScrollContext(
-        listState = listState
-    )
-
-    val isDetailVisible =
-        navigator.scaffoldValue[ListDetailPaneScaffoldRole.Detail] == PaneAdaptedValue.Expanded
-    val isListVisible =
-        navigator.scaffoldValue[ListDetailPaneScaffoldRole.List] == PaneAdaptedValue.Expanded
-    val isDualPane = isListVisible && isDetailVisible
 
     var isSearchExpanded by remember { mutableStateOf(false) }
 
@@ -239,10 +239,8 @@ fun MemosScaffold(
                     },
                     detailPane = {
                         AnimatedPane {
-                            val currentMemoKey = navigator.currentDestination?.contentKey
-
                             AnimatedContent(
-                                targetState = currentMemoKey, transitionSpec = {
+                                targetState = navigator.currentDestination?.contentKey, transitionSpec = {
                                     if (isDualPane) {
                                         if (initialState == null) {
                                             (fadeIn(
