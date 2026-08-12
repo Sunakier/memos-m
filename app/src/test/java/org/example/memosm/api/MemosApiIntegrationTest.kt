@@ -40,6 +40,7 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             return listOf(
                 arrayOf("neosmemo/memos:canary"),
                 arrayOf("neosmemo/memos:stable"),
+                arrayOf("neosmemo/memos:0.30.0"),
                 arrayOf("neosmemo/memos:0.28.0"),
                 arrayOf("neosmemo/memos:0.27.1"),
                 arrayOf("neosmemo/memos:0.27.0"),
@@ -70,7 +71,14 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             container = GenericContainer(dockerImageName)
             log("DEBUG: Attempting container.start() for $dockerImageName")
 
-            container.withExposedPorts(5230).withEnv("MEMOS_DRIVER", "sqlite").start()
+            container.withExposedPorts(5230).withEnv("MEMOS_DRIVER", "sqlite")
+            if (dockerImageName == "neosmemo/memos:canary") {
+                container.withEnv(
+                    "MEMOS_DSN",
+                    "file:/var/opt/memos/memos_prod.db?_txlock=immediate&"
+                )
+            }
+            container.start()
 
             log("DEBUG: container.start() returned")
 

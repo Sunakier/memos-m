@@ -18,15 +18,20 @@ object MemosApiFactory {
 
         // Create the v0.35.3 API used for version probing.
         val v0353Api = retrofit.create(MemosApiV0353::class.java)
-        fun latestApiImplementation(): MemosApi {
+        fun v0280ApiImplementation(): MemosApi {
             val v0280Api = retrofit.create(MemosApiV0280::class.java)
             return MemosApiV0280Impl(v0280Api)
+        }
+
+        fun latestApiImplementation(): MemosApi {
+            val v0300Api = retrofit.create(MemosApiV0300::class.java)
+            return MemosApiV0300Impl(v0300Api)
         }
 
         fun latestApiFallback(reason: String, exception: Exception? = null): MemosApi {
             Log.w(
                 "MemosApiFactory",
-                "$reason, falling back to latest v0.28.0 API implementation",
+                "$reason, falling back to latest v0.30.0 API implementation",
                 exception
             )
             return latestApiImplementation()
@@ -46,8 +51,11 @@ object MemosApiFactory {
                 Log.i("MemosApiFactory", "Using v0.27.0 API implementation")
                 val v0270Api = retrofit.create(MemosApiV0270::class.java)
                 MemosApiV0270Impl(v0270Api)
-            } else if (version.startsWith("0.28")) {
+            } else if (version.startsWith("0.28") || version.startsWith("0.29")) {
                 Log.i("MemosApiFactory", "Using v0.28.0 API implementation")
+                v0280ApiImplementation()
+            } else if (version.startsWith("0.30")) {
+                Log.i("MemosApiFactory", "Using v0.30.0 API implementation")
                 latestApiImplementation()
             } else {
                 latestApiFallback("Unsupported or unknown Memos server version: $version")
