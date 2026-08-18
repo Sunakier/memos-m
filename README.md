@@ -98,6 +98,11 @@ You can also download from [release](https://github.com/yamada-sexta/memos-m/rel
   - [x] Multi language support: English, Japanese, Chinese, Korean, German
   - [x] Sharing intent support
   - [x] Local cache
+  - [x] Offline-first
+    - [x] Full offline read
+    - [x] Offline writes queued
+    - [x] Offline media store
+    - [x] Auto-sync on reconnect
 
 ## Non-goals
 
