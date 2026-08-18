@@ -158,16 +158,21 @@ fun AttachmentsScreen(
             if (uiState.attachmentList.list.items.isEmpty() && uiState.attachmentList.list.isLoading && !uiState.isRefreshing) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (uiState.attachmentList.list.items.isEmpty() && !uiState.attachmentList.list.isLoading) {
-                if (uiState.error != null) {
+                if (uiState.attachmentList.list.errorMessage != null) {
                     ErrorView(
                         title = stringResource(R.string.common_error_failed_to_load_attachments),
-                        message = uiState.error!!,
+                        message = uiState.attachmentList.list.errorMessage!!,
                         onRetry = { viewModel.fetchAttachments(refresh = false) },
                         modifier = Modifier.align(Alignment.Center)
                     )
                 } else {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(stringResource(R.string.attachments_none_found))
+                        Text(
+                            stringResource(
+                                if (!uiState.isOnline) R.string.attachments_offline_empty
+                                else R.string.attachments_none_found
+                            )
+                        )
                     }
                 }
             } else {

@@ -58,22 +58,30 @@ fun MemoImage(
     onDismiss: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val attachmentCacheManager = org.example.memosm.MemosApplication.instance.attachmentCacheManager
     val modelState = produceState<Any?>(initialValue = null, uri, attachment, hostUrl) {
         value = withContext(Dispatchers.IO) {
             when {
                 uri != Uri.EMPTY -> uri
-                attachment != null -> AttachmentManager.getAttachmentUrl(hostUrl, attachment)
-                    ?: when {
-                        !attachment.content.isNullOrBlank() -> {
-                            try {
-                                Base64.decode(attachment.content, Base64.NO_WRAP)
-                            } catch (_: Exception) {
-                                null
+                attachment != null -> {
+                    // Prefer the offline-downloaded file when available. The
+                    // lookup is account-scoped via the display host URL so a
+                    // same-named attachment of another server cannot be picked up.
+                    val localFile = attachmentCacheManager.getLocalFileByHost(hostUrl, attachment.name)
+                    if (localFile != null) localFile
+                    else AttachmentManager.getAttachmentUrl(hostUrl, attachment)
+                        ?: when {
+                            !attachment.content.isNullOrBlank() -> {
+                                try {
+                                    Base64.decode(attachment.content, Base64.NO_WRAP)
+                                } catch (_: Exception) {
+                                    null
+                                }
                             }
-                        }
 
-                        else -> null
-                    }
+                            else -> null
+                        }
+                }
 
                 else -> null
             }
@@ -87,12 +95,6 @@ fun MemoImage(
             attachment?.name != null -> "${hostUrl}_${attachment.name}"
             else -> model?.toString()
         }
-    }
-
-    LaunchedEffect(model, token) {
-        android.util.Log.d(
-            "MemosDebug", "MemoImage: model=$model, hasToken=${token != null}, hostUrl=$hostUrl"
-        )
     }
 
     // Use cached ratio if available

@@ -39,6 +39,7 @@ import org.example.memosm.R
 import org.example.memosm.api.AuthInterceptor
 import org.example.memosm.api.MemosApiFactory
 import org.example.memosm.data.DataStoreManager
+import org.example.memosm.data.offline.SessionCacheStore
 import org.example.memosm.model.Account
 import org.example.memosm.model.UserStats
 
@@ -85,7 +86,19 @@ class UserStatsWidget : GlanceAppWidget(), KoinComponent {
                                         StatsState.Error("User not found")
                                     }
                                 } catch (e: Exception) {
-                                    StatsState.Error(e.message ?: "Network error")
+                                    // Offline fallback: serve the last stats the
+                                    // app persisted in the session snapshot,
+                                    // with the time they were saved.
+                                    val sessionCacheStore: SessionCacheStore by inject()
+                                    val snapshot = sessionCacheStore.get(accountId)
+                                    val cachedStats = snapshot?.userStats
+                                    if (cachedStats != null) {
+                                        StatsState.Success(
+                                            cachedStats, account, snapshot.savedAt
+                                        )
+                                    } else {
+                                        StatsState.Error(e.message ?: "Network error")
+                                    }
                                 }
                             } else {
                                 StatsState.Error("Account not found")
@@ -110,7 +123,7 @@ class UserStatsWidget : GlanceAppWidget(), KoinComponent {
                             is StatsState.Loading -> LoadingState()
                             is StatsState.Error -> ErrorState(currentState.message)
                             is StatsState.Success -> StatsContent(
-                                currentState.stats, currentState.account
+                                currentState.stats, currentState.account, currentState.savedAt
                             )
                         }
                     }
@@ -155,7 +168,7 @@ class UserStatsWidget : GlanceAppWidget(), KoinComponent {
     }
 
     @Composable
-    fun StatsContent(stats: UserStats, account: Account) {
+    fun StatsContent(stats: UserStats, account: Account, savedAt: Long = 0L) {
         val context = androidx.glance.LocalContext.current
         val size = androidx.glance.LocalSize.current
         val notAvailable = context.getString(R.string.common_not_available)
@@ -190,14 +203,17 @@ class UserStatsWidget : GlanceAppWidget(), KoinComponent {
                             modifier = GlanceModifier.fillMaxWidth().padding(bottom = rowSpacing),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "Stats for ${account.name}",
-                                style = TextStyle(
-                                    color = GlanceTheme.colors.onSurface,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = headerFontSize
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = "Stats for ${account.name}",
+                                    style = TextStyle(
+                                        color = GlanceTheme.colors.onSurface,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = headerFontSize
+                                    )
                                 )
-                            )
+                                LastUpdatedText(context, savedAt, labelFontSize)
+                            }
                         }
                     }
                     item {
@@ -225,11 +241,31 @@ class UserStatsWidget : GlanceAppWidget(), KoinComponent {
                         ),
                         modifier = GlanceModifier.padding(bottom = rowSpacing)
                     )
+                    LastUpdatedText(context, savedAt, labelFontSize)
                     Row1(context, stats, valueFontSize, labelFontSize)
                     Spacer(GlanceModifier.height(rowSpacing))
                     Row2(context, stats, notAvailable, valueFontSize, labelFontSize)
                 }
             }
+        }
+    }
+
+    /**
+     * "Last updated" line shown when the widget serves the offline session
+     * snapshot instead of fresh stats (savedAt = 0 hides it).
+     */
+    @Composable
+    fun LastUpdatedText(context: Context, savedAt: Long, labelSize: androidx.compose.ui.unit.TextUnit) {
+        if (savedAt > 0) {
+            val formatted = java.text.DateFormat.getDateTimeInstance(
+                java.text.DateFormat.SHORT, java.text.DateFormat.SHORT
+            ).format(java.util.Date(savedAt))
+            Text(
+                text = context.getString(R.string.user_stats_widget_last_updated, formatted),
+                style = TextStyle(
+                    color = GlanceTheme.colors.onSurfaceVariant, fontSize = labelSize
+                )
+            )
         }
     }
 
@@ -328,6 +364,8 @@ class UserStatsWidget : GlanceAppWidget(), KoinComponent {
 
 sealed class StatsState {
     object Loading : StatsState()
-    data class Success(val stats: UserStats, val account: Account) : StatsState()
+    data class Success(val stats: UserStats, val account: Account, val savedAt: Long = 0L) :
+        StatsState()
+
     data class Error(val message: String) : StatsState()
 }
