@@ -59,17 +59,19 @@ fun MemoImage(
 ) {
     val context = LocalContext.current
     val attachmentCacheManager = org.example.memosm.MemosApplication.instance.attachmentCacheManager
-    val modelState = produceState<Any?>(initialValue = null, uri, attachment, hostUrl) {
+    val imageModels = produceState<Pair<Any?, Any?>>(Pair(null, null), uri, attachment, hostUrl) {
         value = withContext(Dispatchers.IO) {
             when {
-                uri != Uri.EMPTY -> uri
+                uri != Uri.EMPTY -> Pair(uri, uri)
                 attachment != null -> {
                     // Prefer the offline-downloaded file when available. The
                     // lookup is account-scoped via the display host URL so a
                     // same-named attachment of another server cannot be picked up.
                     val localFile = attachmentCacheManager.getLocalFileByHost(hostUrl, attachment.name)
-                    if (localFile != null) localFile
-                    else AttachmentManager.getAttachmentUrl(hostUrl, attachment)
+                    val original = if (localFile != null) {
+                        localFile
+                    } else {
+                        AttachmentManager.getAttachmentUrl(hostUrl, attachment)
                         ?: when {
                             !attachment.content.isNullOrBlank() -> {
                                 try {
@@ -81,13 +83,28 @@ fun MemoImage(
 
                             else -> null
                         }
+                    }
+
+                    // Local files have no server-side thumbnail; preview == original
+                    // makes the loader use the original directly.
+                    val preview = if (original is String && localFile == null) {
+                        AttachmentManager.getAttachmentThumbnailUrl(hostUrl, attachment) ?: original
+                    } else {
+                        original
+                    }
+                    Pair(preview, original)
                 }
 
-                else -> null
+                else -> Pair(null, null)
             }
         }
     }
-    val model = modelState.value
+    val previewModel = imageModels.value.first
+    val originalModel = imageModels.value.second
+    var useOriginal by remember(previewModel, originalModel, isFullScreen) {
+        mutableStateOf(isFullScreen || previewModel == originalModel)
+    }
+    val model = if (useOriginal) originalModel else previewModel
 
     val cacheKey = remember(uri, attachment, hostUrl) {
         when {
@@ -143,6 +160,10 @@ fun MemoImage(
                     }
                 },
                 onError = {
+                    if (!useOriginal && originalModel != null && originalModel != previewModel) {
+                        useOriginal = true
+                        return@AsyncImage
+                    }
                     android.util.Log.e(
                         "MemosDebug", "MemoImage error: $filename, result=${it.result.throwable}"
                     )
