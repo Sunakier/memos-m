@@ -158,10 +158,14 @@ fun AttachmentsScreen(
             if (uiState.attachmentList.list.items.isEmpty() && uiState.attachmentList.list.isLoading && !uiState.isRefreshing) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (uiState.attachmentList.list.items.isEmpty() && !uiState.attachmentList.list.isLoading) {
-                if (uiState.attachmentList.list.errorMessage != null) {
+                if (uiState.attachmentList.list.errorMessage != null || uiState.error != null) {
                     ErrorView(
                         title = stringResource(R.string.common_error_failed_to_load_attachments),
-                        message = uiState.attachmentList.list.errorMessage!!,
+                        message = uiState.attachmentList.list.errorMessage
+                            ?: stringResource(
+                                uiState.error!!.resourceId,
+                                *uiState.error!!.formatArgs.toTypedArray()
+                            ),
                         onRetry = { viewModel.fetchAttachments(refresh = false) },
                         modifier = Modifier.align(Alignment.Center)
                     )

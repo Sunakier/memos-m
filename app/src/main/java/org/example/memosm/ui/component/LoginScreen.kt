@@ -1,6 +1,7 @@
 package org.example.memosm.ui.component
 
 import android.util.Log
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,7 @@ import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -121,7 +124,7 @@ fun LoginDialog(
                             .align(Alignment.TopEnd)
                             .padding(8.dp)
                     ) {
-                        Icon(Icons.Outlined.Close, contentDescription = "Close")
+                        Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.common_close))
                     }
 
                     LoginContent(
@@ -153,9 +156,17 @@ fun LoginContent(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val scope = rememberCoroutineScope()
+    val networkPermission = LocalNetworkPermission.current
+    val localNetworkDenied = stringResource(R.string.local_network_permission_denied)
 
     val errorEmptyHost = stringResource(R.string.login_error_empty_host)
     val errorFailed = stringResource(R.string.login_error_failed)
+    val errorInvalidUrl = stringResource(R.string.login_error_invalid_url)
+    val errorInvalidInstance = stringResource(R.string.login_error_invalid_instance)
+    val errorEmptyToken = stringResource(R.string.login_error_empty_token)
+    val errorVerificationFailed = stringResource(R.string.login_error_verification_failed)
+    val errorEmptyCredentials = stringResource(R.string.login_error_empty_credentials)
+    val errorInvalidCredentials = stringResource(R.string.login_error_invalid_credentials)
 
     val performLogin = {
         scope.launch {
@@ -177,12 +188,16 @@ fun LoginContent(
             val httpUrl = normalizedHost.toHttpUrlOrNull()
 
             if (httpUrl == null) {
-                errorMessage = "Invalid URL format"
+                errorMessage = errorInvalidUrl
                 isLoading = false
                 return@launch
             }
 
             try {
+                if (!networkPermission.ensureAccess(baseUrl)) {
+                    errorMessage = localNetworkDenied
+                    return@launch
+                }
                 val logging = HttpLoggingInterceptor { message ->
                     Log.d("MemosApi", message)
                 }.apply {
@@ -200,7 +215,7 @@ fun LoginContent(
                 try {
                     api.getInstanceProfile()
                 } catch (e: Exception) {
-                    errorMessage = "Invalid Memos instance or host URL"
+                    errorMessage = errorInvalidInstance
                     isLoading = false
                     return@launch
                 }
@@ -208,7 +223,7 @@ fun LoginContent(
                 if (loginMode == LoginMode.TOKEN) {
                     val trimmedToken = token.trim()
                     if (trimmedToken.isBlank()) {
-                        errorMessage = "Token cannot be empty"
+                        errorMessage = errorEmptyToken
                         isLoading = false
                         return@launch
                     }
@@ -227,12 +242,12 @@ fun LoginContent(
                         authApi.getCurrentSession()
                         onLoginSuccess(baseUrl, trimmedToken)
                     } catch (e: Exception) {
-                        errorMessage =
-                            "Invalid token: ${e.localizedMessage ?: "Verification failed"}"
+                        Log.e("MemosLogin", "Token verification failed", e)
+                        errorMessage = errorVerificationFailed
                     }
                 } else {
                     if (username.isBlank() || password.isBlank()) {
-                        errorMessage = "Username and password cannot be empty"
+                        errorMessage = errorEmptyCredentials
                         isLoading = false
                         return@launch
                     }
@@ -245,14 +260,15 @@ fun LoginContent(
 
                     } catch (e: Exception) {
                         Log.e("MemosLogin", "Login failed", e)
-                        errorMessage =
-                            "Login failed: ${e.localizedMessage ?: "Check your credentials"}"
+                        errorMessage = errorInvalidCredentials
                     }
                 }
 
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("MemosLogin", "Login failed", e)
-                errorMessage = errorFailed.format(e.localizedMessage ?: "unknown")
+                errorMessage = errorFailed
             } finally {
                 isLoading = false
             }
@@ -273,6 +289,12 @@ fun LoginContent(
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(bottom = 32.dp)
         )
+
+        if (Build.VERSION.SDK_INT >= 37 && !networkPermission.granted) {
+            TextButton(onClick = { scope.launch { networkPermission.requestAccess() } }) {
+                Text(stringResource(R.string.local_network_permission_title))
+            }
+        }
 
         SecondaryTabRow(
             selectedTabIndex = loginMode.ordinal, modifier = Modifier.fillMaxWidth()

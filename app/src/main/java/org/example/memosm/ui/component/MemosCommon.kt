@@ -444,7 +444,7 @@ fun MemosScaffold(
                     item {
                         ErrorView(
                             title = errorTitle,
-                            message = uiState.error!!,
+                            message = stringResource(uiState.error!!.resourceId, *uiState.error!!.formatArgs.toTypedArray()),
                             onRetry = onRefresh,
                             modifier = Modifier.fillParentMaxHeight(0.7f)
                         )

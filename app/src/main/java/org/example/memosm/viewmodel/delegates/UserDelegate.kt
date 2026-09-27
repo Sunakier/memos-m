@@ -1,5 +1,6 @@
 package org.example.memosm.viewmodel.delegates
 
+import org.example.memosm.R
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ import org.example.memosm.model.UserSetting
 import org.example.memosm.model.Visibility
 import org.example.memosm.model.toUserSnapshot
 import org.example.memosm.viewmodel.MemosUiState
+import org.example.memosm.viewmodel.UiMessage
 
 interface UserDelegate {
     suspend fun fetchUsers(names: List<String>)
@@ -340,7 +342,8 @@ class UserDelegateImpl(
                 }
 
             } catch (e: Exception) {
-                uiState.update { it.copy(error = e.message) }
+                Log.e("MemosViewModel", "Operation failed", e)
+                uiState.update { it.copy(error = UiMessage(R.string.common_operation_failed)) }
             }
         }
     }
@@ -398,7 +401,8 @@ class UserDelegateImpl(
                     onResult(true)
                 }
             } catch (e: Exception) {
-                uiState.update { it.copy(error = e.message) }
+                Log.e("MemosViewModel", "Operation failed", e)
+                uiState.update { it.copy(error = UiMessage(R.string.common_operation_failed)) }
                 onResult(false)
             }
         }
@@ -413,7 +417,8 @@ class UserDelegateImpl(
                 // The Original called updateCurrentAccountInList
                 // check how we handle this callback
             } catch (e: Exception) {
-                uiState.update { it.copy(error = e.message) }
+                Log.e("MemosViewModel", "Operation failed", e)
+                uiState.update { it.copy(error = UiMessage(R.string.common_operation_failed)) }
             }
         }
     }
@@ -464,7 +469,7 @@ class UserDelegateImpl(
                 uiState.update {
                     it.copy(
                         session = org.example.memosm.viewmodel.SessionState(),
-                        error = "No active account found"
+                        error = UiMessage(R.string.common_no_active_account)
                     )
                 }
             }
@@ -496,7 +501,8 @@ class UserDelegateImpl(
 
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error switching account", e)
-                uiState.update { it.copy(error = e.message) }
+                Log.e("MemosViewModel", "Operation failed", e)
+                uiState.update { it.copy(error = UiMessage(R.string.common_operation_failed)) }
             }
         }
     }

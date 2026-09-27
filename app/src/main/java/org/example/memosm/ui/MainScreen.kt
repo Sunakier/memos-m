@@ -68,6 +68,7 @@ import org.example.memosm.model.ShareIntentData
 import org.example.memosm.model.Visibility
 import org.example.memosm.ui.component.ConflictDialog
 import org.example.memosm.ui.component.LoginDialog
+import org.example.memosm.ui.component.LocalNetworkPermission
 import org.example.memosm.ui.component.composer.ComposerMode
 import org.example.memosm.ui.component.composer.MemoComposerScreen
 import org.example.memosm.ui.component.item.media.MemoImage
@@ -101,6 +102,14 @@ fun MainScreen(
     val uiState by viewModel.uiState.collectAsState()
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
+    val networkPermission = LocalNetworkPermission.current
+    var previouslyGranted by remember { mutableStateOf(networkPermission.granted) }
+    LaunchedEffect(networkPermission.granted) {
+        if (networkPermission.granted && !previouslyGranted) {
+            viewModel.userDelegate.updateCurrentAccountInList()
+        }
+        previouslyGranted = networkPermission.granted
+    }
 
     val saveableStateHolder = rememberSaveableStateHolder()
 
@@ -217,7 +226,7 @@ fun MainScreen(
                     token = uiState.session.token,
                     hostUrl = hostUrl,
                     uri = avatarUri,
-                    filename = "avatar",
+                    contentDescription = null,
                     isRound = true,
                     placeholderIcon = if (isSelected) Icons.Default.Person else Icons.Outlined.Person,
                     modifier = modifier
