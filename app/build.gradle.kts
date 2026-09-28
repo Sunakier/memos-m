@@ -1,5 +1,6 @@
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Properties
 
 val gitShortHash: Provider<String> = providers.exec {
     commandLine("git", "rev-parse", "--short", "HEAD")
@@ -37,14 +38,23 @@ android {
         unitTests.isReturnDefaultValues = true
     }
 
+    // Local signing credentials come from local.properties (gitignored); CI keeps using env vars.
+    val localProps = Properties().apply {
+        rootProject.file("local.properties").takeIf { it.exists() }
+            ?.inputStream()?.use { ins -> this@apply.load(ins) }
+    }
+    fun localOrEnv(prop: String, env: String): String? =
+        localProps.getProperty(prop) ?: providers.environmentVariable(env).orNull
+
     signingConfigs {
         create("release") {
-            val keystorePath = providers.environmentVariable("KEYSTORE_PATH")
-            storeFile = keystorePath.map { file(it) }.orNull
+            storeFile = localOrEnv("keystore.path", "KEYSTORE_PATH")
+                ?.let { file(it) } ?: rootProject.file("app/release.keystore").takeIf { it.exists() }
 
-            storePassword = providers.environmentVariable("KEYSTORE_PASSWORD").orNull
-            keyAlias = providers.environmentVariable("KEY_ALIAS").orElse("key0").orNull
-            keyPassword = providers.environmentVariable("KEY_PASSWORD").orNull
+            storePassword = localOrEnv("keystore.password", "KEYSTORE_PASSWORD")
+            keyAlias = localOrEnv("keystore.alias", "KEY_ALIAS") ?: "key0"
+            keyPassword = localOrEnv("keystore.keyPassword", "KEY_PASSWORD")
+                ?: localOrEnv("keystore.password", "KEYSTORE_PASSWORD")
         }
     }
 
