@@ -29,8 +29,15 @@ render.experimental.xml
 # Google Services (e.g. APIs or Firebase)
 google-services.json
 
+# Scratch space: local build outputs, plans, throwaway files
+tmp/
+
 # Android Profiling
 *.hprof
 *.salive
 /app/release
 *.klib
+AGENTS.md
+
+# Mock server run logs
+mock-server/*.log
