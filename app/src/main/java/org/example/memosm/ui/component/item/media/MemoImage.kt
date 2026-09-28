@@ -50,6 +50,7 @@ fun MemoImage(
     hostUrl: String = "",
     uri: Uri = Uri.EMPTY,
     filename: String = "",
+    contentDescription: String? = filename.takeIf { it.isNotBlank() },
     isRound: Boolean = false,
     placeholderIcon: ImageVector? = null,
     onRatioAvailable: (Float) -> Unit = {},
@@ -64,14 +65,10 @@ fun MemoImage(
             when {
                 uri != Uri.EMPTY -> Pair(uri, uri)
                 attachment != null -> {
-                    // Prefer the offline-downloaded file when available. The
-                    // lookup is account-scoped via the display host URL so a
-                    // same-named attachment of another server cannot be picked up.
-                    val localFile = attachmentCacheManager.getLocalFileByHost(hostUrl, attachment.name)
-                    val original = if (localFile != null) {
-                        localFile
-                    } else {
-                        AttachmentManager.getAttachmentUrl(hostUrl, attachment)
+                    // Prefer the account-scoped offline file. A remote attachment
+                    // still keeps upstream's thumbnail preview and original fallback.
+                    val original = attachmentCacheManager.getLocalFileByHost(hostUrl, attachment.name)
+                        ?: AttachmentManager.getAttachmentUrl(hostUrl, attachment)
                         ?: when {
                             !attachment.content.isNullOrBlank() -> {
                                 try {
@@ -83,11 +80,8 @@ fun MemoImage(
 
                             else -> null
                         }
-                    }
 
-                    // Local files have no server-side thumbnail; preview == original
-                    // makes the loader use the original directly.
-                    val preview = if (original is String && localFile == null) {
+                    val preview = if (original is String) {
                         AttachmentManager.getAttachmentThumbnailUrl(hostUrl, attachment) ?: original
                     } else {
                         original
@@ -145,7 +139,7 @@ fun MemoImage(
 
             AsyncImage(
                 model = imageRequest,
-                contentDescription = filename,
+                contentDescription = contentDescription,
                 modifier = imgModifier.zoomable(isFullScreen, onDismiss),
                 contentScale = if (isFullScreen) ContentScale.Fit else ContentScale.Crop,
                 onLoading = { isLoading = true; isError = false },

@@ -2,13 +2,14 @@ package org.example.memosm.viewmodel.delegates
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.example.memosm.MemosApplication
 import org.example.memosm.R
+import org.example.memosm.MemosApplication
 import org.example.memosm.api.GsonProvider
 import org.example.memosm.api.MemosApi
 import org.example.memosm.data.cache.CacheListType
@@ -26,6 +27,7 @@ import org.example.memosm.model.UpsertMemoReactionRequest
 import org.example.memosm.model.User
 import org.example.memosm.model.Visibility
 import org.example.memosm.viewmodel.MemosUiState
+import org.example.memosm.viewmodel.UiMessage
 import org.example.memosm.viewmodel.manager.AttachmentManager
 import org.example.memosm.viewmodel.manager.CommentListManager
 import java.io.IOException
@@ -106,6 +108,12 @@ class MemoActionDelegateImpl(
     /** True when the failure is connectivity-related and safe to queue offline. */
     private fun shouldQueueOffline(e: Exception): Boolean =
         !isOnlineProvider() || e is IOException
+
+    /** Keep the upstream UI error localized while retaining a diagnostic log. */
+    private fun reportOperationFailure(e: Exception) {
+        Log.e("MemosViewModel", "Operation failed", e)
+        uiState.update { it.copy(error = UiMessage(R.string.common_operation_failed)) }
+    }
 
     /**
      * Queue [op] for durable replay, apply the optimistic local change, report
@@ -244,7 +252,7 @@ class MemoActionDelegateImpl(
                         applyLocalCreate(localMemo, draftIdToDelete)
                     }
                 } else {
-                    uiState.update { it.copy(error = e.message) }
+                    reportOperationFailure(e)
                     onError()
                 }
             } finally {
@@ -338,7 +346,7 @@ class MemoActionDelegateImpl(
                         applyLocalUpdate(memo, update)
                     }
                 } else {
-                    uiState.update { it.copy(error = e.message) }
+                    reportOperationFailure(e)
                 }
             }
         }
@@ -400,7 +408,7 @@ class MemoActionDelegateImpl(
                         listUpdater.removeMemoFromLists(name)
                     }
                 } else {
-                    uiState.update { it.copy(error = e.message) }
+                    reportOperationFailure(e)
                 }
             }
         }
@@ -443,7 +451,7 @@ class MemoActionDelegateImpl(
                         cacheLocalMemo(update)
                     }
                 } else {
-                    uiState.update { it.copy(error = e.message) }
+                    reportOperationFailure(e)
                 }
             }
         }
@@ -482,7 +490,7 @@ class MemoActionDelegateImpl(
                         applyLocalComment(localComment, parentName)
                     }
                 } else {
-                    uiState.update { it.copy(error = e.message) }
+                    reportOperationFailure(e)
                 }
             }
         }
@@ -560,7 +568,7 @@ class MemoActionDelegateImpl(
                     // The server rejected the request (e.g. 401/404): roll the
                     // optimistic reaction back and surface the error, instead of
                     // leaving a reaction on screen that was never applied.
-                    uiState.update { it.copy(error = e.message) }
+                    reportOperationFailure(e)
                     listUpdater.updateMemoInLists(memo)
                 }
             }
@@ -616,7 +624,7 @@ class MemoActionDelegateImpl(
                     // The server rejected the request (e.g. 401/404): roll the
                     // optimistic removal back and surface the error, instead of
                     // leaving the reaction hidden while it still exists on the server.
-                    uiState.update { it.copy(error = e.message) }
+                    reportOperationFailure(e)
                     listUpdater.updateMemoInLists(memo)
                 }
             }

@@ -30,7 +30,7 @@ import org.example.memosm.data.sync.SyncWorkScheduler
 import org.example.memosm.data.sync.WorkManagerSyncWorkScheduler
 import org.example.memosm.viewmodel.MemosViewModel
 import org.koin.android.ext.koin.androidContext
-import org.koin.androidx.viewmodel.dsl.viewModel
+import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import java.util.concurrent.TimeUnit
 

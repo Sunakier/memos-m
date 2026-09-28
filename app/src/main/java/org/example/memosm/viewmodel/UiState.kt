@@ -119,7 +119,7 @@ data class MemosUiState(
     val isRefreshing: Boolean = false,
     val refreshTrigger: Long = 0L,
     val refreshSource: RefreshSource = RefreshSource.Manual,
-    val error: String? = null,
+    val error: UiMessage? = null,
 
     // --- Offline / sync state ---
     val isOnline: Boolean = false,

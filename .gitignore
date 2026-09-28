@@ -37,7 +37,7 @@ tmp/
 *.salive
 /app/release
 *.klib
-AGENTS.md
 
-# Mock server run logs
-mock-server/*.log
+# Local development only (not part of the app)
+mock-server/
+AGENTS.md
