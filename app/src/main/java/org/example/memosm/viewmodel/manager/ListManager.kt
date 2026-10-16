@@ -103,6 +103,14 @@ abstract class BaseListManager<T>(
     // Optional: Process item before adding to state (e.g. resolve relative URLs)
     protected open suspend fun processItem(item: T): T = item
 
+    /**
+     * Optional: predicate the active server-side selection (shortcut chip /
+     * hashtag) maps to for cached rows; null when nothing is selected. Applied
+     * to cache reads (prefill, offline load, failure fallback) so the offline
+     * list matches what the filtered server query would return.
+     */
+    protected open fun cacheFilter(): ((T) -> Boolean)? = null
+
     override fun fetch(refresh: Boolean, softRefresh: Boolean): Job? {
         android.util.Log.d(
             TAG,
@@ -190,18 +198,22 @@ abstract class BaseListManager<T>(
         if (cacheCallbacks == null) return
         launchRequest { checkCurrent ->
             try {
-                val cachedItems = cacheCallbacks.getCachedData(null).filterNot { nameProvider?.invoke(it) in removedNames }
+                val filter = cacheFilter()
+                val cachedItems = visibleCachedItems(null)
+                    .filterNot { nameProvider?.invoke(it) in removedNames }
                 coroutineContext.ensureActive()
                 checkCurrent()
-                if (cachedItems.isNotEmpty()) {
-                    _listState.update { it.copy(
-                        items = sortIfNeeded(cachedItems),
-                        isLoading = false,
-                        nextPageToken = null,
-                        isOffline = true,
-                        showingCached = true
-                    ) }
-                }
+                // With a selection active an empty filtered result is honest
+                // and must replace the list; without one, an empty cache
+                // keeps whatever is on screen (previous behavior).
+                if (cachedItems.isEmpty() && filter == null) return@launchRequest
+                _listState.update { it.copy(
+                    items = sortIfNeeded(cachedItems),
+                    isLoading = false,
+                    nextPageToken = null,
+                    isOffline = true,
+                    showingCached = true
+                ) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -213,6 +225,17 @@ abstract class BaseListManager<T>(
     /** Apply the manager's sort order (when configured) to a list of items. */
     private fun sortIfNeeded(items: List<T>): List<T> =
         if (sortComparator != null) items.sortedWith(sortComparator) else items
+
+    /**
+     * Cached rows visible under the active selection filter. Used by the
+     * prefill, the offline load and the failure fallback; null filter keeps
+     * every row.
+     */
+    private suspend fun visibleCachedItems(limit: Int?): List<T> {
+        val cached = cacheCallbacks?.getCachedData(limit) ?: return emptyList()
+        val filter = cacheFilter()
+        return if (filter != null) cached.filter(filter) else cached
+    }
 
     // Helper to allow external updates (e.g. CRUD operations updating the list locally)
     fun updateState(transform: (PaginatedListState<T>) -> PaginatedListState<T>) {
@@ -284,8 +307,10 @@ abstract class BaseListManager<T>(
                         // Limit pushed into the cache query: only the first
                         // [prefillLimit] rows are read and deserialized, so a
                         // pre-downloaded history of thousands of memos does
-                        // not delay first paint.
-                        cacheCallbacks.getCachedData(prefillLimit)
+                        // not delay first paint. Filtered by the active
+                        // selection so a prefill never shows rows the current
+                        // filter excludes.
+                        visibleCachedItems(prefillLimit)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -456,7 +481,7 @@ abstract class BaseListManager<T>(
                 // On failure, try to load from cache (only for initial fetch)
                 if (pageToken == null && cacheCallbacks != null) {
                     try {
-                        val cachedItems = cacheCallbacks.getCachedData(null).filterNot { nameProvider?.invoke(it) in removedNames }
+                        val cachedItems = visibleCachedItems(null).filterNot { nameProvider?.invoke(it) in removedNames }
                         coroutineContext.ensureActive()
                         checkCurrent()
                         if (cachedItems.isNotEmpty()) {
