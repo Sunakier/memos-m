@@ -32,6 +32,7 @@ import org.example.memosm.viewmodel.MemosViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
+import org.koin.core.qualifier.named
 import java.util.concurrent.TimeUnit
 
 val appModule = module {
@@ -42,17 +43,17 @@ val appModule = module {
         )
     }
 
-    single { DataStoreManager(get()) }
+    single { DataStoreManager(get(), onAccountsChanged = { android.app.backup.BackupManager(androidContext()).dataChanged() }) }
 
     single { DraftManager(androidContext()) }
 
     // Room
     single { MemoCacheDatabase.getInstance(androidContext()) }
-    single { get<MemoCacheDatabase>().memoDao() }
+    single<org.example.memosm.data.cache.MemoDao> { org.example.memosm.data.backup.GuardedMemoDao(get<MemoCacheDatabase>().memoDao()) }
     single { get<MemoCacheDatabase>().pendingOpDao() }
-    single { get<MemoCacheDatabase>().cachedAttachmentDao() }
+    single<CachedAttachmentDao> { org.example.memosm.data.backup.GuardedAttachmentDao(get<MemoCacheDatabase>().cachedAttachmentDao()) }
     single { get<MemoCacheDatabase>().attachmentUploadDao() }
-    single { get<MemoCacheDatabase>().cachedAttachmentMetaDao() }
+    single<org.example.memosm.data.media.CachedAttachmentMetaDao> { org.example.memosm.data.backup.GuardedAttachmentMetaDao(get<MemoCacheDatabase>().cachedAttachmentMetaDao()) }
     // The audit log lives in its own database so it survives cache-DB corruption.
     single { AuditDatabase.getInstance(androidContext()) }
     single { get<AuditDatabase>().syncAuditDao() }
@@ -60,7 +61,8 @@ val appModule = module {
     single { SyncRepository(get()) }
     single { SyncAuditLogger(get()) }
     single { AttachmentUploadQueue(androidContext(), get(), get()) }
-    single { LocalRecoveryService(androidContext(), get(), get(), get()) }
+    single { org.example.memosm.data.backup.BackupService(androidContext(), get(), get(), get()) }
+    single { LocalRecoveryService(get(), get()) }
     single<SyncWorkScheduler> { WorkManagerSyncWorkScheduler(androidContext()) }
 
     // Network state monitoring
@@ -81,14 +83,14 @@ val appModule = module {
     // Storage SPI adapters (data/store/); business code consumes the
     // facades below, never these adapters directly.
     single { RoomAttachmentMetaStore(get()) }
-    single<SnapshotStore<SessionSnapshotData>> {
+    single<SnapshotStore<SessionSnapshotData>>(named("session")) {
         DataStoreSnapshotStore(
             dataStoreManager = get(),
             domain = "session",
             type = SessionSnapshotData::class.java
         )
     }
-    single<SnapshotStore<NotificationsSnapshotData>> {
+    single<SnapshotStore<NotificationsSnapshotData>>(named("notifications")) {
         DataStoreSnapshotStore(
             dataStoreManager = get(),
             domain = "notifications",
@@ -97,8 +99,8 @@ val appModule = module {
     }
 
     // Cache-abstraction facades (data/offline/)
-    single { SessionCacheStore(get()) }
-    single { NotificationCacheStore(get()) }
+    single { SessionCacheStore(get(named("session"))) }
+    single { NotificationCacheStore(get(named("notifications"))) }
     single { AttachmentCacheStore(get(), get(), get()) }
 }
 

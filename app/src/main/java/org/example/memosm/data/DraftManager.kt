@@ -7,6 +7,8 @@ import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonToken
 import com.google.gson.stream.JsonWriter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -22,7 +24,7 @@ import java.io.FileWriter
 import kotlin.time.Instant
 
 /**
- * Manages draft storage in the app's cache directory using streaming JSON parsing.
+ * Manages durable draft storage in the app's private files directory using streaming JSON parsing.
  * Uses GSON's JsonReader/JsonWriter to avoid loading entire JSON into memory,
  * which prevents OOM errors when drafts contain large base64-encoded attachments.
  *
@@ -32,6 +34,8 @@ class DraftManager(private val context: Context) {
 
     private val gson = Gson()
     private val mutex = Mutex()
+    private val draftChanges = MutableSharedFlow<String>(extraBufferCapacity = 64)
+    val changes = draftChanges.asSharedFlow()
 
     companion object {
         private const val TAG = "DraftManager"
@@ -40,55 +44,77 @@ class DraftManager(private val context: Context) {
     }
 
     private fun getDraftsDir(): File {
-        val dir = File(context.cacheDir, DRAFTS_DIR)
-        if (!dir.exists()) {
-            dir.mkdirs()
-        }
+        val dir = File(context.filesDir, DRAFTS_DIR)
+        check(dir.exists() || dir.mkdirs()) { "Could not open draft storage" }
         return dir
     }
 
     private fun getDraftsFile(accountId: String): File {
-        return File(getDraftsDir(), draftsFileName(accountId))
+        require(accountId.isNotBlank() && !accountId.contains('/') && !accountId.contains('\\') && accountId != "." && accountId != "..") { "Invalid draft account" }
+        val target = File(getDraftsDir(), draftsFileName(accountId))
+        val legacy = File(File(context.cacheDir, DRAFTS_DIR), draftsFileName(accountId))
+        if (!target.exists() && legacy.exists()) {
+            if (!legacy.renameTo(target)) {
+                val temp = File(target.parentFile, ".${target.name}.migration")
+                legacy.inputStream().use { input -> temp.outputStream().use { output -> input.copyTo(output); output.fd.sync() } }
+                check(temp.renameTo(target)) { "Could not migrate drafts" }
+                legacy.delete()
+            }
+        }
+        return target
     }
 
     /**
      * Get all drafts for an account using streaming JSON parsing.
      * Reads one draft at a time to minimize memory usage.
      */
-    suspend fun getDrafts(accountId: String): List<Draft> = withContext(Dispatchers.IO) {
-        mutex.withLock {
+    suspend fun getDrafts(accountId: String, strict: Boolean = false): List<Draft> = withContext(Dispatchers.IO) {
+        withDraftLock {
             try {
                 val file = getDraftsFile(accountId)
-                if (!file.exists()) return@withContext emptyList()
+                if (!file.exists()) return@withDraftLock emptyList()
 
                 val drafts = mutableListOf<Draft>()
 
                 JsonReader(BufferedReader(FileReader(file))).use { reader ->
+                    if (strict) require(reader.peek() == JsonToken.BEGIN_ARRAY) { "Invalid draft storage" }
                     if (reader.peek() == JsonToken.BEGIN_ARRAY) {
                         reader.beginArray()
                         while (reader.hasNext()) {
                             // Parse each draft object individually
-                            val draft = parseDraft(reader)
+                            val draft = parseDraft(reader, strict)
                             if (draft != null) {
                                 drafts.add(draft)
                             }
                         }
                         reader.endArray()
                     }
+                    if (strict) require(reader.peek() == JsonToken.END_DOCUMENT) { "Unexpected draft storage content" }
                 }
 
                 drafts
             } catch (e: Exception) {
+                if (strict) throw e
                 Log.e(TAG, "Error reading drafts for account $accountId", e)
                 emptyList()
             }
         }
     }
 
+    private suspend fun <T> withDraftLock(action: suspend () -> T): T =
+        org.example.memosm.data.backup.BackupCoordinator.withStorageLock { mutex.withLock { action() } }
+
+    suspend fun replaceDrafts(accountId: String, drafts: List<Draft>): Unit = withContext(Dispatchers.IO) {
+        withDraftLock {
+            saveDraftsInternal(accountId, drafts)
+            draftChanges.tryEmit(accountId)
+        }
+    }
+
     /**
      * Parse a single Draft from the JsonReader.
      */
-    private fun parseDraft(reader: JsonReader): Draft? {
+    private fun parseDraft(reader: JsonReader, strict: Boolean = false): Draft? {
         try {
             var id: String? = null
             var content = ""
@@ -106,13 +132,14 @@ class DraftManager(private val context: Context) {
                     "visibility" -> visibility = try {
                         Visibility.valueOf(reader.nextString())
                     } catch (e: Exception) {
+                        if (strict) throw e
                         Visibility.PRIVATE
                     }
 
                     "attachments" -> {
                         reader.beginArray()
                         while (reader.hasNext()) {
-                            val attachment = parseAttachment(reader)
+                            val attachment = parseAttachment(reader, strict)
                             if (attachment != null) {
                                 attachments.add(attachment)
                             }
@@ -120,7 +147,7 @@ class DraftManager(private val context: Context) {
                         reader.endArray()
                     }
 
-                    "location" -> location = parseLocation(reader)
+                    "location" -> location = parseLocation(reader, strict)
                     "createdAt" -> createdAt = reader.nextLong()
                     "updatedAt" -> updatedAt = reader.nextLong()
                     else -> reader.skipValue()
@@ -128,12 +155,14 @@ class DraftManager(private val context: Context) {
             }
             reader.endObject()
 
+            if (strict) require(!id.isNullOrBlank()) { "Invalid draft ID" }
             return if (id != null) {
                 Draft(id, content, visibility, attachments, location, createdAt, updatedAt)
             } else {
                 null
             }
         } catch (e: Exception) {
+            if (strict) throw e
             Log.e(TAG, "Error parsing draft", e)
             reader.skipValue()
             return null
@@ -144,7 +173,7 @@ class DraftManager(private val context: Context) {
      * Parse a single Attachment from the JsonReader.
      * The base64 content is read as a string - streaming happens at file I/O level.
      */
-    private fun parseAttachment(reader: JsonReader): Attachment? {
+    private fun parseAttachment(reader: JsonReader, strict: Boolean = false): Attachment? {
         try {
             var name: String? = null
             var createTime: Instant? = null
@@ -216,6 +245,7 @@ class DraftManager(private val context: Context) {
                 clientId, localPath
             )
         } catch (e: Exception) {
+            if (strict) throw e
             Log.e(TAG, "Error parsing attachment", e)
             reader.skipValue()
             return null
@@ -225,7 +255,7 @@ class DraftManager(private val context: Context) {
     /**
      * Parse a Location from the JsonReader.
      */
-    private fun parseLocation(reader: JsonReader): Location? {
+    private fun parseLocation(reader: JsonReader, strict: Boolean = false): Location? {
         if (reader.peek() == JsonToken.NULL) {
             reader.nextNull()
             return null
@@ -258,6 +288,7 @@ class DraftManager(private val context: Context) {
 
             return Location(placeholder, latitude, longitude)
         } catch (e: Exception) {
+            if (strict) throw e
             Log.e(TAG, "Error parsing location", e)
             reader.skipValue()
             return null
@@ -267,8 +298,8 @@ class DraftManager(private val context: Context) {
     /**
      * Save or update a draft using streaming JSON writing.
      */
-    suspend fun saveDraft(accountId: String, draft: Draft): Unit = withContext(Dispatchers.IO) {
-        mutex.withLock {
+    suspend fun saveDraft(accountId: String, draft: Draft, strict: Boolean = false): Unit = withContext(Dispatchers.IO) {
+        withDraftLock {
             try {
                 val drafts = getDraftsInternal(accountId).toMutableList()
                 val existingIndex = drafts.indexOfFirst { it.id == draft.id }
@@ -282,7 +313,11 @@ class DraftManager(private val context: Context) {
                 }
 
                 saveDraftsInternal(accountId, drafts)
+                draftChanges.tryEmit(accountId)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
+                if (strict) throw e
                 Log.e(TAG, "Error saving draft for account $accountId", e)
             }
         }
@@ -293,12 +328,13 @@ class DraftManager(private val context: Context) {
      */
     suspend fun deleteDraft(accountId: String, draftId: String): Unit =
         withContext(Dispatchers.IO) {
-            mutex.withLock {
+            withDraftLock {
                 try {
                     val drafts = getDraftsInternal(accountId).toMutableList()
                     val removed = drafts.removeAll { it.id == draftId }
                     if (removed) {
                         saveDraftsInternal(accountId, drafts)
+                        draftChanges.tryEmit(accountId)
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error deleting draft $draftId for account $accountId", e)
@@ -310,11 +346,11 @@ class DraftManager(private val context: Context) {
      * Clear all drafts for an account.
      */
     suspend fun clearDrafts(accountId: String): Unit = withContext(Dispatchers.IO) {
-        mutex.withLock {
+        withDraftLock {
             try {
                 val file = getDraftsFile(accountId)
                 if (file.exists()) {
-                    file.delete()
+                    if (file.delete()) draftChanges.tryEmit(accountId)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error clearing drafts for account $accountId", e)
@@ -330,7 +366,7 @@ class DraftManager(private val context: Context) {
      */
     suspend fun draftsContain(accountId: String, needle: String): Boolean =
         withContext(Dispatchers.IO) {
-            mutex.withLock {
+            withDraftLock {
                 try {
                     val file = getDraftsFile(accountId)
                     file.exists() && file.readText().contains(needle)
@@ -383,15 +419,22 @@ class DraftManager(private val context: Context) {
     private fun saveDraftsInternal(accountId: String, drafts: List<Draft>) {
         val file = getDraftsFile(accountId)
 
-        JsonWriter(BufferedWriter(FileWriter(file))).use { writer ->
-            writer.setIndent("") // Compact output
+        val temp = File(file.parentFile, ".${file.name}.tmp")
+        try {
+            val output = temp.outputStream()
+            JsonWriter(BufferedWriter(java.io.OutputStreamWriter(output, Charsets.UTF_8))).use { writer ->
+                writer.setIndent("") // Compact output
 
-            writer.beginArray()
-            for (draft in drafts) {
-                writeDraft(writer, draft)
+                writer.beginArray()
+                for (draft in drafts) {
+                    writeDraft(writer, draft)
+                }
+                writer.endArray()
+                writer.flush()
+                output.fd.sync()
             }
-            writer.endArray()
-        }
+            check(temp.renameTo(file)) { "Could not save drafts" }
+        } finally { temp.delete() }
     }
 
     /**

@@ -1,5 +1,9 @@
 package org.example.memosm.ui.component
 
+import org.example.memosm.ui.theme.flatCardElevation
+import android.text.format.DateFormat
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandHorizontally
@@ -19,6 +23,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,7 +32,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
@@ -42,6 +50,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -53,10 +62,12 @@ import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.SearchBarValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -64,30 +75,49 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.example.memosm.R
 import org.example.memosm.api.MemoOrderBy
 import org.example.memosm.model.Memo
+import org.example.memosm.model.Visibility
 import org.example.memosm.ui.component.item.MemoItem
+import org.example.memosm.ui.nav.SettingsSection
+import org.example.memosm.ui.profile.SettingsActivity
 import org.example.memosm.viewmodel.MemosUiState
 import org.example.memosm.viewmodel.MemosViewModel
 import org.example.memosm.viewmodel.manager.LocalSearchFilter
-import android.text.format.DateFormat
-import java.util.Date
-import java.util.Locale
+
+/** The map has already loaded its history, so search can filter the same pool offline. */
+internal fun filterLocalSearchMemos(
+    memos: List<Memo>, query: String, tags: Set<String>, start: Long?, end: Long?, order: MemoOrderBy
+): List<Memo> {
+    val matches = memos.filter { memo ->
+        val created = memo.createTime?.toEpochMilliseconds()
+        memo.content.contains(query.trim(), ignoreCase = true) && tags.all { it in memo.tags.orEmpty() } &&
+            (start == null || (created != null && created >= start)) &&
+            (end == null || (created != null && created < end + 86_400_000L))
+    }
+    return if (order == MemoOrderBy.OLDEST) matches.sortedWith(compareBy<Memo> { it.createTime }.thenBy { it.name })
+    else matches.sortedWith(compareByDescending<Memo> { it.createTime }.thenBy { it.name })
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,26 +127,66 @@ fun MemoSearchBar(
     isExplore: Boolean = false,
     onMemoClick: (Memo) -> Unit,
     onExpandedChange: (Boolean) -> Unit = {},
-    placeholder: String = stringResource(R.string.memo_search_placeholder)
+    placeholder: String = stringResource(R.string.memo_search_placeholder),
+    localMemos: List<Memo>? = null,
+    onLocalResultsChanged: (List<Memo>) -> Unit = {},
+    filterActionLabel: String? = null,
+    requestedTag: String? = null,
+    onTagHandled: () -> Unit = {},
+    extraFilters: @Composable () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var query by rememberSaveable { mutableStateOf("") }
-    var expanded by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    val cacheSettings = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        viewModel.refreshAfterProfileDetails()
+    }
+    val queryState = rememberTextFieldState()
+    val query = queryState.text.toString()
+    val searchBarState = rememberSearchBarState()
+    val expanded = searchBarState.targetValue == SearchBarValue.Expanded
+    val searchScope = rememberCoroutineScope()
+    fun collapseSearch() { searchScope.launch { searchBarState.animateToCollapsed() } }
     val focusManager = LocalFocusManager.current
     val containerFocusRequester = remember { FocusRequester() }
+
+    // Report restored expansion too, so the feed header and navigation stay in sync.
+    LaunchedEffect(expanded) { onExpandedChange(expanded) }
 
     // Maintain a set of selected tags for AND filtering within the search context
     var searchSelectedTags by rememberSaveable { mutableStateOf(setOf<String>()) }
     var startDateMillis by rememberSaveable { mutableStateOf<Long?>(null) }
     var endDateMillis by rememberSaveable { mutableStateOf<Long?>(null) }
     var orderBy by rememberSaveable { mutableStateOf(MemoOrderBy.NEWEST) }
+    val tagHandled by androidx.compose.runtime.rememberUpdatedState(onTagHandled)
+    LaunchedEffect(requestedTag) {
+        requestedTag?.let { tag ->
+            searchSelectedTags = if (tag in searchSelectedTags) searchSelectedTags - tag else searchSelectedTags + tag
+            tagHandled()
+        }
+    }
+
+    // Search results are shared in the view model. Keep them scoped to the
+    // active feed, including while a new query is being debounced.
+    val currentUserName = uiState.session.currUser?.name
+    val searchMemos = remember(localMemos, query, searchSelectedTags, startDateMillis, endDateMillis, orderBy,
+        uiState.searchMemoList.list.items, isExplore, currentUserName) {
+        if (localMemos != null) filterLocalSearchMemos(localMemos, query, searchSelectedTags, startDateMillis, endDateMillis, orderBy)
+        else if (isExplore) uiState.searchMemoList.list.items.filter {
+            it.visibility == Visibility.PUBLIC || it.visibility == Visibility.PROTECTED
+        } else uiState.searchMemoList.list.items.filter {
+            currentUserName != null && it.creator == currentUserName
+        }
+    }
 
     // Aggregate tags from the search pool to be context-accurate
     val availableTags =
-        remember(uiState.searchMemoList.list.items, uiState.session.userStats, isExplore) {
-            if (isExplore) {
+        remember(localMemos, searchMemos, uiState.session.userStats, isExplore) {
+            if (localMemos != null) {
+                localMemos.flatMap { it.tags.orEmpty() }.groupingBy { it }.eachCount()
+                    .toList().sortedByDescending { it.second }.toMap()
+            } else if (isExplore) {
                 val tags = mutableMapOf<String, Int>()
-                uiState.searchMemoList.list.items.forEach { memo ->
+                searchMemos.forEach { memo ->
                     val regex = "#(\\w+)".toRegex()
                     regex.findAll(memo.content).forEach { match ->
                         val tag = match.groupValues[1]
@@ -130,8 +200,12 @@ fun MemoSearchBar(
         }
 
     // Effect to trigger server-side search whenever filters change
-    LaunchedEffect(query, searchSelectedTags, startDateMillis, endDateMillis, orderBy, expanded) {
-        if (expanded) {
+    val resultsCallback by androidx.compose.runtime.rememberUpdatedState(onLocalResultsChanged)
+    LaunchedEffect(localMemos, searchMemos) {
+        if (localMemos != null) resultsCallback(searchMemos)
+    }
+    LaunchedEffect(query, searchSelectedTags, startDateMillis, endDateMillis, orderBy, expanded, isExplore, localMemos) {
+        if (expanded && localMemos == null) {
             // Debounce the search to prevent excessive API calls while typing
             delay(300)
             viewModel.userDelegate.refreshUserStats()
@@ -180,102 +254,123 @@ fun MemoSearchBar(
 
     Box(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+            .then(if (expanded) Modifier.fillMaxSize().imePadding() else Modifier.fillMaxWidth())
+            .padding(horizontal = if (expanded) 0.dp else 16.dp)
             .focusRequester(containerFocusRequester)
             .focusable()
             .zIndex(1f)
     ) {
-        SearchBar(
-            modifier = Modifier.fillMaxWidth(), inputField = {
-                SearchBarDefaults.InputField(
-                    query = query,
-                    onQueryChange = { query = it },
-                    onSearch = { focusManager.clearFocus() },
-                    expanded = expanded,
-                    onExpandedChange = {
-                        expanded = it
-                        onExpandedChange(it)
-                    },
-                    placeholder = { Text(placeholder) },
-                    leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-                    trailingIcon = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (query.isNotEmpty() || searchSelectedTags.isNotEmpty() || startDateMillis != null || endDateMillis != null) {
-                                IconButton(onClick = {
-                                    query = ""
-                                    searchSelectedTags = emptySet()
-                                    startDateMillis = null
-                                    endDateMillis = null
-                                }) {
-                                    Icon(Icons.Outlined.Clear, contentDescription = null)
-                                }
-                            }
-                            // Sync/cache status icon, hidden while search is expanded.
-                            // Lives inside the search bar's own trailing slot so
-                            // it is always vertically centered with the input.
-                            androidx.compose.animation.AnimatedVisibility(visible = !expanded) {
-                                SyncStatusIconButton(
-                                    uiState = uiState,
-                                    onClick = { showSyncPanel = true }
-                                )
+        val inputField: @Composable () -> Unit = {
+            SearchBarDefaults.InputField(
+                textFieldState = queryState,
+                searchBarState = searchBarState,
+                onSearch = {
+                    focusManager.clearFocus()
+                    if (filterActionLabel != null) collapseSearch()
+                },
+                placeholder = { Text(placeholder) },
+                leadingIcon = {
+                    if (expanded) {
+                        IconButton(onClick = {
+                            collapseSearch()
+                            onExpandedChange(false)
+                            focusManager.clearFocus()
+                        }) {
+                            Icon(Icons.AutoMirrored.Outlined.ArrowBack,
+                                contentDescription = stringResource(R.string.memo_detail_back))
+                        }
+                    } else {
+                        Icon(Icons.Outlined.Search, contentDescription = null)
+                    }
+                },
+                trailingIcon = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (query.isNotEmpty() || searchSelectedTags.isNotEmpty() || startDateMillis != null || endDateMillis != null) {
+                            IconButton(onClick = {
+                                queryState.setTextAndPlaceCursorAtEnd("")
+                                searchSelectedTags = emptySet()
+                                startDateMillis = null
+                                endDateMillis = null
+                            }) {
+                                Icon(Icons.Outlined.Clear, contentDescription = null)
                             }
                         }
-                    },
-                )
-            }, expanded = expanded, onExpandedChange = {
-                expanded = it
-                onExpandedChange(it)
+                        // Sync/cache status icon, hidden while search is expanded.
+                        // Lives inside the search bar's own trailing slot so
+                        // it is always vertically centered with the input.
+                        androidx.compose.animation.AnimatedVisibility(visible = !expanded && localMemos == null) {
+                            SyncStatusIconButton(
+                                uiState = uiState,
+                                onClick = { showSyncPanel = true }
+                            )
+                        }
+                    }
+                },
+            )
+        }
+        // The inline overload respects the list pane's bounds and scaffold insets.
+        // The newer expanded variants use separate dialog/popup windows.
+        @Suppress("DEPRECATION")
+        SearchBar(
+            inputField = inputField,
+            expanded = expanded,
+            onExpandedChange = { expand ->
+                if (expand) searchScope.launch { searchBarState.animateToExpanded() }
+                else collapseSearch()
             },
-            // Reset window insets to zero since MemosScaffold already handles status bar padding
+            modifier = Modifier.fillMaxWidth().testTag("memo_search_bar"),
+            // This surface stays inside MemosScaffold, which handles system bars and cutouts.
             windowInsets = WindowInsets(0, 0, 0, 0)
         ) {
-                SearchResultContent(
-                    query = query,
-                    selectedTags = searchSelectedTags,
-                    startDateMillis = startDateMillis,
-                    endDateMillis = endDateMillis,
-                    orderBy = orderBy,
-                    availableTags = availableTags,
-                    filteredMemos = uiState.searchMemoList.list.items,
-                    uiState = uiState,
-                    onTagClick = { tag ->
-                        searchSelectedTags = if (tag in searchSelectedTags) {
-                            searchSelectedTags - tag
-                        } else {
-                            searchSelectedTags + tag
-                        }
-                    },
-                    onStartDateSelected = { startDateMillis = it },
-                    onEndDateSelected = { endDateMillis = it },
-                    onOrderByChange = { orderBy = it },
-                    onMemoClick = { memo ->
-                        onMemoClick(memo)
-                    },
-                    onContentUpdate = { memo, newContent ->
-                        viewModel.memoActionDelegate.updateMemo(
-                            memo,
-                            newContent,
-                            memo.visibility,
-                            memo.attachments ?: emptyList(),
-                            memo.location,
-                            null
-                        )
-                    })
-            }
+            SearchResultContent(
+                query = query,
+                selectedTags = searchSelectedTags,
+                startDateMillis = startDateMillis,
+                endDateMillis = endDateMillis,
+                orderBy = orderBy,
+                availableTags = availableTags,
+                filteredMemos = searchMemos,
+                uiState = uiState,
+                filtersOnly = localMemos != null,
+                extraFilters = extraFilters,
+                filterActionLabel = filterActionLabel,
+                onApplyFilters = { collapseSearch(); focusManager.clearFocus() },
+                onTagClick = { tag ->
+                    searchSelectedTags = if (tag in searchSelectedTags) {
+                        searchSelectedTags - tag
+                    } else {
+                        searchSelectedTags + tag
+                    }
+                },
+                onStartDateSelected = { startDateMillis = it },
+                onEndDateSelected = { endDateMillis = it },
+                onOrderByChange = { orderBy = it },
+                onMemoClick = { memo ->
+                    onMemoClick(memo)
+                },
+                onContentUpdate = { memo, newContent ->
+                    viewModel.memoActionDelegate.updateMemo(
+                        memo,
+                        newContent,
+                        memo.visibility,
+                        memo.attachments ?: emptyList(),
+                        memo.location,
+                        null
+                    )
+                })
+        }
 
         if (showSyncPanel) {
             SyncStatusPanel(
                 uiState = uiState,
                 onDismiss = { showSyncPanel = false },
-                onSyncNow = { viewModel.syncNow() },
-                onPreDownloadText = { viewModel.preDownloadNow() },
-                onPreDownloadAttachments = { viewModel.preDownloadAllAttachments() },
                 onDeleteOp = { opId -> viewModel.deletePendingOp(opId) },
-                onClearTextCache = { viewModel.clearTextCache() },
-                onClearAttachmentCache = { viewModel.clearAttachmentCache() }
+                onManageCache = {
+                    showSyncPanel = false
+                    cacheSettings.launch(SettingsActivity.createIntent(context, SettingsSection.OFFLINE))
+                }
             )
         }
     }
@@ -297,7 +392,11 @@ private fun SearchResultContent(
     onEndDateSelected: (Long?) -> Unit,
     onOrderByChange: (MemoOrderBy) -> Unit,
     onMemoClick: (Memo) -> Unit,
-    onContentUpdate: (Memo, String) -> Unit
+    onContentUpdate: (Memo, String) -> Unit,
+    filtersOnly: Boolean = false,
+    extraFilters: @Composable () -> Unit = {},
+    filterActionLabel: String? = null,
+    onApplyFilters: () -> Unit = {}
 ) {
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
@@ -379,13 +478,14 @@ private fun SearchResultContent(
         if (availableTags.isNotEmpty()) {
             item {
                 Card(
+                    elevation = flatCardElevation(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 4.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                     ),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = MaterialTheme.shapes.large
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
@@ -445,7 +545,7 @@ private fun SearchResultContent(
                                                 )
                                             }
                                         },
-                                        shape = RoundedCornerShape(8.dp),
+                                        shape = MaterialTheme.shapes.medium,
                                         colors = FilterChipDefaults.filterChipColors(
                                             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                             selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -558,7 +658,16 @@ private fun SearchResultContent(
             }
         }
 
-        if (uiState.searchMemoList.list.isOffline) {
+        item { extraFilters() }
+        if (filtersOnly) {
+            if (filterActionLabel != null) item {
+                TextButton(onClick = onApplyFilters, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text(filterActionLabel)
+                }
+            }
+        }
+
+        if (!filtersOnly && uiState.searchMemoList.list.isOffline) {
             item {
                 Box(
                     modifier = Modifier
@@ -566,7 +675,7 @@ private fun SearchResultContent(
                         .padding(horizontal = 16.dp, vertical = 4.dp)
                 ) {
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = MaterialTheme.shapes.medium,
                         color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
                     ) {
                         Text(
@@ -580,7 +689,7 @@ private fun SearchResultContent(
             }
         }
 
-        if (uiState.searchMemoList.list.isLoading) {
+        if (!filtersOnly && uiState.searchMemoList.list.isLoading) {
             item {
                 Box(
                     modifier = Modifier
@@ -593,6 +702,7 @@ private fun SearchResultContent(
             }
         }
 
+        if (filtersOnly) return@LazyColumn
         if (filteredMemos.isEmpty() && !uiState.searchMemoList.list.isLoading) {
             item {
                 Box(
@@ -650,9 +760,10 @@ private fun DateSelectorCard(
 ) {
     val context = LocalContext.current
     Card(
+        elevation = flatCardElevation(),
         modifier = modifier, colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        ), shape = RoundedCornerShape(12.dp), onClick = onClick
+        ), shape = MaterialTheme.shapes.large, onClick = onClick
     ) {
         Row(
             modifier = Modifier

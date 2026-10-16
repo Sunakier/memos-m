@@ -11,25 +11,25 @@ import retrofit2.http.Query
 
 /** API additions introduced after the v0.30.0 release. */
 interface MemosApiV0300 : MemosApiV0280 {
-    @GET("api/v1/{user}/views")
+    @GET("{user}/views")
     suspend fun listMemoViewsV0300(
         @Path("user", encoded = true) user: String
     ): ListMemoViewsResponseV0300
 
-    @POST("api/v1/{user}/views")
+    @POST("{user}/views")
     suspend fun createMemoViewV0300(
         @Path("user", encoded = true) user: String,
         @Body memoView: Shortcut,
         @Query("validateOnly") validateOnly: Boolean? = null
     ): Shortcut
 
-    @DELETE("api/v1/{user}/views/{view}")
+    @DELETE("{user}/views/{view}")
     suspend fun deleteMemoViewV0300(
         @Path("user", encoded = true) user: String,
         @Path("view", encoded = true) view: String
     )
 
-    @PATCH("api/v1/{user}/views/{view}")
+    @PATCH("{user}/views/{view}")
     suspend fun updateMemoViewV0300(
         @Path("user", encoded = true) user: String,
         @Path("view", encoded = true) view: String,

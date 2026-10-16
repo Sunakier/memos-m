@@ -3,6 +3,11 @@ package org.example.memosm.viewmodel.delegates
 import org.example.memosm.R
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import org.example.memosm.viewmodel.AccountContext
+import org.example.memosm.viewmodel.AccountSession
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -21,6 +26,9 @@ import org.example.memosm.viewmodel.MemosUiState
 import org.example.memosm.viewmodel.UiMessage
 
 interface UserDelegate {
+    suspend fun restoreCachedSessionNow(replace: Boolean = false)
+    suspend fun reconcileAccount()
+    fun restoreCachedSession()
     suspend fun fetchUsers(names: List<String>)
     fun fetchCurrentUser(
         onUserFetched: suspend (User) -> Unit = {}
@@ -54,16 +62,17 @@ interface UserDelegate {
 class UserDelegateImpl(
     private val scope: CoroutineScope,
     private val uiState: MutableStateFlow<MemosUiState>,
-    private val apiProvider: () -> MemosApi?,
     private val dataStoreManager: DataStoreManager,
     private val sessionCacheStore: SessionCacheStore,
-    private val onAccountSwitched: suspend (Account) -> Unit,
+    private val accountSession: AccountSession,
+    private val onAccountSwitched: suspend (Account?) -> Unit,
     private val onAccountRemoved: (Account) -> Unit = {}
 ) : UserDelegate {
 
-    private val pendingUserRequests = mutableSetOf<String>()
+    private val retryUserAfter = mutableMapOf<Pair<Long, String>, Long>()
+    private val pendingUserRequests = mutableSetOf<Pair<Long, String>>()
+    private val accountMutex = Mutex()
 
-    private val api: MemosApi? get() = apiProvider()
 
     /**
      * Offline fallback snapshot of the session's statistics/data, persisted
@@ -74,14 +83,12 @@ class UserDelegateImpl(
      * data class): Gson cannot instantiate the [User] interface when reading
      * the snapshot back.
      */
-    private fun activeAccountId(): String? =
-        uiState.value.accounts.find { it.isActive }?.id
-
-    private fun persistSessionSnapshot() {
-        val accountId = activeAccountId() ?: return
+    private fun persistSessionSnapshot(context: AccountContext) {
+        if (!accountSession.isCurrent(context)) return
+        val accountId = context.account.id
         val state = uiState.value
         val s = state.session
-        scope.launch {
+        accountSession.readScope.launch {
             runCatching {
                 sessionCacheStore.save(
                     accountId,
@@ -101,59 +108,86 @@ class UserDelegateImpl(
         }
     }
 
-    private fun restoreSessionSnapshot() {
-        val accountId = activeAccountId() ?: return
-        scope.launch {
-            // Snapshots are keyed per account: an offline account switch must
-            // never surface the previous account's stats/settings.
-            val snap = runCatching { sessionCacheStore.get(accountId) }
-                .getOrNull() ?: return@launch
-            uiState.update { state ->
-                val cur = state.session
-                state.copy(
-                    session = cur.copy(
-                        currUser = cur.currUser ?: snap.currUser,
-                        userStats = cur.userStats ?: snap.userStats,
-                        userSettings = cur.userSettings ?: snap.userSettings,
-                        webhooks = cur.webhooks.ifEmpty { snap.webhooks },
-                        instanceProfile = cur.instanceProfile ?: snap.instanceProfile,
-                        instanceSettings = cur.instanceSettings ?: snap.instanceSettings,
-                        activities = cur.activities.ifEmpty { snap.activities }
-                    ),
-                    userMemoList = state.userMemoList.let { list ->
-                        if (list.shortcuts.isEmpty()) {
-                            list.copy(shortcuts = snap.shortcuts)
-                        } else {
-                            list
-                        }
-                    }
-                )
-            }
+    private fun restoreSessionSnapshot(context: AccountContext) {
+        accountSession.readScope.launch { readSessionSnapshot(context) }
+    }
+
+    private suspend fun readSessionSnapshot(context: AccountContext, replace: Boolean = false) {
+        val snap = try {
+            sessionCacheStore.get(context.account.id)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
+        } ?: return
+        accountSession.update(uiState, context) { state ->
+            val cur = state.session
+            state.copy(
+                session = cur.copy(
+                    currUser = if (replace) snap.currUser ?: cur.currUser else cur.currUser ?: snap.currUser,
+                    userStats = if (replace) snap.userStats else cur.userStats ?: snap.userStats,
+                    userSettings = if (replace) snap.userSettings else cur.userSettings ?: snap.userSettings,
+                    webhooks = if (replace) snap.webhooks else cur.webhooks.ifEmpty { snap.webhooks },
+                    instanceProfile = if (replace) snap.instanceProfile else cur.instanceProfile ?: snap.instanceProfile,
+                    instanceSettings = if (replace) snap.instanceSettings else cur.instanceSettings ?: snap.instanceSettings,
+                    activities = if (replace) snap.activities else cur.activities.ifEmpty { snap.activities }
+                ),
+                userMemoList = state.userMemoList.let { list ->
+                    if (replace || list.shortcuts.isEmpty()) list.copy(shortcuts = snap.shortcuts) else list
+                }
+            )
         }
     }
 
+    override suspend fun restoreCachedSessionNow(replace: Boolean) {
+        val context = accountSession.current ?: return
+        readSessionSnapshot(context, replace)
+    }
+
+    override suspend fun reconcileAccount() {
+        accountMutex.withLock { refreshAccountsLocked() }
+    }
+
+    override fun restoreCachedSession() {
+        val context = accountSession.current ?: return
+        restoreSessionSnapshot(context)
+    }
+
     override suspend fun fetchUsers(names: List<String>) {
+        val context = accountSession.current ?: return
+        val api = context.api
+        val currentUser = uiState.value.session.currUser
+        if (currentUser?.name != null && currentUser.name !in uiState.value.users)
+            accountSession.update(uiState, context) { it.copy(users = it.users + (currentUser.name!! to currentUser)) }
         val currentUsers = uiState.value.users
-        val toFetch = names.filter { it !in currentUsers && it !in pendingUserRequests }
+        val now = System.nanoTime() / 1_000_000
+        retryUserAfter.entries.removeAll { it.key.first != context.generation || it.value <= now }
+        val toFetch = names.distinct().filter { it !in currentUsers &&
+            (context.generation to it) !in pendingUserRequests && (context.generation to it) !in retryUserAfter }
         Log.d("MemosUsers", "fetchUsers: requested=$names cached=${currentUsers.keys} toFetch=$toFetch")
         if (toFetch.isEmpty()) return
 
-        pendingUserRequests.addAll(toFetch)
-        scope.launch {
+        pendingUserRequests.addAll(toFetch.map { context.generation to it })
+        accountSession.readScope.launch {
             try {
-                val fetchedUsers = api?.getUsers(toFetch).orEmpty()
+                // Failed or absent creators must not retry on every list/cache state update.
+                toFetch.forEach { retryUserAfter[context.generation to it] = System.nanoTime() / 1_000_000 + 60_000 }
+                val fetchedUsers = api.getUsers(toFetch).orEmpty()
                 Log.d("MemosUsers", "fetchUsers: resolved=${fetchedUsers.keys}")
                 if (fetchedUsers.isNotEmpty()) {
-                    uiState.update { it.copy(users = it.users + fetchedUsers) }
+                    fetchedUsers.keys.forEach { retryUserAfter.remove(context.generation to it) }
+                    accountSession.update(uiState, context) { it.copy(users = it.users + fetchedUsers) }
                 }
                 val unresolved = toFetch.filter { it !in fetchedUsers }
                 if (unresolved.isNotEmpty()) {
                     Log.w("MemosUsers", "fetchUsers: unresolved=$unresolved")
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error fetching users $toFetch", e)
             } finally {
-                pendingUserRequests.removeAll(toFetch.toSet())
+                pendingUserRequests.removeAll(toFetch.map { context.generation to it }.toSet())
             }
         }
     }
@@ -161,22 +195,23 @@ class UserDelegateImpl(
     override fun fetchCurrentUser(
         onUserFetched: suspend (User) -> Unit
     ) {
-        scope.launch {
+        val context = accountSession.current ?: return
+        val api = context.api
+        accountSession.readScope.launch {
             try {
-                val user = api?.getCurrentSession()?.user
+                val user = api.getCurrentSession().user
                 Log.d("MemosViewModel", "fetchCurrentUser: user=$user")
                 if (user != null) {
-                    uiState.update {
+                    accountSession.update(uiState, context) {
                         Log.d("MemosViewModel", "Updating session with user: ${user.name}")
                         it.copy(session = it.session.copy(currUser = user))
                     }
 
                     // Store user in local account for offline access
-                    val activeAccount = uiState.value.accounts.find { it.isActive }
-                    if (activeAccount != null) {
-                        dataStoreManager.updateAccountUser(activeAccount.id, user)
-                    }
+                    val activeAccount = context.account
+                    dataStoreManager.updateAccountUser(activeAccount.id, user)
 
+                    if (!accountSession.isCurrent(context)) return@launch
                     onUserFetched(user)
 
                     val resourceName = user.name ?: ""
@@ -190,45 +225,54 @@ class UserDelegateImpl(
                     fetchInstanceProfile()
                     fetchInstanceSettings()
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Error fetching current user", e)
                 // Offline fallback: serve the previously stored user snapshot so
                 // the UI stays fully usable (e.g. the composer FAB, which is
                 // gated on session.currUser being non-null).
-                val cached = uiState.value.accounts.find { it.isActive }?.user
+                val cached = context.account.user
                 if (cached != null) {
-                    uiState.update {
+                    accountSession.update(uiState, context) {
                         it.copy(session = it.session.copy(currUser = cached))
                     }
+                    if (!accountSession.isCurrent(context)) return@launch
                     onUserFetched(cached)
                 }
                 // Also restore the persisted session snapshot (user stats,
                 // settings, activities, ...) so the Profile page and other
                 // offline surfaces stay populated on an offline cold start.
-                restoreSessionSnapshot()
+                restoreSessionSnapshot(context)
             }
         }
     }
 
     override suspend fun fetchInstanceProfile() {
+        val context = accountSession.current ?: return
+        val api = context.api
         try {
-            val profile = api?.getInstanceProfile()
-            if (profile != null) {
-                uiState.update { it.copy(session = it.session.copy(instanceProfile = profile)) }
-                persistSessionSnapshot()
-            }
+            val profile = api.getInstanceProfile()
+            accountSession.update(uiState, context) { it.copy(session = it.session.copy(instanceProfile = profile)) }
+            persistSessionSnapshot(context)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error fetching instance profile", e)
-            restoreSessionSnapshot()
+            restoreSessionSnapshot(context)
         }
     }
 
     override suspend fun fetchInstanceSettings() {
+        val context = accountSession.current ?: return
+        val api = context.api
         try {
             val settingNames = listOf("GENERAL", "STORAGE", "MEMO_RELATED")
             val results = settingNames.associateWith { name ->
                 try {
-                    api?.getInstanceSetting("settings/$name")
+                    api.getInstanceSetting("settings/$name")
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     Log.e("MemosViewModel", "Error fetching $name instance settings", e)
                     null
@@ -242,36 +286,44 @@ class UserDelegateImpl(
                     storageSetting = results["STORAGE"]?.storageSetting,
                     memoRelatedSetting = results["MEMO_RELATED"]?.memoRelatedSetting
                 )
-                uiState.update { it.copy(session = it.session.copy(instanceSettings = merged)) }
-                persistSessionSnapshot()
+                accountSession.update(uiState, context) { it.copy(session = it.session.copy(instanceSettings = merged)) }
+                persistSessionSnapshot(context)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error fetching instance settings", e)
-            restoreSessionSnapshot()
+            restoreSessionSnapshot(context)
         }
     }
 
     override fun refreshInstanceSettings() {
-        scope.launch {
+        val context = accountSession.current ?: return
+        val api = context.api
+        accountSession.readScope.launch {
             fetchInstanceSettings()
         }
     }
 
     override suspend fun fetchUserStats(userResourceName: String) {
+        val context = accountSession.current ?: return
+        val api = context.api
         try {
-            val stats = api?.getUserStats(userResourceName)
-            if (stats != null) {
-                uiState.update { it.copy(session = it.session.copy(userStats = stats)) }
-                persistSessionSnapshot()
-            }
+            val stats = api.getUserStats(userResourceName)
+            accountSession.update(uiState, context) { it.copy(session = it.session.copy(userStats = stats)) }
+            persistSessionSnapshot(context)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error fetching user stats", e)
-            restoreSessionSnapshot()
+            restoreSessionSnapshot(context)
         }
     }
 
     override fun refreshUserStats() {
-        scope.launch {
+        val context = accountSession.current ?: return
+        val api = context.api
+        accountSession.readScope.launch {
             val user = uiState.value.session.currUser
             val userName = user?.name
             if (userName != null) {
@@ -281,45 +333,56 @@ class UserDelegateImpl(
     }
 
     override suspend fun fetchActivities() {
+        val context = accountSession.current ?: return
+        val api = context.api
         try {
             val hostUrl = uiState.value.session.hostUrl
             Log.d(
                 "MemosViewModel",
                 "fetchActivities: Fetching from $hostUrl/api/v1/activities?pageSize=1000"
             )
-            val response = api?.listActivities(pageSize = 1000)
-            val activities = response?.activities ?: emptyList()
-            uiState.update { it.copy(session = it.session.copy(activities = activities)) }
-            persistSessionSnapshot()
+            val response = api.listActivities(pageSize = 1000)
+            val activities = response.activities ?: emptyList()
+            accountSession.update(uiState, context) { it.copy(session = it.session.copy(activities = activities)) }
+            persistSessionSnapshot(context)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error fetching activities", e)
-            restoreSessionSnapshot()
+            restoreSessionSnapshot(context)
         }
     }
 
     override suspend fun fetchUserSettings(userResourceName: String) {
+        val context = accountSession.current ?: return
+        val api = context.api
         try {
-            val response = api?.listUserSettings(userResourceName)
+            val response = api.listUserSettings(userResourceName)
             val general =
-                response?.settings?.find { it.name?.endsWith("general") == true || it.generalSetting != null }?.generalSetting
+                response.settings?.find { it.name?.endsWith("general") == true || it.generalSetting != null }?.generalSetting
             if (general != null) {
-                uiState.update { it.copy(session = it.session.copy(userSettings = general)) }
-                persistSessionSnapshot()
+                accountSession.update(uiState, context) { it.copy(session = it.session.copy(userSettings = general)) }
+                persistSessionSnapshot(context)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e("MemosViewModel", "Error fetching user settings", e)
-            restoreSessionSnapshot()
+            restoreSessionSnapshot(context)
         }
     }
 
     override fun updateUserGeneralSetting(locale: String?, memoVisibility: Visibility?) {
+        val context = accountSession.current ?: return
+        val api = context.api
+        val state = uiState.value
         scope.launch {
             try {
                 // Early return if api doesn't exist
-                val currentApi = api ?: return@launch
-                val user = uiState.value.session.currUser ?: return@launch
+                val currentApi = api
+                val user = state.session.currUser ?: return@launch
                 val userName = user.name ?: return@launch
-                val currentSetting = uiState.value.session.userSettings ?: UserGeneralSetting()
+                val currentSetting = state.session.userSettings ?: UserGeneralSetting()
                 val newSetting = currentSetting.copy(
                     locale = locale ?: currentSetting.locale,
                     memoVisibility = memoVisibility ?: currentSetting.memoVisibility
@@ -338,12 +401,14 @@ class UserDelegateImpl(
                         UserSetting(generalSetting = newSetting),
                         updateMask
                     )
-                    fetchUserSettings(userName)
+                    if (accountSession.isCurrent(context)) fetchUserSettings(userName)
                 }
 
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Operation failed", e)
-                uiState.update { it.copy(error = UiMessage(R.string.common_operation_failed)) }
+                accountSession.update(uiState, context) { it.copy(error = UiMessage(R.string.common_operation_failed)) }
             }
         }
     }
@@ -357,10 +422,13 @@ class UserDelegateImpl(
         password: String?,
         onResult: (Boolean) -> Unit
     ) {
+        val context = accountSession.current ?: return
+        val api = context.api
+        val state = uiState.value
         scope.launch {
             try {
-                val currentUser = uiState.value.session.currUser ?: return@launch
-                val currentApi = api ?: return@launch
+                val currentUser = state.session.currUser ?: return@launch
+                val currentApi = api
                 val update = org.example.memosm.model.UserSnapshot(
                     username = username,
                     email = email,
@@ -387,122 +455,93 @@ class UserDelegateImpl(
                     // But here we want onResult to be called after
                     val user = currentApi.getCurrentSession().user
                     if (user != null) {
-                        uiState.update {
+                        accountSession.update(uiState, context) {
                             it.copy(session = it.session.copy(currUser = user))
                         }
                         // Store user in local account for offline access
-                        val activeAccount = uiState.value.accounts.find { it.isActive }
-                        if (activeAccount != null) {
-                            dataStoreManager.updateAccountUser(activeAccount.id, user)
-                        }
+                        val activeAccount = context.account
+                        dataStoreManager.updateAccountUser(activeAccount.id, user)
                     }
-                    onResult(true)
+                    if (accountSession.isCurrent(context)) onResult(true)
                 } else {
-                    onResult(true)
+                    if (accountSession.isCurrent(context)) onResult(true)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("MemosViewModel", "Operation failed", e)
+                accountSession.update(uiState, context) { it.copy(error = UiMessage(R.string.common_operation_failed)) }
+                if (accountSession.isCurrent(context)) onResult(false)
+            }
+        }
+    }
+
+    private fun launchAccountChange(block: suspend () -> Unit) {
+        scope.launch {
+            try {
+                block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("MemosViewModel", "Account change failed", e)
                 uiState.update { it.copy(error = UiMessage(R.string.common_operation_failed)) }
-                onResult(false)
             }
         }
     }
 
     override fun addAccount(hostUrl: String, token: String) {
-        scope.launch {
-            try {
-                Log.d("MemosViewModel", "Adding account for $hostUrl")
+        launchAccountChange {
+            accountMutex.withLock {
                 dataStoreManager.addAccount(hostUrl, token)
-                // Trigger account update
-                // The Original called updateCurrentAccountInList
-                // check how we handle this callback
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Operation failed", e)
-                uiState.update { it.copy(error = UiMessage(R.string.common_operation_failed)) }
+                refreshAccountsLocked()
             }
         }
     }
 
     override fun removeAccount(account: Account) {
-        scope.launch {
-            try {
+        launchAccountChange {
+            accountMutex.withLock {
                 dataStoreManager.deleteAccount(account.id)
+                refreshAccountsLocked()
                 onAccountRemoved(account)
-                // Refresh the account list in the UI and, when the removed
-                // account was active, re-bind the session/api to the newly
-                // active account that deleteAccount() promoted.
-                updateCurrentAccountInList()
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error deleting account", e)
             }
         }
     }
 
-    override fun updateAccountCredentials(
-        account: Account, hostUrl: String, token: String
-    ) {
-        scope.launch {
-            try {
+    override fun updateAccountCredentials(account: Account, hostUrl: String, token: String) {
+        launchAccountChange {
+            accountMutex.withLock {
                 dataStoreManager.updateAccount(account.id, hostUrl, token)
-                // Refresh the account list and re-bind the active session/api
-                // when the edited account is the active one (new token/host
-                // must take effect immediately, not after a restart).
-                updateCurrentAccountInList()
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error updating credentials", e)
+                refreshAccountsLocked()
             }
         }
     }
 
     override fun updateCurrentAccountInList() {
-        scope.launch {
-            val accounts = dataStoreManager.getAccounts()
-            val activeAccount = accounts.find { it.isActive }
+        launchAccountChange { accountMutex.withLock { refreshAccountsLocked() } }
+    }
 
-            uiState.update { it.copy(accounts = accounts) }
-
-            if (activeAccount != null) {
-                switchAccount(activeAccount)
-            } else {
-                // Last account removed: clear the session so the UI falls
-                // back to the login screen instead of keeping a stale session.
-                uiState.update {
-                    it.copy(
-                        session = org.example.memosm.viewmodel.SessionState(),
-                        error = UiMessage(R.string.common_no_active_account)
-                    )
-                }
-            }
+    private suspend fun refreshAccountsLocked() {
+        val accounts = dataStoreManager.getAccounts()
+        val active = accounts.find { it.isActive }
+        val previous = accountSession.current?.account
+        uiState.update { it.copy(accounts = accounts) }
+        if (active?.id != previous?.id || active?.hostUrl != previous?.hostUrl ||
+            active?.accessToken != previous?.accessToken || active == null) {
+            pendingUserRequests.clear()
+            retryUserAfter.clear()
+            onAccountSwitched(active)
         }
     }
 
     override fun switchAccount(account: Account) {
-        scope.launch {
-            try {
+        launchAccountChange {
+            accountMutex.withLock {
+                // Read the stored credentials, rather than a potentially stale UI row.
+                if (dataStoreManager.getAccounts().none { it.id == account.id }) return@withLock
                 dataStoreManager.setActiveAccount(account.id)
                 dataStoreManager.updateAccountLastUsed(account.id, System.currentTimeMillis())
-
-                uiState.update {
-                    it.copy(
-                        session = org.example.memosm.viewmodel.SessionState(
-                            token = account.accessToken,
-                            hostUrl = account.hostUrl,
-                            currUser = account.user
-                        ), accounts = it.accounts.map { acc ->
-                            acc.copy(isActive = acc.id == account.id)
-                        }, users = emptyMap(),
-                        error = null  // Clear stale errors (e.g. "No active account found")
-                    )
-                }
-                pendingUserRequests.clear()
-
-                // The calling ViewModel needs to recreate Api and Managers
-                onAccountSwitched(account)
-
-            } catch (e: Exception) {
-                Log.e("MemosViewModel", "Error switching account", e)
-                Log.e("MemosViewModel", "Operation failed", e)
-                uiState.update { it.copy(error = UiMessage(R.string.common_operation_failed)) }
+                refreshAccountsLocked()
             }
         }
     }

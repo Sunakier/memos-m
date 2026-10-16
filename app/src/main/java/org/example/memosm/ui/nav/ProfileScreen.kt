@@ -1,24 +1,17 @@
 package org.example.memosm.ui.nav
 
 import AccountsList
-import androidx.activity.compose.BackHandler
-import androidx.activity.compose.PredictiveBackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.core.SeekableTransitionState
-import androidx.compose.animation.core.Spring
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import org.example.memosm.ui.profile.EditProfileActivity
+import org.example.memosm.ui.profile.EditAccountCredentialsActivity
+import org.example.memosm.ui.profile.ArchivedMemosActivity
+import org.example.memosm.ui.profile.NotificationsActivity
+import org.example.memosm.ui.profile.SettingsActivity
+import org.example.memosm.ui.theme.ProfileTheme
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.rememberTransition
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,59 +32,50 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import org.example.memosm.ui.component.LocalNetworkPermission
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
 import org.example.memosm.R
-import org.example.memosm.model.Account
+import org.example.memosm.data.DataStoreManager
 import org.example.memosm.model.InstanceProfile
-import org.example.memosm.model.User
 import org.example.memosm.model.UserSnapshot
 import org.example.memosm.model.toUserSnapshot
-import org.example.memosm.ui.ProfileDetailKey
-import org.example.memosm.ui.component.ArchivedMemosScreen
 import org.example.memosm.ui.component.ErrorView
-import org.example.memosm.ui.component.LoginDialog
-import org.example.memosm.ui.component.NotificationsScreen
 import org.example.memosm.ui.component.ProfileHeader
 import org.example.memosm.ui.component.StatsActivityCard
 import org.example.memosm.ui.component.rememberScrollContext
-import org.example.memosm.ui.component.setting.AccountEditDialog
+import org.example.memosm.ui.component.setting.SettingsGroup
+import org.example.memosm.ui.component.setting.SettingsNavigationRow
 import org.example.memosm.viewmodel.MemosViewModel
 import org.example.memosm.viewmodel.RefreshSource
+import org.koin.compose.koinInject
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ProfileScreen(
     viewModel: MemosViewModel,
@@ -100,102 +84,40 @@ fun ProfileScreen(
     onToggleNavBar: ((Boolean) -> Unit)? = null,
     isNavBarVisible: Boolean = true
 ) {
-    var activeDetail by rememberSaveable { mutableStateOf<ProfileDetailKey?>(null) }
-    var showSettings by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    val archived = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        viewModel.refreshAfterProfileDetails()
+    }
+    val notifications = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        viewModel.refreshAfterProfileDetails()
+    }
+    val settings = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        viewModel.refreshAfterProfileDetails()
+    }
+    val editProfile = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        viewModel.refreshAfterProfileDetails()
+    }
     val listState = rememberLazyListState()
-
-    val transitionState = remember { SeekableTransitionState<ProfileDetailKey?>(activeDetail) }
-
-    LaunchedEffect(activeDetail) {
-        if (activeDetail != transitionState.targetState) {
-            transitionState.animateTo(activeDetail)
-        }
-    }
-
-    PredictiveBackHandler(enabled = activeDetail != null) { progress ->
-        try {
-            progress.collect { backEvent ->
-                transitionState.seekTo(backEvent.progress, targetState = null)
-            }
-            transitionState.animateTo(null)
-            activeDetail = null
-        } catch (e: CancellationException) {
-            transitionState.animateTo(activeDetail)
-        }
-    }
-
-    // Simple back handling for the settings pane (no shared-element transition)
-    BackHandler(enabled = showSettings && activeDetail == null) {
-        showSettings = false
-    }
-
-    SharedTransitionLayout {
-        val transition = rememberTransition(transitionState, label = "ProfileArchiveTransition")
-        transition.AnimatedContent(
-            transitionSpec = {
-                if (targetState != null) {
-                    (fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) + scaleIn(
-                        initialScale = 0.97f, animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioLowBouncy,
-                            stiffness = Spring.StiffnessMediumLow
-                        )
-                    )).togetherWith(fadeOut(spring(stiffness = Spring.StiffnessMediumLow)))
-                } else {
-                    fadeIn(spring(stiffness = Spring.StiffnessMediumLow)).togetherWith(
-                        fadeOut(spring(stiffness = Spring.StiffnessMediumLow)) + scaleOut(
-                            targetScale = 0.97f,
-                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-                        )
-                    )
-                }
-            }) { detail ->
-            when (detail) {
-                ProfileDetailKey.Archived -> ArchivedMemosScreen(
-                    viewModel = viewModel,
-                    onBack = { activeDetail = null },
-                    onToggleNavBar = onToggleNavBar,
-                    animatedVisibilityScope = this@AnimatedContent,
-                    modifier = Modifier.sharedBounds(
-                        rememberSharedContentState(key = "archived_container"),
-                        animatedVisibilityScope = this@AnimatedContent,
-                        boundsTransform = { _, _ ->
-                            spring(dampingRatio = 0.8f, stiffness = 380f)
-                        })
-                )
-
-                ProfileDetailKey.Notifications -> NotificationsScreen(
-                    viewModel = viewModel,
-                    onBack = { activeDetail = null },
-                    onToggleNavBar = onToggleNavBar
-                )
-
-                null -> if (showSettings) {
-                    SettingsScreen(
-                        viewModel = viewModel,
-                        onBack = { showSettings = false },
-                        onToggleNavBar = onToggleNavBar
-                    )
-                } else {
-                    ProfileListPane(
-                        viewModel = viewModel,
-                        onLogout = onLogout,
-                        onAddAccount = onAddAccount,
-                        onShowArchived = { activeDetail = ProfileDetailKey.Archived },
-                        onShowNotifications = { activeDetail = ProfileDetailKey.Notifications },
-                        onShowSettings = { showSettings = true },
-                        animatedVisibilityScope = this@AnimatedContent,
-                        sharedTransitionScope = this@SharedTransitionLayout,
-                        onToggleNavBar = onToggleNavBar,
-                        isNavBarVisible = isNavBarVisible,
-                        listState = listState
-                    )
-                }
-            }
-        }
+    ProfileTheme {
+        ProfileListPane(
+            viewModel = viewModel,
+            onLogout = onLogout,
+            onAddAccount = onAddAccount,
+            onShowArchived = { archived.launch(Intent(context, ArchivedMemosActivity::class.java)) },
+            onShowNotifications = { notifications.launch(Intent(context, NotificationsActivity::class.java)) },
+            onShowSettings = { settings.launch(Intent(context, SettingsActivity::class.java)) },
+            onOpenSection = { section ->
+                settings.launch(SettingsActivity.createIntent(context, section))
+            },
+            onEditProfile = { editProfile.launch(Intent(context, EditProfileActivity::class.java)) },
+            onToggleNavBar = onToggleNavBar,
+            isNavBarVisible = isNavBarVisible,
+            listState = listState
+        )
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProfileListPane(
     viewModel: MemosViewModel,
@@ -204,8 +126,8 @@ private fun ProfileListPane(
     onShowArchived: () -> Unit,
     onShowNotifications: () -> Unit,
     onShowSettings: () -> Unit,
-    animatedVisibilityScope: AnimatedVisibilityScope,
-    sharedTransitionScope: SharedTransitionScope,
+    onOpenSection: (SettingsSection) -> Unit,
+    onEditProfile: () -> Unit,
     onToggleNavBar: ((Boolean) -> Unit)? = null,
     isNavBarVisible: Boolean = true,
     listState: LazyListState
@@ -239,55 +161,32 @@ private fun ProfileListPane(
         lastProcessedTrigger = uiState.refreshTrigger
     }
 
-    var showAccountSwitcher by remember { mutableStateOf(false) }
-    var showEditDialog by remember { mutableStateOf(false) }
-    var accountToEditCredentials by remember { mutableStateOf<Account?>(null) }
-    var isSavingProfile by remember { mutableStateOf(false) }
+    var showAccountSwitcher by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    val dataStore: DataStoreManager = koinInject()
+    val editCredentials = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val credentials = EditAccountCredentialsActivity.readResult(result.resultCode, result.data)
+        if (credentials != null) {
+            scope.launch {
+                val account = dataStore.getAccounts().firstOrNull { it.id == credentials.accountId }
+                if (account != null) {
+                    viewModel.userDelegate.updateAccountCredentials(account, credentials.hostUrl, credentials.token)
+                    showAccountSwitcher = false
+                }
+            }
+        }
+    }
 
     // Get current account for profile editing
     val activeAccount = accounts.find { it.isActive }
 
-    // Profile Edit Dialog (remote API update)
-    if (showEditDialog && activeAccount != null) {
-        AccountEditDialog(
-            account = activeAccount,
-            onDismiss = { showEditDialog = false },
-            onSave = { update ->
-                isSavingProfile = true
-                viewModel.userDelegate.updateUserProfile(
-                    username = update.username,
-                    email = update.email,
-                    displayName = update.displayName,
-                    avatarUrl = update.avatarUrl,
-                    description = update.description,
-                    password = update.password
-                ) { success ->
-                    isSavingProfile = false
-                    if (success) {
-                        showEditDialog = false
-                    }
-                }
-            },
-            isSaving = isSavingProfile
-        )
-    }
-
-    // Credential Edit Dialog (local login info)
-    accountToEditCredentials?.let { account ->
-        LoginDialog(
-            onLoginSuccess = { baseUrl, token ->
-                // Update the account with new credentials
-                viewModel.userDelegate.updateAccountCredentials(account, baseUrl, token)
-                accountToEditCredentials = null
-                showAccountSwitcher = false
-            }, onDismiss = { accountToEditCredentials = null }, editAccount = account
-        )
-    }
-
     if (showAccountSwitcher) {
         ModalBottomSheet(
             onDismissRequest = { showAccountSwitcher = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            sheetState = rememberBottomSheetState(
+                initialValue = SheetValue.Hidden,
+                enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
+            )
         ) {
             AccountsList(
                 accounts = accounts,
@@ -301,7 +200,7 @@ private fun ProfileListPane(
                 },
                 onLogoutAccount = { viewModel.userDelegate.removeAccount(it) },
                 onEditAccount = { account ->
-                    accountToEditCredentials = account
+                    editCredentials.launch(EditAccountCredentialsActivity.createIntent(context, account.id))
                 },
                 onAddAccount = {
                     onAddAccount()
@@ -349,8 +248,9 @@ private fun ProfileListPane(
                             user = user.toUserSnapshot(
                                 token = uiState.session.token
                             ).copy(avatarUrl = avatarUrl),
+                            userStats = stats,
                             onClick = { showAccountSwitcher = true },
-                            onEditClick = { showEditDialog = true })
+                            onEditClick = onEditProfile)
                     } else {
                         if (activeAccount != null) {
                             val rawAvatarUrl = activeAccount.avatarUrl
@@ -366,8 +266,9 @@ private fun ProfileListPane(
                                     avatarUrl = avatarUrl,
                                     token = uiState.session.token
                                 ),
+                                userStats = stats,
                                 onClick = { showAccountSwitcher = true },
-                                onEditClick = { showEditDialog = true })
+                                onEditClick = onEditProfile)
                         } else if (uiState.userMemoList.list.isLoading) {
                             Box(
                                 modifier = Modifier
@@ -395,27 +296,31 @@ private fun ProfileListPane(
 
                 item {
                     Box(itemModifier) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = onShowNotifications
-                        ) {
-                            ListItem(
-                                headlineContent = {
-                                    Text(stringResource(R.string.profile_notifications))
-                                },
-                                leadingContent = {
-                                    Icon(
-                                        Icons.Outlined.Notifications,
-                                        contentDescription = null
+                        SettingsGroup {
+                            SettingsNavigationRow(
+                                title = stringResource(R.string.profile_notifications),
+                                icon = Icons.Outlined.Notifications,
+                                onClick = onShowNotifications
+                            )
+                            listOf(SettingsSection.SHORTCUTS, SettingsSection.WEBHOOKS, SettingsSection.INSTANCE)
+                                .forEach { section ->
+                                    SettingsNavigationRow(
+                                        title = stringResource(section.titleRes),
+                                        icon = section.icon,
+                                        onClick = { onOpenSection(section) }
                                     )
-                                },
-                                trailingContent = {
-                                    Icon(
-                                        Icons.Outlined.ChevronRight,
-                                        contentDescription = null
-                                    )
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                                }
+                        }
+                    }
+                }
+
+                item {
+                    Box(itemModifier) {
+                        SettingsGroup {
+                            SettingsNavigationRow(
+                                title = stringResource(R.string.profile_archived),
+                                icon = Icons.Outlined.Archive,
+                                onClick = onShowArchived
                             )
                         }
                     }
@@ -423,69 +328,16 @@ private fun ProfileListPane(
 
                 item {
                     Box(itemModifier) {
-                        with(sharedTransitionScope) {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .sharedBounds(
-                                        rememberSharedContentState(key = "archived_container"),
-                                        animatedVisibilityScope = animatedVisibilityScope,
-                                        boundsTransform = { _, _ ->
-                                            spring(dampingRatio = 0.8f, stiffness = 380f)
-                                        }), onClick = onShowArchived
-                            ) {
-                                ListItem(
-                                    headlineContent = {
-                                        Text(
-                                            stringResource(R.string.profile_archived),
-                                            modifier = Modifier.sharedBounds(
-                                                rememberSharedContentState(key = "archive_text"),
-                                                animatedVisibilityScope = animatedVisibilityScope,
-                                                boundsTransform = { _, _ ->
-                                                    tween(durationMillis = 300)
-                                                })
-                                        )
-                                    },
-                                    leadingContent = {
-                                        Icon(
-                                            Icons.Outlined.Archive, contentDescription = null
-                                        )
-                                    },
-                                    trailingContent = {
-                                        Icon(
-                                            Icons.Outlined.ChevronRight, contentDescription = null
-                                        )
-                                    },
-                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    Box(itemModifier) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = onShowSettings
-                        ) {
-                            ListItem(
-                                headlineContent = {
-                                    Text(stringResource(R.string.settings_title))
-                                },
-                                leadingContent = {
-                                    Icon(
-                                        Icons.Outlined.Settings,
-                                        contentDescription = null
-                                    )
-                                },
-                                trailingContent = {
-                                    Icon(
-                                        Icons.Outlined.ChevronRight,
-                                        contentDescription = null
-                                    )
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        SettingsGroup {
+                            SettingsNavigationRow(
+                                title = stringResource(R.string.settings_title),
+                                icon = Icons.Outlined.Settings,
+                                onClick = onShowSettings
+                            )
+                            SettingsNavigationRow(
+                                title = stringResource(SettingsSection.ABOUT.titleRes),
+                                icon = SettingsSection.ABOUT.icon,
+                                onClick = { onOpenSection(SettingsSection.ABOUT) }
                             )
                         }
                     }
@@ -522,32 +374,19 @@ private fun ProfileListPane(
 
 @Composable
 fun InstanceCard(instance: InstanceProfile) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                stringResource(R.string.profile_instance_info),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            val unknown = stringResource(R.string.memo_unknown_user)
-            InfoRow(
-                stringResource(R.string.profile_instance_version), instance.version ?: unknown
-            )
-
-            val modeLabel = if (instance.mode != null) {
-                instance.mode
-            } else if (instance.demo == true) {
-                "demo" // Or a localized string if available, but "demo" is standard
-            } else {
-                "prod" // Default assumption if not demo and no mode
-            }
-
-            InfoRow(
-                stringResource(R.string.profile_instance_mode), modeLabel
-            )
-            InfoRow(
-                stringResource(R.string.profile_instance_url), instance.instanceUrl ?: unknown
+    val unknown = stringResource(R.string.memo_unknown_user)
+    val mode = instance.mode ?: if (instance.demo == true) "demo" else "prod"
+    org.example.memosm.ui.component.setting.SettingsGroup {
+        listOf(
+            stringResource(R.string.profile_instance_version) to (instance.version ?: unknown),
+            stringResource(R.string.profile_instance_mode) to mode,
+            stringResource(R.string.profile_instance_url) to (instance.instanceUrl?.takeIf { it.isNotBlank() } ?: unknown)
+        ).forEach { (label, value) ->
+            ListItem(
+                modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp)),
+                content = { Text(label) },
+                supportingContent = { Text(value) },
+                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
             )
         }
     }

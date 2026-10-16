@@ -3,8 +3,10 @@ package org.example.memosm.api
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -13,6 +15,7 @@ import okio.BufferedSink
 import org.example.memosm.data.StreamingBase64
 import org.example.memosm.model.Attachment
 import java.io.File
+import java.io.InputStream
 
 /**
  * Specialized API client for streaming attachment uploads.
@@ -21,7 +24,8 @@ import java.io.File
  */
 class StreamingAttachmentApi(
     private val client: OkHttpClient,
-    private val baseUrl: String
+    private val baseUrl: String,
+    private val apiPath: String = "api/v1"
 ) {
     companion object {
         private const val TAG = "StreamingAttachmentApi"
@@ -29,199 +33,65 @@ class StreamingAttachmentApi(
 
     private val gson = GsonProvider.gson
 
-    /**
-     * Create an attachment by streaming the file content as base64.
-     * The entire file is never loaded into memory at once.
-     *
-     * @param filename The name of the file
-     * @param mimeType The MIME type of the file
-     * @param contentUri The Uri to read the file content from
-     * @param context Android context for content resolver
-     * @return The created Attachment, or null if upload failed
-     */
     suspend fun createAttachmentStreaming(
         filename: String,
         mimeType: String,
         contentUri: Uri,
         context: Context
-    ): Attachment? = withContext(Dispatchers.IO) {
-        try {
-            Log.d(TAG, "Starting streaming upload for $filename (mimeType=$mimeType)")
-
-            val requestBody = StreamingAttachmentRequestBody(
-                filename = filename,
-                mimeType = mimeType,
-                contentUri = contentUri,
-                context = context
-            )
-
-            val url = "${baseUrl.trimEnd('/')}/api/v1/attachments"
-            Log.d(TAG, "Upload URL: $url")
-
-            val request = Request.Builder()
-                .url(url)
-                .post(requestBody)
-                .build()
-
-            val response = client.newCall(request).execute()
-
-            if (!response.isSuccessful) {
-                val errorBody = response.body.string()
-                Log.e(TAG, "Upload failed with code ${response.code}: ${response.message}")
-                Log.e(TAG, "Error response body: $errorBody")
-                return@withContext null
-            }
-
-            val responseBody = response.body.string()
-
-            Log.d(TAG, "Response body: $responseBody")
-            val attachment = gson.fromJson(responseBody, Attachment::class.java)
-            Log.d(TAG, "Upload successful: ${attachment.name}")
-            attachment
-        } catch (e: Exception) {
-            Log.e(TAG, "Streaming upload failed", e)
-            null
-        }
+    ): Attachment? = upload(filename, mimeType) {
+        requireNotNull(context.contentResolver.openInputStream(contentUri))
     }
 
-    /**
-     * Create an attachment by streaming from a local file.
-     */
     suspend fun createAttachmentFromFile(
         file: File,
         mimeType: String,
         attachmentId: String? = null
+    ): Attachment? = upload(file.name, mimeType, attachmentId) { file.inputStream() }
+
+    private suspend fun upload(
+        filename: String,
+        mimeType: String,
+        attachmentId: String? = null,
+        openStream: () -> InputStream
     ): Attachment? = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "Starting streaming upload for file ${file.name}")
-
-            val requestBody = StreamingFileAttachmentRequestBody(
-                filename = file.name,
-                mimeType = mimeType,
-                file = file
-            )
-
-            // Forward the clientId as the API attachmentId so a retried
-            // streaming upload reconciles server-side instead of duplicating.
-            val base = "${baseUrl.trimEnd('/')}/api/v1/attachments"
-            val url = if (attachmentId != null) {
-                "$base?attachmentId=" + java.net.URLEncoder.encode(attachmentId, "UTF-8")
-            } else {
-                base
-            }
-            Log.d(TAG, "Upload URL: $url")
-
-            val request = Request.Builder()
-                .url(url)
-                .post(requestBody)
+            val serverUrl = requireNotNull(normalizeLoginServerUrl(baseUrl))
+            val url = "$serverUrl$apiPath/attachments".toHttpUrl().newBuilder()
+                .apply { attachmentId?.let { addQueryParameter("attachmentId", it) } }
                 .build()
-
-            val response = client.newCall(request).execute()
-
-            if (!response.isSuccessful) {
-                val errorBody = response.body.string()
-                Log.e(TAG, "Upload failed with code ${response.code}: ${response.message}")
-                Log.e(TAG, "Error response body: $errorBody")
-                return@withContext null
+            val request = Request.Builder().url(url)
+                .post(StreamingAttachmentRequestBody(filename, mimeType, openStream)).build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Upload failed with code ${response.code}: ${response.message}")
+                    return@withContext null
+                }
+                gson.fromJson(response.body.string(), Attachment::class.java)
             }
-
-            val responseBody = response.body.string()
-
-            Log.d(TAG, "Response body: $responseBody")
-            val attachment = gson.fromJson(responseBody, Attachment::class.java)
-            Log.d(TAG, "Upload successful: ${attachment.name}")
-            attachment
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Streaming upload failed", e)
             null
         }
     }
 
-    /**
-     * RequestBody that streams the attachment JSON with base64 content from a Uri.
-     *
-     * The JSON is manually constructed to allow streaming the base64 content
-     * without loading it all into memory. Format:
-     * {"filename":"...","type":"...","content":"<base64>"}
-     */
+    /** Streams the JSON content field without retaining the file bytes in memory. */
     private class StreamingAttachmentRequestBody(
         private val filename: String,
         private val mimeType: String,
-        private val contentUri: Uri,
-        private val context: Context
+        private val openStream: () -> InputStream
     ) : RequestBody() {
-
         override fun contentType() = "application/json".toMediaType()
 
         override fun writeTo(sink: BufferedSink) {
-            // Build JSON manually to stream the base64 content
-            // Escape special characters in filename
-            val escapedFilename = escapeJsonString(filename)
-            val escapedMimeType = escapeJsonString(mimeType)
-
-            // Write JSON opening and fields
-            sink.writeUtf8("{\"filename\":\"")
-            sink.writeUtf8(escapedFilename)
-            sink.writeUtf8("\",\"type\":\"")
-            sink.writeUtf8(escapedMimeType)
-            sink.writeUtf8("\",\"content\":\"")
-
-            // Stream base64 content directly to the sink
-            context.contentResolver.openInputStream(contentUri)?.use { inputStream ->
-                StreamingBase64.encodeToStream(inputStream, sink.outputStream())
-            }
-
-            // Close the JSON
+            sink.writeUtf8("{\"filename\":")
+            sink.writeUtf8(GsonProvider.gson.toJson(filename))
+            sink.writeUtf8(",\"type\":")
+            sink.writeUtf8(GsonProvider.gson.toJson(mimeType))
+            sink.writeUtf8(",\"content\":\"")
+            openStream().use { StreamingBase64.encodeToStream(it, sink.outputStream()) }
             sink.writeUtf8("\"}")
-        }
-
-        private fun escapeJsonString(s: String): String {
-            return s.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t")
-        }
-    }
-
-    /**
-     * RequestBody that streams the attachment JSON with base64 content from a File.
-     */
-    private class StreamingFileAttachmentRequestBody(
-        private val filename: String,
-        private val mimeType: String,
-        private val file: File
-    ) : RequestBody() {
-
-        override fun contentType() = "application/json".toMediaType()
-
-        override fun writeTo(sink: BufferedSink) {
-            // Build JSON manually to stream the base64 content
-            val escapedFilename = escapeJsonString(filename)
-            val escapedMimeType = escapeJsonString(mimeType)
-
-            // Write JSON opening and fields
-            sink.writeUtf8("{\"filename\":\"")
-            sink.writeUtf8(escapedFilename)
-            sink.writeUtf8("\",\"type\":\"")
-            sink.writeUtf8(escapedMimeType)
-            sink.writeUtf8("\",\"content\":\"")
-
-            // Stream base64 content directly to the sink
-            file.inputStream().use { inputStream ->
-                StreamingBase64.encodeToStream(inputStream, sink.outputStream())
-            }
-
-            // Close the JSON
-            sink.writeUtf8("\"}")
-        }
-
-        private fun escapeJsonString(s: String): String {
-            return s.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t")
         }
     }
 }

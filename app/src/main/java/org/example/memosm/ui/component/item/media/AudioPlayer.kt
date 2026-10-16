@@ -1,5 +1,6 @@
 package org.example.memosm.ui.component.item.media
 
+import org.example.memosm.ui.theme.flatCardElevation
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
@@ -19,30 +20,45 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Forward30
+import androidx.compose.material.icons.outlined.Replay30
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,11 +69,10 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.example.memosm.ui.component.item.mutableLongPositionOf
-import java.util.Locale
+import org.example.memosm.R
 
 enum class AudioPlayerMode {
-    WIDE, NORMAL, COMPACT
+    WIDE, NORMAL, COMPACT, FULL_SCREEN
 }
 
 @OptIn(UnstableApi::class)
@@ -71,59 +86,158 @@ fun AudioPlayer(
     showContainer: Boolean = true,
     onPlayingStateChanged: (Boolean) -> Unit = {}
 ) {
+    val accountIdentity = LocalAccountMediaIdentity.current
+    val accountId = accountIdentity?.id
     val context = LocalContext.current
-    val exoPlayer = remember(url, token) {
-        val dataSourceFactory = MediaCache.createDataSourceFactory(context, token)
+    val exoPlayer = remember(url, token, accountIdentity) {
+        val dataSourceFactory = MediaCache.createDataSourceFactory(context, token, accountId)
         ExoPlayer.Builder(context).setMediaSourceFactory(
             DefaultMediaSourceFactory(dataSourceFactory)
         ).build()
     }
-    var isPlaying by remember { mutableStateOf(false) }
-    var progress by remember { mutableFloatStateOf(0f) }
-    var duration by remember { mutableLongStateOf(0L) }
-    var currentPosition by mutableLongPositionOf()
-    var isPrepared by remember { mutableStateOf(false) }
+    var isPlaying by remember(exoPlayer) { mutableStateOf(false) }
+    var playWhenReady by remember(exoPlayer) { mutableStateOf(false) }
+    var duration by remember(exoPlayer) { mutableLongStateOf(0L) }
+    var currentPosition by remember(exoPlayer) { mutableLongStateOf(0L) }
+    var scrubPosition by remember(exoPlayer) { mutableStateOf<Long?>(null) }
+    var isPrepared by remember(exoPlayer) { mutableStateOf(false) }
+    var isSeekable by remember(exoPlayer) { mutableStateOf(false) }
+    var isBuffering by remember(exoPlayer) { mutableStateOf(false) }
+    val onPlayingChanged by rememberUpdatedState(onPlayingStateChanged)
+    val controlsEnabled = !LocalViewerGesturesBlocked.current
+    val displayedPosition = scrubPosition ?: currentPosition
+    val progress = playbackProgress(displayedPosition, duration)
+    val canSeek = isPrepared && isSeekable && duration > 0 && controlsEnabled
 
     DisposableEffect(exoPlayer) {
-        val mediaItem = MediaItem.fromUri(url)
-        exoPlayer.setMediaItem(mediaItem)
-        exoPlayer.prepare()
         val listener = object : Player.Listener {
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_READY) {
-                    isPrepared = true
-                    duration = exoPlayer.duration
-                } else if (playbackState == Player.STATE_ENDED) {
-                    progress = 0f
-                    currentPosition = 0
-                    exoPlayer.pause()
-                    exoPlayer.seekTo(0)
-                    onPlayingStateChanged(false)
-                }
+            override fun onEvents(player: Player, events: Player.Events) {
+                duration = player.duration.coerceAtLeast(0L)
+                currentPosition = player.currentPosition.coerceAtLeast(0L)
+                isPrepared = player.playbackState != Player.STATE_IDLE
+                playWhenReady = player.playWhenReady && player.playbackState != Player.STATE_ENDED
+                isSeekable = player.isCurrentMediaItemSeekable
+                isBuffering = player.playbackState == Player.STATE_BUFFERING
             }
 
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
-                onPlayingStateChanged(playing)
+                onPlayingChanged(playing)
             }
         }
         exoPlayer.addListener(listener)
+        exoPlayer.setMediaItem(MediaItem.fromUri(url))
+        exoPlayer.prepare()
         onDispose {
             exoPlayer.removeListener(listener)
             exoPlayer.release()
+            onPlayingChanged(false)
         }
     }
 
-    LaunchedEffect(isPlaying) {
+    LaunchedEffect(exoPlayer, isPlaying) {
         while (isPlaying) {
-            currentPosition = exoPlayer.currentPosition
-            progress = if (duration > 0) currentPosition.toFloat() / duration else 0f
-            delay(500)
+            currentPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
+            delay(250)
         }
+    }
+
+    val togglePlayback = {
+        togglePlayback(exoPlayer)
+    }
+    val seekTo: (Long) -> Unit = { position ->
+        val target = playbackSeekPosition(position, duration)
+        exoPlayer.seekTo(target)
+        currentPosition = target
+    }
+    val seekLabel = stringResource(R.string.audio_seek)
+    val playbackLabel = stringResource(if (playWhenReady) R.string.memo_action_pause else R.string.memo_action_play)
+    val seekDescription = "${formatMediaTime(displayedPosition)} / ${formatMediaTime(duration)}"
+    val seekSlider: @Composable (Modifier) -> Unit = { sliderModifier ->
+        val sliderState = remember(exoPlayer) { SliderState(value = progress) }
+        LaunchedEffect(progress) { sliderState.value = progress }
+        Slider(
+            state = sliderState,
+            enabled = canSeek,
+            onValueChange = { scrubPosition = (it * duration).toLong() },
+            onValueChangeFinished = {
+                scrubPosition?.let(seekTo)
+                scrubPosition = null
+            },
+            modifier = sliderModifier.semantics {
+                contentDescription = seekLabel
+                stateDescription = seekDescription
+            }
+        )
     }
 
     val content = @Composable {
         when (mode) {
+            AudioPlayerMode.FULL_SCREEN -> Box(
+                modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth()
+                        .verticalScroll(rememberScrollState()).padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = filename, style = MaterialTheme.typography.titleLarge,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(formatMediaTime(displayedPosition), style = MaterialTheme.typography.labelMedium)
+                        seekSlider(Modifier.weight(1f))
+                        Text(formatMediaTime(duration), style = MaterialTheme.typography.labelMedium)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val skipColors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        FilledTonalIconButton(
+                            onClick = { seekTo(currentPosition - 30_000L) }, enabled = canSeek,
+                            modifier = Modifier.weight(1f).height(80.dp),
+                            shape = MaterialTheme.shapes.extraLarge, colors = skipColors
+                        ) {
+                            Icon(Icons.Outlined.Replay30, stringResource(R.string.audio_rewind_30))
+                        }
+                        FilledIconButton(
+                            onClick = togglePlayback, enabled = isPrepared && controlsEnabled,
+                            modifier = Modifier.weight(1.3f).height(96.dp)
+                                .semantics { contentDescription = playbackLabel },
+                            shape = MaterialTheme.shapes.extraLarge
+                        ) {
+                            if (isBuffering) CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp),
+                                color = MaterialTheme.colorScheme.onPrimary
+                            ) else Icon(
+                                if (playWhenReady) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(40.dp)
+                            )
+                        }
+                        FilledTonalIconButton(
+                            onClick = { seekTo(currentPosition + 30_000L) }, enabled = canSeek,
+                            modifier = Modifier.weight(1f).height(80.dp),
+                            shape = MaterialTheme.shapes.extraLarge, colors = skipColors
+                        ) {
+                            Icon(Icons.Outlined.Forward30, stringResource(R.string.audio_forward_30))
+                        }
+                    }
+                }
+            }
+
             AudioPlayerMode.WIDE -> Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -141,28 +255,20 @@ fun AudioPlayer(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     PlayPauseButton(
-                        isPlaying = isPlaying, isPrepared = isPrepared, onToggle = {
-                            if (isPrepared) {
-                                if (isPlaying) exoPlayer.pause()
-                                else exoPlayer.play()
-                            }
-                        })
+                        isPlaying = playWhenReady, isPrepared = isPrepared && controlsEnabled,
+                        onToggle = togglePlayback)
                     Column(modifier = Modifier.weight(1f)) {
-                        Slider(value = progress, onValueChange = {
-                            if (isPrepared) {
-                                progress = it; exoPlayer.seekTo((it * duration).toLong())
-                            }
-                        }, modifier = Modifier.height(24.dp))
+                        seekSlider(Modifier.height(24.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = formatTime(currentPosition),
+                                text = formatMediaTime(displayedPosition),
                                 style = MaterialTheme.typography.labelSmall
                             )
                             Text(
-                                text = formatTime(duration),
+                                text = formatMediaTime(duration),
                                 style = MaterialTheme.typography.labelSmall
                             )
                         }
@@ -172,7 +278,7 @@ fun AudioPlayer(
 
             else -> {
                 Column(
-                    modifier = modifier
+                    modifier = Modifier
                         .fillMaxSize()
                         .padding(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -185,12 +291,8 @@ fun AudioPlayer(
                             .fillMaxWidth()
                     ) {
                         PlayPauseButton(
-                            isPlaying = isPlaying, isPrepared = isPrepared, onToggle = {
-                                if (isPrepared) {
-                                    if (isPlaying) exoPlayer.pause()
-                                    else exoPlayer.play()
-                                }
-                            }, modifier = Modifier.size(48.dp)
+                            isPlaying = playWhenReady, isPrepared = isPrepared && controlsEnabled,
+                            onToggle = togglePlayback, modifier = Modifier.size(48.dp)
                         )
                     }
 
@@ -209,11 +311,12 @@ fun AudioPlayer(
         }
     }
 
-    if (showContainer) {
+    if (showContainer && mode != AudioPlayerMode.FULL_SCREEN) {
         Card(
-            modifier = modifier.then(if (mode != AudioPlayerMode.WIDE) Modifier.height(100.dp) else Modifier),
+            elevation = flatCardElevation(),
+            modifier = modifier.then(if (mode == AudioPlayerMode.NORMAL || mode == AudioPlayerMode.COMPACT) Modifier.height(100.dp) else Modifier),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            shape = RoundedCornerShape(8.dp)
+            shape = MaterialTheme.shapes.medium
         ) { content() }
     } else {
         Box(modifier = modifier) { content() }
@@ -227,7 +330,8 @@ fun PlayPauseButton(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
     iconSize: androidx.compose.ui.unit.Dp = 32.dp,
-    tint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary
+    tint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary,
+    filledIcons: Boolean = false
 ) {
     val rotation = remember { Animatable(0f) }
     val scale = remember { Animatable(1f) }
@@ -270,7 +374,12 @@ fun PlayPauseButton(
                 }, label = "IconSwap"
             ) { playing ->
                 Icon(
-                    imageVector = if (playing) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
+                    imageVector = when {
+                        filledIcons && playing -> Icons.Filled.Pause
+                        filledIcons -> Icons.Filled.PlayArrow
+                        playing -> Icons.Outlined.Pause
+                        else -> Icons.Outlined.PlayArrow
+                    },
                     contentDescription = androidx.compose.ui.res.stringResource(
                         if (playing) org.example.memosm.R.string.memo_action_pause
                         else org.example.memosm.R.string.memo_action_play
@@ -281,11 +390,4 @@ fun PlayPauseButton(
             }
         }
     }
-}
-
-private fun formatTime(ms: Long): String {
-    val totalSeconds = ms / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return String.format(Locale.US, "%02d:%02d", minutes, seconds)
 }

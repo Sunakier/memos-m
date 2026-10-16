@@ -1,10 +1,15 @@
 package org.example.memosm.data.sync
 
 import android.util.Log
+import kotlinx.coroutines.CancellationException
+import org.example.memosm.viewmodel.AccountContext
+import org.example.memosm.viewmodel.AccountSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,8 +17,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.example.memosm.api.GsonProvider
 import org.example.memosm.api.MemosApi
 import org.example.memosm.data.DataStoreManager
@@ -26,7 +29,7 @@ import org.example.memosm.model.User
 private const val TAG = "SyncManager"
 
 /**
- * Replays queued offline writes against the server once connectivity is back,
+ * Pushes queued local writes to the server,
  * detects content conflicts (server modified while we were offline) and lets
  * the user decide how to resolve them.
  *
@@ -41,10 +44,8 @@ class SyncManager(
     private val dataStoreManager: DataStoreManager,
     private val workScheduler: SyncWorkScheduler,
     private val auditLogger: SyncAuditLogger,
-    private val apiProvider: () -> MemosApi?,
-    private val accountIdProvider: () -> String?,
+    private val accountSession: AccountSession,
     private val currentUserProvider: () -> User?,
-    private val isOnlineProvider: () -> Boolean,
     private val attachmentUploadQueueProvider: () -> AttachmentUploadQueue? = { null },
     private val onMemoSynced: suspend (memo: Memo, tempName: String?) -> Unit,
     private val onMemoDeleted: suspend (memoName: String) -> Unit,
@@ -57,18 +58,20 @@ class SyncManager(
     private val _pendingOps = MutableStateFlow<List<PendingOp>>(emptyList())
     val pendingOps: StateFlow<List<PendingOp>> = _pendingOps.asStateFlow()
 
+    data class AccountPendingOps(val context: AccountContext, val ops: List<PendingOp>)
+
+    /** Re-emits unchanged queues when an account activation resets its UI. */
+    val currentPendingOps: Flow<AccountPendingOps> =
+        combine(accountSession.contexts, pendingOps) { context, ops ->
+            if (context != null && ops.all { it.accountId == context.account.id })
+                AccountPendingOps(context, ops) else null
+        }.filterNotNull()
+
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
     private var syncJob: Job? = null
     private var retryJob: Job? = null
-
-    /**
-     * Serializes op processing: a background sync and a user conflict decision
-     * must never touch the same op concurrently (double push, or a re-triggered
-     * conflict for an op that was just resolved).
-     */
-    private val opMutex = Mutex()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun startObserving(accountIdFlow: Flow<String?>) {
@@ -101,31 +104,30 @@ class SyncManager(
         _isSyncing.value = false
     }
 
-    /**
-     * Attempt to replay all queued ops for the active account.
-     * No-op when offline or already syncing.
-     *
-     * [force] bypasses the retry guards (permanently-failed ops and the
-     * exponential backoff window) - used for explicit user actions
-     * (Sync Now button, pull-to-refresh, conflict resolved).
-     */
-    fun syncNow(force: Boolean = false) {
-        if (!isOnlineProvider() || _isSyncing.value) return
-        val accountId = accountIdProvider() ?: return
+    /** Push all queued changes to the server, regardless of previous failures. */
+    fun pushPendingChanges() {
+        if (_isSyncing.value) return
+        val context = accountSession.current ?: return
+        if (!context.networkReady) return
+        val accountId = context.account.id
+        val user = currentUserProvider()
         syncJob?.cancel()
+        // Claim the attempt before launching so consecutive gestures cannot
+        // cancel and replace a replay that has not started running yet.
+        _isSyncing.value = true
         syncJob = scope.launch {
-            _isSyncing.value = true
             try {
-                opMutex.withLock {
-                    val api = apiProvider() ?: return@withLock
+                if (!accountSession.isCurrent(context)) return@launch
+                AccountSyncCoordinator.withAccountLock(accountId) {
+                    if (!accountSession.isCurrent(context)) return@withAccountLock
                     var ops = repository.getOps(accountId)
-                    val executor = newExecutor(api, accountId, currentUserProvider())
+                    val executor = newExecutor(context, user)
                     if (ops.isNotEmpty()) {
-                        Log.d(TAG, "syncNow: syncing ${ops.size} ops")
+                        Log.d(TAG, "pushPendingChanges: pushing ${ops.size} ops")
                     }
-                    val now = System.currentTimeMillis()
                     var index = 0
                     while (index < ops.size) {
+                        if (!accountSession.isCurrent(context)) return@withAccountLock
                         // Reload after each acknowledgement so temporary-name
                         // remaps and rebased follow-ups are used immediately.
                         val opId = ops[index].id
@@ -133,25 +135,6 @@ class SyncManager(
                             ops = repository.getOps(accountId)
                             index++
                             continue
-                        }
-                        if (!force) {
-                            // Ops the server rejected with a 4xx will never succeed
-                            // by retrying - leave them queued (visible in the UI)
-                            // until the user discards or force-syncs.
-                            if (op.permanentlyFailed) {
-                                index++
-                                continue
-                            }
-                            // Exponential backoff: 30s, 1m, 2m, 4m, 8m, capped at 10m.
-                            // A failing op would otherwise be retried on every
-                            // foreground/resume/network-recovery.
-                            val backoffMillis = minOf(
-                                30_000L shl minOf(op.attemptCount, 4), 600_000L
-                            )
-                            if (now - op.lastAttemptAt < backoffMillis) {
-                                index++
-                                continue
-                            }
                         }
                         try {
                             val success = executor.replay(op)
@@ -162,11 +145,13 @@ class SyncManager(
                                 continue
                             }
                             index++
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             Log.e(TAG, "Op ${op.id} (${op.type}) failed", e)
                             // 4xx means the server deterministically rejected the
-                            // op - retrying is pointless, mark it permanent. 5xx
-                            // and transport errors are transient: keep retrying
+                            // op: mark it for attention and let the next push retry it.
+                            // 5xx and transport errors are transient: keep retrying
                             // with backoff. 408/429 are transient too (timeout /
                             // rate limit), matching OutboxSyncWorker and
                             // AttachmentUploadQueue.
@@ -190,23 +175,24 @@ class SyncManager(
                             index++
                         }
                     }
-                    dataStoreManager.saveLastSyncTime(accountId, System.currentTimeMillis())
+                    if (repository.getOps(accountId).isEmpty()) {
+                        dataStoreManager.saveLastSyncTime(accountId, System.currentTimeMillis())
+                    }
                 }
             } finally {
-                _isSyncing.value = false
+                if (accountSession.isCurrent(context)) _isSyncing.value = false
             }
         }
     }
 
     private fun scheduleRetry(accountId: String, attemptCount: Int) {
-        if (!isOnlineProvider()) return
         val delayMs = minOf(30_000L shl minOf(attemptCount, 4), 600_000L)
         workScheduler.schedule(accountId)
         retryJob?.cancel()
         retryJob = scope.launch {
             delay(delayMs)
-            if (accountIdProvider() == accountId && isOnlineProvider()) {
-                syncNow()
+            if (accountSession.current?.account?.id == accountId) {
+                pushPendingChanges()
             }
         }
     }
@@ -226,16 +212,22 @@ class SyncManager(
         resolution: ConflictResolution,
         mergedContent: String? = null
     ) {
+        val context = accountSession.current ?: return
+        if (item.accountId != context.account.id) return
+        val accountId = context.account.id
+        val api = context.api
+        val user = currentUserProvider()
         scope.launch {
-            val accountId = accountIdProvider() ?: return@launch
-            val api = apiProvider() ?: return@launch
-            opMutex.withLock {
-                val executor = newExecutor(api, accountId, currentUserProvider())
+            AccountSyncCoordinator.withAccountLock(accountId) {
+                if (!accountSession.isCurrent(context)) return@withAccountLock
+                val ownedOp = repository.getOp(item.opId) ?: return@withAccountLock
+                if (ownedOp.accountId != accountId || ownedOp.memoName != item.memoName) return@withAccountLock
+                val executor = newExecutor(context, user)
                 when (resolution) {
                     ConflictResolution.KEEP_LOCAL -> {
-                        val op = repository.getOp(item.opId) ?: return@withLock
+                        val op = repository.getOp(item.opId) ?: return@withAccountLock
                         val local = gson.fromJson(op.payloadJson, Memo::class.java)
-                            ?: return@withLock
+                            ?: return@withAccountLock
                         try {
                             val updated = api.updateMemo(
                                 item.memoName, local, op.updateMask ?: "content"
@@ -248,26 +240,28 @@ class SyncManager(
                             )
                             executor.cacheMemo(updated)
                             repository.deleteOp(item.opId)
-                            onMemoSynced(updated, null)
+                            if (accountSession.isCurrent(context)) onMemoSynced(updated, null)
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             Log.e(TAG, "Keep-local push failed for $item.memoName", e)
                             // Leave the op queued and re-surface the conflict so the
                             // user can retry or defer.
-                            onConflict(item)
+                            if (accountSession.isCurrent(context)) onConflict(item)
                         }
                     }
 
                     ConflictResolution.MERGE -> {
-                        val op = repository.getOp(item.opId) ?: return@withLock
+                        val op = repository.getOp(item.opId) ?: return@withAccountLock
                         val local = gson.fromJson(op.payloadJson, Memo::class.java)
-                            ?: return@withLock
+                            ?: return@withAccountLock
                         if (mergedContent == null) {
                             // MERGE without a merged version would silently
                             // overwrite the server version with the local one;
                             // refuse and re-surface the conflict instead.
                             Log.e(TAG, "MERGE resolution without mergedContent for ${item.memoName}")
-                            onConflict(item)
-                            return@withLock
+                            if (accountSession.isCurrent(context)) onConflict(item)
+                            return@withAccountLock
                         }
                         val merged = local.copy(content = mergedContent)
                         try {
@@ -279,15 +273,17 @@ class SyncManager(
                             )
                             executor.cacheMemo(updated)
                             repository.deleteOp(item.opId)
-                            onMemoSynced(updated, null)
+                            if (accountSession.isCurrent(context)) onMemoSynced(updated, null)
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             Log.e(TAG, "Merge push failed for $item.memoName", e)
-                            onConflict(item)
+                            if (accountSession.isCurrent(context)) onConflict(item)
                         }
                     }
 
                     ConflictResolution.KEEP_SERVER -> {
-                        val op = repository.getOp(item.opId) ?: return@withLock
+                        val op = repository.getOp(item.opId) ?: return@withAccountLock
                         repository.deleteOp(item.opId)
                         // Re-anchor follow-up edits (queued while offline, based
                         // on the discarded local version) to the adopted server
@@ -298,7 +294,7 @@ class SyncManager(
                             item.serverMemo.updateTime
                         )
                         executor.cacheMemo(item.serverMemo)
-                        onMemoSynced(item.serverMemo, null)
+                        if (accountSession.isCurrent(context)) onMemoSynced(item.serverMemo, null)
                     }
 
                     ConflictResolution.LATER -> {
@@ -314,18 +310,26 @@ class SyncManager(
      * [OpReplayExecutor]; this wires the UI-facing callbacks (conflict
      * surfacing, comment refresh, memo update/delete notifications) into it.
      */
-    private fun newExecutor(api: MemosApi, accountId: String, currentUser: User?) =
+    private fun newExecutor(context: AccountContext, currentUser: User?) =
         OpReplayExecutor(
-            api = api,
+            api = context.api,
             repository = repository,
             memoCacheRepository = memoCacheRepository,
             auditLogger = auditLogger,
-            accountId = accountId,
+            accountId = context.account.id,
             currentUser = currentUser,
             attachmentUploadQueueProvider = attachmentUploadQueueProvider,
-            onMemoSynced = onMemoSynced,
-            onMemoDeleted = onMemoDeleted,
-            onCommentsRefresh = onCommentsRefresh,
-            onConflict = onConflict
+            onMemoSynced = { memo, name ->
+                if (accountSession.isCurrent(context)) onMemoSynced(memo, name)
+            },
+            onMemoDeleted = { name ->
+                if (accountSession.isCurrent(context)) onMemoDeleted(name)
+            },
+            onCommentsRefresh = {
+                if (accountSession.isCurrent(context)) onCommentsRefresh()
+            },
+            onConflict = { item ->
+                if (accountSession.isCurrent(context)) onConflict(item)
+            }
         )
 }

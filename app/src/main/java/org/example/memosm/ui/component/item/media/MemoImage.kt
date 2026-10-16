@@ -2,7 +2,7 @@ package org.example.memosm.ui.component.item.media
 
 import android.net.Uri
 import android.util.Base64
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -28,9 +28,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.IntSize
 import coil3.compose.AsyncImage
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
@@ -56,18 +54,20 @@ fun MemoImage(
     onRatioAvailable: (Float) -> Unit = {},
     onClick: (() -> Unit)? = null,
     isFullScreen: Boolean = false,
-    onDismiss: (() -> Unit)? = null
+    onLongClick: (() -> Unit)? = null
 ) {
+    val accountIdentity = LocalAccountMediaIdentity.current
+    val accountId = accountIdentity?.id
     val context = LocalContext.current
     val attachmentCacheManager = org.example.memosm.MemosApplication.instance.attachmentCacheManager
-    val imageModels = produceState<Pair<Any?, Any?>>(Pair(null, null), uri, attachment, hostUrl) {
+    val imageModels = produceState<Pair<Any?, Any?>>(Pair(null, null), uri, attachment, hostUrl, accountIdentity) {
         value = withContext(Dispatchers.IO) {
             when {
                 uri != Uri.EMPTY -> Pair(uri, uri)
                 attachment != null -> {
                     // Prefer the account-scoped offline file. A remote attachment
                     // still keeps upstream's thumbnail preview and original fallback.
-                    val original = attachmentCacheManager.getLocalFileByHost(hostUrl, attachment.name)
+                    val original = attachmentCacheManager.getLocalFileForAccount(accountId, attachment.name)
                         ?: AttachmentManager.getAttachmentUrl(hostUrl, attachment)
                         ?: when {
                             !attachment.content.isNullOrBlank() -> {
@@ -100,10 +100,10 @@ fun MemoImage(
     }
     val model = if (useOriginal) originalModel else previewModel
 
-    val cacheKey = remember(uri, attachment, hostUrl) {
+    val cacheKey = remember(uri, attachment, hostUrl, accountIdentity) {
         when {
             uri != Uri.EMPTY -> uri.toString()
-            attachment?.name != null -> "${hostUrl}_${attachment.name}"
+            attachment?.name != null -> accountMediaCacheKey(accountId, "${hostUrl}_${attachment.name}")
             else -> model?.toString()
         }
     }
@@ -120,13 +120,16 @@ fun MemoImage(
         builder.build()
     }
 
-    val imageRequest = remember(model, headers) {
+    val imageRequest = remember(model, headers, accountIdentity) {
         ImageRequest.Builder(context).data(model).httpHeaders(headers)
+            .memoryCacheKey(accountMediaCacheKey(accountId, model.toString()))
+            .diskCacheKey(accountMediaCacheKey(accountId, model.toString()))
             .diskCachePolicy(CachePolicy.ENABLED).memoryCachePolicy(CachePolicy.ENABLED).build()
     }
 
     var isLoading by remember { mutableStateOf(model != null) }
     var isError by remember { mutableStateOf(false) }
+    var imageSize by remember(model) { mutableStateOf(IntSize.Zero) }
 
     Box(
         modifier = modifier, contentAlignment = Alignment.Center
@@ -135,12 +138,14 @@ fun MemoImage(
             val imgModifier = Modifier
                 .fillMaxSize()
                 .then(if (isRound) Modifier.clip(CircleShape) else Modifier)
-                .then(if (onClick != null && !isFullScreen) Modifier.clickable { onClick() } else Modifier)
+                .then(if (onClick != null && !isFullScreen) Modifier.combinedClickable(
+                    onClick = onClick, onLongClick = onLongClick
+                ) else Modifier)
 
             AsyncImage(
                 model = imageRequest,
                 contentDescription = contentDescription,
-                modifier = imgModifier.zoomable(isFullScreen, onDismiss),
+                modifier = imgModifier.zoomable(isFullScreen, imageSize),
                 contentScale = if (isFullScreen) ContentScale.Fit else ContentScale.Crop,
                 onLoading = { isLoading = true; isError = false },
                 onSuccess = { state ->
@@ -148,6 +153,7 @@ fun MemoImage(
                     isError = false
                     val size = state.painter.intrinsicSize
                     if (size.width > 0 && size.height > 0) {
+                        imageSize = IntSize(size.width.toInt(), size.height.toInt())
                         val ratio = size.width / size.height
                         if (cacheKey != null) MediaCache.setAspectRatio(cacheKey, ratio)
                         onRatioAvailable(ratio)

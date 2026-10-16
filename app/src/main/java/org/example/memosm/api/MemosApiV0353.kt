@@ -1,5 +1,6 @@
 package org.example.memosm.api
 
+import org.example.memosm.model.LinkMetadata
 import org.example.memosm.model.Activity
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.CreatePersonalAccessTokenRequest
@@ -49,19 +50,23 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
+/** Resource paths are relative to the API root selected by [MemosApiFactory]. */
 interface MemosApiV0353 {
 
+    @GET("memos/-/linkMetadata")
+    suspend fun getLinkMetadata(@Query("url") url: String): LinkMetadata
+
     // --- ActivityService ---
-    @GET("api/v1/activities")
+    @GET("activities")
     suspend fun listActivities(
         @Query("pageSize") pageSize: Int? = null, @Query("pageToken") pageToken: String? = null
     ): ListActivitiesResponse
 
-    @GET("api/v1/{activity}")
+    @GET("{activity}")
     suspend fun getActivity(@Path("activity", encoded = true) activity: String): Activity
 
     // --- AttachmentService ---
-    @GET("api/v1/attachments")
+    @GET("attachments")
     suspend fun listAttachments(
         @Query("pageSize") pageSize: Int? = null,
         @Query("pageToken") pageToken: String? = null,
@@ -69,18 +74,18 @@ interface MemosApiV0353 {
         @Query("orderBy") orderBy: String? = null
     ): ListAttachmentsResponse
 
-    @POST("api/v1/attachments")
+    @POST("attachments")
     suspend fun createAttachment(
         @Body attachment: Attachment, @Query("attachmentId") attachmentId: String? = null
     ): Attachment
 
-    @GET("api/v1/{attachment}")
+    @GET("{attachment}")
     suspend fun getAttachment(@Path("attachment", encoded = true) attachment: String): Attachment
 
-    @DELETE("api/v1/{attachment}")
+    @DELETE("{attachment}")
     suspend fun deleteAttachment(@Path("attachment", encoded = true) attachment: String)
 
-    @PATCH("api/v1/{attachment}")
+    @PATCH("{attachment}")
     suspend fun updateAttachment(
         @Path("attachment", encoded = true) attachment: String,
         @Body attachmentData: Attachment,
@@ -89,43 +94,43 @@ interface MemosApiV0353 {
 
 
     // --- AuthService ---
-    @GET("api/v1/auth/me")
+    @GET("auth/me")
     suspend fun getCurrentSession(): CurrentSessionResponseV0353
 
-    @POST("api/v1/auth/refresh")
+    @POST("auth/refresh")
     suspend fun refreshToken(@Body request: RefreshTokenRequest): RefreshTokenResponse
 
-    @POST("/api/v1/auth/signin")
+    @POST("auth/signin")
     suspend fun signIn(@Body request: SignInRequest): SignInResponseV0353
 
-    @POST("api/v1/auth/signout")
+    @POST("auth/signout")
     suspend fun signOut()
 
     // --- IdentityProviderService ---
-    @GET("api/v1/identity-providers")
+    @GET("identity-providers")
     suspend fun listIdentityProviders(): ListIdentityProvidersResponse
 
-    @POST("api/v1/identity-providers")
+    @POST("identity-providers")
     suspend fun createIdentityProvider(
         @Body identityProvider: IdentityProvider,
         @Query("identityProviderId") identityProviderId: String? = null
     ): IdentityProvider
 
-    @GET("api/v1/{identityProvider}")
+    @GET("{identityProvider}")
     suspend fun getIdentityProvider(
         @Path(
             "identityProvider", encoded = true
         ) identityProvider: String
     ): IdentityProvider
 
-    @DELETE("api/v1/{identityProvider}")
+    @DELETE("{identityProvider}")
     suspend fun deleteIdentityProvider(
         @Path(
             "identityProvider", encoded = true
         ) identityProvider: String
     )
 
-    @PATCH("api/v1/{identityProvider}")
+    @PATCH("{identityProvider}")
     suspend fun updateIdentityProvider(
         @Path("identityProvider", encoded = true) identityProvider: String,
         @Body identityProviderData: IdentityProvider,
@@ -133,10 +138,10 @@ interface MemosApiV0353 {
     ): IdentityProvider
 
     // --- InstanceService ---
-    @GET("api/v1/instance/profile")
+    @GET("instance/profile")
     suspend fun getInstanceProfile(): InstanceProfile
 
-    @GET("api/v1/instance/{instance}")
+    @GET("instance/{instance}")
     suspend fun getInstanceSetting(
         @Path(
             "instance",
@@ -144,7 +149,7 @@ interface MemosApiV0353 {
         ) instance: String
     ): InstanceSetting
 
-    @PATCH("api/v1/instance/{instance}/*")
+    @PATCH("instance/{instance}/*")
     suspend fun updateInstanceSetting(
         @Path("instance") instance: String,
         @Body setting: InstanceSetting,
@@ -152,7 +157,7 @@ interface MemosApiV0353 {
     ): InstanceSetting
 
     // --- MemoService ---
-    @GET("api/v1/memos")
+    @GET("memos")
     suspend fun listMemos(
         @Query("pageSize") pageSize: Int? = null,
         @Query("pageToken") pageToken: String? = null,
@@ -162,39 +167,39 @@ interface MemosApiV0353 {
         @Query("showDeleted") showDeleted: Boolean? = null
     ): ListMemosResponse
 
-    @POST("api/v1/memos")
+    @POST("memos")
     suspend fun createMemo(
         @Body memo: Memo, @Query("memoId") memoId: String? = null
     ): Memo
 
-    @GET("api/v1/{memo}")
+    @GET("{memo}")
     suspend fun getMemo(@Path("memo", encoded = true) memo: String): Memo
 
-    @DELETE("api/v1/{memo}")
+    @DELETE("{memo}")
     suspend fun deleteMemo(
         @Path("memo", encoded = true) memo: String, @Query("force") force: Boolean? = null
     )
 
-    @PATCH("api/v1/{memo}")
+    @PATCH("{memo}")
     suspend fun updateMemo(
         @Path("memo", encoded = true) memo: String,
         @Body memoData: Memo,
         @Query("updateMask") updateMask: String
     ): Memo
 
-    @GET("api/v1/{memo}/attachments")
+    @GET("{memo}/attachments")
     suspend fun listMemoAttachments(
         @Path("memo", encoded = true) memo: String,
         @Query("pageSize") pageSize: Int? = null,
         @Query("pageToken") pageToken: String? = null
     ): ListMemoAttachmentsResponse
 
-    @PATCH("api/v1/{memo}/attachments")
+    @PATCH("{memo}/attachments")
     suspend fun setMemoAttachments(
         @Path("memo", encoded = true) memo: String, @Body request: SetMemoAttachmentsRequest
     )
 
-    @GET("api/v1/{memo}/comments")
+    @GET("{memo}/comments")
     suspend fun listMemoComments(
         @Path("memo", encoded = true) memo: String,
         @Query("pageSize") pageSize: Int? = null,
@@ -202,44 +207,44 @@ interface MemosApiV0353 {
         @Query("orderBy") orderBy: String? = null
     ): ListMemoCommentsResponse
 
-    @POST("api/v1/{memo}/comments")
+    @POST("{memo}/comments")
     suspend fun createMemoComment(
         @Path("memo", encoded = true) memo: String,
         @Body comment: Memo,
         @Query("commentId") commentId: String? = null
     ): Memo
 
-    @GET("api/v1/{memo}/reactions")
+    @GET("{memo}/reactions")
     suspend fun listMemoReactions(
         @Path("memo", encoded = true) memo: String,
         @Query("pageSize") pageSize: Int? = null,
         @Query("pageToken") pageToken: String? = null
     ): ListMemoReactionsResponse
 
-    @POST("api/v1/{memo}/reactions")
+    @POST("{memo}/reactions")
     suspend fun upsertMemoReaction(
         @Path("memo", encoded = true) memo: String, @Body request: UpsertMemoReactionRequest
     ): Reaction
 
-    @DELETE("api/v1/{reaction}")
+    @DELETE("{reaction}")
     suspend fun deleteMemoReaction(
         @Path("reaction", encoded = true) reaction: String
     )
 
-    @GET("api/v1/{memo}/relations")
+    @GET("{memo}/relations")
     suspend fun listMemoRelations(
         @Path("memo", encoded = true) memo: String,
         @Query("pageSize") pageSize: Int? = null,
         @Query("pageToken") pageToken: String? = null
     ): ListMemoRelationsResponse
 
-    @PATCH("api/v1/{memo}/relations")
+    @PATCH("{memo}/relations")
     suspend fun setMemoRelations(
         @Path("memo", encoded = true) memo: String, @Body request: SetMemoRelationsRequest
     )
 
     // --- UserService ---
-    @GET("api/v1/users")
+    @GET("users")
     suspend fun listUsers(
         @Query("pageSize") pageSize: Int? = null,
         @Query("pageToken") pageToken: String? = null,
@@ -247,7 +252,7 @@ interface MemosApiV0353 {
         @Query("showDeleted") showDeleted: Boolean? = null
     ): ListUsersResponseV0353
 
-    @POST("api/v1/users")
+    @POST("users")
     suspend fun createUser(
         @Body user: UserSnapshot,
         @Query("userId") userId: String? = null,
@@ -255,17 +260,17 @@ interface MemosApiV0353 {
         @Query("requestId") requestId: String? = null
     ): UserV0353
 
-    @GET("api/v1/{user}")
+    @GET("{user}")
     suspend fun getUser(
         @Path("user", encoded = true) user: String, @Query("readMask") readMask: String? = null
     ): UserV0353
 
-    @DELETE("api/v1/{user}")
+    @DELETE("{user}")
     suspend fun deleteUser(
         @Path("user", encoded = true) user: String, @Query("force") force: Boolean? = null
     )
 
-    @PATCH("api/v1/{user}")
+    @PATCH("{user}")
     suspend fun updateUser(
         @Path("user", encoded = true) user: String,
         @Body userData: UserSnapshot,
@@ -273,7 +278,7 @@ interface MemosApiV0353 {
         @Query("allowMissing") allowMissing: Boolean? = null
     ): UserV0353
 
-    @GET("api/v1/{user}/notifications")
+    @GET("{user}/notifications")
     suspend fun listUserNotifications(
         @Path("user", encoded = true) user: String,
         @Query("pageSize") pageSize: Int? = null,
@@ -281,13 +286,13 @@ interface MemosApiV0353 {
         @Query("filter") filter: String? = null
     ): ListUserNotificationsResponse
 
-    @DELETE("api/v1/{user}/notifications/{notification}")
+    @DELETE("{user}/notifications/{notification}")
     suspend fun deleteUserNotification(
         @Path("user", encoded = true) user: String,
         @Path("notification", encoded = true) notification: String
     )
 
-    @PATCH("api/v1/{user}/notifications/{notification}")
+    @PATCH("{user}/notifications/{notification}")
     suspend fun updateUserNotification(
         @Path("user", encoded = true) user: String,
         @Path("notification", encoded = true) notification: String,
@@ -295,37 +300,37 @@ interface MemosApiV0353 {
         @Query("updateMask") updateMask: String
     ): UserNotification
 
-    @GET("api/v1/{user}/personalAccessTokens")
+    @GET("{user}/personalAccessTokens")
     suspend fun listPersonalAccessTokens(
         @Path("user", encoded = true) user: String,
         @Query("pageSize") pageSize: Int? = null,
         @Query("pageToken") pageToken: String? = null
     ): ListPersonalAccessTokensResponse
 
-    @POST("api/v1/{user}/personalAccessTokens")
+    @POST("{user}/personalAccessTokens")
     suspend fun createPersonalAccessToken(
         @Path("user", encoded = true) user: String, @Body request: CreatePersonalAccessTokenRequest
     ): CreatePersonalAccessTokenResponse
 
-    @DELETE("api/v1/{user}/personalAccessTokens/{personalAccessToken}")
+    @DELETE("{user}/personalAccessTokens/{personalAccessToken}")
     suspend fun deletePersonalAccessToken(
         @Path("user", encoded = true) user: String,
         @Path("personalAccessToken", encoded = true) personalAccessToken: String
     )
 
-    @GET("api/v1/{user}/settings")
+    @GET("{user}/settings")
     suspend fun listUserSettings(
         @Path("user", encoded = true) user: String,
         @Query("pageSize") pageSize: Int? = null,
         @Query("pageToken") pageToken: String? = null
     ): ListUserSettingsResponse
 
-    @GET("api/v1/{user}/settings/{setting}")
+    @GET("{user}/settings/{setting}")
     suspend fun getUserSetting(
         @Path("user", encoded = true) user: String, @Path("setting") setting: String
     ): UserSetting
 
-    @PATCH("api/v1/{user}/settings/{setting}")
+    @PATCH("{user}/settings/{setting}")
     suspend fun updateUserSetting(
         @Path("user", encoded = true) user: String,
         @Path("setting") setting: String,
@@ -333,23 +338,23 @@ interface MemosApiV0353 {
         @Query("updateMask") updateMask: String
     ): UserSetting
 
-    @GET("api/v1/{user}/shortcuts")
+    @GET("{user}/shortcuts")
     suspend fun getShortcuts(@Path("user", encoded = true) user: String): ShortcutResponse
 
-    @POST("api/v1/{user}/shortcuts")
+    @POST("{user}/shortcuts")
     suspend fun createShortcut(
         @Path("user", encoded = true) user: String,
         @Body shortcut: Shortcut,
         @Query("validateOnly") validateOnly: Boolean? = null
     ): Shortcut
 
-    @DELETE("api/v1/{user}/shortcuts/{shortcut}")
+    @DELETE("{user}/shortcuts/{shortcut}")
     suspend fun deleteShortcut(
         @Path("user", encoded = true) user: String,
         @Path("shortcut", encoded = true) shortcut: String
     )
 
-    @PATCH("api/v1/{user}/shortcuts/{shortcut}")
+    @PATCH("{user}/shortcuts/{shortcut}")
     suspend fun updateShortcut(
         @Path("user", encoded = true) user: String,
         @Path("shortcut", encoded = true) shortcut: String,
@@ -357,24 +362,24 @@ interface MemosApiV0353 {
         @Query("updateMask") updateMask: String? = null
     ): Shortcut
 
-    @GET("api/v1/{user}/webhooks")
+    @GET("{user}/webhooks")
     suspend fun listUserWebhooks(
         @Path(
             "user", encoded = true
         ) user: String
     ): ListUserWebhooksResponse
 
-    @POST("api/v1/{user}/webhooks")
+    @POST("{user}/webhooks")
     suspend fun createUserWebhook(
         @Path("user", encoded = true) user: String, @Body webhook: UserWebhook
     ): UserWebhook
 
-    @DELETE("api/v1/{user}/webhooks/{webhook}")
+    @DELETE("{user}/webhooks/{webhook}")
     suspend fun deleteUserWebhook(
         @Path("user", encoded = true) user: String, @Path("webhook", encoded = true) webhook: String
     )
 
-    @PATCH("api/v1/{user}/webhooks/{webhook}")
+    @PATCH("{user}/webhooks/{webhook}")
     suspend fun updateUserWebhook(
         @Path("user", encoded = true) user: String,
         @Path("webhook", encoded = true) webhook: String,
@@ -382,10 +387,10 @@ interface MemosApiV0353 {
         @Query("updateMask") updateMask: String
     ): UserWebhook
 
-    @GET("api/v1/{user}:getStats")
+    @GET("{user}:getStats")
     suspend fun getUserStats(@Path("user", encoded = true) user: String): UserStats
 
-    @GET("api/v1/users:stats")
+    @GET("users:stats")
     suspend fun listAllUserStats(): ListAllUserStatsResponse
 }
 

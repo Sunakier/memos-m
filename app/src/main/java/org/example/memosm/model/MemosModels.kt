@@ -78,6 +78,10 @@ data class Attachment(
     val clientId: String? = null,
     val localPath: String? = null
 ) {
+    /** Stable identity for thumbnails, row keys, and transitions, including local-only attachments. */
+    val identityKey: String
+        get() = name ?: clientId ?: "$filename:$type:$createTime:$externalLink:$localPath"
+
     val displayType: String
         get() = mimeType ?: type
 }

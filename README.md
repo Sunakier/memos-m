@@ -15,7 +15,7 @@ A feature-rich Android client for Memos.
 
 ---
 
-**MemosM** is an Android client designed to target the latest stable release of [Memos](https://usememos.com/) (currently v0.28.x - v0.30.x).
+**MemosM** is an Android client designed to target the latest stable release of [Memos](https://usememos.com/) (currently v0.28.x - v0.31.x).
 
 It focuses on providing a native experience, speed, and full support for the latest features of the Memos ecosystem.
 
@@ -31,6 +31,28 @@ While other clients like [MoeMemos](https://github.com/mudkipme/MoeMemosAndroid)
 - **Native Android Focus:** MemosM is built specifically for Android rather than being a cross-platform port. This ensures better performance and robust tablet support.
 - **Efficiency:** Optimized syncing prevents high data usage and ensures a faster, more responsive experience compared to clients that re-sync entire histories.
 - **Modern Feature Set:** By focusing on recent Memos versions, we avoid the limitations of backward compatibility and can implement modern features like advanced Markdown and Reactions.
+
+## SSO login
+
+Select **SSO**, enter your Memos server URL, and choose **Find providers**. Select a provider
+to authenticate in your browser. MemosM then creates a personal access token for the account,
+just as password login does. Password and manual token login remain available.
+
+An administrator must add the app callback URI to the allowed redirect URIs for the OAuth2
+client configured in Memos. Keep the existing Memos web callback registered as well.
+
+| Build | Callback URI |
+| --- | --- |
+| Release | `org.example.memosm://oauth/callback` |
+| Insider | `org.example.memosm.insider://oauth/callback` |
+| Canary | `org.example.memosm.canary://oauth/callback` |
+| Debug | `org.example.memosm.debug://oauth/callback` |
+
+The provider must accept custom URI schemes and S256 PKCE. Providers requiring an HTTPS
+callback can use manual token login instead. SSO supports the existing v0.26–v0.31 API
+adapters and the newer Memos SSO format. Registration and identity provisioning follow
+the server's settings. Sign-in attempts expire after ten minutes; if Android terminates
+the app during authentication, start sign-in again.
 
 ## Downloads
 
@@ -93,10 +115,14 @@ On Android 17 and later, connecting to a local Memos server may require the **Ne
     - [x] View reactions
     - [x] Add/Remove reactions
     - [x] Respect server emoji list
+  - Map
+    - [x] Location
+    - [x] Map view
 - Notifications
   - [x] View notifications
   - [ ] ~~Fetch notifications in the background~~ (bad for battery + no demand)
 - Misc
+  - [x] Native map with Memos/Explore scopes, location pins, filters, and composing at a selected place
   - [x] Multi language support: English, Japanese, Chinese, Korean, German, Polish
   - [x] Sharing intent support
   - [x] Local cache
@@ -105,6 +131,12 @@ On Android 17 and later, connecting to a local Memos server may require the **Ne
     - [x] Offline writes queued
     - [x] Offline media store
     - [x] Auto-sync on reconnect
+
+The Map destination appears only after the connected instance accepts the `has_location`
+memo filter. Older and unknown instances do not show it. Previously verified accounts can
+browse cached locations offline using available cached tiles. Saved views require a connection;
+map regions are not downloaded in advance. Basemaps use OpenFreeMap, with OpenStreetMap
+as a fallback.
 
 ## Non-goals
 
@@ -127,3 +159,12 @@ Contributions are welcome in the form of code, bug reports, or feature suggestio
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=yamada-sexta/memos-m&type=date&legend=top-left)](https://www.star-history.com/#yamada-sexta/memos-m&type=date&legend=top-left)
+
+## Backup and restore
+
+Export configurable `.mmbackup` files with MessagePack, gzip, and optional password protection.
+Restore selected accounts, settings, cached server data, media, and unpublished drafts. Queued
+edits are optional and unchecked by default; restored edits are kept for review and never sync
+automatically. Android Auto Backup restores account information during device setup, while
+direct device transfer also preserves caches and drafts. The server remains authoritative.
+See [backup format and verification](docs/backup.md) for details.

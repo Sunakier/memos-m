@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_map">Mapa</string>
+    <string name="map_retry">Ponów</string>
+    <string name="map_all_views">Wszystkie notatki</string>
+    <string name="map_loaded">Wczytano %1$d notatek…</string>
+    <string name="map_offline">Wyświetlane są lokalizacje z pamięci podręcznej. Mapa offline może być niepełna.</string>
+    <string name="map_view_offline">Zapisane widoki wymagają połączenia. Wybierz Wszystkie notatki, aby przeglądać offline.</string>
+    <string name="map_load_error">Nie udało się wczytać wszystkich lokalizacji notatek.</string>
+    <string name="map_tile_error">Nie udało się wczytać mapy.</string>
+    <string name="map_fit_all">Pokaż wszystkie lokalizacje</string>
+    <string name="map_no_results">Żadne lokalizacje nie pasują do tych filtrów.</string>
+    <string name="map_empty">Brak notatek z lokalizacją. Dotknij mapy, aby napisać w wybranym miejscu.</string>
+    <string name="map_all">Wszystkie</string>
+    <string name="map_show_results">Pokaż na mapie</string>
+    <string name="map_draft_here">Utwórz szkic tutaj</string>
+    <string name="map_place_count">Notatki tutaj: %1$d</string>
+    <string name="map_place_empty">Brak notatek w tej lokalizacji.</string>
+</resources>

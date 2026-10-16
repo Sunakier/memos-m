@@ -12,21 +12,34 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import org.example.memosm.model.AppearancePreferences
+import org.example.memosm.model.ThemeMode
+import org.example.memosm.model.ColorTheme
+import org.example.memosm.model.AppFont
 import org.example.memosm.model.Account
 import org.example.memosm.model.User
 import org.example.memosm.model.toUserSnapshot
 
-class DataStoreManager(private val dataStore: DataStore<Preferences>) {
+class DataStoreManager(
+    private val dataStore: DataStore<Preferences>,
+    private val onAccountsChanged: () -> Unit = {}
+) {
 
     private val gson = Gson()
-    private var cachedAccounts: List<Account>? = null
 
     companion object {
+        val APPEARANCE_THEME_MODE = stringPreferencesKey("appearance_theme_mode")
+        val APPEARANCE_COLOR_THEME = stringPreferencesKey("appearance_color_theme")
+        val APPEARANCE_CUSTOM_HUE = androidx.datastore.preferences.core.floatPreferencesKey("appearance_custom_hue")
+        val APPEARANCE_FONT = stringPreferencesKey("appearance_font")
         val ACCOUNTS_JSON = stringPreferencesKey("accounts_json")
+        val SETUP_COMPLETED = androidx.datastore.preferences.core.booleanPreferencesKey("setup_completed")
         val PAGE_SIZE = intPreferencesKey("page_size")
         const val DEFAULT_PAGE_SIZE = 10
         val HEADER_SCALE = androidx.datastore.preferences.core.floatPreferencesKey("header_scale")
         const val DEFAULT_HEADER_SCALE = 1.0f
+        val LINK_PREVIEW_ENABLED = androidx.datastore.preferences.core.booleanPreferencesKey("link_preview_enabled")
+        const val DEFAULT_LINK_PREVIEW_ENABLED = true
 
         // --- Offline / pre-download settings ---
         val PRE_DOWNLOAD_TEXT = androidx.datastore.preferences.core.booleanPreferencesKey("pre_download_text")
@@ -48,7 +61,7 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
         const val DEFAULT_THEME_CACHE_MAX_MB = 200
         // Incremental-sync cursor for the text pre-downloader. Deliberately
         // separate from the per-account last-sync time (which SyncManager
-        // updates): only the pre-downloader writes this, so syncNow() cannot
+        // updates): only the pre-downloader writes this, so pushPendingChanges() cannot
         // shrink the "what changed since the last full download" window and
         // cause updates to be skipped.
         val TEXT_SYNC_CURSOR = androidx.datastore.preferences.core.longPreferencesKey("text_sync_cursor")
@@ -64,7 +77,6 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
                 val type = object : TypeToken<List<Account>>() {}.type
                 try {
                     val list: List<Account> = gson.fromJson(json, type)
-                    cachedAccounts = list
                     list
                 } catch (e: Exception) {
                     emptyList()
@@ -76,18 +88,25 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
         list.find { it.isActive }
     }
 
+    val setupCompleted: Flow<Boolean> = dataStore.data
+        .map { it[SETUP_COMPLETED] ?: false }
+        .distinctUntilChanged()
+
+    suspend fun completeSetup() {
+        editPreferences { it[SETUP_COMPLETED] = true }
+    }
+
     suspend fun saveAccounts(accounts: List<Account>) {
-        dataStore.edit { preferences ->
+        editPreferences { preferences ->
             preferences[ACCOUNTS_JSON] = gson.toJson(accounts)
         }
-        cachedAccounts = accounts
+        onAccountsChanged()
     }
 
 
     // --- Account Helpers ---
 
     suspend fun getAccounts(): List<Account> {
-        cachedAccounts?.let { return it }
 
         val json = dataStore.data.map { it[ACCOUNTS_JSON] }.first()
 
@@ -127,103 +146,121 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
 
         if (needsSave) {
             saveAccounts(final)
-        } else {
-            cachedAccounts = final
         }
 
         return final
     }
 
-    suspend fun addAccount(
-        hostUrl: String,
-        accessToken: String
-    ) {
-        val current = getAccounts().toMutableList()
-        // Check if account already exists to avoid duplicates
-        val existingIndex =
-            current.indexOfFirst { it.hostUrl == hostUrl && it.accessToken == accessToken }
+    private suspend fun mutateAccounts(completeSetup: Boolean = false, transform: (List<Account>) -> List<Account>) {
+        editPreferences { preferences ->
+            val type = object : TypeToken<List<Account>>() {}.type
+            val current: List<Account> = preferences[ACCOUNTS_JSON]?.let {
+                gson.fromJson(it, type)
+            } ?: emptyList()
+            val updated = transform(current)
+            preferences[ACCOUNTS_JSON] = gson.toJson(updated)
+            if (completeSetup) preferences[SETUP_COMPLETED] = true
+        }
+        onAccountsChanged()
+    }
 
-        if (existingIndex != -1) {
-            // Just activate it
-            setActiveAccount(current[existingIndex].id)
-        } else {
-            // Deactivate others
-            val updated = current.map { it.copy(isActive = false) }.toMutableList()
-            updated.add(
-                Account(
-                    hostUrl = hostUrl,
-                    accessToken = accessToken,
-                    isActive = true
-                )
-            )
-            saveAccounts(updated)
+    suspend fun addAccount(hostUrl: String, accessToken: String) {
+        mutateAccounts(completeSetup = true) { current ->
+            val existing = current.firstOrNull {
+                it.hostUrl == hostUrl && it.accessToken == accessToken
+            }
+            if (existing != null) current.map { it.copy(isActive = it.id == existing.id) }
+            else current.map { it.copy(isActive = false) } +
+                Account(hostUrl = hostUrl, accessToken = accessToken, isActive = true)
         }
     }
 
     suspend fun setActiveAccount(id: String) {
-        val current = getAccounts()
-        val updated = current.map { it.copy(isActive = it.id == id) }
-        saveAccounts(updated)
+        mutateAccounts { current ->
+            if (current.none { it.id == id }) current
+            else current.map { it.copy(isActive = it.id == id) }
+        }
     }
 
     suspend fun updateAccountLastUsed(id: String, timestamp: Long) {
-        val current = getAccounts()
-        val updated = current.map {
-            if (it.id == id) it.copy(lastUsed = timestamp) else it
+        mutateAccounts { current ->
+            current.map { if (it.id == id) it.copy(lastUsed = timestamp) else it }
         }
-        saveAccounts(updated)
     }
 
     suspend fun deleteAccount(id: String) {
-        val current = getAccounts()
-        val updated = current.filterNot { it.id == id }
-        saveAccounts(updated)
-
-        // If we deleted the active one, set new active
-        if (updated.isNotEmpty() && updated.none { it.isActive }) {
-            setActiveAccount(updated.first().id)
+        mutateAccounts { current ->
+            val remaining = current.filterNot { it.id == id }
+            if (remaining.isNotEmpty() && remaining.none { it.isActive }) {
+                remaining.mapIndexed { index, account -> account.copy(isActive = index == 0) }
+            } else remaining
         }
     }
 
-    suspend fun updateAccount(
-        id: String,
-        hostUrl: String,
-        token: String
-    ) {
-        val current = getAccounts()
-        val updated = current.map {
-            if (it.id == id) {
-                it.copy(hostUrl = hostUrl, accessToken = token)
-            } else it
+    suspend fun updateAccount(id: String, hostUrl: String, token: String) {
+        mutateAccounts { current ->
+            val previous = current.find { it.id == id } ?: return@mutateAccounts current
+            fun server(url: String) = url.trim().trimEnd('/').removeSuffix("/api/v1")
+            if (server(previous.hostUrl) == server(hostUrl)) {
+                // Token renewal retains this account's offline history and pending work.
+                current.map { if (it.id == id) it.copy(hostUrl = hostUrl, accessToken = token) else it }
+            } else {
+                // A different server gets a new namespace. Keep the original credentials
+                // and unsynced work available in the original saved account.
+                current.map { if (it.id == id) it.copy(isActive = false) else it } +
+                    Account(id = java.util.UUID.randomUUID().toString(), hostUrl = hostUrl,
+                        accessToken = token, isActive = previous.isActive)
+            }
         }
-        saveAccounts(updated)
     }
 
     suspend fun updateAccountUser(id: String, user: User) {
-        val current = getAccounts()
-        val updated = current.map {
-            if (it.id == id) {
-                it.copy(
-                    user = user.toUserSnapshot(),
-                    name = user.username,
-                    displayName = user.displayName,
-                    avatarUrl = user.avatarUrl,
-                    email = user.email,
-                    description = user.description
-                )
-            } else it
+        mutateAccounts { current ->
+            current.map {
+                if (it.id == id) it.copy(
+                    user = user.toUserSnapshot(), name = user.username,
+                    displayName = user.displayName, avatarUrl = user.avatarUrl,
+                    email = user.email, description = user.description
+                ) else it
+            }
         }
-        saveAccounts(updated)
     }
 
     suspend fun updateAccountToken(id: String, token: String) {
-        val current = getAccounts()
-        val updated = current.map {
-            if (it.id == id) {
-                it.copy(accessToken = token)
-            } else it
+        mutateAccounts { current ->
+            current.map { if (it.id == id) it.copy(accessToken = token) else it }
         }
-        saveAccounts(updated)
+    }
+
+    val appearance: Flow<AppearancePreferences> = dataStore.data.map { preferences ->
+        val hue = preferences[APPEARANCE_CUSTOM_HUE]?.takeIf { it.isFinite() && it in 0f..360f }
+        val colorTheme = ColorTheme.entries.firstOrNull { it.name == preferences[APPEARANCE_COLOR_THEME] }
+            ?: ColorTheme.SYSTEM
+        AppearancePreferences(
+            themeMode = ThemeMode.entries.firstOrNull { it.name == preferences[APPEARANCE_THEME_MODE] }
+                ?: ThemeMode.SYSTEM,
+            colorTheme = if (colorTheme == ColorTheme.CUSTOM && hue == null) ColorTheme.SYSTEM else colorTheme,
+            customHue = hue?.rem(360f),
+            font = AppFont.entries.firstOrNull { it.name == preferences[APPEARANCE_FONT] } ?: AppFont.SYSTEM
+        )
+    }.distinctUntilChanged()
+
+    suspend fun saveThemeMode(mode: ThemeMode) {
+        dataStore.edit { it[APPEARANCE_THEME_MODE] = mode.name }
+    }
+
+    suspend fun saveColorTheme(theme: ColorTheme, hue: Float? = null) {
+        require(theme != ColorTheme.CUSTOM || (hue != null && hue.isFinite() && hue in 0f..360f))
+        dataStore.edit {
+            it[APPEARANCE_COLOR_THEME] = theme.name
+            if (hue != null && hue.isFinite() && hue in 0f..360f) {
+                it[APPEARANCE_CUSTOM_HUE] = hue % 360f
+            }
+        }
+    }
+
+    suspend fun saveFont(font: AppFont) {
+        dataStore.edit { it[APPEARANCE_FONT] = font.name }
     }
 
     val pageSize: Flow<Int> = dataStore.data.map { preferences ->
@@ -231,7 +268,7 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun savePageSize(size: Int) {
-        dataStore.edit { preferences ->
+        editPreferences { preferences ->
             preferences[PAGE_SIZE] = size
         }
     }
@@ -241,19 +278,27 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun saveHeaderScale(scale: Float) {
-        dataStore.edit { preferences ->
+        editPreferences { preferences ->
             preferences[HEADER_SCALE] = scale
         }
     }
 
     // --- Offline / pre-download settings ---
 
+    val linkPreviewEnabled: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[LINK_PREVIEW_ENABLED] ?: DEFAULT_LINK_PREVIEW_ENABLED
+    }
+
+    suspend fun saveLinkPreviewEnabled(enabled: Boolean) {
+        dataStore.edit { it[LINK_PREVIEW_ENABLED] = enabled }
+    }
+
     val preDownloadText: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[PRE_DOWNLOAD_TEXT] ?: DEFAULT_PRE_DOWNLOAD_TEXT
     }
 
     suspend fun savePreDownloadText(enabled: Boolean) {
-        dataStore.edit { preferences ->
+        editPreferences { preferences ->
             preferences[PRE_DOWNLOAD_TEXT] = enabled
         }
     }
@@ -263,7 +308,7 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun savePreDownloadAttachments(enabled: Boolean) {
-        dataStore.edit { preferences ->
+        editPreferences { preferences ->
             preferences[PRE_DOWNLOAD_ATTACHMENTS] = enabled
         }
     }
@@ -273,7 +318,7 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun savePreDownloadWifiOnly(enabled: Boolean) {
-        dataStore.edit { preferences ->
+        editPreferences { preferences ->
             preferences[PRE_DOWNLOAD_WIFI_ONLY] = enabled
         }
     }
@@ -283,7 +328,7 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun savePreDownloadExplore(enabled: Boolean) {
-        dataStore.edit { preferences ->
+        editPreferences { preferences ->
             preferences[PRE_DOWNLOAD_EXPLORE] = enabled
         }
     }
@@ -293,7 +338,7 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun saveAttachmentCacheMaxMb(mb: Int) {
-        dataStore.edit { preferences ->
+        editPreferences { preferences ->
             preferences[ATTACHMENT_CACHE_MAX_MB] = mb
         }
     }
@@ -314,18 +359,29 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun saveLastSyncTime(accountId: String, timestamp: Long) {
-        dataStore.edit { preferences ->
+        editPreferences { preferences ->
             preferences[lastSyncTimeKey(accountId)] = timestamp
         }
     }
 
-    val textSyncCursor: Flow<Long> = dataStore.data.map { preferences ->
-        preferences[TEXT_SYNC_CURSOR] ?: 0L
+    private fun textSyncCursorKey(accountId: String) =
+        androidx.datastore.preferences.core.longPreferencesKey("text_sync_cursor_$accountId")
+
+    // The legacy global cursor has unknown ownership and must never be inherited.
+    fun textSyncCursor(accountId: String): Flow<Long> = dataStore.data.map { preferences ->
+        preferences[textSyncCursorKey(accountId)] ?: 0L
     }
 
-    suspend fun saveTextSyncCursor(timestamp: Long) {
-        dataStore.edit { preferences ->
-            preferences[TEXT_SYNC_CURSOR] = timestamp
+    suspend fun saveTextSyncCursor(accountId: String, timestamp: Long) {
+        editPreferences { preferences ->
+            preferences[textSyncCursorKey(accountId)] = timestamp
+        }
+    }
+
+    suspend fun removeDownloadState(accountId: String) {
+        editPreferences { preferences ->
+            preferences.remove(textSyncCursorKey(accountId))
+            preferences.remove(lastPreDownloadAtKey(accountId))
         }
     }
 
@@ -346,7 +402,7 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun saveLastPreDownloadAt(accountId: String, timestamp: Long) {
-        dataStore.edit { preferences ->
+        editPreferences { preferences ->
             preferences[lastPreDownloadAtKey(accountId)] = timestamp
         }
     }
@@ -358,7 +414,7 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun saveTextCacheMaxMb(mb: Int) {
-        dataStore.edit { preferences ->
+        editPreferences { preferences ->
             preferences[TEXT_CACHE_MAX_MB] = mb
         }
     }
@@ -368,7 +424,7 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
     }
 
     suspend fun saveThemeCacheMaxMb(mb: Int) {
-        dataStore.edit { preferences ->
+        editPreferences { preferences ->
             preferences[THEME_CACHE_MAX_MB] = mb
         }
     }
@@ -387,20 +443,119 @@ class DataStoreManager(private val dataStore: DataStore<Preferences>) {
         }
 
     suspend fun saveSnapshotJson(domain: String, accountId: String, json: String) {
-        dataStore.edit { preferences ->
+        editPreferences { preferences ->
             preferences[snapshotJsonKey(domain, accountId)] = json
         }
     }
 
     suspend fun removeSnapshot(domain: String, accountId: String) {
-        dataStore.edit { preferences ->
+        editPreferences { preferences ->
             preferences.remove(snapshotJsonKey(domain, accountId))
         }
     }
 
     suspend fun removeLastSyncTime(accountId: String) {
-        dataStore.edit { preferences ->
+        editPreferences { preferences ->
             preferences.remove(lastSyncTimeKey(accountId))
         }
     }
+
+    private suspend fun editPreferences(action: suspend (androidx.datastore.preferences.core.MutablePreferences) -> Unit) =
+        org.example.memosm.data.backup.BackupCoordinator.withStorageLock { dataStore.edit(action) }
+
+    private val portableKeys: List<Preferences.Key<*>> get() = listOf(
+        APPEARANCE_THEME_MODE, APPEARANCE_COLOR_THEME, APPEARANCE_CUSTOM_HUE, APPEARANCE_FONT,
+        PAGE_SIZE, HEADER_SCALE, LINK_PREVIEW_ENABLED, PRE_DOWNLOAD_TEXT, PRE_DOWNLOAD_ATTACHMENTS,
+        PRE_DOWNLOAD_WIFI_ONLY, PRE_DOWNLOAD_EXPLORE, ATTACHMENT_CACHE_MAX_MB, TEXT_CACHE_MAX_MB, THEME_CACHE_MAX_MB
+    )
+
+    suspend fun backupSettings(): com.google.gson.JsonObject {
+        val values = dataStore.data.first().asMap().mapKeys { it.key.name }
+        return com.google.gson.JsonObject().apply {
+            portableKeys.forEach { key -> values[key.name]?.let { add(key.name, gson.toJsonTree(it)) } }
+        }
+    }
+
+    suspend fun backupSnapshot(domain: String, accountId: String): com.google.gson.JsonObject? =
+        snapshotJson(domain, accountId).first()?.let { com.google.gson.JsonParser.parseString(it).asJsonObject }
+
+    fun validateBackupSettings(settings: com.google.gson.JsonObject) {
+        require(settings.keySet().all { name -> portableKeys.any { it.name == name } }) { "Unknown backup setting" }
+        settings.entrySet().forEach { (name, value) ->
+            require(value.isJsonPrimitive) { "Invalid backup setting" }
+            when (name) {
+                APPEARANCE_THEME_MODE.name -> org.example.memosm.model.ThemeMode.valueOf(value.asString)
+                APPEARANCE_COLOR_THEME.name -> org.example.memosm.model.ColorTheme.valueOf(value.asString)
+                APPEARANCE_FONT.name -> org.example.memosm.model.AppFont.valueOf(value.asString)
+                APPEARANCE_CUSTOM_HUE.name, HEADER_SCALE.name -> require(value.asJsonPrimitive.isNumber && value.asFloat.isFinite())
+                PAGE_SIZE.name ->
+                    require(value.asJsonPrimitive.isNumber && value.asBigDecimal.stripTrailingZeros().scale() <= 0 && value.asLong in 1..Int.MAX_VALUE.toLong())
+                ATTACHMENT_CACHE_MAX_MB.name, TEXT_CACHE_MAX_MB.name, THEME_CACHE_MAX_MB.name ->
+                    require(value.asJsonPrimitive.isNumber && value.asBigDecimal.stripTrailingZeros().scale() <= 0 && value.asBigDecimal >= Int.MIN_VALUE.toBigDecimal() && value.asBigDecimal <= Int.MAX_VALUE.toBigDecimal())
+                else -> require(value.asJsonPrimitive.isBoolean) { "Invalid boolean setting" }
+            }
+        }
+    }
+
+    /** One atomic preferences update; cache freshness state is deliberately never inherited. */
+    suspend fun applyBackup(manifest: org.example.memosm.data.backup.BackupManifest) {
+        val categories = manifest.categories
+        editPreferences { prefs ->
+            if (org.example.memosm.data.backup.BackupCategory.SETTINGS in categories) {
+                val values = manifest.settings!!
+                validateBackupSettings(values)
+                portableKeys.forEach { key ->
+                    prefs.remove(key)
+                    val value = values.get(key.name) ?: return@forEach
+                    when (key) {
+                        APPEARANCE_THEME_MODE, APPEARANCE_COLOR_THEME, APPEARANCE_FONT -> prefs[stringPreferencesKey(key.name)] = value.asString
+                        APPEARANCE_CUSTOM_HUE, HEADER_SCALE -> prefs[androidx.datastore.preferences.core.floatPreferencesKey(key.name)] = value.asFloat
+                        PAGE_SIZE, ATTACHMENT_CACHE_MAX_MB, TEXT_CACHE_MAX_MB, THEME_CACHE_MAX_MB -> prefs[intPreferencesKey(key.name)] = value.asInt
+                        else -> prefs[androidx.datastore.preferences.core.booleanPreferencesKey(key.name)] = value.asBoolean
+                    }
+                }
+            }
+            manifest.accounts.forEach { data ->
+                val id = data.identity.id
+                if (org.example.memosm.data.backup.BackupCategory.CACHE in categories) {
+                    listOf("session" to data.session, "notifications" to data.notifications).forEach { (domain, obj) ->
+                        val key = snapshotJsonKey(domain, id)
+                        if (obj == null) prefs.remove(key) else prefs[key] = gson.toJson(obj)
+                    }
+                }
+                if (org.example.memosm.data.backup.BackupCategory.CACHE in categories || org.example.memosm.data.backup.BackupCategory.MEDIA in categories) {
+                    prefs.remove(textSyncCursorKey(id)); prefs.remove(lastPreDownloadAtKey(id)); prefs.remove(lastSyncTimeKey(id))
+                }
+                if (org.example.memosm.data.backup.BackupCategory.QUEUED_EDITS in categories) {
+                    prefs[stringPreferencesKey("restored_edits_$id")] = gson.toJson(data.queuedEdits)
+                }
+            }
+            if (org.example.memosm.data.backup.BackupCategory.ACCOUNTS in categories) {
+                val type = object : TypeToken<List<Account>>() {}.type
+                val current: List<Account> = prefs[ACCOUNTS_JSON]?.let { gson.fromJson(it, type) } ?: emptyList()
+                val restored = manifest.accounts.mapNotNull { it.account }
+                val replacements = restored.associateBy { it.id }
+                val combined = current.map { replacements[it.id] ?: it } + restored.filter { account -> current.none { it.id == account.id } }
+                val active = restored.firstOrNull { it.isActive }?.id ?: current.firstOrNull { it.isActive }?.id ?: combined.firstOrNull()?.id
+                prefs[ACCOUNTS_JSON] = gson.toJson(combined.map { it.copy(isActive = it.id == active) })
+            }
+            // Includes Android restoration and imports containing settings only.
+            // This installation state is deliberately excluded from portableKeys.
+            prefs[SETUP_COMPLETED] = true
+        }
+        if (org.example.memosm.data.backup.BackupCategory.ACCOUNTS in categories) onAccountsChanged()
+    }
+
+    fun restoredEdits(accountId: String): Flow<com.google.gson.JsonArray> =
+        dataStore.data.map { prefs -> prefs[stringPreferencesKey("restored_edits_$accountId")]?.let { com.google.gson.JsonParser.parseString(it).asJsonArray } ?: com.google.gson.JsonArray() }
+
+    suspend fun dismissRestoredEdit(accountId: String, editId: String) {
+        editPreferences { prefs ->
+            val key = stringPreferencesKey("restored_edits_$accountId")
+            val edits = prefs[key]?.let { com.google.gson.JsonParser.parseString(it).asJsonArray } ?: return@editPreferences
+            val remaining = com.google.gson.JsonArray().apply { edits.filter { it.asJsonObject.get("id").asString != editId }.forEach { add(it) } }
+            prefs[key] = gson.toJson(remaining)
+        }
+    }
+
 }

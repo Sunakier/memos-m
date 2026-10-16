@@ -7,7 +7,9 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -20,9 +22,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.example.memosm.data.DataStoreManager
@@ -31,7 +35,8 @@ import org.example.memosm.ui.MainScreen
 import org.example.memosm.ui.component.LoginScreen
 import org.example.memosm.ui.component.LocalNetworkPermission
 import org.example.memosm.ui.component.rememberLocalNetworkPermission
-import org.example.memosm.ui.theme.MemosMTheme
+import org.example.memosm.ui.theme.SavedMemosMTheme
+import org.example.memosm.ui.setup.SetupActivity
 import org.example.memosm.viewmodel.MemosViewModel
 import org.example.memosm.widget.DraftWidget
 
@@ -62,13 +67,48 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            MemosMTheme {
+            SavedMemosMTheme(dataStoreManager) {
                 val networkPermission = rememberLocalNetworkPermission()
                 CompositionLocalProvider(LocalNetworkPermission provides networkPermission) {
                     val scope = rememberCoroutineScope()
 
+                    val recoveryError by org.example.memosm.data.backup.BackupCoordinator.recoveryError.collectAsState()
+                    val startupReady by org.example.memosm.data.backup.BackupCoordinator.startupReady.collectAsState()
+                    if (!startupReady) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    } else if (recoveryError != null) {
+                        androidx.compose.foundation.layout.Column(
+                            Modifier.fillMaxSize().padding(24.dp),
+                            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            androidx.compose.material3.Text(recoveryError!!)
+                            androidx.compose.material3.Button(onClick = {
+                                scope.launch {
+                                    val backup = org.koin.core.context.GlobalContext.get().get<org.example.memosm.data.backup.BackupService>()
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                                        backup.recoverInterruptedRestore().onSuccess {
+                                            backup.restoreNativeIfPresent().onFailure {
+                                                org.example.memosm.data.backup.BackupCoordinator.recoveryError.value = getString(R.string.backup_native_recovery_failed)
+                                            }
+                                        }
+                                    }
+                                }
+                            }) { androidx.compose.material3.Text(getString(R.string.backup_recovery_retry)) }
+                        }
+                    } else {
                     // Observe accounts instead of single credentials
                     val accounts by dataStoreManager.accounts.collectAsState(initial = null)
+                    val setupCompleted by dataStoreManager.setupCompleted.collectAsState(initial = null)
+                    var setupLaunched by rememberSaveable { mutableStateOf(false) }
+                    val setupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                        if (it.resultCode == RESULT_OK) {
+                            viewModel.userDelegate.updateCurrentAccountInList()
+                        } else {
+                            // Back from first-launch setup leaves the app; the next launch retries.
+                            finish()
+                        }
+                    }
 
                     // Wait for DataStore to emit initial values
                     var isCheckingSession by remember { mutableStateOf(true) }
@@ -77,14 +117,23 @@ class MainActivity : ComponentActivity() {
                     val pendingShareData by pendingShareDataFlow.collectAsState()
                     val shouldOpenComposer by shouldOpenComposerFlow.collectAsState()
 
-                    LaunchedEffect(accounts) {
-                        if (accounts != null) {
+                    LaunchedEffect(accounts, setupCompleted) {
+                        if (accounts != null && setupCompleted != null) {
                             // Once we have a non-null list (even if empty), we've finished the initial load
                             isCheckingSession = false
+                            if (setupCompleted == false) {
+                                if (accounts!!.isNotEmpty()) {
+                                    // Existing installations stay onboarded even after logout.
+                                    dataStoreManager.completeSetup()
+                                } else if (!setupLaunched) {
+                                    setupLaunched = true
+                                    setupLauncher.launch(SetupActivity.createIntent(this@MainActivity))
+                                }
+                            }
                         }
                     }
 
-                    if (isCheckingSession) {
+                    if (isCheckingSession || setupCompleted != true) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator()
                         }
@@ -107,7 +156,7 @@ class MainActivity : ComponentActivity() {
                                 MainScreen(
                                     onLogout = {
                                         scope.launch {
-                                            dataStoreManager.deleteAccount(activeAccount.id)
+                                            viewModel.userDelegate.removeAccount(activeAccount)
                                         }
                                     },
                                     shareIntentData = pendingShareData,
@@ -129,6 +178,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+                    }
                 }
             }
         }
@@ -138,7 +188,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // App is in the foreground again: flush queued offline writes and
         // top up the local cache.
-        viewModel.onForeground()
+        if (org.example.memosm.data.backup.BackupCoordinator.recoveryError.value == null) viewModel.onForeground()
     }
 
     /**

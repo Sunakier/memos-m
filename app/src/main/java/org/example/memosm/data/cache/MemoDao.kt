@@ -82,10 +82,35 @@ interface MemoDao {
      * Used to enforce the per-tier text cache size limit.
      */
     @Query(
-        "DELETE FROM cached_memos WHERE accountId = :accountId AND listType = :listType AND name NOT IN " +
+        "DELETE FROM cached_memos WHERE accountId = :accountId AND listType = :listType AND name NOT IN (SELECT memoName FROM pending_ops WHERE accountId = :accountId AND memoName IS NOT NULL) AND name NOT IN " +
             "(SELECT name FROM cached_memos WHERE accountId = :accountId AND listType = :listType ORDER BY createTime DESC LIMIT :keep)"
     )
     suspend fun trimListType(accountId: String, listType: String, keep: Int)
+
+    @Query("SELECT DISTINCT memoName FROM pending_ops WHERE accountId = :accountId AND memoName IS NOT NULL")
+    suspend fun protectedMemoNames(accountId: String): List<String>
+
+    @Query("SELECT name, MAX(cachedAt) AS cachedAt FROM cached_memos WHERE accountId = :accountId AND name LIKE 'memos/%' GROUP BY name")
+    suspend fun reconciliationCandidates(accountId: String): List<CachedMemoCandidate>
+
+    /** A queued edit or a newer cached response must win over an earlier 404. */
+    @Query("DELETE FROM cached_memos WHERE accountId = :accountId AND name = :name " +
+        "AND NOT EXISTS (SELECT 1 FROM pending_ops WHERE accountId = :accountId AND (memoName = :name OR parentName = :name)) " +
+        "AND NOT EXISTS (SELECT 1 FROM cached_memos newer WHERE newer.accountId = :accountId AND newer.name = :name AND newer.cachedAt > :checkedAt)")
+    suspend fun deleteMissingMemo(accountId: String, name: String, checkedAt: Long): Int
+
+    @Query("DELETE FROM cached_memos WHERE accountId = :accountId AND listType = :listType AND name IN (:names) " +
+        "AND cachedAt <= :startedAt AND NOT EXISTS (SELECT 1 FROM pending_ops WHERE accountId = :accountId AND (memoName = cached_memos.name OR parentName = cached_memos.name))")
+    suspend fun pruneMissingFromList(accountId: String, listType: String, names: List<String>, startedAt: Long)
+
+    /** Server refreshes must not erase or overwrite unsent optimistic changes. */
+    @Transaction
+    suspend fun cacheRemoteMemos(accountId: String, listType: String, memos: List<CachedMemo>, replace: Boolean) {
+        val protected = protectedMemoNames(accountId).toSet()
+        val local = if (replace) getMemos(accountId, listType).filter { it.name in protected } else emptyList()
+        if (replace) deleteMemos(accountId, listType)
+        insertMemos(memos.filterNot { it.name in protected } + local)
+    }
 
     /**
      * Atomically replace a list type's cache: delete + insert in one

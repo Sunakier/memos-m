@@ -5,6 +5,10 @@ import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
+import org.example.memosm.viewmodel.AccountContext
+import org.example.memosm.viewmodel.AccountSession
+import org.example.memosm.data.DraftManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -35,6 +39,15 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import java.util.UUID
 
+private fun toastOfflineSaved() {
+    Toast.makeText(
+        MemosApplication.instance,
+        MemosApplication.instance.getString(R.string.offline_saved_message),
+        Toast.LENGTH_SHORT
+    ).show()
+}
+
+
 interface MemoActionDelegate {
     fun selectMemo(memo: Memo?)
     fun clearSelectedMemo()
@@ -55,12 +68,13 @@ interface MemoActionDelegate {
         attachments: List<Attachment>,
         location: Location? = null,
         state: MemoState? = null,
+        onError: () -> Unit = {},
         onSuccess: () -> Unit = {}
     )
 
     fun deleteMemo(memo: Memo, onSuccess: () -> Unit = {})
     fun updateMemoPinned(memo: Memo, pinned: Boolean, onSuccess: () -> Unit = {})
-    fun createComment(parentMemo: Memo, content: String, onSuccess: () -> Unit = {})
+    fun createComment(parentMemo: Memo, content: String, onError: () -> Unit = {}, onSuccess: () -> Unit = {})
     suspend fun uploadAttachment(uri: Uri, context: Context): Attachment?
 
     /** Discard a queued offline upload once nothing references its placeholder anymore. */
@@ -80,39 +94,31 @@ interface MemoListUpdater {
 class MemoActionDelegateImpl(
     private val scope: CoroutineScope,
     private val uiState: MutableStateFlow<MemosUiState>,
-    private val apiProvider: () -> MemosApi?,
     private val listUpdater: MemoListUpdater,
     private val draftDelegate: DraftDelegate,
     private val attachmentManagerProvider: () -> AttachmentManager?,
     private val commentManagerProvider: () -> CommentListManager?,
     private val syncManager: SyncManager,
     private val memoCacheRepository: MemoCacheRepository,
-    private val accountIdProvider: () -> String?,
-    private val currentUserProvider: () -> User?,
-    private val isOnlineProvider: () -> Boolean
+    private val accountSession: AccountSession,
+    private val draftManager: DraftManager,
+    private val isOnlineProvider: () -> Boolean,
+    private val notifyOfflineSaved: () -> Unit = ::toastOfflineSaved
 ) : MemoActionDelegate {
 
-    private val api: MemosApi? get() = apiProvider()
     private val attachmentManager: AttachmentManager? get() = attachmentManagerProvider()
     private val commentManager: CommentListManager? get() = commentManagerProvider()
     private val gson = GsonProvider.gson
 
-    private fun toastOfflineSaved() {
-        Toast.makeText(
-            MemosApplication.instance,
-            MemosApplication.instance.getString(R.string.offline_saved_message),
-            Toast.LENGTH_SHORT
-        ).show()
-    }
 
     /** True when the failure is connectivity-related and safe to queue offline. */
-    private fun shouldQueueOffline(e: Exception): Boolean =
-        !isOnlineProvider() || e is IOException
+    private fun shouldQueueOffline(context: AccountContext, e: Exception): Boolean =
+        e is IOException || (accountSession.isCurrent(context) && !isOnlineProvider())
 
     /** Keep the upstream UI error localized while retaining a diagnostic log. */
-    private fun reportOperationFailure(e: Exception) {
+    private fun reportOperationFailure(context: AccountContext, e: Exception) {
         Log.e("MemosViewModel", "Operation failed", e)
-        uiState.update { it.copy(error = UiMessage(R.string.common_operation_failed)) }
+        accountSession.update(uiState, context) { it.copy(error = UiMessage(R.string.common_operation_failed)) }
     }
 
     /**
@@ -122,22 +128,24 @@ class MemoActionDelegateImpl(
      * so the two copies cannot drift apart.
      */
     private suspend fun applyOffline(
+        context: AccountContext,
         op: PendingOp,
         onSuccess: () -> Unit = {},
         applyOptimistic: suspend () -> Unit
     ) {
         syncManager.enqueue(op)
         applyOptimistic()
-        onSuccess()
-        toastOfflineSaved()
+        if (accountSession.isCurrent(context)) {
+            onSuccess()
+            notifyOfflineSaved()
+        }
     }
 
-    private fun currentAccountId(): String? = accountIdProvider()
-
-    private fun currentUser(): User? = currentUserProvider()
+    private fun currentUser(): User? = uiState.value.session.currUser
 
     override fun selectMemo(memo: Memo?) {
-        uiState.update {
+        val context = accountSession.current ?: return
+        accountSession.update(uiState, context) {
             it.copy(detailPane = it.detailPane.copy(selectedMemo = memo))
         }
         if (memo != null) {
@@ -156,23 +164,33 @@ class MemoActionDelegateImpl(
         onError: () -> Unit,
         onSuccess: () -> Unit
     ) {
+        val context = accountSession.current ?: return
+        val connection = context.connection
+        val api = connection.api
+        val wasOnline = connection.networkReady && isOnlineProvider()
         val draftIdToDelete = uiState.value.draft.currentEditingDraftId
-        val accountId = currentAccountId()
+        val accountId = context.account.id
         // One idempotency key per user create action: the online attempt and any
         // offline-queue fallback must reuse the same memoId so a replay after a
         // timeout cannot create a duplicate server-side. Callers with their own
         // stable identity (e.g. draft publishing) can supply [memoId].
         val clientId = memoId ?: UUID.randomUUID().toString()
-        val memo = Memo(
+        var memo = Memo(
             content = content,
             visibility = visibility,
             attachments = attachments,
             location = location
         )
         scope.launch {
-            if (accountId != null && !isOnlineProvider()) {
+            try {
+                val prepared = attachmentManager?.prepareRestoredDraftAttachments(context, memo.attachments.orEmpty()) ?: memo.attachments.orEmpty()
+                memo = memo.copy(attachments = prepared.ifEmpty { null })
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) { reportOperationFailure(context, error); if (accountSession.isCurrent(context)) onError(); return@launch }
+            val attachmentsPending = memo.attachments.orEmpty().any { it.name.isNullOrBlank() && it.clientId != null }
+            if (!wasOnline || attachmentsPending) {
                 // Offline: queue the create and show the memo locally right away.
-                val tempName = "offline-${UUID.randomUUID()}"
+                val tempName = "offline-$clientId"
                 // Stamp local timestamps so the optimistic memo sorts to the
                 // top of the list (null displayTime would sort to the bottom).
                 val now = Clock.System.now()
@@ -184,48 +202,44 @@ class MemoActionDelegateImpl(
                     displayTime = now
                 )
                 applyOffline(
+                    context,
                     PendingOp.new(
                         accountId = accountId,
                         type = PendingOpType.CREATE,
                         memoName = tempName,
-                        payloadJson = gson.toJson(localMemo)
+                        payloadJson = gson.toJson(localMemo),
+                        id = clientId
                     ),
                     onSuccess
                 ) {
-                    applyLocalCreate(localMemo, draftIdToDelete)
+                    applyLocalCreate(context, localMemo, draftIdToDelete)
                 }
                 return@launch
             }
 
             try {
-                uiState.update { it.copy(isPosting = true) }
-                val created = api?.createMemo(memo, clientId)
-                if (created != null) {
-                    draftIdToDelete?.let(draftDelegate::deleteDraft)
-                    if (uiState.value.draft.currentEditingDraftId == draftIdToDelete) {
-                        draftDelegate.setCurrentEditingDraft(null)
-                    }
-                    onSuccess()
-                    listUpdater.refreshUserMemos()
-                    // Keep the local cache fresh for offline browsing.
-                    accountId?.let {
-                        memoCacheRepository.upsertCachedMemo(it, created, CacheListType.USER)
-                    }
-                    uiState.update {
-                        it.copy(
-                            draft = it.draft.copy(
-                                composerResetToken = System.currentTimeMillis().toInt()
-                            )
-                        )
-                    }
-                } else {
-                    // No memo came back (e.g. no API bound): report failure so
-                    // callers awaiting a result (draft publishing) don't hang.
-                    onError()
+                accountSession.update(uiState, context) { it.copy(isPosting = true) }
+                val created = api.createMemo(memo, clientId)
+                draftIdToDelete?.let { draftManager.deleteDraft(context.account.id, it) }
+                if (accountSession.isCurrent(context) && uiState.value.draft.currentEditingDraftId == draftIdToDelete) {
+                    draftDelegate.setCurrentEditingDraft(null)
                 }
+                if (accountSession.isCurrent(context)) listUpdater.refreshUserMemos()
+                // Keep the local cache fresh for offline browsing.
+                memoCacheRepository.upsertCachedMemo(accountId, created, CacheListType.USER)
+                accountSession.update(uiState, context) {
+                    it.copy(
+                        draft = it.draft.copy(
+                            composerResetToken = System.currentTimeMillis().toInt()
+                        )
+                    )
+                }
+                if (accountSession.isCurrent(context)) onSuccess()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                if (accountId != null && shouldQueueOffline(e)) {
-                    val tempName = "offline-${UUID.randomUUID()}"
+                if (shouldQueueOffline(context, e)) {
+                    val tempName = "offline-$clientId"
                     // Stamp local timestamps so the optimistic memo sorts to the
                     // top of the list (null displayTime would sort to the bottom).
                     val now = Clock.System.now()
@@ -237,6 +251,7 @@ class MemoActionDelegateImpl(
                         displayTime = now
                     )
                     applyOffline(
+                        context,
                         PendingOp.new(
                             accountId = accountId,
                             type = PendingOpType.CREATE,
@@ -249,31 +264,29 @@ class MemoActionDelegateImpl(
                         ),
                         onSuccess
                     ) {
-                        applyLocalCreate(localMemo, draftIdToDelete)
+                        applyLocalCreate(context, localMemo, draftIdToDelete)
                     }
                 } else {
-                    reportOperationFailure(e)
-                    onError()
+                    reportOperationFailure(context, e)
+                    if (accountSession.isCurrent(context)) onError()
                 }
             } finally {
-                uiState.update { it.copy(isPosting = false) }
+                accountSession.update(uiState, context) { it.copy(isPosting = false) }
             }
         }
     }
 
-    private suspend fun applyLocalCreate(localMemo: Memo, draftIdToDelete: String?) {
-        val accountId = currentAccountId()
-        if (accountId != null) {
-            memoCacheRepository.upsertCachedMemo(
-                accountId, localMemo, CacheListType.USER, order = 0
-            )
-        }
-        listUpdater.insertMemoIntoUserList(localMemo)
-        draftIdToDelete?.let(draftDelegate::deleteDraft)
-        if (uiState.value.draft.currentEditingDraftId == draftIdToDelete) {
+    private suspend fun applyLocalCreate(context: AccountContext, localMemo: Memo, draftIdToDelete: String?) {
+        val accountId = context.account.id
+        memoCacheRepository.upsertCachedMemo(
+            accountId, localMemo, CacheListType.USER, order = 0
+        )
+        if (accountSession.isCurrent(context)) listUpdater.insertMemoIntoUserList(localMemo)
+        draftIdToDelete?.let { draftManager.deleteDraft(context.account.id, it) }
+        if (accountSession.isCurrent(context) && uiState.value.draft.currentEditingDraftId == draftIdToDelete) {
             draftDelegate.setCurrentEditingDraft(null)
         }
-        uiState.update {
+        accountSession.update(uiState, context) {
             it.copy(
                 draft = it.draft.copy(
                     composerResetToken = System.currentTimeMillis().toInt()
@@ -289,9 +302,14 @@ class MemoActionDelegateImpl(
         attachments: List<Attachment>,
         location: Location?,
         state: MemoState?,
+        onError: () -> Unit,
         onSuccess: () -> Unit
     ) {
-        val accountId = currentAccountId()
+        val context = accountSession.current ?: return
+        val connection = context.connection
+        val api = connection.api
+        val wasOnline = connection.networkReady && isOnlineProvider()
+        val accountId = context.account.id
         val name = memo.name ?: return
         val update = memo.copy(
             content = content,
@@ -305,66 +323,64 @@ class MemoActionDelegateImpl(
             maskParts.add("state")
         }
         val mask = maskParts.joinToString(",")
-        val pendingOp = accountId?.let {
-            PendingOp.new(
-                accountId = it,
-                type = PendingOpType.UPDATE,
-                memoName = name,
-                payloadJson = gson.toJson(update),
-                updateMask = mask,
-                baseUpdateTime = memo.updateTime?.toString()
-            )
-        }
+        val pendingOp = PendingOp.new(
+            accountId = accountId,
+            type = PendingOpType.UPDATE,
+            memoName = name,
+            payloadJson = gson.toJson(update),
+            updateMask = mask,
+            baseUpdateTime = memo.updateTime?.toString()
+        )
 
         scope.launch {
-            if (accountId != null && pendingOp != null && !isOnlineProvider()) {
-                applyOffline(pendingOp, onSuccess) {
-                    applyLocalUpdate(memo, update)
+            if (!wasOnline) {
+                applyOffline(context, pendingOp, onSuccess) {
+                    applyLocalUpdate(context, memo, update)
                 }
                 return@launch
             }
 
             try {
-                val updated = api?.updateMemo(name, update, mask)
-                if (updated != null) {
-                    onSuccess()
+                val updated = api.updateMemo(name, update, mask)
+                // Handle local list moves if state changed
+                val oldState = memo.state ?: MemoState.NORMAL
+                val newState = updated.state ?: MemoState.NORMAL
 
-                    // Handle local list moves if state changed
-                    val oldState = memo.state ?: MemoState.NORMAL
-                    val newState = updated.state ?: MemoState.NORMAL
-
-                    if (oldState != newState) {
-                        listUpdater.handleMemoStateChange(memo, updated)
-                    }
-
-                    listUpdater.updateMemoInLists(updated)
-                    cacheLocalMemo(updated)
+                if (oldState != newState) {
+                    if (accountSession.isCurrent(context)) listUpdater.handleMemoStateChange(memo, updated)
                 }
+
+                if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(updated)
+                cacheLocalMemo(context, updated)
+                if (accountSession.isCurrent(context)) onSuccess()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                if (accountId != null && pendingOp != null && shouldQueueOffline(e)) {
-                    applyOffline(pendingOp, onSuccess) {
-                        applyLocalUpdate(memo, update)
+                if (shouldQueueOffline(context, e)) {
+                    applyOffline(context, pendingOp, onSuccess) {
+                        applyLocalUpdate(context, memo, update)
                     }
                 } else {
-                    reportOperationFailure(e)
+                    reportOperationFailure(context, e)
+                    if (accountSession.isCurrent(context)) onError()
                 }
             }
         }
     }
 
-    private suspend fun applyLocalUpdate(oldMemo: Memo, updated: Memo) {
+    private suspend fun applyLocalUpdate(context: AccountContext, oldMemo: Memo, updated: Memo) {
         val oldState = oldMemo.state ?: MemoState.NORMAL
         val newState = updated.state ?: MemoState.NORMAL
         if (oldState != newState) {
-            listUpdater.handleMemoStateChange(oldMemo, updated)
+            if (accountSession.isCurrent(context)) listUpdater.handleMemoStateChange(oldMemo, updated)
         } else {
-            listUpdater.updateMemoInLists(updated)
+            if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(updated)
         }
-        cacheLocalMemo(updated)
+        cacheLocalMemo(context, updated)
     }
 
-    private suspend fun cacheLocalMemo(memo: Memo) {
-        val accountId = currentAccountId() ?: return
+    private suspend fun cacheLocalMemo(context: AccountContext, memo: Memo) {
+        val accountId = context.account.id
         val name = memo.name ?: return
         // Atomic cross-list-type upsert (single transaction) - the previous
         // remove+upsert pair could race a concurrent writer and lose the row.
@@ -376,121 +392,133 @@ class MemoActionDelegateImpl(
     }
 
     override fun deleteMemo(memo: Memo, onSuccess: () -> Unit) {
-        val accountId = currentAccountId()
+        val context = accountSession.current ?: return
+        val connection = context.connection
+        val api = connection.api
+        val wasOnline = connection.networkReady && isOnlineProvider()
+        val accountId = context.account.id
         val name = memo.name ?: return
-        val pendingOp = accountId?.let {
-            PendingOp.new(
-                accountId = it,
-                type = PendingOpType.DELETE,
-                memoName = name
-            )
-        }
+        val pendingOp = PendingOp.new(
+            accountId = accountId,
+            type = PendingOpType.DELETE,
+            memoName = name
+        )
         scope.launch {
-            if (accountId != null && pendingOp != null && !isOnlineProvider()) {
-                applyOffline(pendingOp, onSuccess) {
+            if (!wasOnline) {
+                applyOffline(context, pendingOp, onSuccess) {
                     memoCacheRepository.removeCachedMemo(accountId, name)
-                    listUpdater.removeMemoFromLists(name)
+                    if (accountSession.isCurrent(context)) listUpdater.removeMemoFromLists(name)
                 }
                 return@launch
             }
 
             try {
-                api?.deleteMemo(name)
-                onSuccess()
+                api.deleteMemo(name)
+                if (accountSession.isCurrent(context)) onSuccess()
 
                 // Local update: Remove from all lists
-                listUpdater.removeMemoFromLists(name)
-                accountId?.let { memoCacheRepository.removeCachedMemo(it, name) }
+                if (accountSession.isCurrent(context)) listUpdater.removeMemoFromLists(name)
+                memoCacheRepository.removeCachedMemo(accountId, name)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                if (accountId != null && pendingOp != null && shouldQueueOffline(e)) {
-                    applyOffline(pendingOp, onSuccess) {
+                if (shouldQueueOffline(context, e)) {
+                    applyOffline(context, pendingOp, onSuccess) {
                         memoCacheRepository.removeCachedMemo(accountId, name)
-                        listUpdater.removeMemoFromLists(name)
+                        if (accountSession.isCurrent(context)) listUpdater.removeMemoFromLists(name)
                     }
                 } else {
-                    reportOperationFailure(e)
+                    reportOperationFailure(context, e)
                 }
             }
         }
     }
 
     override fun updateMemoPinned(memo: Memo, pinned: Boolean, onSuccess: () -> Unit) {
-        val accountId = currentAccountId()
+        val context = accountSession.current ?: return
+        val connection = context.connection
+        val api = connection.api
+        val wasOnline = connection.networkReady && isOnlineProvider()
+        val accountId = context.account.id
         val name = memo.name ?: return
         val update = memo.copy(pinned = pinned)
-        val pendingOp = accountId?.let {
-            PendingOp.new(
-                accountId = it,
-                type = PendingOpType.UPDATE,
-                memoName = name,
-                payloadJson = gson.toJson(update),
-                updateMask = "pinned",
-                baseUpdateTime = memo.updateTime?.toString()
-            )
-        }
+        val pendingOp = PendingOp.new(
+            accountId = accountId,
+            type = PendingOpType.UPDATE,
+            memoName = name,
+            payloadJson = gson.toJson(update),
+            updateMask = "pinned",
+            baseUpdateTime = memo.updateTime?.toString()
+        )
         scope.launch {
-            if (accountId != null && pendingOp != null && !isOnlineProvider()) {
-                applyOffline(pendingOp, onSuccess) {
-                    listUpdater.updateMemoInLists(update)
-                    cacheLocalMemo(update)
+            if (!wasOnline) {
+                applyOffline(context, pendingOp, onSuccess) {
+                    if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(update)
+                    cacheLocalMemo(context, update)
                 }
                 return@launch
             }
 
             try {
-                val updated = api?.updateMemo(name, update, "pinned")
-                if (updated != null) {
-                    onSuccess()
-                    listUpdater.updateMemoInLists(updated)
-                    cacheLocalMemo(updated)
-                }
+                val updated = api.updateMemo(name, update, "pinned")
+                if (accountSession.isCurrent(context)) onSuccess()
+                if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(updated)
+                cacheLocalMemo(context, updated)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                if (accountId != null && pendingOp != null && shouldQueueOffline(e)) {
-                    applyOffline(pendingOp, onSuccess) {
-                        listUpdater.updateMemoInLists(update)
-                        cacheLocalMemo(update)
+                if (shouldQueueOffline(context, e)) {
+                    applyOffline(context, pendingOp, onSuccess) {
+                        if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(update)
+                        cacheLocalMemo(context, update)
                     }
                 } else {
-                    reportOperationFailure(e)
+                    reportOperationFailure(context, e)
                 }
             }
         }
     }
 
-    override fun createComment(parentMemo: Memo, content: String, onSuccess: () -> Unit) {
-        val accountId = currentAccountId()
+    override fun createComment(parentMemo: Memo, content: String, onError: () -> Unit, onSuccess: () -> Unit) {
+        val context = accountSession.current ?: return
+        val connection = context.connection
+        val api = connection.api
+        val wasOnline = connection.networkReady && isOnlineProvider()
+        val accountId = context.account.id
         val parentName = parentMemo.name ?: return
         val comment = Memo(content = content, visibility = parentMemo.visibility, parent = parentName)
         val tempName = "offline-comment-${UUID.randomUUID()}"
         val localComment = comment.copy(name = tempName, parent = parentName)
-        val pendingOp = accountId?.let {
-            PendingOp.new(
-                accountId = it,
-                type = PendingOpType.COMMENT_CREATE,
-                memoName = tempName,
-                parentName = parentName,
-                payloadJson = gson.toJson(localComment)
-            )
-        }
+        val pendingOp = PendingOp.new(
+            accountId = accountId,
+            type = PendingOpType.COMMENT_CREATE,
+            memoName = tempName,
+            parentName = parentName,
+            payloadJson = gson.toJson(localComment)
+        )
         scope.launch {
-            if (accountId != null && pendingOp != null && !isOnlineProvider()) {
-                applyOffline(pendingOp, onSuccess) {
-                    applyLocalComment(localComment, parentName)
+            if (!wasOnline) {
+                applyOffline(context, pendingOp, onSuccess) {
+                    applyLocalComment(context, localComment, parentName)
                 }
                 return@launch
             }
 
             try {
-                api?.createMemoComment(parentName, comment)
-                onSuccess()
-                commentManager?.fetch(refresh = true)
+                val created = api.createMemoComment(parentName, comment)
+                memoCacheRepository.upsertCachedMemo(accountId, created, CacheListType.COMMENT, parentName = parentName)
+                if (accountSession.isCurrent(context)) onSuccess()
+                if (accountSession.isCurrent(context)) commentManager?.fetch(refresh = true)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                if (accountId != null && pendingOp != null && shouldQueueOffline(e)) {
-                    applyOffline(pendingOp, onSuccess) {
-                        applyLocalComment(localComment, parentName)
+                if (shouldQueueOffline(context, e)) {
+                    applyOffline(context, pendingOp, onSuccess) {
+                        applyLocalComment(context, localComment, parentName)
                     }
                 } else {
-                    reportOperationFailure(e)
+                    reportOperationFailure(context, e)
+                    if (accountSession.isCurrent(context)) onError()
                 }
             }
         }
@@ -500,50 +528,55 @@ class MemoActionDelegateImpl(
      * Show the optimistic comment and persist it so it survives restarts / a
      * failed sync until the server list refresh replaces it.
      */
-    private suspend fun applyLocalComment(localComment: Memo, parentName: String) {
-        commentManager?.upsert(
+    private suspend fun applyLocalComment(context: AccountContext, localComment: Memo, parentName: String) {
+        if (accountSession.isCurrent(context)) commentManager?.upsert(
             localComment,
             { it.name == localComment.name },
             compareBy { it.createTime }
         )
-        val accountId = currentAccountId() ?: return
+        val accountId = context.account.id
         memoCacheRepository.upsertCachedMemo(
             accountId, localComment, CacheListType.COMMENT, parentName = parentName
         )
     }
 
     override suspend fun uploadAttachment(uri: Uri, context: Context): Attachment? {
-        return attachmentManager?.uploadAttachment(uri, context)
+        val account = accountSession.current ?: return null
+        val attachment = attachmentManager?.uploadAttachment(uri, context)
+        return attachment.takeIf { accountSession.isCurrent(account) }
     }
 
     override fun discardQueuedUploadIfOrphaned(clientId: String) {
+        val context = accountSession.current ?: return
         scope.launch { attachmentManager?.discardQueuedUploadIfOrphaned(clientId) }
     }
 
     override fun upsertMemoReaction(memo: Memo, reactionType: String) {
-        val accountId = currentAccountId()
+        val context = accountSession.current ?: return
+        val connection = context.connection
+        val api = connection.api
+        val wasOnline = connection.networkReady && isOnlineProvider()
+        val accountId = context.account.id
         val name = memo.name ?: return
         val mine = currentUser()?.name
-        val pendingOp = accountId?.let {
-            PendingOp.new(
-                accountId = it,
-                type = PendingOpType.REACTION_UPSERT,
-                memoName = name,
-                payloadJson = gson.toJson(
-                    ReactionOpPayload(reactionType = reactionType, creator = mine)
-                )
+        val pendingOp = PendingOp.new(
+            accountId = accountId,
+            type = PendingOpType.REACTION_UPSERT,
+            memoName = name,
+            payloadJson = gson.toJson(
+                ReactionOpPayload(reactionType = reactionType, creator = mine)
             )
-        }
+        )
         scope.launch {
             // Optimistic local update for instant feedback (online or offline).
             val optimistic = memo.copy(
                 reactions = withLocalReactions(memo, reactionType, mine, add = true)
             )
-            listUpdater.updateMemoInLists(optimistic)
+            if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(optimistic)
 
-            if (accountId != null && pendingOp != null && !isOnlineProvider()) {
-                applyOffline(pendingOp) {
-                    cacheLocalMemo(optimistic)
+            if (!wasOnline) {
+                applyOffline(context, pendingOp) {
+                    cacheLocalMemo(context, optimistic)
                 }
                 return@launch
             }
@@ -551,44 +584,46 @@ class MemoActionDelegateImpl(
             try {
                 val reaction = Reaction(contentId = name, reactionType = reactionType)
                 val request = UpsertMemoReactionRequest(name = memo.name, reaction = reaction)
-                api?.upsertMemoReaction(name, request)
+                api.upsertMemoReaction(name, request)
 
                 // Fetch latest memo state to be sure about all reactions and update in-place
-                val updated = api?.getMemo(name)
-                if (updated != null) {
-                    listUpdater.updateMemoInLists(updated)
-                    cacheLocalMemo(updated)
-                }
+                val updated = api.getMemo(name)
+                if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(updated)
+                cacheLocalMemo(context, updated)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                if (accountId != null && pendingOp != null && shouldQueueOffline(e)) {
-                    applyOffline(pendingOp) {
-                        cacheLocalMemo(optimistic)
+                if (shouldQueueOffline(context, e)) {
+                    applyOffline(context, pendingOp) {
+                        cacheLocalMemo(context, optimistic)
                     }
                 } else {
                     // The server rejected the request (e.g. 401/404): roll the
                     // optimistic reaction back and surface the error, instead of
                     // leaving a reaction on screen that was never applied.
-                    reportOperationFailure(e)
-                    listUpdater.updateMemoInLists(memo)
+                    reportOperationFailure(context, e)
+                    if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(memo)
                 }
             }
         }
     }
 
     override fun deleteMemoReaction(memo: Memo, reaction: Reaction) {
-        val accountId = currentAccountId()
+        val context = accountSession.current ?: return
+        val connection = context.connection
+        val api = connection.api
+        val wasOnline = connection.networkReady && isOnlineProvider()
+        val accountId = context.account.id
         val name = memo.name ?: return
         val mine = currentUser()?.name
-        val pendingOp = accountId?.let {
-            PendingOp.new(
-                accountId = it,
-                type = PendingOpType.REACTION_DELETE,
-                memoName = name,
-                payloadJson = gson.toJson(
-                    ReactionOpPayload(reactionType = reaction.reactionType, creator = mine)
-                )
+        val pendingOp = PendingOp.new(
+            accountId = accountId,
+            type = PendingOpType.REACTION_DELETE,
+            memoName = name,
+            payloadJson = gson.toJson(
+                ReactionOpPayload(reactionType = reaction.reactionType, creator = mine)
             )
-        }
+        )
         scope.launch {
             // Optimistic local update for instant feedback (online or offline).
             val optimistic = memo.copy(
@@ -596,36 +631,36 @@ class MemoActionDelegateImpl(
                     it.reactionType == reaction.reactionType && (mine == null || it.creator == mine)
                 }
             )
-            listUpdater.updateMemoInLists(optimistic)
+            if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(optimistic)
 
-            if (accountId != null && pendingOp != null && !isOnlineProvider()) {
-                applyOffline(pendingOp) {
-                    cacheLocalMemo(optimistic)
+            if (!wasOnline) {
+                applyOffline(context, pendingOp) {
+                    cacheLocalMemo(context, optimistic)
                 }
                 return@launch
             }
 
             try {
                 val reactionName = reaction.name ?: return@launch
-                api?.deleteMemoReaction(reactionName)
+                api.deleteMemoReaction(reactionName)
 
                 // Fetch latest memo state and update in-place
-                val updated = api?.getMemo(name)
-                if (updated != null) {
-                    listUpdater.updateMemoInLists(updated)
-                    cacheLocalMemo(updated)
-                }
+                val updated = api.getMemo(name)
+                if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(updated)
+                cacheLocalMemo(context, updated)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                if (accountId != null && pendingOp != null && shouldQueueOffline(e)) {
-                    applyOffline(pendingOp) {
-                        cacheLocalMemo(optimistic)
+                if (shouldQueueOffline(context, e)) {
+                    applyOffline(context, pendingOp) {
+                        cacheLocalMemo(context, optimistic)
                     }
                 } else {
                     // The server rejected the request (e.g. 401/404): roll the
                     // optimistic removal back and surface the error, instead of
                     // leaving the reaction hidden while it still exists on the server.
-                    reportOperationFailure(e)
-                    listUpdater.updateMemoInLists(memo)
+                    reportOperationFailure(context, e)
+                    if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(memo)
                 }
             }
         }

@@ -11,6 +11,8 @@
     <application
         android:name=".MemosApplication"
         android:allowBackup="true"
+        android:backupAgent=".data.backup.NativeBackupAgent"
+        android:fullBackupOnly="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="@xml/backup_rules"
@@ -68,6 +70,28 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".ui.profile.EditProfileActivity" android:exported="false" />
+        <activity android:name=".ui.profile.EditAccountCredentialsActivity" android:exported="false" />
+        <activity android:name=".ui.profile.NotificationsActivity" android:exported="false" />
+        <activity android:name=".ui.profile.DraftsActivity" android:exported="false" />
+        <activity android:name=".ui.component.composer.MemoEditorActivity" android:exported="false" />
+        <activity android:name=".ui.profile.ArchivedMemosActivity" android:exported="false" />
+        <activity android:name=".ui.profile.SettingsActivity" android:exported="false" />
+        <activity android:name=".ui.setup.SetupActivity" android:exported="false" />
+        <activity android:name=".ui.setup.SetupLoginActivity" android:exported="false" android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize" />
+        <activity android:name=".ui.setup.SsoLoginActivity" android:exported="false" />
+        <activity android:name=".ui.setup.SsoCallbackActivity" android:exported="true" android:excludeFromRecents="true" android:noHistory="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="${applicationId}" android:host="oauth" android:path="/callback" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".ui.backup.BackupTransferActivity" android:exported="false" android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize" />
+        <activity android:name=".ui.profile.SyncLogActivity" android:exported="false" />
+        <activity android:name=".ui.profile.OpenSourceLicensesActivity" android:exported="false" />
 
         <receiver
             android:name=".widget.DraftWidgetReceiver"

@@ -56,7 +56,7 @@ data class MemoListState(
 data class AttachmentListState(
     val list: PaginatedListState<Attachment> = PaginatedListState(),
     val cellWidth: Float = 240f,
-    val aspectRatios: Map<Float, Map<String, Float>> = emptyMap()
+    val aspectRatios: Map<String, Float> = emptyMap()
 )
 
 // --- Draft State ---
@@ -79,6 +79,7 @@ data class DetailPaneState(
 // --- App Settings (local) ---
 
 data class AppSettings(
+    val linkPreviewEnabled: Boolean = true,
     val pageSize: Int = 10,
     val headerScale: Float = 1.0f,
     // --- Offline / pre-download settings ---
@@ -96,12 +97,14 @@ enum class ConnectionState {
     OFFLINE,
     SERVER_UNREACHABLE,
     AUTH_REQUIRED,
+    RATE_LIMITED,
     ONLINE
 }
 
 // --- Main UI State ---
 
 data class MemosUiState(
+    val memoMap: MemoMapState = MemoMapState(),
     val session: SessionState = SessionState(),
     val userMemoList: MemoListState = MemoListState(),
     val exploreMemoList: MemoListState = MemoListState(),
@@ -113,6 +116,7 @@ data class MemosUiState(
     val appSettings: AppSettings = AppSettings(),
 
     val accounts: List<Account> = emptyList(),
+    val accountGeneration: Long = 0L,
     val users: Map<String, User> = emptyMap(),
 
     val isPosting: Boolean = false,
@@ -133,6 +137,18 @@ data class MemosUiState(
     val attachmentCacheUsage: AttachmentCacheManager.Usage = AttachmentCacheManager.Usage(),
     val textCacheCount: Int = 0,
     val syncError: String? = null
+)
+
+data class MemoMapState(
+    val capability: org.example.memosm.model.MapCapability = org.example.memosm.model.MapCapability.UNKNOWN,
+    val scope: org.example.memosm.model.MapScope = org.example.memosm.model.MapScope.MEMOS,
+    val memos: List<Memo> = emptyList(),
+    val isLoading: Boolean = false,
+    val complete: Boolean = false,
+    val isOffline: Boolean = false,
+    val loadFailed: Boolean = false,
+    val savedView: Shortcut? = null,
+    val filterUnavailable: Boolean = false
 )
 
 enum class RefreshSource {

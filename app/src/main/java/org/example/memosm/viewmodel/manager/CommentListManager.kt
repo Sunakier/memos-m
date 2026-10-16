@@ -10,17 +10,24 @@ class CommentListManager(
     scope: CoroutineScope,
     private val apiProvider: () -> MemosApi?,
     cacheCallbacks: CacheCallbacks<Memo>? = null,
-    private val isOnlineProvider: () -> Boolean = { true }
+    private val isOnlineProvider: () -> Boolean = { true },
+    protectedNamesProvider: (() -> Set<String>)? = null
 ) : BaseListManager<Memo>(
     scope,
     cacheCallbacks = cacheCallbacks,
-    nameProvider = { it.name }
+    nameProvider = { it.name },
+    protectedNamesProvider = protectedNamesProvider
 ) {
 
     private var _currentMemoName: String? = null
 
     val currentMemoName: String?
         get() = _currentMemoName
+
+    fun clearParent() {
+        _currentMemoName = null
+        reset()
+    }
 
     fun setMemo(memoName: String) {
         if (_currentMemoName != memoName) {

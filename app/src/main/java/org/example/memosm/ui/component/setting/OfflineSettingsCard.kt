@@ -1,56 +1,64 @@
 package org.example.memosm.ui.component.setting
 
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.example.memosm.ui.component.item.media.MediaCache
+import org.example.memosm.ui.formatBytes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.Card
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlin.math.ceil
 import org.example.memosm.R
 import org.example.memosm.data.media.AttachmentCacheManager
 import org.example.memosm.ui.component.CacheCleanupDialog
+import org.example.memosm.data.sync.PreDownloadState
 import java.util.Locale
 
-/**
- * Offline & pre-download settings: toggles for automatic text/attachment
- * pre-download (with a Wi-Fi-only option), per-tier cache size limits (each
- * an editable dropdown with presets, MB/GB units and "unlimited"),
- * a cache-analysis summary and a single clear button that opens the shared
- * CacheCleanupDialog (the same one the sync status panel uses).
- */
+/** Storage overview with grouped download preferences and cache limit editors. */
 @Composable
 fun OfflineSettingsCard(
     preDownloadText: Boolean,
@@ -69,21 +77,113 @@ fun OfflineSettingsCard(
     onThemeCacheMaxMbChange: (Int) -> Unit,
     textCacheCount: Int,
     attachmentCacheUsage: AttachmentCacheManager.Usage,
+    preDownloadState: PreDownloadState,
+    onCacheNow: (Boolean, Boolean) -> Unit,
     onClearTextCache: () -> Unit,
     onClearAttachmentCache: () -> Unit
 ) {
-    var showCleanup by remember { mutableStateOf(false) }
+    var showCleanup by rememberSaveable { mutableStateOf(false) }
+    var showCacheNow by rememberSaveable { mutableStateOf(false) }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(vertical = 16.dp)) {
+    val context = LocalContext.current
+    var mediaBytes by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(attachmentCacheUsage, showCleanup) {
+        mediaBytes = withContext(Dispatchers.IO) { MediaCache.sizeBytes(context) }
+    }
+    val fileBytes = mediaBytes?.let { it + attachmentCacheUsage.bytes }
+    val fileLimitBytes = if (attachmentCacheMaxMb > 0 && themeCacheMaxMb > 0) {
+        (attachmentCacheMaxMb.toLong() + themeCacheMaxMb) * 1024L * 1024L
+    } else null
+    val caching = preDownloadState as? PreDownloadState.Running
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Text(
-                stringResource(R.string.offline_settings_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                text = fileBytes?.let(::formatBytes) ?: "…",
+                style = MaterialTheme.typography.displayMedium
             )
-            Spacer(modifier = Modifier.height(8.dp))
-
+            Text(
+                text = stringResource(R.string.settings_cache_files_used),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (fileLimitBytes != null && fileBytes != null) {
+                LinearProgressIndicator(
+                    progress = { (fileBytes.toFloat() / fileLimitBytes).coerceIn(0f, 1f) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(32.dp)
+                        .clip(RoundedCornerShape(percent = 50)),
+                    strokeCap = StrokeCap.Butt,
+                    gapSize = 0.dp,
+                    drawStopIndicator = {}
+                )
+                Text(
+                    text = stringResource(R.string.settings_cache_files_limit, formatBytes(fileLimitBytes)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        SettingsGroup {
+            SettingsNavigationRow(
+                title = stringResource(
+                    when (caching?.phase) {
+                        PreDownloadState.Running.Phase.TEXT -> R.string.cache_now_running_text
+                        PreDownloadState.Running.Phase.ATTACHMENTS -> R.string.cache_now_running_attachments
+                        null -> R.string.cache_now
+                    }
+                ),
+                icon = Icons.Outlined.Download,
+                showChevron = false,
+                enabled = caching == null,
+                supportingContent = if (caching != null) {
+                    {
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else null,
+                onClick = { showCacheNow = true }
+            )
+            SettingsNavigationRow(
+                title = stringResource(R.string.cache_cleanup_title),
+                icon = Icons.Outlined.Delete,
+                showChevron = false,
+                onClick = { showCleanup = true }
+            )
+        }
+        if (preDownloadState is PreDownloadState.Failed) {
+            Text(
+                stringResource(R.string.offline_predownload_failed, preDownloadState.message),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+        SettingsGroup {
+            CacheUsageRow(
+                label = stringResource(R.string.cache_cleanup_attachments),
+                bytes = attachmentCacheUsage.bytes,
+                limitMb = attachmentCacheMaxMb
+            )
+            CacheUsageRow(
+                label = stringResource(R.string.cache_cleanup_media),
+                bytes = mediaBytes,
+                limitMb = themeCacheMaxMb
+            )
+            ListItem(
+                modifier = Modifier.clip(RoundedCornerShape(4.dp)),
+                content = { Text(stringResource(R.string.cache_cleanup_text)) },
+                supportingContent = { Text(pluralStringResource(R.plurals.cached_memo_count, textCacheCount, textCacheCount)) },
+                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+            )
+        }
+        SettingsLabel(stringResource(R.string.settings_cache_downloads))
+        SettingsGroup {
             SettingSwitchRow(
                 label = stringResource(R.string.offline_settings_pre_download_text),
                 checked = preDownloadText,
@@ -104,8 +204,9 @@ fun OfflineSettingsCard(
                 checked = preDownloadExplore,
                 onCheckedChange = onPreDownloadExploreChange
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
+        }
+        SettingsLabel(stringResource(R.string.settings_cache_limits))
+        SettingsGroup {
             CacheLimitRow(
                 label = stringResource(R.string.offline_settings_cache_size_text),
                 valueMb = textCacheMaxMb,
@@ -121,25 +222,51 @@ fun OfflineSettingsCard(
                 valueMb = themeCacheMaxMb,
                 onChange = onThemeCacheMaxMbChange
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.End
-            ) {
-                OutlinedButton(onClick = { showCleanup = true }) {
-                    Icon(
-                        Icons.Outlined.Delete,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.cache_cleanup_title))
-                }
-            }
         }
+    }
+
+    if (showCacheNow) {
+        var cacheText by rememberSaveable { mutableStateOf(true) }
+        var cacheAttachments by rememberSaveable { mutableStateOf(true) }
+        AlertDialog(
+            onDismissRequest = { showCacheNow = false },
+            icon = { Icon(Icons.Outlined.Download, contentDescription = null) },
+            title = { Text(stringResource(R.string.cache_now)) },
+            text = {
+                Column {
+                    SettingToggleRow(
+                        label = stringResource(R.string.cache_text),
+                        icon = Icons.Outlined.Description,
+                        checked = cacheText,
+                        containerColor = Color.Transparent,
+                        onCheckedChange = { cacheText = it }
+                    )
+                    SettingToggleRow(
+                        label = stringResource(R.string.nav_attachments),
+                        icon = Icons.Outlined.AttachFile,
+                        checked = cacheAttachments,
+                        containerColor = Color.Transparent,
+                        onCheckedChange = { cacheAttachments = it }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onCacheNow(cacheText, cacheAttachments)
+                        showCacheNow = false
+                    },
+                    enabled = cacheText || cacheAttachments,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+                ) { Text(stringResource(R.string.cache_now)) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showCacheNow = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+                ) { Text(stringResource(R.string.common_cancel)) }
+            }
+        )
     }
 
     if (showCleanup) {
@@ -149,6 +276,61 @@ fun OfflineSettingsCard(
             onClearText = onClearTextCache,
             onClearAttachment = onClearAttachmentCache,
             onDismiss = { showCleanup = false }
+        )
+    }
+}
+
+@Composable
+private fun SettingsLabel(label: String) {
+    Text(
+        label,
+        modifier = Modifier.padding(start = 16.dp, top = 12.dp),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary
+    )
+}
+
+@Composable
+private fun CacheUsageRow(label: String, bytes: Long?, limitMb: Int) {
+    ListItem(
+        modifier = Modifier.clip(RoundedCornerShape(4.dp)),
+        content = { Text(label) },
+        trailingContent = { Text(bytes?.let(::formatBytes) ?: "…") },
+        supportingContent = if (limitMb > 0 && bytes != null) {
+            {
+                LinearProgressIndicator(
+                    progress = { (bytes.toFloat() / (limitMb.toLong() * 1024L * 1024L)).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                )
+            }
+        } else null,
+        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+    )
+}
+
+@Composable
+private fun CacheLimitRow(label: String, valueMb: Int, onChange: (Int) -> Unit) {
+    var showEditor by rememberSaveable { mutableStateOf(false) }
+    SettingsNavigationRow(
+        title = label,
+        summary = if (valueMb <= 0) stringResource(R.string.cache_cleanup_unlimited)
+            else formatBytes(valueMb.toLong() * 1024L * 1024L),
+        onClick = { showEditor = true }
+    )
+    if (showEditor) {
+        var draft by rememberSaveable { mutableStateOf(valueMb) }
+        AlertDialog(
+            onDismissRequest = { showEditor = false },
+            title = { Text(label) },
+            text = { CacheLimitEditor(label = label, valueMb = draft, onChange = { draft = it }) },
+            confirmButton = {
+                TextButton(onClick = { onChange(draft); showEditor = false }) {
+                    Text(stringResource(R.string.common_save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditor = false }) { Text(stringResource(R.string.common_cancel)) }
+            }
         )
     }
 }
@@ -179,13 +361,13 @@ private enum class CacheUnit(val label: String, val bytesPerUnit: Long) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CacheLimitRow(
+private fun CacheLimitEditor(
     label: String,
     valueMb: Int,
     onChange: (Int) -> Unit
 ) {
     var unit by remember { mutableStateOf(CacheUnit.MB) }
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
     val unlimited = valueMb <= 0
 
     Column(
@@ -228,7 +410,7 @@ private fun CacheLimitRow(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor()
+                    .menuAnchor(androidx.compose.material3.ExposedDropdownMenuAnchorType.PrimaryEditable)
             )
             ExposedDropdownMenu(
                 expanded = expanded,
@@ -283,18 +465,5 @@ private fun SettingSwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
+    SettingToggleRow(label = label, checked = checked, onCheckedChange = onCheckedChange)
 }

@@ -1,10 +1,11 @@
 package org.example.memosm.ui
 
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import android.net.Uri
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -13,7 +14,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -21,16 +21,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.filled.Attachment
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.outlined.Attachment
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material.icons.outlined.Map
+import androidx.compose.material.icons.filled.Map
+import org.example.memosm.model.MapCapability
+import org.example.memosm.ui.nav.MapScreen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -41,17 +44,19 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.key
+import org.example.memosm.ui.component.item.media.AccountMediaIdentity
+import org.example.memosm.ui.component.item.media.LocalAccountMediaIdentity
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -63,26 +68,29 @@ import org.koin.androidx.compose.koinViewModel
 import kotlinx.coroutines.launch
 import org.example.memosm.R
 import org.example.memosm.model.Attachment
-import org.example.memosm.model.Location
 import org.example.memosm.model.ShareIntentData
 import org.example.memosm.model.Visibility
 import org.example.memosm.ui.component.ConflictDialog
 import org.example.memosm.ui.component.LoginDialog
 import org.example.memosm.ui.component.LocalNetworkPermission
-import org.example.memosm.ui.component.composer.ComposerMode
-import org.example.memosm.ui.component.composer.MemoComposerScreen
+import org.example.memosm.ui.component.composer.EditorRequest
+import org.example.memosm.ui.component.composer.rememberMemoEditorLauncher
 import org.example.memosm.ui.component.item.media.MemoImage
+import org.example.memosm.ui.component.item.markdown.LocalLinkPreviews
+import org.example.memosm.ui.component.item.markdown.LinkPreviewEnvironment
 import org.example.memosm.ui.component.resolveResourceUrl
 import org.example.memosm.ui.nav.AttachmentsScreen
-import org.example.memosm.ui.nav.ExploreScreen
+import org.example.memosm.ui.nav.MemoFeed
 import org.example.memosm.ui.nav.MemosScreen
 import org.example.memosm.ui.nav.ProfileScreen
 import org.example.memosm.viewmodel.MemosViewModel
+import org.example.memosm.viewmodel.MemosUiState
+import androidx.compose.runtime.MutableState
 
 enum class MainDestination(
     val labelRes: Int
 ) {
-    MEMOS(R.string.nav_memos), EXPLORE(R.string.nav_explore), ATTACHMENTS(R.string.nav_attachments), PROFILE(
+    MEMOS(R.string.nav_memos), MAP(R.string.nav_map), ATTACHMENTS(R.string.nav_attachments), PROFILE(
         R.string.nav_profile
     )
 }
@@ -96,17 +104,55 @@ fun MainScreen(
     shouldOpenComposer: Boolean = false,
     onComposerOpened: () -> Unit = {}
 ) {
-    var currentDestination by rememberSaveable { mutableStateOf(MainDestination.MEMOS) }
-    var lastTapTime by remember { mutableLongStateOf(0L) }
+    val destination = rememberSaveable { mutableStateOf(MainDestination.MEMOS) }
     val viewModel: MemosViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
+    val previewRepository by viewModel.linkPreviews.collectAsState()
+    val linkPreviews = remember(previewRepository, uiState.appSettings.linkPreviewEnabled, uiState.isOnline) {
+        previewRepository?.takeIf { uiState.appSettings.linkPreviewEnabled }
+            ?.let { LinkPreviewEnvironment(it, uiState.isOnline) }
+    }
+    val mediaIdentity = uiState.accounts.firstOrNull { it.isActive }?.let {
+        AccountMediaIdentity(it.id, uiState.accountGeneration)
+    }
+    CompositionLocalProvider(
+        LocalAccountMediaIdentity provides mediaIdentity,
+        LocalLinkPreviews provides linkPreviews
+    ) {
+        key(uiState.accountGeneration) {
+            MainScreenContent(viewModel, uiState, destination, onLogout, modifier,
+                shareIntentData, onShareIntentConsumed, shouldOpenComposer, onComposerOpened)
+        }
+    }
+}
+
+@Composable
+private fun MainScreenContent(
+    viewModel: MemosViewModel,
+    uiState: MemosUiState,
+    destination: MutableState<MainDestination>,
+    onLogout: () -> Unit,
+    modifier: Modifier,
+    shareIntentData: ShareIntentData?,
+    onShareIntentConsumed: () -> Unit,
+    shouldOpenComposer: Boolean,
+    onComposerOpened: () -> Unit
+) {
+    var currentDestination by destination
+    val mapSupported = uiState.memoMap.capability == MapCapability.SUPPORTED
+    val visibleDestinations = MainDestination.entries.filter { it != MainDestination.MAP || mapSupported }
+    LaunchedEffect(mapSupported, uiState.accountGeneration) {
+        if (!mapSupported && currentDestination == MainDestination.MAP) currentDestination = MainDestination.MEMOS
+    }
+    val feedPagerState = rememberPagerState(pageCount = { MemoFeed.entries.size })
+    var lastTapTime by remember { mutableLongStateOf(0L) }
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
     val networkPermission = LocalNetworkPermission.current
     var previouslyGranted by remember { mutableStateOf(networkPermission.granted) }
     LaunchedEffect(networkPermission.granted) {
         if (networkPermission.granted && !previouslyGranted) {
-            viewModel.userDelegate.updateCurrentAccountInList()
+            viewModel.retryAccountConnection()
         }
         previouslyGranted = networkPermission.granted
     }
@@ -116,13 +162,7 @@ fun MainScreen(
     var isNavBarVisible by remember { mutableStateOf(true) }
     var isAddingAccount by remember { mutableStateOf(false) }
 
-    // Share intent composer dialog state
-    var showShareComposerDialog by remember { mutableStateOf(false) }
-    var shareText by remember { mutableStateOf<String?>(null) }
-    var shareUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
-    var shareAttachments by remember { mutableStateOf<List<Attachment>>(emptyList()) }
-    var shareVisibility by remember { mutableStateOf<Visibility?>(null) }
-    var shareLocation by remember { mutableStateOf<Location?>(null) }
+    val openEditor = rememberMemoEditorLauncher(viewModel)
 
     // Track if we've already processed the current share intent
     var processedShareData by remember { mutableStateOf<ShareIntentData?>(null) }
@@ -133,6 +173,8 @@ fun MainScreen(
     LaunchedEffect(shouldOpenComposer) {
         if (shouldOpenComposer) {
             currentDestination = MainDestination.MEMOS
+            // The pager may be off-screen when a widget request arrives.
+            feedPagerState.requestScrollToPage(MemoFeed.MEMOS.ordinal)
         }
     }
 
@@ -141,18 +183,11 @@ fun MainScreen(
         // 1. We have share data
         // 2. We haven't already processed this exact share data
         if (shareIntentData != null && !shareIntentData.isEmpty && processedShareData != shareIntentData) {
-            // Create a fresh new draft with just the shared content
-            shareText = shareIntentData.text ?: ""
-            shareUris = shareIntentData.uris
-            shareAttachments = emptyList()
-            shareVisibility = null
-            shareLocation = null
-
-            // Always initialize a new draft session for shared content
-            viewModel.draftDelegate.initializeNewDraftSession()
-
+            val account = uiState.accounts.firstOrNull { it.isActive } ?: return@LaunchedEffect
+            openEditor(EditorRequest(account.id, titleRes = R.string.memo_composer_fab_new_memo,
+                content = shareIntentData.text.orEmpty(), uris = shareIntentData.uris.map { it.toString() },
+                visibility = uiState.session.userSettings?.memoVisibility ?: Visibility.PRIVATE))
             processedShareData = shareIntentData
-            showShareComposerDialog = true
             onShareIntentConsumed()
         }
     }
@@ -165,7 +200,7 @@ fun MainScreen(
     val configuration = LocalConfiguration.current
     val isMobile = configuration.screenWidthDp < 600
 
-    val adaptiveInfo = androidx.compose.material3.adaptive.currentWindowAdaptiveInfo()
+    val adaptiveInfo = androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2()
 
 
     val toggleNavBar: ((Boolean) -> Unit)? = if (isMobile) {
@@ -177,29 +212,24 @@ fun MainScreen(
         LoginDialog(onLoginSuccess = { newBaseUrl, newToken ->
             scope.launch {
                 viewModel.userDelegate.addAccount(newBaseUrl, newToken)
-                viewModel.userDelegate.updateCurrentAccountInList()
                 isAddingAccount = false
             }
         }, onDismiss = { isAddingAccount = false })
     }
 
-    // Share intent composer easing values
-    val enterEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
-    val exitEasing = CubicBezierEasing(0.3f, 0.0f, 0.8f, 0.15f)
 
     @Composable
     fun NavigationIcon(
         destination: MainDestination, isSelected: Boolean, modifier: Modifier = Modifier.size(24.dp)
     ) {
         when (destination) {
-            MainDestination.MEMOS -> Icon(
-                if (isSelected) Icons.AutoMirrored.Filled.LibraryBooks else Icons.AutoMirrored.Outlined.LibraryBooks,
+            MainDestination.MAP -> Icon(
+                if (isSelected) Icons.Filled.Map else Icons.Outlined.Map,
                 contentDescription = null,
                 modifier = modifier
             )
-
-            MainDestination.EXPLORE -> Icon(
-                if (isSelected) Icons.Default.Public else Icons.Outlined.Public,
+            MainDestination.MEMOS -> Icon(
+                if (isSelected) Icons.AutoMirrored.Filled.LibraryBooks else Icons.AutoMirrored.Outlined.LibraryBooks,
                 contentDescription = null,
                 modifier = modifier
             )
@@ -246,9 +276,12 @@ fun MainScreen(
         val currentTime = System.currentTimeMillis()
         if (currentDestination == destination && currentTime - lastTapTime < 500) {
             when (destination) {
-                MainDestination.MEMOS -> viewModel.fetchUserMemos(refresh = true)
-                MainDestination.EXPLORE -> viewModel.fetchExploreMemos(refresh = true)
+                MainDestination.MEMOS -> when (MemoFeed.entries[feedPagerState.currentPage]) {
+                    MemoFeed.MEMOS -> viewModel.fetchUserMemos(refresh = true)
+                    MemoFeed.EXPLORE -> viewModel.fetchExploreMemos(refresh = true)
+                }
                 MainDestination.ATTACHMENTS -> viewModel.fetchAttachments(refresh = true)
+                MainDestination.MAP -> viewModel.memoMapManager.load()
                 else -> {}
             }
         }
@@ -269,7 +302,7 @@ fun MainScreen(
                     ) {
                         Spacer(Modifier.height(12.dp))
                         // Items
-                        MainDestination.entries.forEach { destination ->
+                        visibleDestinations.forEach { destination ->
                             if (destination == MainDestination.PROFILE) {
                                 Spacer(Modifier.weight(1f))
                             }
@@ -302,20 +335,23 @@ fun MainScreen(
                         label = "MainScreenDestinationTransition",
                         modifier = Modifier.fillMaxSize()
                     ) { targetDestination ->
-                        saveableStateHolder.SaveableStateProvider(targetDestination) {
+                        val destinationKey = if (targetDestination == MainDestination.MAP) {
+                            "map:${uiState.accounts.firstOrNull { it.isActive }?.id}:${uiState.session.hostUrl}"
+                        } else targetDestination
+                        saveableStateHolder.SaveableStateProvider(destinationKey) {
                             when (targetDestination) {
+                                MainDestination.MAP -> if (mapSupported) {
+                                    key(uiState.accountGeneration) {
+                                        MapScreen(viewModel, isNavBarVisible = isNavBarVisible, onToggleNavBar = toggleNavBar)
+                                    }
+                                }
                                 MainDestination.MEMOS -> MemosScreen(
                                     viewModel = viewModel,
+                                    pagerState = feedPagerState,
                                     onToggleNavBar = toggleNavBar,
                                     isNavBarVisible = isNavBarVisible,
                                     openComposer = shouldOpenComposer,
                                     onComposerOpened = onComposerOpened
-                                )
-
-                                MainDestination.EXPLORE -> ExploreScreen(
-                                    viewModel = viewModel,
-                                    onToggleNavBar = toggleNavBar,
-                                    isNavBarVisible = isNavBarVisible
                                 )
 
                                 MainDestination.ATTACHMENTS -> AttachmentsScreen(
@@ -349,7 +385,7 @@ fun MainScreen(
                             containerColor = MaterialTheme.colorScheme.surfaceContainer,
                             contentColor = contentColorFor(MaterialTheme.colorScheme.surfaceContainer)
                         ) {
-                            MainDestination.entries.forEach { destination ->
+                            visibleDestinations.forEach { destination ->
                                 NavigationBarItem(
                                     selected = currentDestination == destination,
                                     onClick = { handleDestinationClick(destination) },
@@ -378,37 +414,4 @@ fun MainScreen(
         )
     }
 
-    // Share intent composer screen (full-screen OVERLAY — must be AFTER Surface for correct z-order)
-    AnimatedVisibility(
-        visible = showShareComposerDialog,
-        enter = slideInVertically(
-            animationSpec = tween(400, easing = enterEasing), initialOffsetY = { it }) + fadeIn(
-            animationSpec = tween(400, easing = enterEasing)
-        ),
-        exit = slideOutVertically(
-            animationSpec = tween(200, easing = exitEasing), targetOffsetY = { it }) + fadeOut(
-            animationSpec = tween(200, easing = exitEasing)
-        )
-    ) {
-        MemoComposerScreen(
-            onDismiss = {
-                showShareComposerDialog = false
-                shareText = null
-                shareUris = emptyList()
-                shareAttachments = emptyList()
-                shareVisibility = null
-                shareLocation = null
-            },
-            onToggleNavBar = toggleNavBar,
-            viewModel = viewModel,
-            hostUrl = uiState.session.hostUrl,
-            title = stringResource(R.string.memo_composer_fab_new_memo),
-            initialContent = shareText ?: "",
-            initialUris = shareUris,
-            initialAttachments = shareAttachments,
-            initialVisibility = shareVisibility,
-            initialLocation = shareLocation,
-            mode = ComposerMode.PUBLISH
-        )
-    }
 }

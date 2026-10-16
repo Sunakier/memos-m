@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_map">Karte</string>
+    <string name="map_retry">Erneut versuchen</string>
+    <string name="map_all_views">Alle Notizen</string>
+    <string name="map_loaded">%1$d Notizen geladen…</string>
+    <string name="map_offline">Gespeicherte Orte werden angezeigt. Offline-Karten können unvollständig sein.</string>
+    <string name="map_view_offline">Gespeicherte Ansichten benötigen eine Verbindung. Wähle Alle Notizen für die Offline-Ansicht.</string>
+    <string name="map_load_error">Nicht alle Orte konnten geladen werden.</string>
+    <string name="map_tile_error">Die Basiskarte konnte nicht geladen werden.</string>
+    <string name="map_fit_all">Alle Orte anzeigen</string>
+    <string name="map_no_results">Keine Orte entsprechen diesen Filtern.</string>
+    <string name="map_empty">Noch keine Memos mit Standort. Tippe auf die Karte, um hier zu schreiben.</string>
+    <string name="map_all">Alle</string>
+    <string name="map_show_results">Auf Karte anzeigen</string>
+    <string name="map_draft_here">Memo hier entwerfen</string>
+    <string name="map_place_count">Memos hier: %1$d</string>
+    <string name="map_place_empty">An diesem Ort gibt es noch keine Memos.</string>
+</resources>

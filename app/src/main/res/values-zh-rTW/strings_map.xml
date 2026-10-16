@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_map">地圖</string>
+    <string name="map_retry">重試</string>
+    <string name="map_all_views">所有筆記</string>
+    <string name="map_loaded">已載入 %1$d 則筆記…</string>
+    <string name="map_offline">正在顯示快取的位置。離線地圖可能不完整。</string>
+    <string name="map_view_offline">已儲存的檢視需要網路連線。請選擇所有筆記以離線瀏覽。</string>
+    <string name="map_load_error">無法載入所有筆記位置。</string>
+    <string name="map_tile_error">無法載入底圖。</string>
+    <string name="map_fit_all">顯示所有位置</string>
+    <string name="map_no_results">沒有符合篩選條件的位置。</string>
+    <string name="map_empty">還沒有帶位置的備忘錄。點選地圖即可在指定位置撰寫。</string>
+    <string name="map_all">全部</string>
+    <string name="map_show_results">在地圖上顯示</string>
+    <string name="map_draft_here">在此起草備忘錄</string>
+    <string name="map_place_count">此處的備忘錄：%1$d</string>
+    <string name="map_place_empty">此位置還沒有備忘錄。</string>
+</resources>

@@ -1,6 +1,6 @@
 package org.example.memosm.ui.component.item.media
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -123,7 +123,8 @@ fun FileThumbnail(
     filename: String,
     mode: FileThumbnailMode,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null
 ) {
     // Better identification by looking at both the type and the name
     val fileType = remember(displayType, filename) {
@@ -135,7 +136,7 @@ fun FileThumbnail(
             Row(
                 modifier = modifier
                     .fillMaxSize()
-                    .clickable { onClick() }
+                    .combinedClickable(onClick = onClick, onLongClick = onLongClick)
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center) {
@@ -160,7 +161,7 @@ fun FileThumbnail(
             Column(
                 modifier = modifier
                     .fillMaxSize()
-                    .clickable { onClick() }
+                    .combinedClickable(onClick = onClick, onLongClick = onLongClick)
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center) {

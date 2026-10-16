@@ -16,7 +16,7 @@ import org.example.memosm.model.MemoRelationType
 import org.example.memosm.model.MemoSnippet
 import org.example.memosm.model.MemoState
 import org.example.memosm.model.Reaction
-import org.example.memosm.model.SignInRequestV0260
+import org.example.memosm.model.SignInRequest
 import org.example.memosm.model.SignInResponse
 import org.example.memosm.model.UseRole
 import org.example.memosm.model.UseState
@@ -31,13 +31,13 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface MemosApiV0280 : MemosApiV0270 {
-    @GET("api/v1/auth/me")
+    @GET("auth/me")
     suspend fun getCurrentUserV0280(): GetCurrentUserResponseDtoV0280
 
-    @POST("api/v1/auth/signin")
-    suspend fun signInV0280(@Body request: SignInRequestV0260): SignInResponseDtoV0280
+    @POST("auth/signin")
+    suspend fun signInV0280(@Body request: SignInRequest): SignInResponseDtoV0280
 
-    @GET("api/v1/users")
+    @GET("users")
     suspend fun listUsersV0280(
         @Query("pageSize") pageSize: Int? = null,
         @Query("pageToken") pageToken: String? = null,
@@ -45,7 +45,7 @@ interface MemosApiV0280 : MemosApiV0270 {
         @Query("showDeleted") showDeleted: Boolean? = null
     ): ListUsersResponseV0280
 
-    @POST("api/v1/users")
+    @POST("users")
     suspend fun createUserV0280(
         @Body user: UserSnapshot,
         @Query("userId") userId: String? = null,
@@ -53,13 +53,13 @@ interface MemosApiV0280 : MemosApiV0270 {
         @Query("requestId") requestId: String? = null
     ): UserV0280
 
-    @GET("api/v1/{user}")
+    @GET("{user}")
     suspend fun getUserV0280(
         @Path("user", encoded = true) user: String,
         @Query("readMask") readMask: String? = null
     ): UserV0280
 
-    @PATCH("api/v1/{user}")
+    @PATCH("{user}")
     suspend fun updateUserV0280(
         @Path("user", encoded = true) user: String,
         @Body userData: UserSnapshot,
@@ -67,7 +67,7 @@ interface MemosApiV0280 : MemosApiV0270 {
         @Query("allowMissing") allowMissing: Boolean? = null
     ): UserV0280
 
-    @GET("api/v1/memos")
+    @GET("memos")
     suspend fun listMemosV0280(
         @Query("pageSize") pageSize: Int? = null,
         @Query("pageToken") pageToken: String? = null,
@@ -77,23 +77,23 @@ interface MemosApiV0280 : MemosApiV0270 {
         @Query("showDeleted") showDeleted: Boolean? = null
     ): ListMemosResponseV0280
 
-    @POST("api/v1/memos")
+    @POST("memos")
     suspend fun createMemoV0280(
         @Body memo: MemoV0280,
         @Query("memoId") memoId: String? = null
     ): MemoV0280
 
-    @GET("api/v1/{memo}")
+    @GET("{memo}")
     suspend fun getMemoV0280(@Path("memo", encoded = true) memo: String): MemoV0280
 
-    @PATCH("api/v1/{memo}")
+    @PATCH("{memo}")
     suspend fun updateMemoV0280(
         @Path("memo", encoded = true) memo: String,
         @Body memoData: MemoV0280,
         @Query("updateMask") updateMask: String
     ): MemoV0280
 
-    @GET("api/v1/{memo}/comments")
+    @GET("{memo}/comments")
     suspend fun listMemoCommentsV0280(
         @Path("memo", encoded = true) memo: String,
         @Query("pageSize") pageSize: Int? = null,
@@ -101,7 +101,7 @@ interface MemosApiV0280 : MemosApiV0270 {
         @Query("orderBy") orderBy: String? = null
     ): ListMemoCommentsResponseV0280
 
-    @POST("api/v1/{memo}/comments")
+    @POST("{memo}/comments")
     suspend fun createMemoCommentV0280(
         @Path("memo", encoded = true) memo: String,
         @Body comment: MemoV0280,
@@ -146,6 +146,7 @@ data class GetCurrentUserResponseDtoV0280(val user: UserV0280) {
 data class SignInResponseDtoV0280(
     val user: UserV0280,
     val accessToken: String,
+    @SerializedName("accessTokenExpiresAt", alternate = ["accessTokenExpireTime"])
     val accessTokenExpiresAt: String
 ) {
     fun toModel(): SignInResponse = SignInResponse(
@@ -273,7 +274,7 @@ data class ListMemosResponseV0280(
 }
 
 data class ListMemoCommentsResponseV0280(
-    val memos: List<MemoV0280>?,
+    @SerializedName("memos", alternate = ["comments"]) val memos: List<MemoV0280>?,
     val nextPageToken: String? = null,
     val totalSize: Int? = null
 ) {

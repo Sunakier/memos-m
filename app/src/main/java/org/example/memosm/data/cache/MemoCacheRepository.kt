@@ -11,6 +11,17 @@ private const val TAG = "MemoCacheRepository"
  */
 class MemoCacheRepository(private val memoDao: MemoDao) {
 
+    suspend fun reconciliationCandidates(accountId: String): List<CachedMemoCandidate> =
+        memoDao.reconciliationCandidates(accountId)
+
+    suspend fun removeMissingMemo(accountId: String, candidate: CachedMemoCandidate): Boolean =
+        memoDao.deleteMissingMemo(accountId, candidate.name, candidate.cachedAt) > 0
+
+    /** Only an exhausted, unfiltered paging run may prune the initial list snapshot. */
+    suspend fun pruneMissingFromList(accountId: String, listType: CacheListType, names: List<String>, startedAt: Long) {
+        names.chunked(500).forEach { memoDao.pruneMissingFromList(accountId, listType.name, it, startedAt) }
+    }
+
     /**
      * Cache a list of memos for a specific account and list type.
      *
@@ -34,13 +45,7 @@ class MemoCacheRepository(private val memoDao: MemoDao) {
                     CachedMemo.fromMemo(memo, accountId, listType, index, parentName)
                 }
 
-            if (replace) {
-                // Atomic delete+insert in one transaction: a concurrent writer
-                // never observes (or gets wiped by) the intermediate empty state.
-                memoDao.replaceMemos(accountId, listType.name, cachedMemos)
-            } else if (cachedMemos.isNotEmpty()) {
-                memoDao.insertMemos(cachedMemos)
-            }
+            memoDao.cacheRemoteMemos(accountId, listType.name, cachedMemos, replace)
             Log.d(TAG, "Cached ${cachedMemos.size} memos for $listType (replace=$replace)")
         } catch (e: CancellationException) {
             throw e

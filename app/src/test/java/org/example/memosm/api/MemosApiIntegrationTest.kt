@@ -1,10 +1,7 @@
 package org.example.memosm.api
 
 import kotlinx.coroutines.runBlocking
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -106,48 +103,14 @@ class MemosApiIntegrationTest(private val dockerImageName: String) {
             return sharedApi!!
         }
 
-        val logging = okhttp3.logging.HttpLoggingInterceptor { message ->
-            println(message)
-        }.apply {
-            level = okhttp3.logging.HttpLoggingInterceptor.Level.BODY
-        }
-
-        val client =
-            OkHttpClient.Builder().addInterceptor(logging).readTimeout(30, TimeUnit.SECONDS).build()
-
-        // Ensure we have an admin user (first user is admin)
-        val signupJson = """
-            {
-                "username": "$TEST_USERNAME",
-                "password": "$TEST_PASSWORD",
-                "displayName": "$TEST_DISPLAY_NAME",
-                "role": "HOST"
-            }
-        """.trimIndent()
-
-        val signupRequest = Request.Builder().url("${baseUrl}api/v1/users")
-            .post(signupJson.toRequestBody("application/json".toMediaType())).build()
-
-        // Sign up and verify success (fail if already exists or other error)
-        client.newCall(signupRequest).execute().use { response ->
-            val body = response.body.string()
-            println("Signup response: $body")
-            assertTrue("Signup failed: $body", response.isSuccessful)
-        }
-
-        val api = MemosApiFactory.create(baseUrl, client)
-
-        // Login
-        val token = loginAndCreateToken(api, baseUrl, TEST_USERNAME, TEST_PASSWORD)
-
-        val authClient = OkHttpClient.Builder().addInterceptor(logging).addInterceptor { chain ->
-            val request =
-                chain.request().newBuilder().addHeader("Authorization", "Bearer $token").build()
-            chain.proceed(request)
-        }.readTimeout(30, TimeUnit.SECONDS).build()
-
-        sharedApi = MemosApiFactory.create(baseUrl, authClient)
-        return sharedApi!!
+        val api = MemosApiFactory.create(baseUrl, OkHttpClient())
+        // The first registered user becomes the administrator on every supported version.
+        api.createUser(org.example.memosm.model.UserSnapshot(
+            username = TEST_USERNAME,
+            password = TEST_PASSWORD,
+            displayName = TEST_DISPLAY_NAME
+        ))
+        return createAuthenticatedApi(TEST_USERNAME, TEST_PASSWORD).also { sharedApi = it }
     }
 
     private suspend fun createAuthenticatedApi(

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_map">地図</string>
+    <string name="map_retry">再試行</string>
+    <string name="map_all_views">すべてのメモ</string>
+    <string name="map_loaded">%1$d 件のメモを読み込みました…</string>
+    <string name="map_offline">キャッシュした位置を表示しています。オフラインの地図は一部表示できない場合があります。</string>
+    <string name="map_view_offline">保存したビューには接続が必要です。オフラインでは「すべてのメモ」を選択してください。</string>
+    <string name="map_load_error">メモの位置をすべて読み込めませんでした。</string>
+    <string name="map_tile_error">背景地図を読み込めませんでした。</string>
+    <string name="map_fit_all">すべての位置を表示</string>
+    <string name="map_no_results">条件に一致する位置がありません。</string>
+    <string name="map_empty">位置情報付きのメモはまだありません。地図をタップしてメモを書けます。</string>
+    <string name="map_all">すべて</string>
+    <string name="map_show_results">地図に表示</string>
+    <string name="map_draft_here">ここで下書きを作成</string>
+    <string name="map_place_count">この場所のメモ：%1$d</string>
+    <string name="map_place_empty">この場所にはまだメモがありません。</string>
+</resources>

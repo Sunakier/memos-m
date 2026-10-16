@@ -1,20 +1,26 @@
 package org.example.memosm.api
 
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import okhttp3.OkHttpClient
+import retrofit2.HttpException
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object MemosApiFactory {
 
-    suspend fun create(baseUrl: String, client: OkHttpClient): MemosApi {
-        var normalizedBaseUrl = baseUrl.trimEnd('/') + "/"
-        if (normalizedBaseUrl.endsWith("/api/v1/")) {
-            normalizedBaseUrl = normalizedBaseUrl.removeSuffix("api/v1/")
-        }
-
-        val retrofit = Retrofit.Builder().baseUrl(normalizedBaseUrl).client(client)
+    private fun retrofit(baseUrl: String, client: OkHttpClient, apiPath: String = "api/v1"): Retrofit {
+        val normalizedBaseUrl = requireNotNull(normalizeLoginServerUrl(baseUrl)) { "Invalid server URL" }
+        return Retrofit.Builder().baseUrl("$normalizedBaseUrl$apiPath/").client(client)
             .addConverterFactory(GsonConverterFactory.create(GsonProvider.gson)).build()
+    }
+
+    /** Bind local state immediately; version discovery can run as a cancellable session read. */
+    fun createLatest(baseUrl: String, client: OkHttpClient): MemosApi =
+        MemosApiV0300Impl(retrofit(baseUrl, client).create(MemosApiV0300::class.java))
+
+    suspend fun create(baseUrl: String, client: OkHttpClient): MemosApi {
+        val retrofit = retrofit(baseUrl, client)
 
         // Create the v0.35.3 API used for version probing.
         val v0353Api = retrofit.create(MemosApiV0353::class.java)
@@ -39,7 +45,16 @@ object MemosApiFactory {
 
         // Probe for version
         return try {
-            val profile = v0353Api.getInstanceProfile()
+            val profile = try {
+                v0353Api.getInstanceProfile()
+            } catch (e: HttpException) {
+                // New servers removed v1; probe the replacement with a read before
+                // choosing its schema. Never retry authentication or writes.
+                if (e.code() != 404 && e.code() != 410) throw e
+                val unversioned = retrofit(baseUrl, client, "api").create(MemosApiUnversioned::class.java)
+                unversioned.getInstanceProfile()
+                return MemosApiUnversionedImpl(unversioned)
+            }
             val version = profile.version ?: "Unknown"
             Log.i("MemosApiFactory", "Detected Memos server version: $version")
 
@@ -60,6 +75,8 @@ object MemosApiFactory {
             } else {
                 latestApiFallback("Unsupported or unknown Memos server version: $version")
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             latestApiFallback("Failed to probe Memos server version", e)
         }

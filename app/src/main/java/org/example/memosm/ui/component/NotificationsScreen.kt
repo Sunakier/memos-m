@@ -1,28 +1,23 @@
 package org.example.memosm.ui.component
 
+import org.example.memosm.ui.theme.flatCardElevation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +27,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.CancellationException
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,24 +54,19 @@ import java.time.format.FormatStyle
 fun NotificationsScreen(
     viewModel: MemosViewModel,
     onBack: () -> Unit,
-    onToggleNavBar: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+    val generation = uiState.accountGeneration
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
-    rememberScrollContext(
-        listState = listState,
-        onScrollDown = { onToggleNavBar?.invoke(false) },
-        onScrollUp = { onToggleNavBar?.invoke(true) }
-    )
-
-    var notifications by remember { mutableStateOf<List<UserNotification>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var isRefreshing by remember { mutableStateOf(false) }
-    var showingCached by remember { mutableStateOf(false) }
-    var cachedSavedAt by remember { mutableStateOf(0L) }
-    var hasLoadError by remember { mutableStateOf(false) }
+    var notifications by remember(generation) { mutableStateOf<List<UserNotification>>(emptyList()) }
+    var isLoading by remember(generation) { mutableStateOf(true) }
+    var isRefreshing by remember(generation) { mutableStateOf(false) }
+    var showingCached by remember(generation) { mutableStateOf(false) }
+    var cachedSavedAt by remember(generation) { mutableStateOf(0L) }
+    var hasLoadError by remember(generation) { mutableStateOf(false) }
 
     suspend fun loadNotifications(isUserRefresh: Boolean = false) {
         if (isUserRefresh) {
@@ -91,6 +83,7 @@ fun NotificationsScreen(
             showingCached = result.fromCache
             cachedSavedAt = result.savedAt
         }.onFailure {
+            if (it is CancellationException) throw it
             notifications = emptyList()
             showingCached = false
             Log.e("NotificationsScreen", "Failed to load notifications", it)
@@ -101,8 +94,13 @@ fun NotificationsScreen(
         isRefreshing = false
     }
 
-    LaunchedEffect(Unit) {
-        loadNotifications()
+    LaunchedEffect(generation, uiState.session.currUser?.name, uiState.connectionState) {
+        if (uiState.session.currUser?.name != null) {
+            loadNotifications()
+        } else if (uiState.connectionState != org.example.memosm.viewmodel.ConnectionState.CHECKING) {
+            isLoading = false
+            hasLoadError = true
+        }
     }
 
     Scaffold(
@@ -111,9 +109,7 @@ fun NotificationsScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.profile_notifications)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.memo_detail_back))
-                    }
+                    ProfileBackButton(onClick = onBack)
                 }
             )
         }
@@ -165,11 +161,9 @@ fun NotificationsScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = 16.dp,
-                            top = 16.dp + WindowInsets.statusBars.asPaddingValues()
-                                .calculateTopPadding(),
+                            top = 16.dp,
                             end = 16.dp,
-                            bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues()
-                                .calculateBottomPadding()
+                            bottom = 16.dp
                         ),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
@@ -219,9 +213,9 @@ fun NotificationsScreen(
 
 @Composable
 private fun NotificationCard(notification: UserNotification) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(elevation = flatCardElevation(), modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
         ListItem(
-            headlineContent = {
+            content = {
                 Text(
                     text = notificationTitle(notification),
                     fontWeight = FontWeight.Medium

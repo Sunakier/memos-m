@@ -13,10 +13,10 @@ interface MemosApiV0260 : MemosApiV0353 {
 
     // Replaces getCurrentSession
     // https://demo.usememos.com/api/v1/auth/me
-    @GET("api/v1/auth/me")
+    @GET("auth/me")
     suspend fun getCurrentUser(): GetCurrentUserResponseDtoV0260
 
-    @retrofit2.http.POST("api/v1/auth/signin")
+    @retrofit2.http.POST("auth/signin")
     suspend fun signIn(@retrofit2.http.Body request: SignInRequestV0260): SignInResponseDtoV0260
 }
 

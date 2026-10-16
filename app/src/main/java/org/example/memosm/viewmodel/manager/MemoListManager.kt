@@ -2,6 +2,9 @@ package org.example.memosm.viewmodel.manager
 
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -106,11 +109,13 @@ class ExploreMemoListManager(
     scope: CoroutineScope,
     private val apiProvider: () -> MemosApi?,
     private val pageSizeProvider: () -> Int,
-    cacheCallbacks: CacheCallbacks<Memo>? = null
+    cacheCallbacks: CacheCallbacks<Memo>? = null,
+    protectedNamesProvider: (() -> Set<String>)? = null
 ) : BaseListManager<Memo>(
     scope,
     cacheCallbacks = cacheCallbacks,
     nameProvider = { it.name },
+    protectedNamesProvider = protectedNamesProvider,
     sortComparator = MEMO_TIME_COMPARATOR
 ) {
 
@@ -142,11 +147,13 @@ class ArchivedMemoListManager(
     private val apiProvider: () -> MemosApi?,
     private val currentUserProvider: () -> User?,
     private val pageSizeProvider: () -> Int,
-    cacheCallbacks: CacheCallbacks<Memo>? = null
+    cacheCallbacks: CacheCallbacks<Memo>? = null,
+    protectedNamesProvider: (() -> Set<String>)? = null
 ) : BaseListManager<Memo>(
     scope,
     cacheCallbacks = cacheCallbacks,
     nameProvider = { it.name },
+    protectedNamesProvider = protectedNamesProvider,
     sortComparator = MEMO_TIME_COMPARATOR
 ) {
 
@@ -198,18 +205,31 @@ class SearchMemoListManager(
     private val apiProvider: () -> MemosApi?,
     private val pageSizeProvider: () -> Int,
     cacheCallbacks: CacheCallbacks<Memo>? = null,
-    private val localSearchProvider: suspend (LocalSearchFilter) -> List<Memo> = { emptyList() }
+    private val localSearchProvider: suspend (LocalSearchFilter) -> List<Memo> = { emptyList() },
+    protectedNamesProvider: (() -> Set<String>)? = null
 ) : BaseListManager<Memo>(
     scope,
     cacheCallbacks = cacheCallbacks,
-    nameProvider = { it.name }
+    nameProvider = { it.name },
+    protectedNamesProvider = protectedNamesProvider
 ) {
 
+    var hasActiveQuery: Boolean = false
+        private set
     private var currentFilter: String? = null
     private var currentOrderBy: MemoOrderBy? = null
     private var currentLocalFilter: LocalSearchFilter = LocalSearchFilter()
 
+    override fun reset() {
+        super.reset()
+        hasActiveQuery = false
+        currentFilter = null
+        currentOrderBy = null
+        currentLocalFilter = LocalSearchFilter()
+    }
+
     fun updateFilter(filter: String?, orderBy: MemoOrderBy?) {
+        hasActiveQuery = true
         currentFilter = filter
         currentOrderBy = orderBy
     }
@@ -222,9 +242,11 @@ class SearchMemoListManager(
      * Run the search against the local cache only (used when offline).
      */
     fun searchLocal() {
-        scope.launch {
+        launchRequest { checkCurrent ->
             try {
-                val items = localSearchProvider(currentLocalFilter)
+                val items = excludeForgotten(localSearchProvider(currentLocalFilter))
+                coroutineContext.ensureActive()
+                checkCurrent()
                 _listState.update {
                     it.copy(
                         items = items,
@@ -234,7 +256,10 @@ class SearchMemoListManager(
                         errorMessage = null
                     )
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                checkCurrent()
                 android.util.Log.e("SearchMemoListManager", "searchLocal failed", e)
                 _listState.update {
                     it.copy(

@@ -1,5 +1,6 @@
 package org.example.memosm.ui.component
 
+import android.text.format.DateUtils
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,12 +19,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.data.sync.PreDownloadState
-import org.example.memosm.ui.formatSyncTime
 import org.example.memosm.ui.preDownloadPhaseLabel
 
 /**
@@ -45,13 +46,14 @@ fun SyncStatusBar(
     preDownloadState: PreDownloadState,
     cachedCount: Int,
     lastSyncTime: Long,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    connectionState: org.example.memosm.viewmodel.ConnectionState = org.example.memosm.viewmodel.ConnectionState.ONLINE
 ) {
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
     val textStyle = MaterialTheme.typography.labelSmall
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
 
-    val status = syncStatusOf(isOnline, isSyncing, preDownloadState, pendingOpsCount)
+    val status = syncStatusOf(isOnline, isSyncing, preDownloadState, pendingOpsCount, connectionState)
     val (icon, text) = when (status) {
         SyncStatus.SYNCING -> {
             Icons.Outlined.Sync to stringResource(R.string.sync_status_syncing)
@@ -76,9 +78,18 @@ fun SyncStatusBar(
             Icons.Outlined.CloudOff to stringResource(R.string.sync_status_offline)
         }
 
+        SyncStatus.RATE_LIMITED -> {
+            Icons.Outlined.CloudSync to stringResource(R.string.sync_status_rate_limited)
+        }
+
         SyncStatus.IDLE -> {
             Icons.Outlined.Storage to stringResource(
-                R.string.sync_status_cached, cachedCount, formatSyncTime(lastSyncTime, "HH:mm")
+                R.string.sync_status_cached,
+                pluralStringResource(R.plurals.cached_memo_count, cachedCount, cachedCount),
+                if (lastSyncTime <= 0L) stringResource(R.string.sync_time_never)
+                else DateUtils.getRelativeTimeSpanString(
+                    lastSyncTime, System.currentTimeMillis(), DateUtils.SECOND_IN_MILLIS
+                ).toString()
             )
         }
     }

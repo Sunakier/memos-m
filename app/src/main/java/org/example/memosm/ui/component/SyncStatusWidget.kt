@@ -1,7 +1,7 @@
 package org.example.memosm.ui.component
 
+import android.text.format.DateUtils
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -30,33 +29,27 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.example.memosm.R
 import org.example.memosm.api.GsonProvider
 import org.example.memosm.data.sync.PendingOp
 import org.example.memosm.data.sync.PendingOpType
 import org.example.memosm.data.sync.PreDownloadState
-import org.example.memosm.ui.component.item.media.MediaCache
-import org.example.memosm.ui.formatBytes
-import org.example.memosm.ui.formatSyncTime
+import org.example.memosm.ui.component.setting.SettingsGroup
+import org.example.memosm.ui.component.setting.SettingsNavigationRow
 import org.example.memosm.ui.preDownloadPhaseLabel
 import org.example.memosm.viewmodel.MemosUiState
 import java.text.SimpleDateFormat
@@ -102,6 +95,12 @@ fun SyncStatusIconButton(
                 tint = MaterialTheme.colorScheme.error
             )
 
+            SyncStatus.RATE_LIMITED -> Icon(
+                Icons.Outlined.CloudSync,
+                contentDescription = stringResource(R.string.sync_status_rate_limited),
+                tint = MaterialTheme.colorScheme.tertiary
+            )
+
             SyncStatus.IDLE -> Icon(
                 Icons.Outlined.CheckCircle,
                 contentDescription = stringResource(R.string.sync_status_idle),
@@ -112,22 +111,16 @@ fun SyncStatusIconButton(
 }
 
 /**
- * Detail panel with the full sync/cache state: queue, pre-download progress,
- * cache analysis and one-tap actions.
+ * Essential sync status, pending changes and cache actions.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SyncStatusPanel(
     uiState: MemosUiState,
     onDismiss: () -> Unit,
-    onSyncNow: () -> Unit,
-    onPreDownloadText: () -> Unit,
-    onPreDownloadAttachments: () -> Unit,
     onDeleteOp: (String) -> Unit,
-    onClearTextCache: () -> Unit,
-    onClearAttachmentCache: () -> Unit
+    onManageCache: () -> Unit
 ) {
-    var showCleanup by remember { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
@@ -135,24 +128,6 @@ fun SyncStatusPanel(
                 .verticalScroll(rememberScrollState())
                 .padding(start = 20.dp, end = 20.dp, bottom = 32.dp)
         ) {
-            // Title: icon + large bold text so the panel reads as a proper
-            // dialog header, not a small caption.
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Outlined.CloudSync,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(26.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    stringResource(R.string.sync_panel_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-
             // Main status row (larger than the old caption-sized row)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val status = syncStatusOf(uiState)
@@ -175,6 +150,8 @@ fun SyncStatusPanel(
                         stringResource(R.string.sync_status_pending, uiState.pendingOpsCount)
                     SyncStatus.OFFLINE ->
                         stringResource(R.string.sync_status_offline)
+                    SyncStatus.RATE_LIMITED ->
+                        stringResource(R.string.sync_status_rate_limited)
                     SyncStatus.IDLE ->
                         stringResource(R.string.sync_status_idle)
                 }
@@ -193,7 +170,11 @@ fun SyncStatusPanel(
                     )
                     Text(
                         text = stringResource(
-                            R.string.sync_panel_last_sync, formatSyncTime(uiState.lastSyncTime)
+                            R.string.sync_panel_last_sync,
+                            if (uiState.lastSyncTime <= 0L) stringResource(R.string.sync_time_never)
+                            else DateUtils.getRelativeTimeSpanString(
+                                uiState.lastSyncTime, System.currentTimeMillis(), DateUtils.SECOND_IN_MILLIS
+                            ).toString()
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -236,16 +217,6 @@ fun SyncStatusPanel(
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
 
-                is PreDownloadState.Done -> {
-                    Text(
-                        text = stringResource(
-                            R.string.offline_predownload_done, state.textCount, state.attachmentCount
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
                 is PreDownloadState.Failed -> {
                     Text(
                         text = stringResource(R.string.offline_predownload_failed, state.message),
@@ -254,122 +225,18 @@ fun SyncStatusPanel(
                     )
                 }
 
-                else -> {
-                    Text(
-                        text = stringResource(R.string.sync_panel_predownload_idle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                else -> Unit
             }
 
-            // Cache analysis: what is stored locally per tier. Media bytes
-            // are measured on open (cheap directory walk, off the main thread).
-            Spacer(modifier = Modifier.height(12.dp))
-            val context = LocalContext.current
-            var mediaCacheBytes by remember { mutableStateOf(-1L) }
-            LaunchedEffect(Unit) {
-                mediaCacheBytes = withContext(Dispatchers.IO) { MediaCache.sizeBytes(context) }
-            }
-            Text(
-                stringResource(R.string.offline_settings_cache_analysis_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            CacheAnalysisRow(
-                label = stringResource(R.string.offline_settings_cache_size_text),
-                value = stringResource(R.string.offline_settings_text_count, uiState.textCacheCount)
-            )
-            CacheAnalysisRow(
-                label = stringResource(R.string.offline_settings_cache_size),
-                value = stringResource(
-                    R.string.offline_attachment_cache_usage,
-                    formatBytes(uiState.attachmentCacheUsage.bytes)
-                )
-            )
-            CacheAnalysisRow(
-                label = stringResource(R.string.offline_settings_cache_size_theme),
-                value = stringResource(
-                    R.string.offline_settings_media_usage,
-                    if (mediaCacheBytes >= 0) formatBytes(mediaCacheBytes) else "…"
-                )
-            )
-
-            // Actions: one uniform row pair of outlined buttons. Cache
-            // clearing lives behind "Manage Cache" (shared CacheCleanupDialog)
-            // so every action here looks and behaves the same. Row 1 holds the
-            // two immediate actions (sync / manage cache), row 2 the two
-            // pre-download actions - symmetric on both axes.
             Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = onSyncNow,
-                    enabled = uiState.isOnline && !uiState.isSyncing,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.offline_sync_now))
-                }
-                OutlinedButton(
-                    onClick = { showCleanup = true },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        Icons.Outlined.Storage,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.cache_cleanup_manage))
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = onPreDownloadAttachments,
-                    enabled = uiState.isOnline,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.offline_predownload_attachments_button))
-                }
-                OutlinedButton(
-                    onClick = onPreDownloadText,
-                    enabled = uiState.isOnline,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.offline_predownload_text_button))
-                }
+            SettingsGroup {
+                SettingsNavigationRow(
+                    title = stringResource(R.string.sync_panel_manage_cache),
+                    icon = Icons.Outlined.Storage,
+                    onClick = onManageCache
+                )
             }
         }
-    }
-
-    if (showCleanup) {
-        CacheCleanupDialog(
-            textCacheCount = uiState.textCacheCount,
-            attachmentUsage = uiState.attachmentCacheUsage,
-            onClearText = onClearTextCache,
-            onClearAttachment = onClearAttachmentCache,
-            onDismiss = { showCleanup = false }
-        )
-    }
-}
-
-@Composable
-private fun CacheAnalysisRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = value, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -386,7 +253,7 @@ private fun PendingOperationItem(op: PendingOp, onDelete: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         color = if (op.permanentlyFailed) {
             MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f)
         } else {

@@ -23,6 +23,7 @@ plugins {
 android {
     namespace = "org.example.memosm"
     compileSdk = 37
+    compileSdkMinor = 1
     
     defaultConfig {
         applicationId = "org.example.memosm"
@@ -30,6 +31,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
+        buildConfigField("String", "GIT_HASH", "\"${gitShortHash.get()}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -109,6 +111,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
     }
 
@@ -116,7 +119,7 @@ android {
         named("main") {
         }
         named("androidTest") {
-            assets.srcDir("$projectDir/schemas")
+            assets.directories.add("$projectDir/schemas")
         }
         named("canary") {
             res.directories.add(("src/canary/res"))
@@ -131,6 +134,12 @@ room {
     schemaDirectory("$projectDir/schemas")
 }
 
+kotlin {
+    compilerOptions {
+        allWarningsAsErrors.set(true)
+    }
+}
+
 androidComponents {
     onVariants(selector().withBuildType("insider")) { variant ->
         variant.outputs.forEach { output ->
@@ -142,6 +151,7 @@ androidComponents {
 
 
 dependencies {
+    implementation(libs.msgpack.core)
     coreLibraryDesugaring(libs.android.desugarJdkLibs)
 
     // ----------------------------
@@ -150,8 +160,6 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
 
-    implementation(project(":core"))
-
     // ----------------------------
     // Android / Compose
     // ----------------------------
@@ -159,12 +167,14 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.browser)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.material.kolor)
     implementation(libs.androidx.compose.material3.adaptive)
     implementation(libs.androidx.compose.material3.adaptive.layout)
     implementation(libs.androidx.compose.material3.adaptive.navigation)
@@ -176,6 +186,7 @@ dependencies {
 
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
     implementation(libs.coil.network.okhttp)
     implementation(libs.coil.svg)
 
@@ -187,7 +198,9 @@ dependencies {
 
 
     // Location
+    implementation(libs.androidx.collection)
     implementation(libs.google.play.services.location)
+    implementation(libs.maplibre.android)
 
     // About Libraries (OSS Licenses)
     implementation(libs.aboutlibraries.compose)
@@ -206,12 +219,16 @@ dependencies {
 
     // Tests
     testImplementation(libs.junit)
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    // The Compose test activity shares the app's classloader with Espresso.
+    // Match its test core/monitor version to the instrumentation APK.
+    debugImplementation(libs.androidx.core)
     testImplementation(libs.testcontainers)
     testImplementation(libs.jna)
     testImplementation(libs.slf4j.simple)

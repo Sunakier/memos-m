@@ -1,5 +1,6 @@
 package org.example.memosm.api
 
+import org.example.memosm.model.LinkMetadata
 import org.example.memosm.model.Activity
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.CreatePersonalAccessTokenRequest
@@ -59,7 +60,8 @@ data class ApiConstants(
     val webhookMaskUrl: String,
 
     val shortcutMaskTitle: String,
-    val shortcutMaskFilter: String
+    val shortcutMaskFilter: String,
+    val apiPath: String = "api/v1"
 )
 
 enum class MemoCreatorFilterStyle {
@@ -83,6 +85,8 @@ fun MemosApi.resolveMemoOrderBy(orderBy: MemoOrderBy?): String? {
 }
 
 interface MemosApi {
+
+    suspend fun getLinkMetadata(url: String): LinkMetadata
 
     val constants: ApiConstants
 

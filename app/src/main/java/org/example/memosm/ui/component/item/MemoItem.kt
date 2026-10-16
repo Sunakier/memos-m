@@ -1,5 +1,6 @@
 package org.example.memosm.ui.component.item
 
+import org.example.memosm.ui.theme.flatCardElevation
 import android.content.Intent
 import android.net.Uri
 import android.text.format.DateUtils
@@ -20,7 +21,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -47,13 +47,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -90,7 +87,11 @@ import org.example.memosm.model.MemoState
 import org.example.memosm.model.Reaction
 import org.example.memosm.model.User
 import org.example.memosm.ui.VisibilityIcon
+import org.example.memosm.ui.component.ActionSheet
+import org.example.memosm.ui.component.ActionSheetItem
 import org.example.memosm.ui.component.item.markdown.NativeComposeMarkdown
+import org.example.memosm.ui.component.item.media.AttachmentOrigins
+import org.example.memosm.ui.component.item.media.attachmentOrigin
 import org.example.memosm.ui.component.item.media.FullScreenAttachmentViewer
 import org.example.memosm.ui.component.resolveResourceUrl
 
@@ -123,6 +124,7 @@ fun MemoItem(
     var showMenu by remember { mutableStateOf(false) }
     var showReactionPicker by remember { mutableStateOf(false) }
     var showRawTextDialog by remember { mutableStateOf(false) }
+    val attachmentOrigins = remember { AttachmentOrigins() }
     var showFullScreenViewer by remember { mutableStateOf(false) }
     var fullScreenInitialIndex by remember { mutableStateOf(0) }
     val context = LocalContext.current
@@ -146,7 +148,8 @@ fun MemoItem(
 
 
     Card(
-        modifier = modifier.fillMaxWidth(), colors = colors
+        elevation = flatCardElevation(),
+        modifier = modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, colors = colors
     ) {
         Column(
             modifier = Modifier
@@ -303,135 +306,14 @@ fun MemoItem(
                 }
 
                 if (onEdit != null || onDelete != null || onUpsertReaction != null || memo.name != null) {
-                    Box {
-                        IconButton(
-                            onClick = { showMenu = true }, modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.MoreVert,
-                                contentDescription = stringResource(R.string.memo_action_more),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                            if (memo.name != null && hostUrl.isNotBlank()) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.memo_action_open_web)) },
-                                    onClick = {
-                                        showMenu = false
-                                        val memoId = memo.name.removePrefix("memos/")
-                                        val baseUrl =
-                                            if (hostUrl.endsWith("/")) hostUrl else "$hostUrl/"
-                                        val webUrl = "${baseUrl}memos/$memoId"
-                                        try {
-                                            val intent = Intent(Intent.ACTION_VIEW, webUrl.toUri())
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            Log.e(
-                                                "MemoItem", "Failed to open web URL: $webUrl", e
-                                            )
-                                        }
-                                    },
-                                    leadingIcon = {
-                                        Icon(Icons.Outlined.Language, contentDescription = null)
-                                    })
-                            }
-
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.memo_action_show_raw)) },
-                                onClick = {
-                                    showMenu = false
-                                    showRawTextDialog = true
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Outlined.Description, contentDescription = null)
-                                })
-
-
-                            if (onUpsertReaction != null) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.memo_action_add_reaction)) },
-                                    onClick = {
-                                        showMenu = false
-                                        showReactionPicker = true
-                                    },
-                                    leadingIcon = {
-                                        Icon(Icons.Outlined.AddReaction, contentDescription = null)
-                                    })
-                            }
-                            if (onEdit != null) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.memo_action_edit)) },
-                                    onClick = {
-                                        showMenu = false
-                                        onEdit()
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Outlined.Edit, contentDescription = null
-                                        )
-                                    })
-                            }
-                            if (onPin != null && memo.state == MemoState.NORMAL) {
-                                val isPinned = memo.pinned == true
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(if (isPinned) R.string.memo_action_unpin else R.string.memo_action_pin)) },
-                                    onClick = {
-                                        showMenu = false
-                                        onPin(!isPinned)
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Outlined.PushPin, contentDescription = null
-                                        )
-                                    })
-                            }
-                            if (onArchive != null && memo.state == MemoState.NORMAL) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.memo_action_archive)) },
-                                    onClick = {
-                                        showMenu = false
-                                        onArchive()
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Outlined.Archive, contentDescription = null
-                                        )
-                                    })
-                            }
-                            if (onUnarchive != null && memo.state == MemoState.ARCHIVED) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.memo_action_unarchive)) },
-                                    onClick = {
-                                        showMenu = false
-                                        onUnarchive()
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Outlined.Unarchive, contentDescription = null
-                                        )
-                                    })
-                            }
-                            if (onDelete != null) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.memo_action_delete)) },
-                                    onClick = {
-                                        showMenu = false
-                                        onDelete()
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.Outlined.Delete, contentDescription = null
-                                        )
-                                    },
-                                    colors = MenuDefaults.itemColors(
-                                        textColor = MaterialTheme.colorScheme.error,
-                                        leadingIconColor = MaterialTheme.colorScheme.error
-                                    )
-                                )
-                            }
-                        }
+                    IconButton(
+                        onClick = { showMenu = true }, modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.MoreVert,
+                            contentDescription = stringResource(R.string.memo_action_more),
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }
@@ -471,13 +353,7 @@ fun MemoItem(
                         onHashtagClick = onHashtagClick,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 12.dp, end = 16.dp, bottom = 8.dp)
-                            .then(
-                                if (maxHeight != Dp.Unspecified) Modifier.wrapContentHeight(
-                                    unbounded = true,
-                                    align = Alignment.Top
-                                ) else Modifier
-                            ),
+                            .padding(start = 12.dp, end = 16.dp, bottom = 8.dp),
                         headerScale = headerScale
                     )
                 }
@@ -544,6 +420,7 @@ fun MemoItem(
                                 }
                                 AttachmentCard(
                                     attachment = attachment,
+                                    mediaModifier = Modifier.attachmentOrigin(attachmentOrigins, attachment),
                                     token = token,
                                     hostUrl = hostUrl,
                                     modifier = Modifier
@@ -594,6 +471,7 @@ fun MemoItem(
                                 key = { index, it -> "${it.externalLink ?: "link"}_${it.filename}_${it.createTime ?: 0}_$index" }) { index, attachment ->
                                 AttachmentCard(
                                     attachment = attachment,
+                                    mediaModifier = Modifier.attachmentOrigin(attachmentOrigins, attachment),
                                     token = token,
                                     hostUrl = hostUrl,
                                     modifier = Modifier.size(width = 240.dp, height = 160.dp),
@@ -667,6 +545,126 @@ fun MemoItem(
         }
     }
 
+    if (showMenu) {
+        ActionSheet(
+            onDismissRequest = { showMenu = false }
+        ) {
+            if (memo.name != null && hostUrl.isNotBlank()) {
+                ActionSheetItem(
+                    text = { Text(stringResource(R.string.memo_action_open_web)) },
+                    onClick = {
+                        showMenu = false
+                        val memoId = memo.name.removePrefix("memos/")
+                        val baseUrl =
+                            if (hostUrl.endsWith("/")) hostUrl else "$hostUrl/"
+                        val webUrl = "${baseUrl}memos/$memoId"
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, webUrl.toUri())
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e(
+                                "MemoItem", "Failed to open web URL: $webUrl", e
+                            )
+                        }
+                    },
+                    leadingIcon = {
+                        Icon(Icons.Outlined.Language, contentDescription = null)
+                    })
+            }
+
+            ActionSheetItem(
+                text = { Text(stringResource(R.string.memo_action_show_raw)) },
+                onClick = {
+                    showMenu = false
+                    showRawTextDialog = true
+                },
+                leadingIcon = {
+                    Icon(Icons.Outlined.Description, contentDescription = null)
+                })
+
+
+            if (onUpsertReaction != null) {
+                ActionSheetItem(
+                    text = { Text(stringResource(R.string.memo_action_add_reaction)) },
+                    onClick = {
+                        showMenu = false
+                        showReactionPicker = true
+                    },
+                    leadingIcon = {
+                        Icon(Icons.Outlined.AddReaction, contentDescription = null)
+                    })
+            }
+            if (onEdit != null) {
+                ActionSheetItem(
+                    text = { Text(stringResource(R.string.memo_action_edit)) },
+                    onClick = {
+                        showMenu = false
+                        onEdit()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Outlined.Edit, contentDescription = null
+                        )
+                    })
+            }
+            if (onPin != null && memo.state == MemoState.NORMAL) {
+                val isPinned = memo.pinned == true
+                ActionSheetItem(
+                    text = { Text(stringResource(if (isPinned) R.string.memo_action_unpin else R.string.memo_action_pin)) },
+                    onClick = {
+                        showMenu = false
+                        onPin(!isPinned)
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Outlined.PushPin, contentDescription = null
+                        )
+                    })
+            }
+            if (onArchive != null && memo.state == MemoState.NORMAL) {
+                ActionSheetItem(
+                    text = { Text(stringResource(R.string.memo_action_archive)) },
+                    onClick = {
+                        showMenu = false
+                        onArchive()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Outlined.Archive, contentDescription = null
+                        )
+                    })
+            }
+            if (onUnarchive != null && memo.state == MemoState.ARCHIVED) {
+                ActionSheetItem(
+                    text = { Text(stringResource(R.string.memo_action_unarchive)) },
+                    onClick = {
+                        showMenu = false
+                        onUnarchive()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Outlined.Unarchive, contentDescription = null
+                        )
+                    })
+            }
+            if (onDelete != null) {
+                ActionSheetItem(
+                    text = { Text(stringResource(R.string.memo_action_delete)) },
+                    onClick = {
+                        showMenu = false
+                        onDelete()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Outlined.Delete, contentDescription = null
+                        )
+                    },
+                    destructive = true
+                )
+            }
+        }
+    }
+
     if (showReactionPicker) {
         ReactionPickerDialog(
             reactionOptions = reactionOptions,
@@ -705,7 +703,8 @@ fun MemoItem(
             initialIndex = fullScreenInitialIndex,
             token = token,
             hostUrl = hostUrl,
-            onDismiss = { showFullScreenViewer = false }
+            onDismiss = { showFullScreenViewer = false },
+            originBounds = attachmentOrigins::boundsFor
         )
     }
 }
