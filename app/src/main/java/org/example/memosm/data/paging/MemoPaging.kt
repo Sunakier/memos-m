@@ -28,6 +28,13 @@ import org.example.memosm.model.Visibility
 import org.example.memosm.viewmodel.AccountContext
 import java.io.IOException
 
+private const val SHORTCUT_TAG_LITERAL = """(?:"[^"\\\r\n]+"|'[^'\\\r\n]+')"""
+private const val SHORTCUT_TAG_GROUP = """tag\s+in\s+\[\s*$SHORTCUT_TAG_LITERAL(?:\s*,\s*$SHORTCUT_TAG_LITERAL)*\s*]"""
+private val shortcutTagFilter = Regex("""\s*$SHORTCUT_TAG_GROUP(?:\s*&&\s*$SHORTCUT_TAG_GROUP)*\s*""")
+private val shortcutTagGroup = Regex(SHORTCUT_TAG_GROUP)
+private val shortcutTagLiteral = Regex(SHORTCUT_TAG_LITERAL)
+private val markdownHashtag = Regex("""#[^\s#]+""")
+
 /** A request captures its account, parent, filter and ordering for its entire lifetime. */
 data class MemoQuery(
     val listType: CacheListType,
@@ -38,6 +45,15 @@ data class MemoQuery(
     val serverFilter: String? = null,
     val order: MemoOrderBy = MemoOrderBy.NEWEST,
 ) {
+    // A shortcut can reuse the personal cache only if its entire CEL filter is understood.
+    @Transient
+    internal val shortcutTagGroups =
+        serverFilter?.takeIf(shortcutTagFilter::matches)?.let { filter ->
+            shortcutTagGroup.findAll(filter).map { group ->
+                shortcutTagLiteral.findAll(group.value).map { it.value.substring(1, it.value.lastIndex) }.toSet()
+            }.toList()
+        }
+
     val key: String get() =
         if (search == null && hashtag == null && serverFilter.isNullOrBlank()) {
             listType.name + parentName?.let { ":$it" }.orEmpty()
@@ -51,15 +67,21 @@ fun matchesLocalQuery(
     query: MemoQuery,
     user: User?,
 ): Boolean {
-    if (!query.serverFilter.isNullOrBlank()) return false // Arbitrary server CEL cannot be evaluated locally.
+    val tagGroups = query.shortcutTagGroups
+    if (!query.serverFilter.isNullOrBlank() && tagGroups == null) return false
+    val tags = memo.tags.orEmpty()
+    if (tagGroups != null && tagGroups.any { group -> group.none(tags::contains) }) return false
     if (query.explore && memo.visibility !in setOf(Visibility.PUBLIC, Visibility.PROTECTED)) return false
     if (query.listType == CacheListType.SEARCH && memo.state == MemoState.ARCHIVED) return false
     if (query.listType == CacheListType.SEARCH && !query.explore && memo.creator != user?.name) return false
     val criteria = query.search
-    if (query.hashtag != null && query.hashtag.removePrefix("#") !in memo.tags.orEmpty()) return false
+    query.hashtag?.removePrefix("#")?.let { tag ->
+        val matches = memo.tags?.contains(tag) ?: markdownHashtag.findAll(memo.content).any { it.value == "#$tag" }
+        if (!matches) return false
+    }
     if (criteria == null) return true
     if (!memo.content.contains(criteria.query, ignoreCase = true)) return false
-    if (!memo.tags.orEmpty().containsAll(criteria.tags)) return false
+    if (!tags.containsAll(criteria.tags)) return false
     val time = memo.createTime?.toEpochMilliseconds() ?: 0L
     if (criteria.startDateMillis?.let { time < it } == true) return false
     if (criteria.endDateMillis?.let { time >= it + 86_400_000L } == true) return false
@@ -88,8 +110,10 @@ suspend fun memoPages(
     val storageGeneration = BackupCoordinator.generation
 
     fun current() = isCurrent() && BackupCoordinator.generation == storageGeneration
+    val hasLocalFilter =
+        if (query.serverFilter.isNullOrBlank()) query.search != null || query.hashtag != null else query.shortcutTagGroups != null
     val localSource =
-        if (!query.serverFilter.isNullOrBlank() || query.search == null && query.hashtag == null) {
+        if (!hasLocalFilter) {
             null
         } else if (query.listType == CacheListType.SEARCH) {
             if (query.explore) CacheListType.EXPLORE else CacheListType.USER
