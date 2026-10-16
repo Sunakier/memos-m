@@ -149,8 +149,50 @@ class MemosViewModel(
                 accountId, CacheListType.USER, limit = limit
             )
         }),
-        protectedNamesProvider = ::pendingMemoNames
+        protectedNamesProvider = ::pendingMemoNames,
+        selectionFilterProvider = { selectionCacheFilter() }
     )
+
+    /**
+     * Cached-row predicate for the active selection, so offline cache loads
+     * and failure fallbacks match the filtered server query. Hashtags match
+     * the memo's tag list (content scan fallback for servers that leave tags
+     * empty); shortcuts understand their `tag in [...]` predicates - a
+     * shortcut without any tag predicate cannot be expressed locally and
+     * falls back to the unfiltered cache.
+     */
+    private fun selectionCacheFilter(): ((Memo) -> Boolean)? {
+        val shortcut = _uiState.value.userMemoList.selectedShortcut
+        val hashtag = _uiState.value.userMemoList.selectedHashtag
+        return when {
+            shortcut != null -> shortcutFilterPredicate(shortcut.filter)
+            hashtag != null -> {
+                val tag = hashtag.removePrefix("#")
+                val matchesTag: (Memo) -> Boolean = { memo ->
+                    memo.tags?.contains(tag) ?: memo.content.contains("#$tag")
+                }
+                matchesTag
+            }
+            else -> null
+        }
+    }
+
+    private fun shortcutFilterPredicate(filter: String?): ((Memo) -> Boolean)? {
+        if (filter.isNullOrBlank()) return null
+        val tagGroups = SHORTCUT_TAG_REGEX.findAll(filter)
+            .map { match ->
+                SHORTCUT_QUOTED_REGEX.findAll(match.groupValues[1])
+                    .map { it.groupValues[1] }
+                    .toList()
+            }
+            .filter { it.isNotEmpty() }
+            .toList()
+        if (tagGroups.isEmpty()) return null
+        return { memo ->
+            val memoTags = memo.tags.orEmpty()
+            tagGroups.all { group -> group.any { it in memoTags } }
+        }
+    }
 
     private val exploreMemoManager: ExploreMemoListManager =
         ExploreMemoListManager(
@@ -380,10 +422,10 @@ class MemosViewModel(
         sessionCacheStore,
         accountSession,
         {
-            // Filter changes: the cached prefill/merge is unfiltered, so clear
-            // the cached-merge flag before refetching - the server-filtered
-            // page must replace the list plainly instead of being polluted by
-            // cached items from other filters.
+            // Filter changes: rows shown from the cache were loaded under the
+            // old selection, so clear the cached-merge flag before refetching -
+            // the server-filtered page must replace the list plainly instead
+            // of being polluted by items the new filter excludes.
             userMemoManager.updateState { it.copy(showingCached = false) }
             userMemoManager.fetch(refresh = true)
         })
@@ -1176,6 +1218,12 @@ class MemosViewModel(
         memoCacheReconciler.cancel()
         unregisterBackupHook()
         super.onCleared()
+    }
+
+    private companion object {
+        /** Extracts the `tag in [...]` groups of a shortcut filter expression. */
+        val SHORTCUT_TAG_REGEX = Regex("""tag\s+in\s+\[([^\]]*)]""")
+        val SHORTCUT_QUOTED_REGEX = Regex("""["']([^"']*)["']""")
     }
 
 }

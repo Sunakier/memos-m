@@ -40,7 +40,14 @@ class UserMemoListManager(
     private val filterProvider: () -> String?,
     private val pageSizeProvider: () -> Int,
     cacheCallbacks: CacheCallbacks<Memo>? = null,
-    protectedNamesProvider: (() -> Set<String>)? = null
+    protectedNamesProvider: (() -> Set<String>)? = null,
+    /**
+     * Maps the active selection (shortcut chip / hashtag) onto cached rows;
+     * null when nothing is selected or the selection cannot be expressed
+     * locally. Keeps offline cache loads consistent with the filtered server
+     * query - see [BaseListManager.cacheFilter].
+     */
+    private val selectionFilterProvider: (() -> ((Memo) -> Boolean)?)? = null
 ) : BaseListManager<Memo>(
     scope,
     cacheCallbacks = cacheCallbacks,
@@ -48,6 +55,8 @@ class UserMemoListManager(
     protectedNamesProvider = protectedNamesProvider,
     sortComparator = USER_MEMO_COMPARATOR
 ) {
+
+    override fun cacheFilter(): ((Memo) -> Boolean)? = selectionFilterProvider?.invoke()
 
     override suspend fun fetchFromApi(pageToken: String?): Pair<List<Memo>, String?> {
         val api = apiProvider() ?: return Pair(emptyList(), null)
