@@ -45,16 +45,29 @@ android {
         rootProject.file("local.properties").takeIf { it.exists() }
             ?.inputStream()?.use { ins -> this@apply.load(ins) }
     }
+    // Non-blank variant for identity fields (path/alias): a blank value is a
+    // placeholder, so fall through to the env var. Password fields below use
+    // localOrEnv directly - a blank password is meaningful (passwordless
+    // keystore) and must not fall through.
+    fun localOrEnvNonBlank(prop: String, env: String): String? =
+        localProps.getProperty(prop)?.takeIf { it.isNotBlank() }
+            ?: providers.environmentVariable(env).orNull
     fun localOrEnv(prop: String, env: String): String? =
         localProps.getProperty(prop) ?: providers.environmentVariable(env).orNull
 
     signingConfigs {
         create("release") {
-            storeFile = localOrEnv("keystore.path", "KEYSTORE_PATH")
-                ?.let { file(it) } ?: rootProject.file("app/release.keystore").takeIf { it.exists() }
+            storeFile = localOrEnvNonBlank("keystore.path", "KEYSTORE_PATH")
+                ?.let {
+                    // Relative values in local.properties are repo-root
+                    // relative (mirroring the fallback below); file() alone
+                    // would resolve them against the app/ module dir.
+                    val moduleFile = file(it)
+                    if (moduleFile.exists()) moduleFile else rootProject.file(it)
+                } ?: rootProject.file("app/release.keystore").takeIf { it.exists() }
 
             storePassword = localOrEnv("keystore.password", "KEYSTORE_PASSWORD")
-            keyAlias = localOrEnv("keystore.alias", "KEY_ALIAS") ?: "key0"
+            keyAlias = localOrEnvNonBlank("keystore.alias", "KEY_ALIAS") ?: "key0"
             keyPassword = localOrEnv("keystore.keyPassword", "KEY_PASSWORD")
                 ?: localOrEnv("keystore.password", "KEYSTORE_PASSWORD")
         }
