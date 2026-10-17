@@ -89,7 +89,6 @@ android {
             // x86/x86_64 devices are effectively nonexistent outside emulators
             // (which run debug builds); shipping them doubles the MapLibre
             // native library size for no real users.
-            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
             applicationIdSuffix = ".canary"
 
             val timestamp = SimpleDateFormat("yyyyMMddHHmm").format(Date())
@@ -105,7 +104,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
             applicationIdSuffix = ".insider"
 
             // Tag format is likely v1.1.1, so we strip the 'v' prefix
@@ -121,7 +119,6 @@ android {
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             )
-            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
             signingConfig = signingConfigs.getByName("release")
             manifestPlaceholders["appLabel"] = "MemosM"
         }
@@ -136,6 +133,17 @@ android {
             // Store native libraries deflated; saves ~16 MB in the universal APK.
             // Trade-off: install extracts them, so install size/time grows slightly.
             useLegacyPackaging = true
+        }
+    }
+    // Opt-in ABI splits: debug/emulator builds keep every ABI, release builds
+    // pass -PabiSplits=true (local release script + CI workflows).
+    val abiSplits = providers.gradleProperty("abiSplits").orNull?.toBoolean() ?: false
+    splits {
+        abi {
+            isEnable = abiSplits
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = false
         }
     }
     compileOptions {
