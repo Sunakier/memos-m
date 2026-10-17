@@ -126,6 +126,18 @@ android {
             manifestPlaceholders["appLabel"] = "MemosM"
         }
     }
+    androidResources {
+        // Only the UI languages this project maintains; drops library translations.
+        localeFilters += listOf("en", "de", "ja", "ko", "pl", "zh-rCN", "zh-rTW")
+    }
+
+    packaging {
+        jniLibs {
+            // Store native libraries deflated; saves ~16 MB in the universal APK.
+            // Trade-off: install extracts them, so install size/time grows slightly.
+            useLegacyPackaging = true
+        }
+    }
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
