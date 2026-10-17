@@ -26,7 +26,7 @@ android {
     compileSdkMinor = 1
     
     defaultConfig {
-        applicationId = "org.example.memosm"
+        applicationId = "top.lazyerpaper.memosm"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
