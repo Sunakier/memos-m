@@ -38,3 +38,20 @@
 # from the Android API; msgpack probes for it at runtime and falls back.
 -dontwarn sun.nio.ch.DirectBuffer
 -dontwarn org.msgpack.**
+
+# --- Persisted JSON / upgrade compatibility --------------------------------
+# These types are written to disk as Gson JSON and must keep their field
+# names across releases; otherwise an upgrade cannot read old queues/sessions.
+-keep class org.example.memosm.data.sync.ReactionOpPayload { *; }
+-keep class org.example.memosm.ui.component.composer.EditorRequest { *; }
+-keep class org.example.memosm.ui.component.composer.EditorSnapshot { *; }
+-keep class org.example.memosm.ui.component.composer.EditorAttachment { *; }
+-keep class org.example.memosm.ui.component.composer.StoredEditorSession { *; }
+
+# Enum constant names are persisted by Gson and in DataStore/backup payloads.
+# Do not rely on a third-party consumer rule (MapLibre currently keeps them).
+-keepclassmembers enum * {
+    <fields>;
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
