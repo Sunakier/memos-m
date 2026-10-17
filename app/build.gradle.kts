@@ -29,8 +29,8 @@ android {
         applicationId = "top.lazyerpaper.memosm"
         minSdk = 24
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 102
+        versionName = "1.0.2"
         buildConfigField("String", "GIT_HASH", "\"${gitShortHash.get()}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
