@@ -67,7 +67,7 @@ jobs:
           echo "${{ secrets.KEYSTORE }}" | base64 --decode > app/release.keystore
 
       - name: Build Canary APK
-        run: ./gradlew assembleCanary
+        run: ./gradlew assembleCanary -PabiSplits=true
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
@@ -76,10 +76,18 @@ jobs:
 
       - name: Prepare APK for Upload
         run: |
-          APK_FILE=$(find app/build/outputs/apk/canary -name "*.apk" ! -name "*-unsigned.apk" | head -n 1)
-          if [ -z "$APK_FILE" ]; then echo "No signed APK found!"; exit 1; fi
-          cp "$APK_FILE" "memos-latest.apk"
-          echo "APK_PATH=memos-latest.apk" >> $GITHUB_ENV
+          APK_DIR=app/build/outputs/apk/canary
+          ARM64=$(find "$APK_DIR" -name "*arm64-v8a*.apk" ! -name "*-unsigned.apk" | head -n 1)
+          V7A=$(find "$APK_DIR" -name "*armeabi-v7a*.apk" ! -name "*-unsigned.apk" | head -n 1)
+          if [ -z "$ARM64" ] || [ -z "$V7A" ]; then
+            echo "Missing ABI APK; contents:"
+            find "$APK_DIR" -name "*.apk"
+            exit 1
+          fi
+          cp "$ARM64" "memos-latest-arm64-v8a.apk"
+          cp "$V7A" "memos-latest-armeabi-v7a.apk"
+          echo "APK_ARM64=memos-latest-arm64-v8a.apk" >> $GITHUB_ENV
+          echo "APK_V7A=memos-latest-armeabi-v7a.apk" >> $GITHUB_ENV
 
       # -------------------------------
       # FORCE-UPDATE TAG
@@ -103,7 +111,10 @@ jobs:
             Date: ${{ steps.timestamp.outputs.date }}
 
             This release is automatically updated on every push to main with the Canary build.
-          files: ${{ env.APK_PATH }}
+            Download `memos-latest-arm64-v8a.apk` (most devices) or `memos-latest-armeabi-v7a.apk` (older 32-bit devices).
+          files: |
+            ${{ env.APK_ARM64 }}
+            ${{ env.APK_V7A }}
           prerelease: true
           make_latest: true
         env:

@@ -48,7 +48,7 @@ jobs:
           echo "${{ secrets.KEYSTORE }}" | base64 --decode > app/release.keystore
 
       - name: Build Insider APK
-        run: ./gradlew assembleInsider
+        run: ./gradlew assembleInsider -PabiSplits=true
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
@@ -57,10 +57,18 @@ jobs:
 
       - name: Prepare APK for Upload
         run: |
-          APK_FILE=$(find app/build/outputs/apk/insider -name "*.apk" ! -name "*-unsigned.apk" | head -n 1)
-          if [ -z "$APK_FILE" ]; then echo "No signed APK found!"; exit 1; fi
-          cp "$APK_FILE" "memos-insider.apk"
-          echo "APK_PATH=memos-insider.apk" >> $GITHUB_ENV
+          APK_DIR=app/build/outputs/apk/insider
+          ARM64=$(find "$APK_DIR" -name "*arm64-v8a*.apk" ! -name "*-unsigned.apk" | head -n 1)
+          V7A=$(find "$APK_DIR" -name "*armeabi-v7a*.apk" ! -name "*-unsigned.apk" | head -n 1)
+          if [ -z "$ARM64" ] || [ -z "$V7A" ]; then
+            echo "Missing ABI APK; contents:"
+            find "$APK_DIR" -name "*.apk"
+            exit 1
+          fi
+          cp "$ARM64" "memos-insider-arm64-v8a.apk"
+          cp "$V7A" "memos-insider-armeabi-v7a.apk"
+          echo "APK_ARM64=memos-insider-arm64-v8a.apk" >> $GITHUB_ENV
+          echo "APK_V7A=memos-insider-armeabi-v7a.apk" >> $GITHUB_ENV
 
       - name: Create/Update Release
         uses: softprops/action-gh-release@v2
@@ -70,7 +78,10 @@ jobs:
             **Insider Build**
             Version: ${{ github.ref_name }}
             Commit: ${{ github.sha }}
-          files: ${{ env.APK_PATH }}
+            Download `memos-insider-arm64-v8a.apk` (most devices) or `memos-insider-armeabi-v7a.apk` (older 32-bit devices).
+          files: |
+            ${{ env.APK_ARM64 }}
+            ${{ env.APK_V7A }}
           prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
