@@ -90,6 +90,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // x86/x86_64 devices are effectively nonexistent outside emulators
+            // (which run debug builds); shipping them doubles the MapLibre
+            // native library size for no real users.
+            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
             applicationIdSuffix = ".canary"
 
             val timestamp = SimpleDateFormat("yyyyMMddHHmm").format(Date())
@@ -104,6 +108,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
             applicationIdSuffix = ".insider"
 
             // Tag format is likely v1.1.1, so we strip the 'v' prefix
@@ -118,6 +123,7 @@ android {
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             )
+            ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
             signingConfig = signingConfigs.getByName("release")
             manifestPlaceholders["appLabel"] = "MemosM"
         }
