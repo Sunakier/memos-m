@@ -39,6 +39,11 @@ android {
         unitTests.isReturnDefaultValues = true
     }
 
+    // Opt-in ABI splits: debug and default builds keep the previous layout;
+    // release-like builds pass -PabiSplits=true to produce per-ABI APKs plus
+    // a universal APK containing every ABI.
+    val abiSplits = providers.gradleProperty("abiSplits").orNull?.toBoolean() ?: false
+
     signingConfigs {
         create("release") {
             val keystorePath = providers.environmentVariable("KEYSTORE_PATH")
@@ -57,11 +62,17 @@ android {
             manifestPlaceholders["appLabel"] = "MemosM (Debug)"
         }
         create("canary") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Without -PabiSplits, keep the single APK to phone ABIs; the
+            // splits block below adds x86/x86_64 and a universal fallback.
+            if (!abiSplits) {
+                ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+            }
             applicationIdSuffix = ".canary"
 
             val timestamp = SimpleDateFormat("yyyyMMddHHmm").format(Date())
@@ -71,11 +82,15 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
         create("insider") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (!abiSplits) {
+                ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+            }
             applicationIdSuffix = ".insider"
 
             // Tag format is likely v1.1.1, so we strip the 'v' prefix
@@ -86,12 +101,40 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             )
+            if (!abiSplits) {
+                ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+            }
             signingConfig = signingConfigs.getByName("release")
             manifestPlaceholders["appLabel"] = "MemosM"
+        }
+    }
+
+    // Opt-in ABI splits (-PabiSplits=true): arm64-v8a, armeabi-v7a, x86, and
+    // x86_64 APKs plus a universal APK containing every ABI. Without the
+    // flag, release-like builds keep a single arm-only APK.
+    splits {
+        abi {
+            isEnable = abiSplits
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+            isUniversalApk = true
+        }
+    }
+    androidResources {
+        // Only the UI languages this project maintains; drops library translations.
+        localeFilters += listOf("en", "de", "ja", "ko", "pl", "zh-rCN", "zh-rTW")
+    }
+
+    packaging {
+        jniLibs {
+            // Store native libraries deflated; saves ~16 MB in the universal APK.
+            // Trade-off: install extracts them, so install size/time grows slightly.
+            useLegacyPackaging = true
         }
     }
     compileOptions {
@@ -240,15 +283,6 @@ dependencies {
 
     // optional - Kotlin Extensions and Coroutines support for Room
     implementation(libs.androidx.room.ktx)
-
-    // optional - RxJava2 support for Room
-    implementation(libs.androidx.room.rxjava2)
-
-    // optional - RxJava3 support for Room
-    implementation(libs.androidx.room.rxjava3)
-
-    // optional - Guava support for Room, including Optional and ListenableFuture
-    implementation(libs.androidx.room.guava)
 
     // optional - Test helpers
     testImplementation(libs.androidx.room.testing)

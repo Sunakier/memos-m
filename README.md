@@ -56,6 +56,11 @@ the app during authentication, start sign-in again.
 
 ## Downloads
 
+> Pick the APK that matches your device ABI: `arm64-v8a` (most phones),
+> `armeabi-v7a` (older 32-bit devices), `x86` (32-bit emulators),
+> `x86_64` (64-bit emulators), or `universal` (works on any ABI).
+> Each release also includes `mapping.txt.gz` for retracing crash reports.
+
 ### Stable Build
 
 > MemosM is still under active development, so there is no stable build for now.
