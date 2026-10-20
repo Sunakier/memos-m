@@ -181,6 +181,7 @@ class MemoActionDelegateImpl(
         val clientId = memoId ?: UUID.randomUUID().toString()
         var memo = Memo(
             content = content,
+            creator = currentUser()?.name,
             visibility = visibility,
             attachments = attachments,
             location = location

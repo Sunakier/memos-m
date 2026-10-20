@@ -219,6 +219,8 @@ fun MemoDetailView(
                             } else null,
                             isDetailView = true,
                             headerScale = uiState.appSettings.headerScale,
+                            quickReactionOptions = uiState.appSettings.quickReactions.split(Regex("\\s+"))
+                                .filter(String::isNotBlank),
                             reactionOptions = reactionOptions)
                     }
 
@@ -354,6 +356,8 @@ fun MemoDetailView(
                             } else null,
                             isDetailView = true,
                             headerScale = uiState.appSettings.headerScale,
+                            quickReactionOptions = uiState.appSettings.quickReactions.split(Regex("\\s+"))
+                                .filter(String::isNotBlank),
                             reactionOptions = reactionOptions)
                     }
                     }

@@ -118,6 +118,7 @@ fun MemoItem(
     maxHeight: Dp = Dp.Unspecified,
     isDetailView: Boolean = false,
     reactionOptions: List<String> = emptyList(),
+    quickReactionOptions: List<String> = emptyList(),
     headerScale: Float,
     onHashtagClick: ((String) -> Unit)? = null
 ) {
@@ -488,6 +489,11 @@ fun MemoItem(
                 }
 
                 // Reactions
+                if (currentUser != null && onUpsertReaction != null && memo.name != null) {
+                    QuickReactionBar(quickReactionOptions,
+                        memo.reactions.orEmpty().filter { it.creator == currentUser.name }
+                            .map { it.reactionType }.toSet(), onUpsertReaction)
+                }
                 val reactions = remember(memo.reactions) {
                     memo.reactions ?: emptyList()
                 }

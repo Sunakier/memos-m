@@ -531,6 +531,8 @@ fun MemoPreviewItem(
         modifier = modifier.widthIn(max = 800.dp),
         onHashtagClick = onHashtagClick,
         headerScale = uiState.appSettings.headerScale,
+                            quickReactionOptions = uiState.appSettings.quickReactions.split(Regex("\\s+"))
+                                .filter(String::isNotBlank),
         reactionOptions = uiState.session.instanceSettings?.memoRelatedSetting?.reactions
             ?: emptyList())
     if (showDelete) {
