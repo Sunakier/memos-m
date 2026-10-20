@@ -16,4 +16,17 @@
     <string name="map_draft_here">在此起草备忘录</string>
     <string name="map_place_count">此处的备忘录：%1$d</string>
     <string name="map_place_empty">此位置还没有备忘录。</string>
+    <string name="quick_edit_title">快速编辑</string>
+    <string name="quick_edit_auto_publish">退出时自动发布</string>
+    <string name="quick_edit_auto_publish_description">停止输入后保存到本地，离开编辑器时发布。</string>
+    <string name="quick_edit_immersive">沉浸式编辑</string>
+    <string name="quick_edit_hide_comments">默认折叠评论区</string>
+    <string name="quick_edit_hide_empty_comments">无评论时折叠评论区</string>
+    <string name="quick_edit_reactions">常驻反应</string>
+    <string name="quick_edit_reactions_description">仅本地生效。用空格分隔，最多 8 个；清空可隐藏。</string>
+    <string name="quick_edit_show_comments">展开评论</string>
+    <string name="quick_edit_hide_comments_action">收起评论</string>
+    <string name="quick_edit_blank_hint">双击此处编辑</string>
+    <string name="quick_edit_reaction_hint">长按后拖动选择，松手表态；移出可取消。</string>
+    <string name="quick_edit_saved">已保存到本地，联网后继续发布。</string>
 </resources>

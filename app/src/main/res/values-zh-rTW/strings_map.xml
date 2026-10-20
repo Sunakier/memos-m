@@ -16,4 +16,17 @@
     <string name="map_draft_here">在此起草備忘錄</string>
     <string name="map_place_count">此處的備忘錄：%1$d</string>
     <string name="map_place_empty">此位置還沒有備忘錄。</string>
+    <string name="quick_edit_title">快速編輯</string>
+    <string name="quick_edit_auto_publish">離開時自動發佈</string>
+    <string name="quick_edit_auto_publish_description">停止輸入後儲存到本機，離開編輯器時發佈。</string>
+    <string name="quick_edit_immersive">沉浸式編輯</string>
+    <string name="quick_edit_hide_comments">預設摺疊留言區</string>
+    <string name="quick_edit_hide_empty_comments">無留言時摺疊留言區</string>
+    <string name="quick_edit_reactions">常駐反應</string>
+    <string name="quick_edit_reactions_description">僅本機生效。以空格分隔，最多 8 個；清空可隱藏。</string>
+    <string name="quick_edit_show_comments">展開留言</string>
+    <string name="quick_edit_hide_comments_action">收起留言</string>
+    <string name="quick_edit_blank_hint">點兩下此處編輯</string>
+    <string name="quick_edit_reaction_hint">長按後拖曳選擇，放開表態；移出可取消。</string>
+    <string name="quick_edit_saved">已儲存到本機，連線後繼續發佈。</string>
 </resources>

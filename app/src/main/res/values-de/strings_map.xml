@@ -16,4 +16,17 @@
     <string name="map_draft_here">Memo hier entwerfen</string>
     <string name="map_place_count">Memos hier: %1$d</string>
     <string name="map_place_empty">An diesem Ort gibt es noch keine Memos.</string>
+    <string name="quick_edit_title">QuickEdit</string>
+    <string name="quick_edit_auto_publish">Beim Verlassen veröffentlichen</string>
+    <string name="quick_edit_auto_publish_description">Bei Eingabepausen lokal speichern; beim Verlassen veröffentlichen.</string>
+    <string name="quick_edit_immersive">Ablenkungsfreies Bearbeiten</string>
+    <string name="quick_edit_hide_comments">Kommentare standardmäßig einklappen</string>
+    <string name="quick_edit_hide_empty_comments">Leere Kommentare einklappen</string>
+    <string name="quick_edit_reactions">Schnellreaktionen</string>
+    <string name="quick_edit_reactions_description">Nur lokal. Bis zu 8 Reaktionen mit Leerzeichen trennen. Zum Ausblenden leeren.</string>
+    <string name="quick_edit_show_comments">Kommentare anzeigen</string>
+    <string name="quick_edit_hide_comments_action">Kommentare ausblenden</string>
+    <string name="quick_edit_blank_hint">Hier zum Bearbeiten doppeltippen</string>
+    <string name="quick_edit_reaction_hint">Halten, ziehen und zum Reagieren loslassen. Außerhalb loslassen zum Abbrechen.</string>
+    <string name="quick_edit_saved">Lokal gespeichert; Veröffentlichung wird bei Verbindung fortgesetzt.</string>
 </resources>

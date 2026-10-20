@@ -16,4 +16,17 @@
     <string name="map_draft_here">Draft memo here</string>
     <string name="map_place_count">Memos here: %1$d</string>
     <string name="map_place_empty">No memos at this location yet.</string>
+    <string name="quick_edit_title">QuickEdit</string>
+    <string name="quick_edit_auto_publish">Publish on exit</string>
+    <string name="quick_edit_auto_publish_description">Pause typing to save locally; leave the editor to publish.</string>
+    <string name="quick_edit_immersive">Immersive editing</string>
+    <string name="quick_edit_hide_comments">Collapse comments by default</string>
+    <string name="quick_edit_hide_empty_comments">Collapse empty comments</string>
+    <string name="quick_edit_reactions">Quick reactions</string>
+    <string name="quick_edit_reactions_description">Local only. Separate up to 8 reactions with spaces. Clear to hide.</string>
+    <string name="quick_edit_show_comments">Show comments</string>
+    <string name="quick_edit_hide_comments_action">Hide comments</string>
+    <string name="quick_edit_blank_hint">Double-tap here to edit</string>
+    <string name="quick_edit_reaction_hint">Hold, drag to choose, release to react. Drag outside to cancel.</string>
+    <string name="quick_edit_saved">Saved locally; publishing will resume when connected.</string>
 </resources>

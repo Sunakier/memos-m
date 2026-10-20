@@ -16,4 +16,17 @@
     <string name="map_draft_here">ここで下書きを作成</string>
     <string name="map_place_count">この場所のメモ：%1$d</string>
     <string name="map_place_empty">この場所にはまだメモがありません。</string>
+    <string name="quick_edit_title">クイック編集</string>
+    <string name="quick_edit_auto_publish">終了時に自動投稿</string>
+    <string name="quick_edit_auto_publish_description">入力を止めると端末に保存し、編集画面を閉じると投稿します。</string>
+    <string name="quick_edit_immersive">集中編集</string>
+    <string name="quick_edit_hide_comments">コメントを初期状態で折りたたむ</string>
+    <string name="quick_edit_hide_empty_comments">コメントがない場合は折りたたむ</string>
+    <string name="quick_edit_reactions">クイックリアクション</string>
+    <string name="quick_edit_reactions_description">この端末のみ。空白で区切り最大8個。空にすると非表示。</string>
+    <string name="quick_edit_show_comments">コメントを表示</string>
+    <string name="quick_edit_hide_comments_action">コメントを隠す</string>
+    <string name="quick_edit_blank_hint">ここをダブルタップして編集</string>
+    <string name="quick_edit_reaction_hint">長押ししてドラッグで選び、離して送信。外に動かすとキャンセル。</string>
+    <string name="quick_edit_saved">端末に保存しました。接続後に投稿を再開します。</string>
 </resources>
