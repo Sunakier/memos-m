@@ -270,7 +270,7 @@ fun MemoComposer(
                 }
     val exit: () -> Unit = {
         if (!isPosting && !preparing && isUploadingCount == 0) {
-            if (autoPublishOnExit && (contentState.text.isNotBlank() || draftAttachments.isNotEmpty()) && hasChanges) publish()
+            if (autoPublishOnExit && (mode == ComposerMode.UPDATE || contentState.text.isNotBlank() || draftAttachments.isNotEmpty()) && hasChanges) publish()
             else onExit?.invoke()
         }
     }

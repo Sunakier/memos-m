@@ -51,8 +51,8 @@ fun MemoComposerScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { if (!uiState.appSettings.immersiveEditing) Text(title) },
+            if (!uiState.appSettings.immersiveEditing) TopAppBar(
+                title = { Text(title) },
                 navigationIcon = {
                     ProfileBackButton(onClick = { exitRequested++ })
                 }

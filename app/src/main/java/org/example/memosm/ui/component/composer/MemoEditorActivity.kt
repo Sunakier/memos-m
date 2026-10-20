@@ -45,6 +45,15 @@ class MemoEditorActivity : ProfileActivity() {
     @Composable
     override fun Destination(viewModel: MemosViewModel, onBack: () -> Unit) {
         val uiState by viewModel.uiState.collectAsState()
+        androidx.compose.runtime.DisposableEffect(uiState.appSettings.immersiveEditing) {
+            val controller = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
+            val bars = androidx.core.view.WindowInsetsCompat.Type.systemBars()
+            if (uiState.appSettings.immersiveEditing) {
+                controller.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                controller.hide(bars)
+            }
+            onDispose { controller.show(bars) }
+        }
         val session = editor.session
         if (editor.failed) {
             Text(stringResource(R.string.common_operation_failed))
