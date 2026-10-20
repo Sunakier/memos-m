@@ -74,7 +74,7 @@ class AttachmentManager(
      * (no server `name`, carrying the queue clientId + staged localPath) when
      * the upload was queued, or null when even staging failed.
      */
-    suspend fun uploadAttachment(uri: Uri, context: Context): Attachment? {
+    suspend fun uploadAttachment(uri: Uri, context: Context, durable: Boolean = false): Attachment? {
         val account = accountSession.current ?: return null
         val connection = account.connection
         val api = connection.api
@@ -93,7 +93,7 @@ class AttachmentManager(
             )
 
             // Offline (or no API yet): queue for later instead of failing.
-            if (!connection.networkReady) {
+            if (durable || !connection.networkReady) {
                 return enqueueForLater(account, uri, fileName, mimeType, fileSize)
             }
 

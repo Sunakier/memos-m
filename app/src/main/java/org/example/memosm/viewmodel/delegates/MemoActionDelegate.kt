@@ -567,7 +567,7 @@ class MemoActionDelegateImpl(
 
     override suspend fun uploadAttachment(uri: Uri, context: Context): Attachment? {
         val account = accountSession.current ?: return null
-        val attachment = attachmentManager?.uploadAttachment(uri, context)
+        val attachment = attachmentManager?.uploadAttachment(uri, context, durable = true)
         return attachment.takeIf { accountSession.isCurrent(account) }
     }
 

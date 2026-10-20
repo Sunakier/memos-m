@@ -74,7 +74,11 @@ fun MemoComposer(
     mode: ComposerMode,
     isPosting: Boolean = false,
     editorState: ComposerState,
-    onDiscardQueuedUpload: (String) -> Unit = {}
+    onDiscardQueuedUpload: (String) -> Unit = {},
+    onExit: (() -> Unit)? = null,
+    autoPublishOnExit: Boolean = false,
+    hasChanges: Boolean = true,
+    exitRequested: Int = 0
 
 ) {
     // Depending on the Composer Mode there will be different placeholder
@@ -193,6 +197,88 @@ fun MemoComposer(
         }
     }
 
+    var preparing by remember { mutableStateOf(false) }
+    val publish: () -> Unit = publish@{
+                if (isPosting || preparing || isUploadingCount > 0) return@publish
+                preparing = true
+                scope.launch {
+                  try {
+                    val pendingUploads = draftAttachments.withIndex().filter { indexedValue ->
+                        val pair = indexedValue.value
+                        // Case 1: New local file (Uri is not EMPTY, Attachment is null)
+                        (pair.second == null && pair.first != Uri.EMPTY) ||
+                                // Case 2: Restored draft (Uri is EMPTY, Attachment has content but no name on server)
+                                (pair.second != null && pair.second!!.name == null && pair.second!!.content != null)
+                    }
+                    val uploadedAttachments = mutableListOf<Attachment>()
+
+                    for (indexedValue in pendingUploads) {
+                        val index = indexedValue.index
+                        val (uri, attachment) = indexedValue.value
+                        isUploadingCount++
+
+                        // If it's a restored draft, we first need to convert it to a temp Uri
+                        val uploadUri = if (uri == Uri.EMPTY && attachment != null) {
+                            base64ToTempUri(
+                                attachment.content ?: "",
+                                attachment.filename,
+                                attachment.type,
+                                context
+                            )
+                        } else {
+                            uri
+                        }
+
+                        if (uploadUri != null) {
+                            uploadingUris = uploadingUris + uploadUri
+                            val uploaded = onUploadFile(uploadUri, context)
+                            uploadingUris = uploadingUris - uploadUri
+
+                            if (uploaded != null) {
+                                uploadedAttachments.add(uploaded)
+                                // Update local draft state immediately as we upload
+                                // We match by the index to replace it safely
+                                draftAttachments = draftAttachments.mapIndexed { i, item ->
+                                    if (i == index) uploadUri to uploaded else item
+                                }
+                            }
+                        }
+                        isUploadingCount--
+                    }
+
+                    // Now collect all valid attachments:
+                    // 1. Items that were already valid (non-null attachment with name)
+                    // 2. Newly uploaded items are already swapped into draftAttachments by the loop above,
+                    //    OR added to uploadedAttachments if we want to be safe, but the loop updates draftAttachments.
+                    // 3. Queued-upload placeholders (name == null but carrying the queue
+                    //    clientId) stay attached; the outbox replay resolves them to the
+                    //    real server attachment once the durable upload lands.
+                    val finalAttachments =
+                        draftAttachments.mapNotNull { it.second }
+                            .filter { it.name != null || it.clientId != null }
+
+                    if (finalAttachments.size != draftAttachments.size) {
+                        Toast.makeText(context, R.string.common_operation_failed, Toast.LENGTH_LONG).show()
+                        return@launch
+                    }
+                    onPublish(contentState.text, visibility, finalAttachments, location)
+                  } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                  catch (error: Exception) {
+                      Toast.makeText(context, R.string.common_operation_failed, Toast.LENGTH_LONG).show()
+                  } finally { preparing = false; isUploadingCount = 0; uploadingUris = emptySet() }
+                }
+                }
+    val exit: () -> Unit = {
+        if (!isPosting && !preparing && isUploadingCount == 0) {
+            if (autoPublishOnExit && (contentState.text.isNotBlank() || draftAttachments.isNotEmpty()) && hasChanges) publish()
+            else onExit?.invoke()
+        }
+    }
+    LaunchedEffect(exitRequested) { if (exitRequested > 0) exit() }
+    if (onExit != null) {
+        androidx.activity.compose.BackHandler(onBack = exit)
+    }
+
     var componentWidth by remember { mutableStateOf(0.dp) }
 
     Column(
@@ -213,7 +299,7 @@ fun MemoComposer(
             onContentChange = { contentState = it },
             placeholder = placeholder,
             availableTags = availableTags,
-            enabled = !isPosting,
+            enabled = !isPosting && !preparing,
             autoFocus = true,
             modifier = Modifier.weight(1f),
         )
@@ -272,68 +358,7 @@ fun MemoComposer(
             onLocationFounded = { loc ->
                 location = loc
             },
-            onPublishClick = publish@{
-                if (isPosting || isUploadingCount > 0) return@publish
-                scope.launch {
-                    val pendingUploads = draftAttachments.withIndex().filter { indexedValue ->
-                        val pair = indexedValue.value
-                        // Case 1: New local file (Uri is not EMPTY, Attachment is null)
-                        (pair.second == null && pair.first != Uri.EMPTY) ||
-                                // Case 2: Restored draft (Uri is EMPTY, Attachment has content but no name on server)
-                                (pair.second != null && pair.second!!.name == null && pair.second!!.content != null)
-                    }
-                    val uploadedAttachments = mutableListOf<Attachment>()
-
-                    for (indexedValue in pendingUploads) {
-                        val index = indexedValue.index
-                        val (uri, attachment) = indexedValue.value
-                        isUploadingCount++
-
-                        // If it's a restored draft, we first need to convert it to a temp Uri
-                        val uploadUri = if (uri == Uri.EMPTY && attachment != null) {
-                            base64ToTempUri(
-                                attachment.content ?: "",
-                                attachment.filename,
-                                attachment.type,
-                                context
-                            )
-                        } else {
-                            uri
-                        }
-
-                        if (uploadUri != null) {
-                            uploadingUris = uploadingUris + uploadUri
-                            val uploaded = onUploadFile(uploadUri, context)
-                            uploadingUris = uploadingUris - uploadUri
-
-                            if (uploaded != null) {
-                                uploadedAttachments.add(uploaded)
-                                // Update local draft state immediately as we upload
-                                // We match by the index to replace it safely
-                                draftAttachments = draftAttachments.mapIndexed { i, item ->
-                                    if (i == index) uploadUri to uploaded else item
-                                }
-                            }
-                        }
-                        isUploadingCount--
-                    }
-
-                    // Now collect all valid attachments:
-                    // 1. Items that were already valid (non-null attachment with name)
-                    // 2. Newly uploaded items are already swapped into draftAttachments by the loop above,
-                    //    OR added to uploadedAttachments if we want to be safe, but the loop updates draftAttachments.
-                    // 3. Queued-upload placeholders (name == null but carrying the queue
-                    //    clientId) stay attached; the outbox replay resolves them to the
-                    //    real server attachment once the durable upload lands.
-                    val finalAttachments =
-                        draftAttachments.mapNotNull { it.second }
-                            .filter { it.name != null || it.clientId != null }
-
-                    onPublish(
-                        contentState.text, visibility, finalAttachments, location
-                    )
-                }
-            })
+            onPublishClick = publish)
     }
 
     if (showLocationEditDialog && location != null) {

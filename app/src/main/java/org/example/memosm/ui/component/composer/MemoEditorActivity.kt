@@ -67,7 +67,7 @@ class MemoEditorActivity : ProfileActivity() {
             title = stringResource(session.request.titleRes),
             initialMemo = session.request.memo, parentMemo = session.request.parentMemo,
             mode = session.request.mode, editorSession = session,
-            onDismiss = onBack,
+            onDismiss = { finish() },
             onSubmitted = {
                 session.submitted()
                 setResult(RESULT_OK, Intent().putExtra(EXTRA_SESSION, session.id))

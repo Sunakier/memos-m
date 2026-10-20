@@ -166,6 +166,12 @@ object EditorSessionStore {
 class EditorSession(val id: String, stored: StoredEditorSession) {
     val request = stored.request
     val state = ComposerState(stored.snapshot)
+    private val initial = stored.snapshot
+    val hasChanges: Boolean get() {
+        val current = state.snapshot()
+        return current.text != initial.text || current.visibility != initial.visibility ||
+            current.location != initial.location || current.attachments != initial.attachments
+    }
     val createdAt = request.createdAt
     @Volatile var completed = false
         private set
