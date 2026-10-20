@@ -8,6 +8,11 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -81,6 +86,9 @@ fun MemoDetailView(
     val onEditMemo = LocalMemoEditor.current
     var memoToDelete by remember { mutableStateOf<Memo?>(null) }
 
+    var commentsOverride by rememberSaveable(memo.name) { mutableStateOf<Boolean?>(null) }
+    val showComments = commentsOverride ?: !(uiState.appSettings.hideComments ||
+        (uiState.appSettings.hideEmptyComments && comments.items.isEmpty()))
     val listState = rememberLazyListState()
     var isFabExpanded by remember { mutableStateOf(true) }
 
@@ -102,7 +110,7 @@ fun MemoDetailView(
     }
 
     val isOwner = remember(memo.creator, uiState.session.currUser?.name) {
-        memo.creator == uiState.session.currUser?.name
+        uiState.session.currUser != null && memo.creator == uiState.session.currUser?.name
     }
 
     Surface(
@@ -144,7 +152,7 @@ fun MemoDetailView(
             }, floatingActionButton = {
                 if (uiState.session.currUser != null) {
                     ExtendedFloatingActionButton(
-                        onClick = { onCommentMemo(memo) },
+                        onClick = { commentsOverride = true; onCommentMemo(memo) },
                         expanded = isFabExpanded,
                         icon = {
                             Icon(
@@ -214,6 +222,25 @@ fun MemoDetailView(
                             reactionOptions = reactionOptions)
                     }
 
+                    if (isOwner) {
+                        item(key = "quick_edit_blank") {
+                            Box(Modifier.fillMaxWidth().heightIn(min = 72.dp)
+                                .pointerInput(memo, onEditMemo) {
+                                    detectTapGestures(onDoubleTap = { onEditMemo(memo) })
+                                }, contentAlignment = Alignment.Center) {
+                                TextButton(onClick = { onEditMemo(memo) }) {
+                                    Text(stringResource(R.string.quick_edit_blank_hint))
+                                }
+                            }
+                        }
+                    }
+                    item(key = "comments_toggle") {
+                        TextButton(onClick = { commentsOverride = !showComments }) {
+                            Text(stringResource(if (showComments) R.string.quick_edit_hide_comments_action
+                                else R.string.quick_edit_show_comments))
+                        }
+                    }
+                    if (showComments) {
                     // Comments section header
                     item(key = "comments_header") {
                         Row(
@@ -328,6 +355,7 @@ fun MemoDetailView(
                             isDetailView = true,
                             headerScale = uiState.appSettings.headerScale,
                             reactionOptions = reactionOptions)
+                    }
                     }
                 }
             }
