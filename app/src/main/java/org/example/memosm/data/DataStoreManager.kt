@@ -34,6 +34,11 @@ class DataStoreManager(
         val APPEARANCE_FONT = stringPreferencesKey("appearance_font")
         val ACCOUNTS_JSON = stringPreferencesKey("accounts_json")
         val SETUP_COMPLETED = androidx.datastore.preferences.core.booleanPreferencesKey("setup_completed")
+        val QUICK_EDIT_AUTO_PUBLISH = androidx.datastore.preferences.core.booleanPreferencesKey("quick_edit_auto_publish")
+        val IMMERSIVE_EDITING = androidx.datastore.preferences.core.booleanPreferencesKey("immersive_editing")
+        val HIDE_COMMENTS = androidx.datastore.preferences.core.booleanPreferencesKey("hide_comments")
+        val HIDE_EMPTY_COMMENTS = androidx.datastore.preferences.core.booleanPreferencesKey("hide_empty_comments")
+        val QUICK_REACTIONS = androidx.datastore.preferences.core.stringPreferencesKey("quick_reactions")
         val PAGE_SIZE = intPreferencesKey("page_size")
         const val DEFAULT_PAGE_SIZE = 10
         val HEADER_SCALE = androidx.datastore.preferences.core.floatPreferencesKey("header_scale")
@@ -262,6 +267,21 @@ class DataStoreManager(
     suspend fun saveFont(font: AppFont) {
         dataStore.edit { it[APPEARANCE_FONT] = font.name }
     }
+
+    val quickEditAutoPublish: Flow<Boolean> = dataStore.data.map { it[QUICK_EDIT_AUTO_PUBLISH] ?: true }
+    suspend fun saveQuickEditAutoPublish(value: Boolean) { dataStore.edit { it[QUICK_EDIT_AUTO_PUBLISH] = value } }
+
+    val immersiveEditing: Flow<Boolean> = dataStore.data.map { it[IMMERSIVE_EDITING] ?: false }
+    suspend fun saveImmersiveEditing(value: Boolean) { dataStore.edit { it[IMMERSIVE_EDITING] = value } }
+
+    val hideComments: Flow<Boolean> = dataStore.data.map { it[HIDE_COMMENTS] ?: true }
+    suspend fun saveHideComments(value: Boolean) { dataStore.edit { it[HIDE_COMMENTS] = value } }
+
+    val hideEmptyComments: Flow<Boolean> = dataStore.data.map { it[HIDE_EMPTY_COMMENTS] ?: true }
+    suspend fun saveHideEmptyComments(value: Boolean) { dataStore.edit { it[HIDE_EMPTY_COMMENTS] = value } }
+
+    val quickReactions: Flow<String> = dataStore.data.map { it[QUICK_REACTIONS] ?: "👍 ❤️ 🎉 🤔 👀" }
+    suspend fun saveQuickReactions(value: String) { dataStore.edit { it[QUICK_REACTIONS] = value } }
 
     val pageSize: Flow<Int> = dataStore.data.map { preferences ->
         preferences[PAGE_SIZE] ?: DEFAULT_PAGE_SIZE

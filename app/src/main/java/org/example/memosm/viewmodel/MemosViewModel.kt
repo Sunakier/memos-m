@@ -511,6 +511,7 @@ class MemosViewModel(
             appSettingsDelegate.loadPageSize()
             appSettingsDelegate.loadHeaderScale()
             appSettingsDelegate.loadLinkPreviewEnabled()
+            appSettingsDelegate.loadQuickEditSettings()
             appSettingsDelegate.loadOfflineSettings()
 
             startStateCollection()
