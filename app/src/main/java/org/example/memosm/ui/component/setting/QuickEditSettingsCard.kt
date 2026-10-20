@@ -1,5 +1,9 @@
 package org.example.memosm.ui.component.setting
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.OutlinedTextField
@@ -17,8 +21,10 @@ import org.example.memosm.viewmodel.delegates.AppSettingsDelegate
 
 @Composable
 fun QuickEditSettingsCard(settings: AppSettings, actions: AppSettingsDelegate) {
-    Column {
-        Text(stringResource(R.string.quick_edit_title))
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(stringResource(R.string.quick_edit_title),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
         SettingToggleRow(label = stringResource(R.string.quick_edit_auto_publish),
             description = stringResource(R.string.quick_edit_auto_publish_description),
             checked = settings.quickEditAutoPublish, onCheckedChange = actions::updateQuickEditAutoPublish)
@@ -28,8 +34,8 @@ fun QuickEditSettingsCard(settings: AppSettings, actions: AppSettingsDelegate) {
             checked = settings.hideComments, onCheckedChange = actions::updateHideComments)
         SettingToggleRow(label = stringResource(R.string.quick_edit_hide_empty_comments),
             checked = settings.hideEmptyComments, onCheckedChange = actions::updateHideEmptyComments)
-        var reactions by rememberSaveable { mutableStateOf(settings.quickReactions) }
-        OutlinedTextField(value = reactions, onValueChange = {
+        var reactions by rememberSaveable { mutableStateOf<String?>(null) }
+        OutlinedTextField(value = reactions ?: settings.quickReactions, onValueChange = {
             reactions = it
             actions.updateQuickReactions(it.trim().split(Regex("\\s+")).filter(String::isNotBlank)
                 .filter { token -> token.length <= 24 }.distinct().take(8).joinToString(" "))

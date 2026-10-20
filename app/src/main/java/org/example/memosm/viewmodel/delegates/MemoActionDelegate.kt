@@ -139,8 +139,8 @@ class MemoActionDelegateImpl(
         applyOptimistic()
         if (accountSession.isCurrent(context)) {
             onSuccess()
-            notifyOfflineSaved()
-            syncManager.pushPendingChanges()
+            if (!isOnlineProvider()) notifyOfflineSaved()
+            if (isOnlineProvider()) syncManager.pushPendingChanges()
         }
     }
 
@@ -195,31 +195,31 @@ class MemoActionDelegateImpl(
             val attachmentsPending = memo.attachments.orEmpty().any { it.name.isNullOrBlank() && it.clientId != null }
             if (durable || !wasOnline || attachmentsPending) {
                 try {
-                // Offline: queue the create and show the memo locally right away.
-                val tempName = "offline-$clientId"
-                // Stamp local timestamps so the optimistic memo sorts to the
-                // top of the list (null displayTime would sort to the bottom).
-                val now = Clock.System.now()
-                val localMemo = memo.copy(
-                    name = tempName,
-                    state = MemoState.NORMAL,
-                    createTime = now,
-                    updateTime = now,
-                    displayTime = now
-                )
-                applyOffline(
-                    context,
-                    PendingOp.new(
-                        accountId = accountId,
-                        type = PendingOpType.CREATE,
-                        memoName = tempName,
-                        payloadJson = gson.toJson(localMemo),
-                        id = clientId
-                    ),
-                    onSuccess
-                ) {
-                    applyLocalCreate(context, localMemo, draftIdToDelete)
-                }
+                    // Offline: queue the create and show the memo locally right away.
+                    val tempName = "offline-$clientId"
+                    // Stamp local timestamps so the optimistic memo sorts to the
+                    // top of the list (null displayTime would sort to the bottom).
+                    val now = Clock.System.now()
+                    val localMemo = memo.copy(
+                        name = tempName,
+                        state = MemoState.NORMAL,
+                        createTime = now,
+                        updateTime = now,
+                        displayTime = now
+                    )
+                    applyOffline(
+                        context,
+                        PendingOp.new(
+                            accountId = accountId,
+                            type = PendingOpType.CREATE,
+                            memoName = tempName,
+                            payloadJson = gson.toJson(localMemo),
+                            id = clientId
+                        ),
+                        onSuccess
+                    ) {
+                        applyLocalCreate(context, localMemo, draftIdToDelete)
+                    }
                 } catch (e: CancellationException) { throw e }
                 catch (e: Exception) {
                     reportOperationFailure(context, e)
@@ -347,9 +347,9 @@ class MemoActionDelegateImpl(
         scope.launch {
             if (durable || !wasOnline) {
                 try {
-                applyOffline(context, pendingOp, onSuccess) {
-                    applyLocalUpdate(context, memo, update)
-                }
+                    applyOffline(context, pendingOp, onSuccess) {
+                        applyLocalUpdate(context, memo, update)
+                    }
                 } catch (e: CancellationException) { throw e }
                 catch (e: Exception) {
                     reportOperationFailure(context, e)
@@ -519,9 +519,9 @@ class MemoActionDelegateImpl(
         scope.launch {
             if (durable || !wasOnline) {
                 try {
-                applyOffline(context, pendingOp, onSuccess) {
-                    applyLocalComment(context, localComment, parentName)
-                }
+                    applyOffline(context, pendingOp, onSuccess) {
+                        applyLocalComment(context, localComment, parentName)
+                    }
                 } catch (e: CancellationException) { throw e }
                 catch (e: Exception) {
                     reportOperationFailure(context, e)
