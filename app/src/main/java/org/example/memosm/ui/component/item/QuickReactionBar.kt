@@ -9,12 +9,10 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddReaction
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +26,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -48,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import org.example.memosm.R
+import kotlin.math.abs
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -62,8 +62,8 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
     val margin = with(density) { 8.dp.roundToPx() }
-    val radiusDp = if (choices.size > 5) 82.dp else 56.dp
-    val outerDp = radiusDp + 24.dp
+    val radiusDp = if (choices.size > 5) 100.dp else 60.dp
+    val outerDp = radiusDp + 22.dp
     val paddingDp = 12.dp
     val gutterDp = 20.dp
     val centerXDp = paddingDp + gutterDp
@@ -72,7 +72,8 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
     val centerY = with(density) { centerYDp.toPx() }
     val innerRadius = with(density) { (radiusDp - 18.dp).toPx() }
     val outerRadius = with(density) { (radiusDp + 22.dp).toPx() }
-    val edgeTolerance = with(density) { 12.dp.toPx() }
+    val choiceHalfAngle = 65 * PI / 180
+    val hitHalfAngle = if (choices.size == 1) 20 * PI / 180 else 78 * PI / 180
     val armDistance = with(density) { 14.dp.toPx() }
     var anchor by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var holding by remember { mutableStateOf(false) }
@@ -89,14 +90,21 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
         GenericShape { size, _ ->
             val gutter = with(density) { gutterDp.toPx() }
             val radius = size.height / 2
-            val corner = with(density) { 20.dp.toPx() }
-            moveTo(gutter, 0f)
-            cubicTo(gutter + radius * .5523f, 0f, size.width, radius * .4477f, size.width, radius)
-            cubicTo(size.width, radius * 1.5523f, gutter + radius * .5523f, size.height, gutter, size.height)
-            lineTo(corner, size.height)
-            quadraticTo(0f, size.height, 0f, size.height - corner)
-            lineTo(0f, corner)
-            quadraticTo(0f, 0f, corner, 0f)
+            val edgeAngle = 80 * PI / 180
+            val roundAngle = 74 * PI / 180
+            val rounding = with(density) { 10.dp.toPx() }
+            val neutralRadius = with(density) { 20.dp.toPx() }
+            fun x(r: Float, angle: Double) = gutter + r * cos(angle).toFloat()
+            fun y(r: Float, angle: Double) = radius + r * sin(angle).toFloat()
+            moveTo(x(neutralRadius, -edgeAngle), y(neutralRadius, -edgeAngle))
+            lineTo(x(radius - rounding, -edgeAngle), y(radius - rounding, -edgeAngle))
+            quadraticTo(x(radius, -edgeAngle), y(radius, -edgeAngle),
+                x(radius, -roundAngle), y(radius, -roundAngle))
+            arcTo(Rect(gutter - radius, 0f, gutter + radius, size.height), -74f, 148f, false)
+            quadraticTo(x(radius, edgeAngle), y(radius, edgeAngle),
+                x(radius - rounding, edgeAngle), y(radius - rounding, edgeAngle))
+            lineTo(x(neutralRadius, edgeAngle), y(neutralRadius, edgeAngle))
+            quadraticTo(gutter, radius, x(neutralRadius, -edgeAngle), y(neutralRadius, -edgeAngle))
             close()
         }
     }
@@ -113,11 +121,11 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
                 val windowPoint = anchor?.takeIf { it.isAttached }?.localToWindow(pointer)
                 val delta = windowPoint?.minus(Offset(origin.x + centerX, origin.y + centerY))
                 val distance = delta?.getDistance() ?: 0f
+                val angle = delta?.let { atan2(it.y.toDouble(), it.x.toDouble()) } ?: 0.0
                 val next = if (!ready || !armed || choices.isEmpty() || delta == null ||
-                    distance < innerRadius || distance > outerRadius || delta.x < -edgeTolerance) null else {
-                    val angle = atan2(delta.y.toDouble(), delta.x.toDouble()).coerceIn(-PI / 2, PI / 2)
+                    distance < innerRadius || distance > outerRadius || abs(angle) > hitHalfAngle) null else {
                     val index = if (choices.size == 1) 0 else
-                        ((angle + PI / 2) / (PI / (choices.size - 1))).roundToInt()
+                        ((angle + choiceHalfAngle) / (2 * choiceHalfAngle / (choices.size - 1))).roundToInt()
                     choices[index.coerceIn(choices.indices)]
                 }
                 if (next != hover) {
@@ -179,20 +187,10 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
                         border = BorderStroke(.5.dp, outline.copy(alpha = .4f)),
                         shadowElevation = 8.dp, tonalElevation = 3.dp
                     ) {}
-                    Surface(onClick = { holding = false; hover = null; ready = false },
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        modifier = Modifier.absoluteOffset(x = centerXDp - 18.dp, y = centerYDp - 18.dp).size(36.dp)) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.common_cancel),
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
                     choices.forEachIndexed { index, emoji ->
-                        val angle = if (choices.size == 1) 0.0 else -PI / 2 + index * PI / (choices.size - 1)
-                        val x = centerXDp + radiusDp * cos(angle).toFloat() - 18.dp
-                        val y = centerYDp + radiusDp * sin(angle).toFloat() - 18.dp
+                        val angle = if (choices.size == 1) 0.0 else -choiceHalfAngle + index * 2 * choiceHalfAngle / (choices.size - 1)
+                        val x = centerXDp + radiusDp * cos(angle).toFloat() - 16.dp
+                        val y = centerYDp + radiusDp * sin(angle).toFloat() - 16.dp
                         val selected = hover == emoji
                         val scale by animateFloatAsState(if (selected) 1.15f else 1f,
                             animationSpec = spring(dampingRatio = .7f, stiffness = 650f), label = "reactionScale")
@@ -201,7 +199,7 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
                         Surface(onClick = {
                             holding = false; hover = null; ready = false
                             react(emoji)
-                        }, modifier = Modifier.absoluteOffset(x = x, y = y).size(36.dp)
+                        }, modifier = Modifier.absoluteOffset(x = x, y = y).size(32.dp)
                             .graphicsLayer { scaleX = scale; scaleY = scale },
                             shape = RoundedCornerShape(12.dp), color = color) {
                             Box(contentAlignment = Alignment.Center) {
