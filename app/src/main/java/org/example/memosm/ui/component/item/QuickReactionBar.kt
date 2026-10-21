@@ -1,13 +1,16 @@
 package org.example.memosm.ui.component.item
 
 import android.os.SystemClock
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddReaction
@@ -26,8 +29,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -59,18 +62,18 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
     val margin = with(density) { 8.dp.roundToPx() }
-    val radiusDp = if (choices.size > 5) 104.dp else 80.dp
-    val outerDp = radiusDp + 28.dp
+    val radiusDp = if (choices.size > 5) 82.dp else 56.dp
+    val outerDp = radiusDp + 24.dp
     val paddingDp = 12.dp
-    val gutterDp = 28.dp
+    val gutterDp = 20.dp
     val centerXDp = paddingDp + gutterDp
     val centerYDp = paddingDp + outerDp
     val centerX = with(density) { centerXDp.toPx() }
     val centerY = with(density) { centerYDp.toPx() }
-    val innerRadius = with(density) { (radiusDp - 26.dp).toPx() }
-    val outerRadius = with(density) { (radiusDp + 26.dp).toPx() }
+    val innerRadius = with(density) { (radiusDp - 18.dp).toPx() }
+    val outerRadius = with(density) { (radiusDp + 22.dp).toPx() }
     val edgeTolerance = with(density) { 12.dp.toPx() }
-    val armDistance = with(density) { 20.dp.toPx() }
+    val armDistance = with(density) { 14.dp.toPx() }
     var anchor by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var holding by remember { mutableStateOf(false) }
     var ready by remember { mutableStateOf(false) }
@@ -81,17 +84,19 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
     var origin by remember { mutableStateOf(IntOffset.Zero) }
     val hint = stringResource(R.string.quick_edit_reaction_hint)
     val panelColor = MaterialTheme.colorScheme.surfaceContainer
-    val ringColor = MaterialTheme.colorScheme.surfaceContainerHigh
     val outline = MaterialTheme.colorScheme.outlineVariant
-    val primary = MaterialTheme.colorScheme.primary
     val panelShape = remember(density, outerDp) {
         GenericShape { size, _ ->
             val gutter = with(density) { gutterDp.toPx() }
             val radius = size.height / 2
+            val corner = with(density) { 20.dp.toPx() }
             moveTo(gutter, 0f)
-            arcTo(Rect(gutter - radius, 0f, gutter + radius, size.height), -90f, 180f, false)
-            lineTo(0f, size.height)
-            lineTo(0f, 0f)
+            cubicTo(gutter + radius * .5523f, 0f, size.width, radius * .4477f, size.width, radius)
+            cubicTo(size.width, radius * 1.5523f, gutter + radius * .5523f, size.height, gutter, size.height)
+            lineTo(corner, size.height)
+            quadraticTo(0f, size.height, 0f, size.height - corner)
+            lineTo(0f, corner)
+            quadraticTo(0f, 0f, corner, 0f)
             close()
         }
     }
@@ -171,42 +176,34 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
                         modifier = Modifier.absoluteOffset(x = paddingDp, y = paddingDp)
                             .size(width = gutterDp + outerDp, height = outerDp * 2),
                         shape = panelShape, color = panelColor,
-                        border = BorderStroke(1.dp, outline),
-                        shadowElevation = 12.dp, tonalElevation = 4.dp
-                    ) {
-                        Canvas(Modifier.size(width = gutterDp + outerDp, height = outerDp * 2)) {
-                            val index = choices.indexOf(hover)
-                            if (index >= 0) {
-                                val radius = radiusDp.toPx()
-                                val step = if (choices.size == 1) 180f else 180f / (choices.size - 1)
-                                val angle = if (choices.size == 1) 0f else -90f + index * step
-                                val start = (angle - step / 2).coerceAtLeast(-90f)
-                                val end = (angle + step / 2).coerceAtMost(90f)
-                                drawArc(highlight, startAngle = start, sweepAngle = end - start,
-                                    useCenter = false,
-                                    topLeft = Offset(gutterDp.toPx() - radius, outerDp.toPx() - radius),
-                                    size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
-                                    style = Stroke(width = 50.dp.toPx()))
-                            }
-                        }
-                    }
-                    Surface(shape = CircleShape, color = ringColor,
-                        border = BorderStroke(1.dp, outline),
-                        modifier = Modifier.absoluteOffset(x = centerXDp - 24.dp, y = centerYDp - 24.dp).size(48.dp)) {
+                        border = BorderStroke(.5.dp, outline.copy(alpha = .4f)),
+                        shadowElevation = 8.dp, tonalElevation = 3.dp
+                    ) {}
+                    Surface(onClick = { holding = false; hover = null; ready = false },
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        modifier = Modifier.absoluteOffset(x = centerXDp - 18.dp, y = centerYDp - 18.dp).size(36.dp)) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.common_cancel),
+                                modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     choices.forEachIndexed { index, emoji ->
                         val angle = if (choices.size == 1) 0.0 else -PI / 2 + index * PI / (choices.size - 1)
-                        val x = centerXDp + radiusDp * cos(angle).toFloat() - 22.dp
-                        val y = centerYDp + radiusDp * sin(angle).toFloat() - 22.dp
-                        Surface(modifier = Modifier.absoluteOffset(x = x, y = y).size(44.dp),
-                            shape = CircleShape,
-                            border = BorderStroke(1.dp, if (hover == emoji) primary else outline),
-                            color = if (hover == emoji) highlight else ringColor,
-                            shadowElevation = if (hover == emoji) 4.dp else 1.dp) {
+                        val x = centerXDp + radiusDp * cos(angle).toFloat() - 18.dp
+                        val y = centerYDp + radiusDp * sin(angle).toFloat() - 18.dp
+                        val selected = hover == emoji
+                        val scale by animateFloatAsState(if (selected) 1.15f else 1f,
+                            animationSpec = spring(dampingRatio = .7f, stiffness = 650f), label = "reactionScale")
+                        val color by animateColorAsState(if (selected) highlight else Color.Transparent,
+                            label = "reactionHighlight")
+                        Surface(onClick = {
+                            holding = false; hover = null; ready = false
+                            react(emoji)
+                        }, modifier = Modifier.absoluteOffset(x = x, y = y).size(36.dp)
+                            .graphicsLayer { scaleX = scale; scaleY = scale },
+                            shape = RoundedCornerShape(12.dp), color = color) {
                             Box(contentAlignment = Alignment.Center) {
                                 Text(emoji, style = MaterialTheme.typography.headlineSmall)
                             }
