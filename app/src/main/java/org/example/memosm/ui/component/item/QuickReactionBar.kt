@@ -70,7 +70,7 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
     val centerYDp = paddingDp + outerDp
     val centerX = with(density) { centerXDp.toPx() }
     val centerY = with(density) { centerYDp.toPx() }
-    val innerRadius = with(density) { (radiusDp - 18.dp).toPx() }
+    val innerRadius = with(density) { (radiusDp - 22.dp).toPx() }
     val outerRadius = with(density) { (radiusDp + 22.dp).toPx() }
     val choiceHalfAngle = 65 * PI / 180
     val hitHalfAngle = if (choices.size == 1) 20 * PI / 180 else 78 * PI / 180
@@ -93,18 +93,23 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
             val edgeAngle = 80 * PI / 180
             val roundAngle = 74 * PI / 180
             val rounding = with(density) { 10.dp.toPx() }
-            val neutralRadius = with(density) { 20.dp.toPx() }
+            val neutralRadius = with(density) { (radiusDp - 22.dp).toPx() }
             fun x(r: Float, angle: Double) = gutter + r * cos(angle).toFloat()
             fun y(r: Float, angle: Double) = radius + r * sin(angle).toFloat()
-            moveTo(x(neutralRadius, -edgeAngle), y(neutralRadius, -edgeAngle))
+            moveTo(x(neutralRadius + rounding, -edgeAngle), y(neutralRadius + rounding, -edgeAngle))
             lineTo(x(radius - rounding, -edgeAngle), y(radius - rounding, -edgeAngle))
             quadraticTo(x(radius, -edgeAngle), y(radius, -edgeAngle),
                 x(radius, -roundAngle), y(radius, -roundAngle))
             arcTo(Rect(gutter - radius, 0f, gutter + radius, size.height), -74f, 148f, false)
             quadraticTo(x(radius, edgeAngle), y(radius, edgeAngle),
                 x(radius - rounding, edgeAngle), y(radius - rounding, edgeAngle))
-            lineTo(x(neutralRadius, edgeAngle), y(neutralRadius, edgeAngle))
-            quadraticTo(gutter, radius, x(neutralRadius, -edgeAngle), y(neutralRadius, -edgeAngle))
+            lineTo(x(neutralRadius + rounding, edgeAngle), y(neutralRadius + rounding, edgeAngle))
+            quadraticTo(x(neutralRadius, edgeAngle), y(neutralRadius, edgeAngle),
+                x(neutralRadius, roundAngle), y(neutralRadius, roundAngle))
+            arcTo(Rect(gutter - neutralRadius, radius - neutralRadius,
+                gutter + neutralRadius, radius + neutralRadius), 74f, -148f, false)
+            quadraticTo(x(neutralRadius, -edgeAngle), y(neutralRadius, -edgeAngle),
+                x(neutralRadius + rounding, -edgeAngle), y(neutralRadius + rounding, -edgeAngle))
             close()
         }
     }
