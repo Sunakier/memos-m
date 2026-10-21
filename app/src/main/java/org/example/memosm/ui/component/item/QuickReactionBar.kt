@@ -62,14 +62,15 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
     val margin = with(density) { 8.dp.roundToPx() }
-    val choiceHalfAngle = 70 * PI / 180
+    val choiceArcDegrees = 85f
+    val choiceHalfAngle = choiceArcDegrees * PI / 180
     // Adjacent 48dp touch targets must not overlap, including custom sets of up to eight.
-    val radiusDp = max(80f, if (choices.size > 1)
-        (48 / (2 * sin(choiceHalfAngle / (choices.size - 1)))).toFloat() else 80f).dp
+    val radiusDp = max(68f, if (choices.size > 1)
+        (48 / (2 * sin(choiceHalfAngle / (choices.size - 1)))).toFloat() else 68f).dp
     val bandHalfDp = 28.dp
     val outerDp = radiusDp + bandHalfDp
     val paddingDp = 12.dp
-    val gutterDp = 20.dp
+    val gutterDp = 28.dp
     val centerXDp = paddingDp + gutterDp
     val centerYDp = paddingDp + outerDp
     val centerX = with(density) { centerXDp.toPx() }
@@ -101,11 +102,11 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
                 return Rect(x - cap, y - cap, x + cap, y + cap)
             }
             // A constant-width arc with true semicircular ends, tangent to both rims.
-            arcTo(Rect(gutter - radius, 0f, gutter + radius, size.height), -70f, 140f, true)
-            arcTo(capBounds(choiceHalfAngle), 70f, 180f, false)
+            arcTo(Rect(gutter - radius, 0f, gutter + radius, size.height), -choiceArcDegrees, choiceArcDegrees * 2, true)
+            arcTo(capBounds(choiceHalfAngle), choiceArcDegrees, 180f, false)
             arcTo(Rect(gutter - inner, radius - inner, gutter + inner, radius + inner),
-                70f, -140f, false)
-            arcTo(capBounds(-choiceHalfAngle), 110f, 180f, false)
+                choiceArcDegrees, -choiceArcDegrees * 2, false)
+            arcTo(capBounds(-choiceHalfAngle), 180f - choiceArcDegrees, 180f, false)
             close()
         }
     }
