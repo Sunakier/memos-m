@@ -1,6 +1,7 @@
 package org.example.memosm.ui.component
 
 import DeleteConfirmationDialog
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
@@ -8,14 +9,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -36,7 +37,10 @@ import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Forum
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -92,8 +97,6 @@ fun MemoDetailView(
     var commentsOverride by rememberSaveable(memo.name) { mutableStateOf<Boolean?>(null) }
     val showComments = commentsOverride ?: !(uiState.appSettings.hideComments ||
         (uiState.appSettings.hideEmptyComments && comments.items.isEmpty()))
-    var listCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
-    var memoBottom by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     val listState = rememberLazyListState()
     var isFabExpanded by remember { mutableStateOf(true) }
 
@@ -184,14 +187,7 @@ fun MemoDetailView(
                     modifier = Modifier
                         .fillMaxSize() // Use fillMaxSize instead of fillMaxHeight
                         .widthIn(max = 800.dp)
-                        .padding(horizontal = 16.dp)
-                        .onGloballyPositioned { listCoordinates = it }
-                        .pointerInput(isOwner, showComments, memo) {
-                            if (isOwner && !showComments) detectTapGestures(onDoubleTap = { point ->
-                                val y = listCoordinates?.takeIf { it.isAttached }?.localToWindow(point)?.y
-                                if (y != null && y > memoBottom) onEditMemo(memo)
-                            })
-                        },
+                        .padding(horizontal = 16.dp),
                     contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -199,7 +195,32 @@ fun MemoDetailView(
                     // Original memo
                     item(key = "original_${memo.name ?: memo.content.hashCode()}") {
                         MemoItem(
-                            modifier = Modifier.onGloballyPositioned { memoBottom = it.boundsInWindow().bottom },
+                            modifier = if (isOwner) Modifier.pointerInput(memo, onEditMemo) {
+                                var previousUpTime = 0L
+                                var previousPosition = Offset.Zero
+                                awaitEachGesture {
+                                    // Observe before selectable Markdown handles its own double tap.
+                                    // Single taps and long presses still belong to child controls.
+                                    val down = awaitFirstDown(requireUnconsumed = false,
+                                        pass = PointerEventPass.Initial)
+                                    val up = waitForUpOrCancellation(pass = PointerEventPass.Initial)
+                                    if (up != null && up.uptimeMillis - down.uptimeMillis <
+                                        viewConfiguration.longPressTimeoutMillis &&
+                                        (up.position - down.position).getDistance() < viewConfiguration.touchSlop) {
+                                        val elapsed = up.uptimeMillis - previousUpTime
+                                        if (elapsed in viewConfiguration.doubleTapMinTimeMillis..
+                                            viewConfiguration.doubleTapTimeoutMillis &&
+                                            (up.position - previousPosition).getDistance() < viewConfiguration.touchSlop * 2) {
+                                            up.consume()
+                                            previousUpTime = 0L
+                                            onEditMemo(memo)
+                                        } else {
+                                            previousUpTime = up.uptimeMillis
+                                            previousPosition = up.position
+                                        }
+                                    } else previousUpTime = 0L
+                                }
+                            } else Modifier,
                             memo = memo,
                             user = uiState.users[memo.creator],
                             currentUser = uiState.session.currUser,
@@ -237,23 +258,33 @@ fun MemoDetailView(
                             reactionOptions = reactionOptions)
                     }
 
-                    if (isOwner) {
-                        item(key = "quick_edit_blank") {
-                            Box(Modifier.fillMaxWidth().heightIn(min = 72.dp)
-                                .pointerInput(memo, onEditMemo) {
-                                    detectTapGestures(onDoubleTap = { onEditMemo(memo) })
-                                }, contentAlignment = Alignment.Center) {
-                                Text(stringResource(R.string.quick_edit_blank_hint),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-                            }
-                        }
-                    }
                     item(key = "comments_toggle") {
-                        TextButton(onClick = { commentsOverride = !showComments }) {
+                        val arrowRotation by animateFloatAsState(
+                            targetValue = if (showComments) 180f else 0f,
+                            label = "commentsToggleRotation"
+                        )
+                        FilledTonalButton(
+                            onClick = { commentsOverride = !showComments },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                            shape = MaterialTheme.shapes.medium,
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            Icon(Icons.Outlined.Forum, contentDescription = null,
+                                modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(12.dp))
                             Text(stringResource(if (showComments) R.string.quick_edit_hide_comments_action
-                                else R.string.quick_edit_show_comments))
+                                else R.string.quick_edit_show_comments),
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.labelLarge)
+                            Text(comments.items.size.toString(),
+                                style = MaterialTheme.typography.labelMedium)
+                            Spacer(Modifier.width(8.dp))
+                            Icon(Icons.Outlined.ExpandMore, contentDescription = null,
+                                modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = arrowRotation })
                         }
                     }
                     if (showComments) {
