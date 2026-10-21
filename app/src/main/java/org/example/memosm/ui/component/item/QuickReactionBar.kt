@@ -5,11 +5,13 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AddReaction
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -44,9 +46,8 @@ import org.example.memosm.R
 
 /** A long press previews; only a deliberate release over a target sends a reaction. */
 @Composable
-fun QuickReactionBar(options: List<String>, selected: Set<String>, onReact: (String) -> Unit) {
+fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPicker: () -> Unit) {
     val choices = options.distinct().take(8)
-    if (choices.isEmpty()) return
     val react by rememberUpdatedState(onReact)
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
@@ -63,7 +64,7 @@ fun QuickReactionBar(options: List<String>, selected: Set<String>, onReact: (Str
         val now = SystemClock.uptimeMillis()
         if (now - lastSent >= 400) { lastSent = now; react(emoji) }
     }
-    Box(Modifier.fillMaxWidth().onGloballyPositioned { anchor = it }
+    Box(Modifier.size(48.dp).onGloballyPositioned { anchor = it }
         .semantics { contentDescription = hint }
         .pointerInput(choices) {
             var pointer = Offset.Zero
@@ -78,8 +79,8 @@ fun QuickReactionBar(options: List<String>, selected: Set<String>, onReact: (Str
                 }
             }
             detectDragGesturesAfterLongPress(
-                onDragStart = { pointer = it; hover = null; targets.clear(); holding = true
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                onDragStart = { pointer = it; hover = null; targets.clear(); holding = choices.isNotEmpty()
+                    if (holding) haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
                 onDrag = { change, delta -> change.consume(); pointer += delta; updateHover() },
                 onDragCancel = { holding = false; hover = null; targets.clear() },
                 onDragEnd = {
@@ -89,15 +90,10 @@ fun QuickReactionBar(options: List<String>, selected: Set<String>, onReact: (Str
                     if (chosen != null && SystemClock.uptimeMillis() - hoverSince >= 100) send(chosen)
                 })
         }) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            choices.forEach { emoji ->
-                Surface(onClick = { if (!holding) send(emoji) },
-                    modifier = Modifier.weight(1f).height(48.dp), shape = MaterialTheme.shapes.small,
-                    color = if (emoji in selected) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.surfaceContainerHigh) {
-                    Box(contentAlignment = Alignment.Center) { Text(emoji) }
-                }
-            }
+        IconButton(onClick = { if (!holding) onOpenPicker() }) {
+            Icon(Icons.Outlined.AddReaction,
+                contentDescription = stringResource(R.string.memo_action_add_reaction),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (holding) {
             Popup(popupPositionProvider = remember(gap) {
