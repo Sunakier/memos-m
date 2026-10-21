@@ -47,12 +47,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import org.example.memosm.R
-import kotlin.math.abs
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlin.math.max
 
 /** A short radial drag previews a reaction; returning to the center cancels it. */
 @Composable
@@ -62,18 +62,20 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
     val margin = with(density) { 8.dp.roundToPx() }
-    val radiusDp = if (choices.size > 5) 100.dp else 60.dp
-    val outerDp = radiusDp + 22.dp
+    val choiceHalfAngle = 70 * PI / 180
+    // Adjacent 48dp touch targets must not overlap, including custom sets of up to eight.
+    val radiusDp = max(80f, if (choices.size > 1)
+        (48 / (2 * sin(choiceHalfAngle / (choices.size - 1)))).toFloat() else 80f).dp
+    val bandHalfDp = 28.dp
+    val outerDp = radiusDp + bandHalfDp
     val paddingDp = 12.dp
     val gutterDp = 20.dp
     val centerXDp = paddingDp + gutterDp
     val centerYDp = paddingDp + outerDp
     val centerX = with(density) { centerXDp.toPx() }
     val centerY = with(density) { centerYDp.toPx() }
-    val innerRadius = with(density) { (radiusDp - 22.dp).toPx() }
-    val outerRadius = with(density) { (radiusDp + 22.dp).toPx() }
-    val choiceHalfAngle = 65 * PI / 180
-    val hitHalfAngle = if (choices.size == 1) 20 * PI / 180 else 78 * PI / 180
+    val ringRadius = with(density) { radiusDp.toPx() }
+    val bandHalf = with(density) { bandHalfDp.toPx() }
     val armDistance = with(density) { 14.dp.toPx() }
     var anchor by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var holding by remember { mutableStateOf(false) }
@@ -90,30 +92,24 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
         GenericShape { size, _ ->
             val gutter = with(density) { gutterDp.toPx() }
             val radius = size.height / 2
-            val edgeAngle = 80 * PI / 180
-            val roundAngle = 74 * PI / 180
-            val rounding = with(density) { 10.dp.toPx() }
-            val neutralRadius = with(density) { (radiusDp - 22.dp).toPx() }
-            fun x(r: Float, angle: Double) = gutter + r * cos(angle).toFloat()
-            fun y(r: Float, angle: Double) = radius + r * sin(angle).toFloat()
-            moveTo(x(neutralRadius + rounding, -edgeAngle), y(neutralRadius + rounding, -edgeAngle))
-            lineTo(x(radius - rounding, -edgeAngle), y(radius - rounding, -edgeAngle))
-            quadraticTo(x(radius, -edgeAngle), y(radius, -edgeAngle),
-                x(radius, -roundAngle), y(radius, -roundAngle))
-            arcTo(Rect(gutter - radius, 0f, gutter + radius, size.height), -74f, 148f, false)
-            quadraticTo(x(radius, edgeAngle), y(radius, edgeAngle),
-                x(radius - rounding, edgeAngle), y(radius - rounding, edgeAngle))
-            lineTo(x(neutralRadius + rounding, edgeAngle), y(neutralRadius + rounding, edgeAngle))
-            quadraticTo(x(neutralRadius, edgeAngle), y(neutralRadius, edgeAngle),
-                x(neutralRadius, roundAngle), y(neutralRadius, roundAngle))
-            arcTo(Rect(gutter - neutralRadius, radius - neutralRadius,
-                gutter + neutralRadius, radius + neutralRadius), 74f, -148f, false)
-            quadraticTo(x(neutralRadius, -edgeAngle), y(neutralRadius, -edgeAngle),
-                x(neutralRadius + rounding, -edgeAngle), y(neutralRadius + rounding, -edgeAngle))
+            val inner = with(density) { (radiusDp - bandHalfDp).toPx() }
+            val ring = with(density) { radiusDp.toPx() }
+            val cap = with(density) { bandHalfDp.toPx() }
+            fun capBounds(angle: Double): Rect {
+                val x = gutter + ring * cos(angle).toFloat()
+                val y = radius + ring * sin(angle).toFloat()
+                return Rect(x - cap, y - cap, x + cap, y + cap)
+            }
+            // A constant-width arc with true semicircular ends, tangent to both rims.
+            arcTo(Rect(gutter - radius, 0f, gutter + radius, size.height), -70f, 140f, true)
+            arcTo(capBounds(choiceHalfAngle), 70f, 180f, false)
+            arcTo(Rect(gutter - inner, radius - inner, gutter + inner, radius + inner),
+                70f, -140f, false)
+            arcTo(capBounds(-choiceHalfAngle), 110f, 180f, false)
             close()
         }
     }
-    val highlight = MaterialTheme.colorScheme.primaryContainer
+    val highlight = MaterialTheme.colorScheme.primary.copy(alpha = .14f)
 
     Box(Modifier.size(48.dp).onGloballyPositioned { anchor = it }
         .semantics { contentDescription = hint }
@@ -125,10 +121,14 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
                 if ((pointer - start).getDistance() >= armDistance) armed = true
                 val windowPoint = anchor?.takeIf { it.isAttached }?.localToWindow(pointer)
                 val delta = windowPoint?.minus(Offset(origin.x + centerX, origin.y + centerY))
-                val distance = delta?.getDistance() ?: 0f
                 val angle = delta?.let { atan2(it.y.toDouble(), it.x.toDouble()) } ?: 0.0
-                val next = if (!ready || !armed || choices.isEmpty() || delta == null ||
-                    distance < innerRadius || distance > outerRadius || abs(angle) > hitHalfAngle) null else {
+                val nearestAngle = if (choices.size == 1) 0.0 else
+                    angle.coerceIn(-choiceHalfAngle, choiceHalfAngle)
+                val ringPoint = Offset(ringRadius * cos(nearestAngle).toFloat(),
+                    ringRadius * sin(nearestAngle).toFloat())
+                // Match the visible rounded band, including its end caps and central dead zone.
+                val inBand = delta != null && (delta - ringPoint).getDistance() <= bandHalf
+                val next = if (!ready || !armed || choices.isEmpty() || !inBand) null else {
                     val index = if (choices.size == 1) 0 else
                         ((angle + choiceHalfAngle) / (2 * choiceHalfAngle / (choices.size - 1))).roundToInt()
                     choices[index.coerceIn(choices.indices)]
@@ -189,24 +189,24 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
                         modifier = Modifier.absoluteOffset(x = paddingDp, y = paddingDp)
                             .size(width = gutterDp + outerDp, height = outerDp * 2),
                         shape = panelShape, color = panelColor,
-                        border = BorderStroke(.5.dp, outline.copy(alpha = .4f)),
+                        border = BorderStroke(.5.dp, outline.copy(alpha = .25f)),
                         shadowElevation = 8.dp, tonalElevation = 3.dp
                     ) {}
                     choices.forEachIndexed { index, emoji ->
                         val angle = if (choices.size == 1) 0.0 else -choiceHalfAngle + index * 2 * choiceHalfAngle / (choices.size - 1)
-                        val x = centerXDp + radiusDp * cos(angle).toFloat() - 16.dp
-                        val y = centerYDp + radiusDp * sin(angle).toFloat() - 16.dp
+                        val x = centerXDp + radiusDp * cos(angle).toFloat() - 24.dp
+                        val y = centerYDp + radiusDp * sin(angle).toFloat() - 24.dp
                         val selected = hover == emoji
-                        val scale by animateFloatAsState(if (selected) 1.15f else 1f,
+                        val scale by animateFloatAsState(if (selected) 1.08f else 1f,
                             animationSpec = spring(dampingRatio = .7f, stiffness = 650f), label = "reactionScale")
                         val color by animateColorAsState(if (selected) highlight else Color.Transparent,
                             label = "reactionHighlight")
                         Surface(onClick = {
                             holding = false; hover = null; ready = false
                             react(emoji)
-                        }, modifier = Modifier.absoluteOffset(x = x, y = y).size(32.dp)
+                        }, modifier = Modifier.absoluteOffset(x = x, y = y).size(48.dp)
                             .graphicsLayer { scaleX = scale; scaleY = scale },
-                            shape = RoundedCornerShape(12.dp), color = color) {
+                            shape = RoundedCornerShape(24.dp), color = color) {
                             Box(contentAlignment = Alignment.Center) {
                                 Text(emoji, style = MaterialTheme.typography.headlineSmall)
                             }
