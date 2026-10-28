@@ -20,6 +20,8 @@
 -keep class org.example.memosm.data.backup.** { *; }
 # Per-account offline snapshots are (de)serialized by Gson.
 -keep class org.example.memosm.data.offline.** { *; }
+# Instrumentation checks the same production serializer on the minified canary.
+-keep class org.example.memosm.data.store.SnapshotGson { *; }
 # Durable outbox entries are (de)serialized by Gson.
 -keep class org.example.memosm.data.sync.PendingOp* { *; }
 

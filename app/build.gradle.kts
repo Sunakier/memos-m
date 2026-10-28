@@ -39,6 +39,14 @@ android {
         unitTests.isReturnDefaultValues = true
     }
 
+    // Keep debug as the normal instrumentation target; opt in to the R8-minified
+    // canary app when running the legacy-snapshot instrumentation check.
+    testBuildType = if (providers.gradleProperty("minifiedSnapshotTests").orNull?.toBoolean() == true) {
+        "canary"
+    } else {
+        "debug"
+    }
+
     // Opt-in ABI splits: debug and default builds keep the previous layout;
     // release-like builds pass -PabiSplits=true to produce per-ABI APKs plus
     // a universal APK containing every ABI.
@@ -68,11 +76,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Without -PabiSplits, keep the single APK to phone ABIs; the
-            // splits block below adds x86/x86_64 and a universal fallback.
-            if (!abiSplits) {
-                ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
-            }
             applicationIdSuffix = ".canary"
 
             val timestamp = SimpleDateFormat("yyyyMMddHHmm").format(Date())
@@ -88,9 +91,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            if (!abiSplits) {
-                ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
-            }
             applicationIdSuffix = ".insider"
 
             // Tag format is likely v1.1.1, so we strip the 'v' prefix
@@ -106,9 +106,6 @@ android {
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             )
-            if (!abiSplits) {
-                ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
-            }
             signingConfig = signingConfigs.getByName("release")
             manifestPlaceholders["appLabel"] = "MemosM"
         }
@@ -116,7 +113,7 @@ android {
 
     // Opt-in ABI splits (-PabiSplits=true): arm64-v8a, armeabi-v7a, x86, and
     // x86_64 APKs plus a universal APK containing every ABI. Without the
-    // flag, release-like builds keep a single arm-only APK.
+    // flag, release-like builds keep one APK with all supported ABIs.
     splits {
         abi {
             isEnable = abiSplits

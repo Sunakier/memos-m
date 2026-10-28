@@ -104,6 +104,14 @@ jobs:
           gzip -9 -c "$MAPPING" > memos-latest-mapping.txt.gz
           echo "MAPPING=memos-latest-mapping.txt.gz" >> $GITHUB_ENV
 
+      - name: Retain canary mapping by commit
+        uses: actions/upload-artifact@v7
+        with:
+          name: canary-mapping-${{ github.sha }}
+          path: memos-latest-mapping.txt.gz
+          if-no-files-found: error
+          retention-days: 90
+
       # -------------------------------
       # FORCE-UPDATE TAG
       # -------------------------------
@@ -134,6 +142,7 @@ jobs:
             Date: ${{ steps.timestamp.outputs.date }}
 
             This release is automatically updated on every push to main with the Canary build.
+            The matching mapping is also retained as the `canary-mapping-${{ github.sha }}` workflow artifact for 90 days.
 
             Download the APK for your device ABI: `arm64-v8a` (most phones), `armeabi-v7a` (older 32-bit devices), `x86` (32-bit emulators), `x86_64` (64-bit emulators), or `universal` (any ABI, larger download).
 

@@ -60,6 +60,9 @@ the app during authentication, start sign-in again.
 > `armeabi-v7a` (older 32-bit devices), `x86` (32-bit emulators),
 > `x86_64` (64-bit emulators), or `universal` (works on any ABI).
 > Each release also includes `mapping.txt.gz` for retracing crash reports.
+> CI Canary and Insider builds publish per-ABI APKs plus a universal APK.
+> A local release-like build stays a single APK with all supported ABIs unless
+> `-PabiSplits=true` is supplied.
 
 ### Stable Build
 
