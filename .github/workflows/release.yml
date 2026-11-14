@@ -1,0 +1,22 @@
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: memosm-distribution
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'Sunakier/memos-m'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/distribution.yml
+    with:
+      channel: stable
+    secrets: inherit

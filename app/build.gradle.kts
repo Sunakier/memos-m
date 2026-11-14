@@ -20,6 +20,14 @@ plugins {
     alias(libs.plugins.aboutlibraries)
 }
 
+val releaseVersion = Properties().apply {
+    rootProject.file("version.properties").inputStream().use { load(it) }
+}
+val distributionVersionCode = providers.gradleProperty("versionCodeOverride")
+    .orElse(releaseVersion.getProperty("versionCode")).map(String::toInt)
+val distributionVersionName = providers.gradleProperty("versionNameOverride")
+    .orElse(releaseVersion.getProperty("versionName"))
+
 android {
     namespace = "org.example.memosm"
     compileSdk = 37
@@ -29,8 +37,10 @@ android {
         applicationId = "top.lazyerpaper.memosm"
         minSdk = 24
         targetSdk = 37
-        versionCode = 103
-        versionName = "1.0.3"
+        versionCode = distributionVersionCode.get().also {
+            require(it in 1..2_100_000_000) { "Invalid Android versionCode" }
+        }
+        versionName = distributionVersionName.get()
         buildConfigField("String", "GIT_HASH", "\"${gitShortHash.get()}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

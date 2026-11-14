@@ -1,0 +1,169 @@
+name: Build and distribute
+
+on:
+  workflow_call:
+    inputs:
+      channel:
+        required: true
+        type: string
+    secrets:
+      KEYSTORE:
+        required: false
+      RELEASE_KEYSTORE_PASSWORD:
+        required: false
+      RELEASE_KEY_ALIAS:
+        required: false
+      RELEASE_KEY_PASSWORD:
+        required: false
+      GRADLE_CACHE_KEY:
+        required: false
+
+env:
+  EXPECTED_APP_ID: top.lazyerpaper.memosm
+  EXPECTED_SIGNER_SHA256: 17a7f4feee874fd644d60616d1938365467f07023acd30c9f71b8a8be49b7022
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Allocate version
+        id: version
+        uses: actions/github-script@v9
+        env:
+          RELEASE_CHANNEL: ${{ inputs.channel }}
+          DISTRIBUTE: ${{ inputs.channel == 'preview' }}
+        with:
+          script: |
+            if (!['check', 'preview', 'stable'].includes(process.env.RELEASE_CHANNEL)) {
+              throw new Error('Invalid distribution channel');
+            }
+            const allocate = require('./.github/scripts/allocate-version.cjs');
+            await allocate({ github, context, core });
+
+      - name: Set up JDK
+        if: steps.version.outputs.build == 'true'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        if: steps.version.outputs.build == 'true'
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-37.1 build-tools;36.0.0
+
+      - name: Set up Gradle
+        if: steps.version.outputs.build == 'true'
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+          cache-encryption-key: ${{ secrets.GRADLE_CACHE_KEY }}
+
+      - name: Run focused regression checks
+        if: steps.version.outputs.build == 'true'
+        run: >-
+          ./gradlew :app:testDebugUnitTest
+          --tests org.example.memosm.account.MemoEditorSubmissionTest
+          --tests org.example.memosm.account.MemoWriteAccountIsolationTest
+          --tests org.example.memosm.api.UnversionedApiTest
+          --console=plain
+
+      - name: Build validation APK
+        if: steps.version.outputs.build == 'true' && steps.version.outputs.publish != 'true'
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+        run: >-
+          ./gradlew :app:assembleDebug
+          -PversionNameOverride="$VERSION_NAME"
+          -PversionCodeOverride="$VERSION_CODE"
+          --console=plain
+
+      - name: Restore sealed assets for retry
+        id: restore
+        if: steps.version.outputs.build == 'true' && steps.version.outputs.publish == 'true'
+        uses: actions/github-script@v9
+        env:
+          VERSION_RECORD: ${{ steps.version.outputs.record }}
+          SOURCE_SHA: ${{ steps.version.outputs.sha }}
+        with:
+          script: |
+            const restore = require('./.github/scripts/restore-release-assets.cjs');
+            await restore({ github, context, core });
+
+      - name: Decode release keystore
+        if: steps.version.outputs.build == 'true' && steps.version.outputs.publish == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE }}
+        run: |
+          set -euo pipefail
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo '::error::Missing KEYSTORE; a distribution build requires the release key.'
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > app/release.keystore
+
+      - name: Build signed R8 APKs
+        if: steps.version.outputs.build == 'true' && steps.version.outputs.publish == 'true' && steps.restore.outputs.restored != 'true'
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+        run: >-
+          ./gradlew :app:assembleRelease -PabiSplits=true
+          -PversionCodeOverride="$VERSION_CODE"
+          -PversionNameOverride="$VERSION_NAME"
+          --console=plain
+
+      - name: Verify and collect distribution files
+        if: steps.version.outputs.build == 'true' && steps.version.outputs.publish == 'true'
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+          RESTORED: ${{ steps.restore.outputs.restored }}
+        run: bash .github/scripts/verify-release.sh
+
+      - name: Publish verified Release
+        if: steps.version.outputs.build == 'true' && steps.version.outputs.publish == 'true'
+        uses: actions/github-script@v9
+        env:
+          RELEASE_CHANNEL: ${{ inputs.channel }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+          SOURCE_SHA: ${{ steps.version.outputs.sha }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          VERSION_RECORD: ${{ steps.version.outputs.record }}
+        with:
+          script: |
+            const publish = require('./.github/scripts/publish-release.cjs');
+            await publish({ github, context, core });
+
+      - name: Upload validation APK
+        if: steps.version.outputs.build == 'true' && steps.version.outputs.publish != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: MemosM-check-${{ github.run_id }}-${{ github.run_attempt }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Preserve failed test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MemosM-test-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+          if-no-files-found: ignore
+          retention-days: 1
