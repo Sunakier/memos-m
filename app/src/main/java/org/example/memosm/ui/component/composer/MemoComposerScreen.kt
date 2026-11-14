@@ -1,5 +1,6 @@
 package org.example.memosm.ui.component.composer
 
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,13 +48,14 @@ fun MemoComposerScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     val scope = rememberCoroutineScope()
+    var exitRequested by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            if (!uiState.appSettings.immersiveEditing) TopAppBar(
                 title = { Text(title) },
                 navigationIcon = {
-                    ProfileBackButton(onClick = onDismiss)
+                    ProfileBackButton(onClick = { exitRequested++ })
                 }
             )
         },
@@ -74,8 +77,7 @@ fun MemoComposerScreen(
                 }
                 MemoComposer(
                     onPublish = { content, visibility, attachments, location ->
-                        scope.launch {
-                            if (!editorSession.beginSubmission()) return@launch
+                        if (editorSession.beginSubmission()) scope.launch {
                             val failed: () -> Unit = {
                                 editorSession.submissionFailed()
                             }
@@ -83,14 +85,15 @@ fun MemoComposerScreen(
                                 failed()
                                 return@launch
                             }
+                            val draftId = UUID.nameUUIDFromBytes(editorSession.request.draftId.toByteArray()).toString()
                             when {
                                 initialMemo != null -> viewModel.memoActionDelegate.updateMemo(
                                     initialMemo, content, visibility, attachments, location, onError = failed, onSuccess = onSubmitted)
                                 parentMemo != null -> viewModel.memoActionDelegate.createComment(
-                                    parentMemo, content, onError = failed, onSuccess = onSubmitted)
+                                    parentMemo, content, commentId = draftId, onError = failed, onSuccess = onSubmitted)
                                 else -> viewModel.memoActionDelegate.createMemo(content, visibility,
                                     attachments, location,
-                                    memoId = java.util.UUID.nameUUIDFromBytes(editorSession.request.draftId.toByteArray()).toString(),
+                                    memoId = draftId,
                                     onError = failed, onSuccess = onSubmitted)
                             }
                         }
@@ -103,6 +106,10 @@ fun MemoComposerScreen(
                     hostUrl = hostUrl,
                     isPosting = uiState.isPosting || editorSession.busy,
                     editorState = editorSession.state,
+                    onExit = onDismiss,
+                    autoPublishOnExit = uiState.appSettings.quickEditAutoPublish && mode != ComposerMode.COMMENT,
+                    hasChanges = if (mode == ComposerMode.PUBLISH) true else editorSession.hasChanges,
+                    exitRequested = exitRequested,
                     mode = mode,
                     modifier = Modifier
                         .weight(1f)

@@ -3,6 +3,7 @@ package org.example.memosm.ui.component.composer
 import android.content.Context
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -73,6 +74,10 @@ fun MemoComposer(
     isPosting: Boolean = false,
     editorState: ComposerState,
     onDiscardQueuedUpload: (String) -> Unit = {},
+    onExit: (() -> Unit)? = null,
+    autoPublishOnExit: Boolean = false,
+    hasChanges: Boolean = true,
+    exitRequested: Int = 0,
 ) {
     // Depending on the Composer Mode there will be different placeholder
     val placeholder =
@@ -200,6 +205,48 @@ fun MemoComposer(
             }
         }
 
+    val publish: () -> Unit = publish@{
+        if (isPosting || isUploadingCount > 0) return@publish
+        isUploadingCount++
+        scope.launch {
+            try {
+                val finalAttachments =
+                    collectComposerAttachments(
+                        draftAttachments,
+                        stage = { uri ->
+                            uploadingUris = uploadingUris + uri
+                            try {
+                                requireNotNull(onUploadFile(uri, context)) { "Could not save attachment" }
+                            } finally {
+                                uploadingUris = uploadingUris - uri
+                            }
+                        },
+                        onPrepared = { index, attachment ->
+                            draftAttachments =
+                                draftAttachments.mapIndexed { i, item ->
+                                    if (i == index) item.first to attachment else item
+                                }
+                        },
+                    )
+                onPublish(contentState.text, visibility, finalAttachments, location)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                android.util.Log.e("MemoComposer", "Could not prepare attachments", error)
+                Toast.makeText(context, R.string.common_operation_failed, Toast.LENGTH_SHORT).show()
+            } finally {
+                isUploadingCount--
+            }
+        }
+    }
+    val exit: () -> Unit = exit@{
+        if (isPosting || isUploadingCount > 0) return@exit
+        val hasContent = mode == ComposerMode.UPDATE || contentState.text.isNotBlank() || draftAttachments.isNotEmpty()
+        if (autoPublishOnExit && hasChanges && hasContent) publish() else onExit?.invoke()
+    }
+    LaunchedEffect(exitRequested) { if (exitRequested > 0) exit() }
+    if (onExit != null) BackHandler(onBack = exit)
+
     var componentWidth by remember { mutableStateOf(0.dp) }
 
     Column(
@@ -284,40 +331,7 @@ fun MemoComposer(
             onLocationFounded = { loc ->
                 location = loc
             },
-            onPublishClick = publish@{
-                if (isPosting || isUploadingCount > 0) return@publish
-                scope.launch {
-                    isUploadingCount++
-                    try {
-                        val finalAttachments =
-                            collectComposerAttachments(
-                                draftAttachments,
-                                stage = { uri ->
-                                    uploadingUris = uploadingUris + uri
-                                    try {
-                                        requireNotNull(onUploadFile(uri, context)) { "Could not save attachment" }
-                                    } finally {
-                                        uploadingUris = uploadingUris - uri
-                                    }
-                                },
-                                onPrepared = { index, attachment ->
-                                    draftAttachments =
-                                        draftAttachments.mapIndexed { i, item ->
-                                            if (i == index) item.first to attachment else item
-                                        }
-                                },
-                            )
-                        onPublish(contentState.text, visibility, finalAttachments, location)
-                    } catch (cancelled: kotlinx.coroutines.CancellationException) {
-                        throw cancelled
-                    } catch (error: Exception) {
-                        android.util.Log.e("MemoComposer", "Could not prepare attachments", error)
-                        Toast.makeText(context, R.string.common_operation_failed, Toast.LENGTH_SHORT).show()
-                    } finally {
-                        isUploadingCount--
-                    }
-                }
-            },
+            onPublishClick = publish,
         )
     }
 

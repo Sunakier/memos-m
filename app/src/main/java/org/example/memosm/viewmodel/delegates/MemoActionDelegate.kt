@@ -73,6 +73,7 @@ interface MemoActionDelegate {
     fun createComment(
         parentMemo: Memo,
         content: String,
+        commentId: String? = null,
         onError: () -> Unit = {},
         onSuccess: () -> Unit = {},
     )
@@ -304,12 +305,13 @@ class MemoActionDelegateImpl(
     override fun createComment(
         parentMemo: Memo,
         content: String,
+        commentId: String?,
         onError: () -> Unit,
         onSuccess: () -> Unit,
     ) {
         val context = accountSession.current ?: return
         val parent = parentMemo.name ?: return
-        val id = UUID.randomUUID().toString()
+        val id = commentId ?: UUID.randomUUID().toString()
         val creator =
             context.account.user?.name ?: uiState.value.session.currUser
                 ?.name

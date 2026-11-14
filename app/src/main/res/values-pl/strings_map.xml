@@ -16,4 +16,17 @@
     <string name="map_draft_here">Utwórz szkic tutaj</string>
     <string name="map_place_count">Notatki tutaj: %1$d</string>
     <string name="map_place_empty">Brak notatek w tej lokalizacji.</string>
+    <string name="quick_edit_title">Szybka edycja</string>
+    <string name="quick_edit_auto_publish">Publikuj przy wyjściu</string>
+    <string name="quick_edit_auto_publish_description">Przerwa zapisuje lokalnie; wyjście z edytora publikuje.</string>
+    <string name="quick_edit_immersive">Edycja bez rozpraszania</string>
+    <string name="quick_edit_hide_comments">Domyślnie zwijaj komentarze</string>
+    <string name="quick_edit_hide_empty_comments">Zwijaj puste komentarze</string>
+    <string name="quick_edit_reactions">Szybkie reakcje</string>
+    <string name="quick_edit_reactions_description">Tylko lokalnie. Do 8 reakcji oddzielonych spacjami. Wyczyść, aby ukryć.</string>
+    <string name="quick_edit_show_comments">Pokaż komentarze</string>
+    <string name="quick_edit_hide_comments_action">Ukryj komentarze</string>
+    <string name="quick_edit_blank_hint">Dotknij dwukrotnie, aby edytować</string>
+    <string name="quick_edit_reaction_hint">Przytrzymaj, przeciągnij i puść, aby zareagować. Przesuń poza panel, aby anulować.</string>
+    <string name="quick_edit_saved">Zapisano lokalnie; publikacja zostanie wznowiona po połączeniu.</string>
 </resources>

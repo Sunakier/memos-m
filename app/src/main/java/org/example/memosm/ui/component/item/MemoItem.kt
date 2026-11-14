@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -119,6 +118,7 @@ fun MemoItem(
     maxHeight: Dp = Dp.Unspecified,
     isDetailView: Boolean = false,
     reactionOptions: List<String> = emptyList(),
+    quickReactionOptions: List<String> = emptyList(),
     headerScale: Float,
     onHashtagClick: ((String) -> Unit)? = null,
 ) {
@@ -535,69 +535,12 @@ fun MemoItem(
                     }
                 }
 
-                // Reactions
-                val reactions =
-                    remember(memo.reactions) {
-                        memo.reactions ?: emptyList()
-                    }
-                if (reactions.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    val groupedReactions =
-                        remember(reactions) {
-                            reactions.groupBy { it.reactionType }
-                        }
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        groupedReactions.forEach { (type, reactionList) ->
-                            val myReaction = reactionList.find { it.creator == currentUser?.name }
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color =
-                                    if (myReaction != null) {
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    } else {
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                    },
-                                border =
-                                    if (myReaction != null) {
-                                        null
-                                    } else {
-                                        null
-                                    },
-                                onClick = {
-                                    if (myReaction != null) {
-                                        // Pass the emoji type or the reaction name to the viewmodel
-                                        onDeleteReaction?.invoke(myReaction)
-                                    } else {
-                                        onUpsertReaction?.invoke(type)
-                                    }
-                                },
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(
-                                        text = type,
-                                        style = MaterialTheme.typography.labelMedium,
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = reactionList.size.toString(),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color =
-                                            if (myReaction != null) {
-                                                MaterialTheme.colorScheme.onPrimaryContainer
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                            },
-                                    )
-                                }
-                            }
-                        }
-                    }
+                if (isDetailView && currentUser != null && onUpsertReaction != null && memo.name != null) {
+                    QuickReactionBar(
+                        options = quickReactionOptions.ifEmpty { reactionOptions },
+                        onReact = onUpsertReaction,
+                        onOpenPicker = { showReactionPicker = true },
+                    )
                 }
             }
         }
@@ -739,7 +682,7 @@ fun MemoItem(
 
     if (showReactionPicker) {
         ReactionPickerDialog(
-            reactionOptions = reactionOptions,
+            reactionOptions = (quickReactionOptions + reactionOptions).distinct(),
             onDismiss = { showReactionPicker = false },
             onReactionSelected = { emoji ->
                 onUpsertReaction?.invoke(emoji)

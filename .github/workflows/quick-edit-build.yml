@@ -1,0 +1,62 @@
+name: QuickEdit Build CI
+
+on:
+  push:
+    branches: ["feature/quick-edit"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quick-edit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-37.1
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: wrapper
+
+      - name: Build APK and test editor writes
+        run: >-
+          ./gradlew :app:assembleDebug :app:testDebugUnitTest
+          --tests org.example.memosm.account.MemoEditorSubmissionTest
+          --tests org.example.memosm.account.MemoWriteAccountIsolationTest
+          --console=plain
+
+      - name: Upload QuickEdit APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MemosM-QuickEdit-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuickEdit-test-results-${{ github.sha }}
+          path: |
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+          if-no-files-found: ignore
