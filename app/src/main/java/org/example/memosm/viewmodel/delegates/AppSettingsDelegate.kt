@@ -8,6 +8,12 @@ import org.example.memosm.data.DataStoreManager
 import org.example.memosm.viewmodel.MemosUiState
 
 interface AppSettingsDelegate {
+    fun loadQuickEditSettings()
+    fun updateQuickEditAutoPublish(value: Boolean)
+    fun updateImmersiveEditing(value: Boolean)
+    fun updateHideComments(value: Boolean)
+    fun updateHideEmptyComments(value: Boolean)
+    fun updateQuickReactions(value: String)
     fun loadPageSize()
     fun loadHeaderScale()
     fun updatePageSize(size: Int)
@@ -33,6 +39,54 @@ class AppSettingsDelegateImpl(
     private val onPageSizeChanged: () -> Unit,
     private val onOfflineSettingsChanged: () -> Unit = {}
 ) : AppSettingsDelegate {
+
+    override fun loadQuickEditSettings() {
+        scope.launch {
+            dataStoreManager.quickEditAutoPublish.collect { value ->
+                uiState.update { it.copy(appSettings = it.appSettings.copy(quickEditAutoPublish = value)) }
+            }
+        }
+        scope.launch {
+            dataStoreManager.immersiveEditing.collect { value ->
+                uiState.update { it.copy(appSettings = it.appSettings.copy(immersiveEditing = value)) }
+            }
+        }
+        scope.launch {
+            dataStoreManager.hideComments.collect { value ->
+                uiState.update { it.copy(appSettings = it.appSettings.copy(hideComments = value)) }
+            }
+        }
+        scope.launch {
+            dataStoreManager.hideEmptyComments.collect { value ->
+                uiState.update { it.copy(appSettings = it.appSettings.copy(hideEmptyComments = value)) }
+            }
+        }
+        scope.launch {
+            dataStoreManager.quickReactions.collect { value ->
+                uiState.update { it.copy(appSettings = it.appSettings.copy(quickReactions = value)) }
+            }
+        }
+    }
+
+    override fun updateQuickEditAutoPublish(value: Boolean) {
+        scope.launch { dataStoreManager.saveQuickEditAutoPublish(value) }
+    }
+
+    override fun updateImmersiveEditing(value: Boolean) {
+        scope.launch { dataStoreManager.saveImmersiveEditing(value) }
+    }
+
+    override fun updateHideComments(value: Boolean) {
+        scope.launch { dataStoreManager.saveHideComments(value) }
+    }
+
+    override fun updateHideEmptyComments(value: Boolean) {
+        scope.launch { dataStoreManager.saveHideEmptyComments(value) }
+    }
+
+    override fun updateQuickReactions(value: String) {
+        scope.launch { dataStoreManager.saveQuickReactions(value) }
+    }
 
     override fun loadPageSize() {
         scope.launch {

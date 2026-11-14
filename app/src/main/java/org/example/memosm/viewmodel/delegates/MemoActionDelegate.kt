@@ -57,6 +57,7 @@ interface MemoActionDelegate {
         attachments: List<Attachment>? = null,
         location: Location? = null,
         memoId: String? = null,
+        durable: Boolean = false,
         onError: () -> Unit = {},
         onSuccess: () -> Unit = {}
     )
@@ -68,13 +69,14 @@ interface MemoActionDelegate {
         attachments: List<Attachment>,
         location: Location? = null,
         state: MemoState? = null,
+        durable: Boolean = false,
         onError: () -> Unit = {},
         onSuccess: () -> Unit = {}
     )
 
     fun deleteMemo(memo: Memo, onSuccess: () -> Unit = {})
     fun updateMemoPinned(memo: Memo, pinned: Boolean, onSuccess: () -> Unit = {})
-    fun createComment(parentMemo: Memo, content: String, onError: () -> Unit = {}, onSuccess: () -> Unit = {})
+    fun createComment(parentMemo: Memo, content: String, durable: Boolean = false, commentId: String? = null, onError: () -> Unit = {}, onSuccess: () -> Unit = {})
     suspend fun uploadAttachment(uri: Uri, context: Context): Attachment?
 
     /** Discard a queued offline upload once nothing references its placeholder anymore. */
@@ -137,7 +139,8 @@ class MemoActionDelegateImpl(
         applyOptimistic()
         if (accountSession.isCurrent(context)) {
             onSuccess()
-            notifyOfflineSaved()
+            if (!isOnlineProvider()) notifyOfflineSaved()
+            if (isOnlineProvider()) syncManager.pushPendingChanges()
         }
     }
 
@@ -161,6 +164,7 @@ class MemoActionDelegateImpl(
         attachments: List<Attachment>?,
         location: Location?,
         memoId: String?,
+        durable: Boolean,
         onError: () -> Unit,
         onSuccess: () -> Unit
     ) {
@@ -177,6 +181,7 @@ class MemoActionDelegateImpl(
         val clientId = memoId ?: UUID.randomUUID().toString()
         var memo = Memo(
             content = content,
+            creator = currentUser()?.name,
             visibility = visibility,
             attachments = attachments,
             location = location
@@ -188,31 +193,37 @@ class MemoActionDelegateImpl(
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { reportOperationFailure(context, error); if (accountSession.isCurrent(context)) onError(); return@launch }
             val attachmentsPending = memo.attachments.orEmpty().any { it.name.isNullOrBlank() && it.clientId != null }
-            if (!wasOnline || attachmentsPending) {
-                // Offline: queue the create and show the memo locally right away.
-                val tempName = "offline-$clientId"
-                // Stamp local timestamps so the optimistic memo sorts to the
-                // top of the list (null displayTime would sort to the bottom).
-                val now = Clock.System.now()
-                val localMemo = memo.copy(
-                    name = tempName,
-                    state = MemoState.NORMAL,
-                    createTime = now,
-                    updateTime = now,
-                    displayTime = now
-                )
-                applyOffline(
-                    context,
-                    PendingOp.new(
-                        accountId = accountId,
-                        type = PendingOpType.CREATE,
-                        memoName = tempName,
-                        payloadJson = gson.toJson(localMemo),
-                        id = clientId
-                    ),
-                    onSuccess
-                ) {
-                    applyLocalCreate(context, localMemo, draftIdToDelete)
+            if (durable || !wasOnline || attachmentsPending) {
+                try {
+                    // Offline: queue the create and show the memo locally right away.
+                    val tempName = "offline-$clientId"
+                    // Stamp local timestamps so the optimistic memo sorts to the
+                    // top of the list (null displayTime would sort to the bottom).
+                    val now = Clock.System.now()
+                    val localMemo = memo.copy(
+                        name = tempName,
+                        state = MemoState.NORMAL,
+                        createTime = now,
+                        updateTime = now,
+                        displayTime = now
+                    )
+                    applyOffline(
+                        context,
+                        PendingOp.new(
+                            accountId = accountId,
+                            type = PendingOpType.CREATE,
+                            memoName = tempName,
+                            payloadJson = gson.toJson(localMemo),
+                            id = clientId
+                        ),
+                        onSuccess
+                    ) {
+                        applyLocalCreate(context, localMemo, draftIdToDelete)
+                    }
+                } catch (e: CancellationException) { throw e }
+                catch (e: Exception) {
+                    reportOperationFailure(context, e)
+                    if (accountSession.isCurrent(context)) onError()
                 }
                 return@launch
             }
@@ -302,6 +313,7 @@ class MemoActionDelegateImpl(
         attachments: List<Attachment>,
         location: Location?,
         state: MemoState?,
+        durable: Boolean,
         onError: () -> Unit,
         onSuccess: () -> Unit
     ) {
@@ -333,9 +345,15 @@ class MemoActionDelegateImpl(
         )
 
         scope.launch {
-            if (!wasOnline) {
-                applyOffline(context, pendingOp, onSuccess) {
-                    applyLocalUpdate(context, memo, update)
+            if (durable || !wasOnline) {
+                try {
+                    applyOffline(context, pendingOp, onSuccess) {
+                        applyLocalUpdate(context, memo, update)
+                    }
+                } catch (e: CancellationException) { throw e }
+                catch (e: Exception) {
+                    reportOperationFailure(context, e)
+                    if (accountSession.isCurrent(context)) onError()
                 }
                 return@launch
             }
@@ -479,7 +497,7 @@ class MemoActionDelegateImpl(
         }
     }
 
-    override fun createComment(parentMemo: Memo, content: String, onError: () -> Unit, onSuccess: () -> Unit) {
+    override fun createComment(parentMemo: Memo, content: String, durable: Boolean, commentId: String?, onError: () -> Unit, onSuccess: () -> Unit) {
         val context = accountSession.current ?: return
         val connection = context.connection
         val api = connection.api
@@ -487,19 +505,27 @@ class MemoActionDelegateImpl(
         val accountId = context.account.id
         val parentName = parentMemo.name ?: return
         val comment = Memo(content = content, visibility = parentMemo.visibility, parent = parentName)
-        val tempName = "offline-comment-${UUID.randomUUID()}"
+        val clientId = commentId ?: UUID.randomUUID().toString()
+        val tempName = "offline-comment-$clientId"
         val localComment = comment.copy(name = tempName, parent = parentName)
         val pendingOp = PendingOp.new(
             accountId = accountId,
             type = PendingOpType.COMMENT_CREATE,
             memoName = tempName,
             parentName = parentName,
-            payloadJson = gson.toJson(localComment)
+            payloadJson = gson.toJson(localComment),
+            id = clientId
         )
         scope.launch {
-            if (!wasOnline) {
-                applyOffline(context, pendingOp, onSuccess) {
-                    applyLocalComment(context, localComment, parentName)
+            if (durable || !wasOnline) {
+                try {
+                    applyOffline(context, pendingOp, onSuccess) {
+                        applyLocalComment(context, localComment, parentName)
+                    }
+                } catch (e: CancellationException) { throw e }
+                catch (e: Exception) {
+                    reportOperationFailure(context, e)
+                    if (accountSession.isCurrent(context)) onError()
                 }
                 return@launch
             }
@@ -542,7 +568,7 @@ class MemoActionDelegateImpl(
 
     override suspend fun uploadAttachment(uri: Uri, context: Context): Attachment? {
         val account = accountSession.current ?: return null
-        val attachment = attachmentManager?.uploadAttachment(uri, context)
+        val attachment = attachmentManager?.uploadAttachment(uri, context, durable = true)
         return attachment.takeIf { accountSession.isCurrent(account) }
     }
 
@@ -553,58 +579,23 @@ class MemoActionDelegateImpl(
 
     override fun upsertMemoReaction(memo: Memo, reactionType: String) {
         val context = accountSession.current ?: return
-        val connection = context.connection
-        val api = connection.api
-        val wasOnline = connection.networkReady && isOnlineProvider()
-        val accountId = context.account.id
         val name = memo.name ?: return
-        val mine = currentUser()?.name
+        val mine = currentUser()?.name ?: return
         val pendingOp = PendingOp.new(
-            accountId = accountId,
+            accountId = context.account.id,
             type = PendingOpType.REACTION_UPSERT,
             memoName = name,
-            payloadJson = gson.toJson(
-                ReactionOpPayload(reactionType = reactionType, creator = mine)
-            )
+            payloadJson = gson.toJson(ReactionOpPayload(reactionType = reactionType, creator = mine))
         )
         scope.launch {
-            // Optimistic local update for instant feedback (online or offline).
-            val optimistic = memo.copy(
-                reactions = withLocalReactions(memo, reactionType, mine, add = true)
-            )
-            if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(optimistic)
-
-            if (!wasOnline) {
-                applyOffline(context, pendingOp) {
-                    cacheLocalMemo(context, optimistic)
-                }
-                return@launch
-            }
-
             try {
-                val reaction = Reaction(contentId = name, reactionType = reactionType)
-                val request = UpsertMemoReactionRequest(name = memo.name, reaction = reaction)
-                api.upsertMemoReaction(name, request)
-
-                // Fetch latest memo state to be sure about all reactions and update in-place
-                val updated = api.getMemo(name)
-                if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(updated)
-                cacheLocalMemo(context, updated)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                if (shouldQueueOffline(context, e)) {
-                    applyOffline(context, pendingOp) {
-                        cacheLocalMemo(context, optimistic)
-                    }
-                } else {
-                    // The server rejected the request (e.g. 401/404): roll the
-                    // optimistic reaction back and surface the error, instead of
-                    // leaving a reaction on screen that was never applied.
-                    reportOperationFailure(context, e)
-                    if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(memo)
+                applyOffline(context, pendingOp) {
+                    val optimistic = memo.copy(reactions = withLocalReactions(memo, reactionType, mine, add = true))
+                    cacheLocalMemo(context, optimistic)
+                    if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(optimistic)
                 }
-            }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { reportOperationFailure(context, e) }
         }
     }
 

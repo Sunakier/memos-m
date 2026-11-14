@@ -16,4 +16,17 @@
     <string name="map_draft_here">여기서 초안 작성</string>
     <string name="map_place_count">이 위치의 메모: %1$d</string>
     <string name="map_place_empty">이 위치에는 아직 메모가 없습니다.</string>
+    <string name="quick_edit_title">빠른 편집</string>
+    <string name="quick_edit_auto_publish">나갈 때 자동 게시</string>
+    <string name="quick_edit_auto_publish_description">입력을 멈추면 로컬에 저장하고 편집기를 나가면 게시합니다.</string>
+    <string name="quick_edit_immersive">몰입 편집</string>
+    <string name="quick_edit_hide_comments">댓글 기본 접기</string>
+    <string name="quick_edit_hide_empty_comments">댓글이 없으면 접기</string>
+    <string name="quick_edit_reactions">빠른 반응</string>
+    <string name="quick_edit_reactions_description">이 기기에만 적용됩니다. 공백으로 최대 8개 구분. 비우면 숨깁니다.</string>
+    <string name="quick_edit_show_comments">댓글 보기</string>
+    <string name="quick_edit_hide_comments_action">댓글 숨기기</string>
+    <string name="quick_edit_blank_hint">여기를 두 번 눌러 편집</string>
+    <string name="quick_edit_reaction_hint">길게 누르고 끌어서 선택한 뒤 놓아 반응합니다. 밖으로 끌면 취소됩니다.</string>
+    <string name="quick_edit_saved">로컬에 저장했습니다. 연결되면 게시를 계속합니다.</string>
 </resources>

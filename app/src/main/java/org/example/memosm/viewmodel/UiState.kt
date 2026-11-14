@@ -79,6 +79,11 @@ data class DetailPaneState(
 // --- App Settings (local) ---
 
 data class AppSettings(
+    val quickEditAutoPublish: Boolean = true,
+    val immersiveEditing: Boolean = false,
+    val hideComments: Boolean = true,
+    val hideEmptyComments: Boolean = true,
+    val quickReactions: String = "👍 ❤️ 🎉 🤔 👀",
     val linkPreviewEnabled: Boolean = true,
     val pageSize: Int = 10,
     val headerScale: Float = 1.0f,

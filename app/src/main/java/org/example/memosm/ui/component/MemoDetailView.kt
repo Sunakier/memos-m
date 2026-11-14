@@ -1,6 +1,7 @@
 package org.example.memosm.ui.component
 
 import DeleteConfirmationDialog
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
@@ -8,6 +9,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -28,7 +37,10 @@ import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Forum
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -81,6 +94,9 @@ fun MemoDetailView(
     val onEditMemo = LocalMemoEditor.current
     var memoToDelete by remember { mutableStateOf<Memo?>(null) }
 
+    var commentsOverride by rememberSaveable(memo.name) { mutableStateOf<Boolean?>(null) }
+    val showComments = commentsOverride ?: !(uiState.appSettings.hideComments ||
+        (uiState.appSettings.hideEmptyComments && comments.items.isEmpty()))
     val listState = rememberLazyListState()
     var isFabExpanded by remember { mutableStateOf(true) }
 
@@ -102,7 +118,7 @@ fun MemoDetailView(
     }
 
     val isOwner = remember(memo.creator, uiState.session.currUser?.name) {
-        memo.creator == uiState.session.currUser?.name
+        uiState.session.currUser != null && memo.creator == uiState.session.currUser?.name
     }
 
     Surface(
@@ -144,7 +160,7 @@ fun MemoDetailView(
             }, floatingActionButton = {
                 if (uiState.session.currUser != null) {
                     ExtendedFloatingActionButton(
-                        onClick = { onCommentMemo(memo) },
+                        onClick = { commentsOverride = true; onCommentMemo(memo) },
                         expanded = isFabExpanded,
                         icon = {
                             Icon(
@@ -179,6 +195,32 @@ fun MemoDetailView(
                     // Original memo
                     item(key = "original_${memo.name ?: memo.content.hashCode()}") {
                         MemoItem(
+                            modifier = if (isOwner) Modifier.pointerInput(memo, onEditMemo) {
+                                var previousUpTime = 0L
+                                var previousPosition = Offset.Zero
+                                awaitEachGesture {
+                                    // Observe before selectable Markdown handles its own double tap.
+                                    // Single taps and long presses still belong to child controls.
+                                    val down = awaitFirstDown(requireUnconsumed = false,
+                                        pass = PointerEventPass.Initial)
+                                    val up = waitForUpOrCancellation(pass = PointerEventPass.Initial)
+                                    if (up != null && up.uptimeMillis - down.uptimeMillis <
+                                        viewConfiguration.longPressTimeoutMillis &&
+                                        (up.position - down.position).getDistance() < viewConfiguration.touchSlop) {
+                                        val elapsed = up.uptimeMillis - previousUpTime
+                                        if (elapsed in viewConfiguration.doubleTapMinTimeMillis..
+                                            viewConfiguration.doubleTapTimeoutMillis &&
+                                            (up.position - previousPosition).getDistance() < viewConfiguration.touchSlop * 2) {
+                                            up.consume()
+                                            previousUpTime = 0L
+                                            onEditMemo(memo)
+                                        } else {
+                                            previousUpTime = up.uptimeMillis
+                                            previousPosition = up.position
+                                        }
+                                    } else previousUpTime = 0L
+                                }
+                            } else Modifier,
                             memo = memo,
                             user = uiState.users[memo.creator],
                             currentUser = uiState.session.currUser,
@@ -211,123 +253,158 @@ fun MemoDetailView(
                             } else null,
                             isDetailView = true,
                             headerScale = uiState.appSettings.headerScale,
+                            quickReactionOptions = uiState.appSettings.quickReactions.split(Regex("\\s+"))
+                                .filter(String::isNotBlank),
                             reactionOptions = reactionOptions)
                     }
 
-                    // Comments section header
-                    item(key = "comments_header") {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp)
+                    item(key = "comments_toggle") {
+                        val arrowRotation by animateFloatAsState(
+                            targetValue = if (showComments) 180f else 0f,
+                            label = "commentsToggleRotation"
+                        )
+                        FilledTonalButton(
+                            onClick = { commentsOverride = !showComments },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                            shape = MaterialTheme.shapes.medium,
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Forum,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = stringResource(
-                                    R.string.memo_detail_comments, comments.items.size
-                                ),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Icon(Icons.Outlined.Forum, contentDescription = null,
+                                modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Text(stringResource(if (showComments) R.string.quick_edit_hide_comments_action
+                                else R.string.quick_edit_show_comments),
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.labelLarge)
+                            Text(comments.items.size.toString(),
+                                style = MaterialTheme.typography.labelMedium)
+                            Spacer(Modifier.width(8.dp))
+                            Icon(Icons.Outlined.ExpandMore, contentDescription = null,
+                                modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = arrowRotation })
                         }
                     }
-
-                    // Cached comments hint (offline: showing local cache)
-                    if (comments.isOffline && !comments.isLoading) {
-                        item(key = "comments_cached_hint") {
-                            Surface(
-                                shape = MaterialTheme.shapes.medium,
-                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                    if (showComments) {
+                        // Comments section header
+                        item(key = "comments_header") {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = 8.dp)
                             ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Forum,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = stringResource(R.string.memo_detail_comments_cached),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                    text = stringResource(
+                                        R.string.memo_detail_comments, comments.items.size
+                                    ),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }
-                    }
 
-                    // Loading indicator for comments
-                    if (comments.isLoading) {
-                        item(key = "loading") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
+                        // Cached comments hint (offline: showing local cache)
+                        if (comments.isOffline && !comments.isLoading) {
+                            item(key = "comments_cached_hint") {
+                                Surface(
+                                    shape = MaterialTheme.shapes.medium,
+                                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 8.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.memo_detail_comments_cached),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    // Comments list
-                    if (!comments.isLoading && comments.items.isEmpty()) {
-                        item(key = "empty_comments") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.memo_detail_no_comments),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                        // Loading indicator for comments
+                        if (comments.isLoading) {
+                            item(key = "loading") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
+                                }
                             }
                         }
-                    }
 
-                    itemsIndexed(
-                        comments.items,
-                        key = { index, it -> "comment_${it.name ?: it.content.hashCode()}_$index" }) { index, comment ->
-                        val isCommentOwner = comment.creator == uiState.session.currUser?.name
-                        MemoItem(
-                            memo = comment,
-                            user = uiState.users[comment.creator],
-                            currentUser = uiState.session.currUser,
-                            token = token,
-                            hostUrl = hostUrl,
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                            onEdit = if (isCommentOwner) {
-                                { onEditMemo(comment) }
-                            } else null,
-                            onDelete = if (isCommentOwner) {
-                                { memoToDelete = comment }
-                            } else null,
-                            onUpsertReaction = { emoji ->
-                                viewModel.memoActionDelegate.upsertMemoReaction(comment, emoji)
-                            },
-                            onDeleteReaction = { reaction ->
-                                viewModel.memoActionDelegate.deleteMemoReaction(comment, reaction)
-                            },
-                            onContentUpdate = if (isCommentOwner) { newContent ->
-                                viewModel.memoActionDelegate.updateMemo(
-                                    comment,
-                                    newContent,
-                                    comment.visibility,
-                                    comment.attachments ?: emptyList(),
-                                    comment.location
-                                )
-                            } else null,
-                            isDetailView = true,
-                            headerScale = uiState.appSettings.headerScale,
-                            reactionOptions = reactionOptions)
+                        // Comments list
+                        if (!comments.isLoading && comments.items.isEmpty()) {
+                            item(key = "empty_comments") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.memo_detail_no_comments),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        itemsIndexed(
+                            comments.items,
+                            key = { index, it -> "comment_${it.name ?: it.content.hashCode()}_$index" }) { index, comment ->
+                            val isCommentOwner = comment.creator == uiState.session.currUser?.name
+                            MemoItem(
+                                memo = comment,
+                                user = uiState.users[comment.creator],
+                                currentUser = uiState.session.currUser,
+                                token = token,
+                                hostUrl = hostUrl,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                ),
+                                onEdit = if (isCommentOwner) {
+                                    { onEditMemo(comment) }
+                                } else null,
+                                onDelete = if (isCommentOwner) {
+                                    { memoToDelete = comment }
+                                } else null,
+                                onUpsertReaction = { emoji ->
+                                    viewModel.memoActionDelegate.upsertMemoReaction(comment, emoji)
+                                },
+                                onDeleteReaction = { reaction ->
+                                    viewModel.memoActionDelegate.deleteMemoReaction(comment, reaction)
+                                },
+                                onContentUpdate = if (isCommentOwner) { newContent ->
+                                    viewModel.memoActionDelegate.updateMemo(
+                                        comment,
+                                        newContent,
+                                        comment.visibility,
+                                        comment.attachments ?: emptyList(),
+                                        comment.location
+                                    )
+                                } else null,
+                                isDetailView = true,
+                                headerScale = uiState.appSettings.headerScale,
+                                quickReactionOptions = uiState.appSettings.quickReactions.split(Regex("\\s+"))
+                                    .filter(String::isNotBlank),
+                                reactionOptions = reactionOptions)
+                        }
                     }
                 }
             }

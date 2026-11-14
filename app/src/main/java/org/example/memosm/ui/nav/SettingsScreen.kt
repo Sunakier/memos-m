@@ -245,4 +245,8 @@ private fun AppPreferenceRows(viewModel: MemosViewModel, category: AppSettingsCa
         },
         category = category
     )
+    if (category == AppSettingsCategory.GENERAL) {
+        org.example.memosm.ui.component.setting.QuickEditSettingsCard(
+            uiState.appSettings, viewModel.appSettingsDelegate)
+    }
 }
