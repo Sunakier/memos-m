@@ -6,5 +6,37 @@
   "name": "1.0.3-ci-104",
   "tag": "ci-104",
   "runId": 43626462237,
-  "complete": false
+  "complete": false,
+  "manifest": {
+    "schema": 1,
+    "source": "58c8c3a961e87d9a0ca0c2144aa7b4e90fb12333",
+    "channel": "preview",
+    "versionName": "1.0.3-ci-104",
+    "versionCode": 104,
+    "tag": "ci-104",
+    "applicationId": "top.lazyerpaper.memosm",
+    "signerSha256": "17a7f4feee874fd644d60616d1938365467f07023acd30c9f71b8a8be49b7022",
+    "assets": [
+      {
+        "name": "MemosM-1.0.3-ci-104-arm64-v8a.apk",
+        "size": 11866578,
+        "digest": "sha256:e491edd38eebd2aa5d2ea8277b2d9eae900161f032f5b77dd2aa62f45b47f276"
+      },
+      {
+        "name": "MemosM-1.0.3-ci-104-armeabi-v7a.apk",
+        "size": 11262932,
+        "digest": "sha256:0c69aa75e06dded7bd913e022563a739de364eb75bb378b65aa25d5f58cff061"
+      },
+      {
+        "name": "MemosM-1.0.3-ci-104-mapping.txt.gz",
+        "size": 7843655,
+        "digest": "sha256:b81ca4fce3033c8fd6110999838b7a029955a2016ac14d6a4a93141f3448d5ea"
+      },
+      {
+        "name": "SHA256SUMS-1.0.3-ci-104.txt",
+        "size": 303,
+        "digest": "sha256:dcabbd13b3bba143878f7f3346291b345eccdbea45b3d5c706568b8835b75cdd"
+      }
+    ]
+  }
 }
