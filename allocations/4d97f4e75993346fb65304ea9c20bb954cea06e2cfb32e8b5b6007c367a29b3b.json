@@ -6,7 +6,7 @@
   "name": "1.0.3-ci-105",
   "tag": "ci-105",
   "runId": 43631568366,
-  "complete": false,
+  "complete": true,
   "manifest": {
     "schema": 1,
     "source": "86c0cd93f6bf32a6f62f724ed322d8b48e3aa2b4",
@@ -38,5 +38,6 @@
         "digest": "sha256:6a68e8d761c37b5b508c08508896b8b18437f84ae8cdfb3ab84e9b64b3002ba4"
       }
     ]
-  }
+  },
+  "publishedRunId": 43631568366
 }
