@@ -19,13 +19,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ReactionPickerDialog(
-    reactionOptions: List<String>, onDismiss: () -> Unit, onReactionSelected: (String) -> Unit
+    reactionOptions: List<String>, onDismiss: () -> Unit, onReactionSelected: (String) -> Unit,
+    selectedReactions: Set<String> = emptySet()
 ) {
     val commonEmojis = reactionOptions.ifEmpty {
         listOf(
@@ -56,8 +59,9 @@ fun ReactionPickerDialog(
                     Surface(
                         onClick = { onReactionSelected(emoji) },
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        modifier = Modifier.size(56.dp)
+                        color = if (emoji in selectedReactions) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.size(56.dp).semantics { selected = emoji in selectedReactions }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(text = emoji, style = MaterialTheme.typography.headlineMedium)

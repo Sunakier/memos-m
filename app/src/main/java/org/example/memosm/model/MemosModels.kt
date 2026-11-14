@@ -109,7 +109,7 @@ data class MemoSnippet(
 data class Reaction(
     val name: String? = null,
     val creator: String? = null,
-    val contentId: String,
+    val contentId: String? = null,
     val reactionType: String,
     val createTime: Instant? = null
 )

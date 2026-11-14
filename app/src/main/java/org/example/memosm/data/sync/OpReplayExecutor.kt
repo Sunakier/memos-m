@@ -229,13 +229,35 @@ class OpReplayExecutor(
     private suspend fun syncReactionUpsert(op: PendingOp): Boolean {
         val name = op.memoName ?: return true
         val payload = gson.fromJson(op.payloadJson, ReactionOpPayload::class.java) ?: return true
-        api.upsertMemoReaction(
-            name, UpsertMemoReactionRequest(name = name, reaction = Reaction(
-                contentId = name, reactionType = payload.reactionType
-            ))
-        )
+        // The server's "upsert" inserts a row with a unique creator/memo/type
+        // key. A repeated selection or a retry after a lost response must not
+        // insert it again (older servers answer that constraint failure with 500).
+        if (!hasServerReaction(name, payload)) {
+            try {
+                api.upsertMemoReaction(
+                    name, UpsertMemoReactionRequest(name = name, reaction = Reaction(
+                        contentId = name, reactionType = payload.reactionType
+                    ))
+                )
+            } catch (error: HttpException) {
+                // Another client may have added it after the preflight read.
+                val applied = if (error.code() in setOf(409, 500)) {
+                    try { hasServerReaction(name, payload) }
+                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: Exception) { false }
+                } else false
+                if (!applied) throw error
+            }
+        }
         refreshMemo(name)
         return true
+    }
+
+    private suspend fun hasServerReaction(name: String, payload: ReactionOpPayload): Boolean {
+        val mine = payload.creator ?: currentUser?.name ?: return false
+        return api.listMemoReactions(name).reactions.orEmpty().any {
+            it.creator == mine && it.reactionType == payload.reactionType
+        }
     }
 
     private suspend fun syncReactionDelete(op: PendingOp): Boolean {
