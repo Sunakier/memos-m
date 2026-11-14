@@ -601,12 +601,9 @@ class MemoActionDelegateImpl(
 
     override fun deleteMemoReaction(memo: Memo, reaction: Reaction) {
         val context = accountSession.current ?: return
-        val connection = context.connection
-        val api = connection.api
-        val wasOnline = connection.networkReady && isOnlineProvider()
         val accountId = context.account.id
         val name = memo.name ?: return
-        val mine = currentUser()?.name
+        val mine = currentUser()?.name ?: return
         val pendingOp = PendingOp.new(
             accountId = accountId,
             type = PendingOpType.REACTION_DELETE,
@@ -616,43 +613,21 @@ class MemoActionDelegateImpl(
             )
         )
         scope.launch {
-            // Optimistic local update for instant feedback (online or offline).
-            val optimistic = memo.copy(
-                reactions = memo.reactions.orEmpty().filterNot {
-                    it.reactionType == reaction.reactionType && (mine == null || it.creator == mine)
-                }
-            )
-            if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(optimistic)
-
-            if (!wasOnline) {
-                applyOffline(context, pendingOp) {
-                    cacheLocalMemo(context, optimistic)
-                }
-                return@launch
-            }
-
             try {
-                val reactionName = reaction.name ?: return@launch
-                api.deleteMemoReaction(reactionName)
-
-                // Fetch latest memo state and update in-place
-                val updated = api.getMemo(name)
-                if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(updated)
-                cacheLocalMemo(context, updated)
+                // Also handles an optimistic reaction which has no server name yet.
+                applyOffline(context, pendingOp) {
+                    val optimistic = memo.copy(
+                        reactions = memo.reactions.orEmpty().filterNot {
+                            it.reactionType == reaction.reactionType && it.creator == mine
+                        }
+                    )
+                    cacheLocalMemo(context, optimistic)
+                    if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(optimistic)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (shouldQueueOffline(context, e)) {
-                    applyOffline(context, pendingOp) {
-                        cacheLocalMemo(context, optimistic)
-                    }
-                } else {
-                    // The server rejected the request (e.g. 401/404): roll the
-                    // optimistic removal back and surface the error, instead of
-                    // leaving the reaction hidden while it still exists on the server.
-                    reportOperationFailure(context, e)
-                    if (accountSession.isCurrent(context)) listUpdater.updateMemoInLists(memo)
-                }
+                reportOperationFailure(context, e)
             }
         }
     }
