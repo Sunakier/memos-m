@@ -6,7 +6,7 @@
   "name": "1.0.3-ci-104",
   "tag": "ci-104",
   "runId": 43626462237,
-  "complete": false,
+  "complete": true,
   "manifest": {
     "schema": 1,
     "source": "58c8c3a961e87d9a0ca0c2144aa7b4e90fb12333",
@@ -38,5 +38,6 @@
         "digest": "sha256:dcabbd13b3bba143878f7f3346291b345eccdbea45b3d5c706568b8835b75cdd"
       }
     ]
-  }
+  },
+  "publishedRunId": 43626462237
 }
