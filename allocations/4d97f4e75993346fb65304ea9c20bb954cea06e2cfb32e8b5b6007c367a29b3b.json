@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "channel": "preview",
+  "sha": "86c0cd93f6bf32a6f62f724ed322d8b48e3aa2b4",
+  "code": 105,
+  "name": "1.0.3-ci-105",
+  "tag": "ci-105",
+  "runId": 43631568366,
+  "complete": false
+}
