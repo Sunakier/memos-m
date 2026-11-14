@@ -298,6 +298,7 @@ class OutboxLifecycleTest {
                     val api =
                         stub<MemosApi> { method, args ->
                             when (method) {
+                                "listMemoReactions" -> org.example.memosm.model.ListMemoReactionsResponse(emptyList(), null, null)
                                 "upsertMemoReaction" -> {
                                     org.example.memosm.model
                                         .Reaction(contentId = "memos/1", reactionType = "like")

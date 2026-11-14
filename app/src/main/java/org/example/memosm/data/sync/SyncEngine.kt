@@ -224,21 +224,30 @@ internal suspend fun sendMutation(
             val name = requireNotNull(remoteName)
             val reaction =
                 requireNotNull(GsonProvider.gson.fromJson(op.payloadJson, ReactionOpPayload::class.java)) { "Missing reaction payload" }
-            requireNotNull(reaction.creator) { "Missing reaction owner" }
+            val creator = requireNotNull(reaction.creator) { "Missing reaction owner" }
+            val existing = api.findMemoReaction(name, creator, reaction.reactionType)
             if (op.type == PendingOpType.REACTION_UPSERT.name) {
-                api.upsertMemoReaction(
-                    name,
-                    UpsertMemoReactionRequest(
-                        name,
-                        Reaction(contentId = name, reactionType = reaction.reactionType),
-                    ),
-                )
-            } else {
-                val found =
-                    api.getMemo(name).reactions.orEmpty().firstOrNull {
-                        it.creator == reaction.creator && it.reactionType == reaction.reactionType
+                if (existing == null) {
+                    try {
+                        api.upsertMemoReaction(
+                            name,
+                            UpsertMemoReactionRequest(name, Reaction(contentId = name, reactionType = reaction.reactionType)),
+                        )
+                    } catch (error: HttpException) {
+                        if (error.code() !in setOf(409, 500)) throw error
+                        // Another client may have inserted it between the lookup and the POST.
+                        val applied = try {
+                            api.findMemoReaction(name, creator, reaction.reactionType) != null
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
+                            false
+                        }
+                        if (!applied) throw error
                     }
-                found?.name?.let { reactionName ->
+                }
+            } else {
+                existing?.name?.let { reactionName ->
                     try {
                         api.deleteMemoReaction(reactionName)
                     } catch (error: HttpException) {
@@ -249,3 +258,15 @@ internal suspend fun sendMutation(
             MutationResult(api.getMemo(name))
         }
     }
+
+private suspend fun MemosApi.findMemoReaction(memo: String, creator: String, type: String): Reaction? {
+    var token: String? = null
+    val seenTokens = mutableSetOf<String>()
+    do {
+        val page = listMemoReactions(memo, pageToken = token)
+        page.reactions.orEmpty().firstOrNull { it.creator == creator && it.reactionType == type }?.let { return it }
+        token = page.nextPageToken?.takeIf { it.isNotBlank() }
+        check(token == null || seenTokens.add(token)) { "Server repeated a reaction pagination token" }
+    } while (token != null)
+    return null
+}

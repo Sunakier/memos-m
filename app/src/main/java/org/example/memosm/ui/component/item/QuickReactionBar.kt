@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddReaction
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -39,6 +41,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
@@ -56,7 +59,10 @@ import kotlin.math.max
 
 /** A short radial drag previews a reaction; returning to the center cancels it. */
 @Composable
-fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPicker: () -> Unit) {
+fun QuickReactionBar(
+    options: List<String>, onReact: (String) -> Unit, onOpenPicker: () -> Unit,
+    selectedReactions: Set<String> = emptySet()
+) {
     val choices = options.distinct().take(8)
     val react by rememberUpdatedState(onReact)
     val haptic = LocalHapticFeedback.current
@@ -113,7 +119,7 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
     val highlight = MaterialTheme.colorScheme.primary.copy(alpha = .14f)
 
     Box(Modifier.size(48.dp).onGloballyPositioned { anchor = it }
-        .semantics { contentDescription = hint }
+        .semantics { contentDescription = hint; selected = selectedReactions.isNotEmpty() }
         .pointerInput(choices, density) {
             var pointer = Offset.Zero
             var start = Offset.Zero
@@ -164,9 +170,17 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
                 })
         }) {
         IconButton(onClick = { if (!holding) onOpenPicker() }) {
-            Icon(Icons.Outlined.AddReaction,
-                contentDescription = stringResource(R.string.memo_action_add_reaction),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (selectedReactions.isNotEmpty()) {
+                BadgedBox(badge = {
+                    if (selectedReactions.size > 1) Badge { Text(selectedReactions.size.toString()) }
+                }) {
+                    Text(selectedReactions.first(), style = MaterialTheme.typography.headlineSmall)
+                }
+            } else {
+                Icon(Icons.Outlined.AddReaction,
+                    contentDescription = stringResource(R.string.memo_action_add_reaction),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         if (holding) {
             Popup(popupPositionProvider = remember(pressWindow, margin, centerX, centerY) {
@@ -200,7 +214,8 @@ fun QuickReactionBar(options: List<String>, onReact: (String) -> Unit, onOpenPic
                         val selected = hover == emoji
                         val scale by animateFloatAsState(if (selected) 1.08f else 1f,
                             animationSpec = spring(dampingRatio = .7f, stiffness = 650f), label = "reactionScale")
-                        val color by animateColorAsState(if (selected) highlight else Color.Transparent,
+                        val color by animateColorAsState(if (selected) highlight else if (emoji in selectedReactions)
+                            MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                             label = "reactionHighlight")
                         Surface(onClick = {
                             holding = false; hover = null; ready = false

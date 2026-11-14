@@ -129,6 +129,15 @@ fun MemoItem(
     var showFullScreenViewer by remember { mutableStateOf(false) }
     var fullScreenInitialIndex by remember { mutableStateOf(0) }
     val context = LocalContext.current
+    val ownReactions = memo.reactions.orEmpty().filter {
+        currentUser != null && it.creator == currentUser.name
+    }
+    val selectedReactionTypes = ownReactions.map { it.reactionType }.toSet()
+    val selectReaction: (String) -> Unit = { emoji ->
+        val existing = ownReactions.firstOrNull { it.reactionType == emoji }
+        if (existing != null && onDeleteReaction != null) onDeleteReaction(existing)
+        else onUpsertReaction?.invoke(emoji)
+    }
 
     val unknownTime = stringResource(R.string.memo_unknown_time)
 
@@ -538,8 +547,9 @@ fun MemoItem(
                 if (isDetailView && currentUser != null && onUpsertReaction != null && memo.name != null) {
                     QuickReactionBar(
                         options = quickReactionOptions.ifEmpty { reactionOptions },
-                        onReact = onUpsertReaction,
+                        onReact = selectReaction,
                         onOpenPicker = { showReactionPicker = true },
+                        selectedReactions = selectedReactionTypes,
                     )
                 }
             }
@@ -683,9 +693,10 @@ fun MemoItem(
     if (showReactionPicker) {
         ReactionPickerDialog(
             reactionOptions = (quickReactionOptions + reactionOptions).distinct(),
+            selectedReactions = selectedReactionTypes,
             onDismiss = { showReactionPicker = false },
             onReactionSelected = { emoji ->
-                onUpsertReaction?.invoke(emoji)
+                selectReaction(emoji)
                 showReactionPicker = false
             },
         )
