@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Both automatic previews and stable releases serialize distribution.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('memosm-pr-{0}', github.event.pull_request.number) || 'memosm-distribution' }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main' || github.repository != 'Sunakier/memos-m'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/distribution.yml
+    with:
+      channel: check
+
+  preview:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository == 'Sunakier/memos-m'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/distribution.yml
+    with:
+      channel: preview
+    secrets: inherit
