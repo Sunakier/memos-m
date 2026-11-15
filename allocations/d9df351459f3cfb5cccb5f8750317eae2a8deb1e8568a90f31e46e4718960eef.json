@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "channel": "preview",
+  "feature": "feature/papertone",
+  "sha": "3d5dda161fa5d526a1076124df104bf53b2a1c44",
+  "code": 106,
+  "name": "1.0.3-papertone-106",
+  "tag": "papertone-106",
+  "runId": "manual-papertone-3d5dda161fa5",
+  "complete": false
+}
