@@ -1,10 +1,15 @@
 package org.example.memosm.ui.nav
 
+import org.example.memosm.ui.theme.mainBottomBarHeight
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.PaperTonePageHeader
+
 import android.text.format.DateFormat
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -149,8 +154,9 @@ fun AttachmentsScreen(
         onScrollUp = { onToggleNavBar?.invoke(true) }
     )
 
+    val navigationHeight = mainBottomBarHeight()
     val bottomPadding by animateDpAsState(
-        targetValue = if (isNavBarVisible) 80.dp else 16.dp, label = "BottomPadding"
+        targetValue = if (isNavBarVisible) navigationHeight else 16.dp, label = "BottomPadding"
     )
 
     LaunchedEffect(Unit) {
@@ -168,12 +174,15 @@ fun AttachmentsScreen(
         lastProcessedTrigger = uiState.refreshTrigger
     }
 
+    val paperTone = LocalPaperTone.current
+    Column(Modifier.fillMaxSize()) {
+    if (paperTone) PaperTonePageHeader(stringResource(R.string.nav_attachments), Modifier.statusBarsPadding())
     PullToRefreshBox(
         isRefreshing = uiState.isRefreshing, onRefresh = {
             viewModel.fetchAttachments(refresh = true)
         }, modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
+            .fillMaxWidth().weight(1f)
+            .then(if (paperTone) Modifier else Modifier.statusBarsPadding())
     ) {
         BoxWithConstraints(
             modifier = Modifier
@@ -349,6 +358,7 @@ fun AttachmentsScreen(
         }
     }
 
+    }
     if (showFullScreenViewer) {
         FullScreenAttachmentViewer(
             attachments = orderedAttachments,

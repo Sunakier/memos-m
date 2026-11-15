@@ -13,7 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import org.example.memosm.R
+import org.example.memosm.ui.theme.LocalPaperTone
 
 @Composable
 fun ProfileBackButton(onClick: () -> Unit) {
@@ -22,7 +24,7 @@ fun ProfileBackButton(onClick: () -> Unit) {
         modifier = Modifier.padding(start = 8.dp, end = 8.dp).size(36.dp),
         shape = CircleShape,
         colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = if (LocalPaperTone.current) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     ) {

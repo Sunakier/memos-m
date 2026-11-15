@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_papertone">PaperTone</string>
+    <string name="appearance_papertone_description">Papierowe karty, przyciski w kolorze atramentu i pasek szybkich notatek. Ma pierwszeństwo przed innymi stylami. Wyłączenie przywraca kolory systemowe.</string>
+    <string name="appearance_papertone_write">Napisz coś…</string>
+    <plurals name="appearance_papertone_characters">
+        <item quantity="one">%1$d znak</item>
+        <item quantity="few">%1$d znaki</item>
+        <item quantity="many">%1$d znaków</item>
+        <item quantity="other">%1$d znaku</item>
+    </plurals>
+</resources>

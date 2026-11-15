@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_papertone">PaperTone</string>
+    <string name="appearance_papertone_description">종이 카드, 먹색 버튼과 빠른 메모 입력창. 다른 스타일보다 우선 적용됩니다. 끄면 시스템 색상으로 돌아갑니다.</string>
+    <string name="appearance_papertone_write">무언가 적어 보세요…</string>
+    <plurals name="appearance_papertone_characters">
+        <item quantity="other">%1$d자</item>
+    </plurals>
+</resources>

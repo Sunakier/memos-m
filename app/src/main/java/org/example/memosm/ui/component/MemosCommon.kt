@@ -1,5 +1,7 @@
 package org.example.memosm.ui.component
 
+import org.example.memosm.ui.theme.mainBottomBarHeight
+
 import DeleteConfirmationDialog
 
 import androidx.compose.runtime.setValue
@@ -330,7 +332,7 @@ fun MemosScaffold(
         userProvider: (Memo) -> User? = { null },
         header: (LazyListScope.() -> Unit)? = null,
         contentPadding: PaddingValues = PaddingValues(
-            start = 16.dp, top = 88.dp, end = 16.dp, bottom = 80.dp
+            start = 16.dp, top = 88.dp, end = 16.dp, bottom = mainBottomBarHeight()
         ),
         errorTitle: String = stringResource(R.string.common_error_failed_to_load),
         onHashtagClick: ((String) -> Unit)? = null,

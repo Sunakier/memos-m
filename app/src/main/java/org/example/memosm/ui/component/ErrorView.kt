@@ -1,5 +1,13 @@
 package org.example.memosm.ui.component
 
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.paperToneCardBorder
+import org.example.memosm.ui.theme.paperToneControlShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -40,7 +48,9 @@ fun ErrorView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
+        if (LocalPaperTone.current) Icon(Icons.Outlined.ErrorOutline, contentDescription = null,
+            modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        else Text(
             text = displayKaomoji,
             style = MaterialTheme.typography.displayLarge.copy(
                 fontSize = 48.sp,
@@ -71,6 +81,8 @@ fun ErrorView(
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
+            shape = paperToneControlShape(ButtonDefaults.shape),
+            border = paperToneCardBorder(),
             onClick = onRetry,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,

@@ -1,5 +1,7 @@
 package org.example.memosm.ui.nav
 
+import org.example.memosm.ui.theme.paperToneDivider
+
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.Arrangement
@@ -52,7 +54,7 @@ fun DraftsScreen(
     var draftToDelete by remember { mutableStateOf<Draft?>(null) }
 
     Scaffold(modifier = Modifier.fillMaxSize(), topBar = {
-        TopAppBar(title = { Text(stringResource(R.string.drafts_title)) }, navigationIcon = {
+        TopAppBar(modifier = Modifier.paperToneDivider(), title = { Text(stringResource(R.string.drafts_title)) }, navigationIcon = {
             ProfileBackButton(onClick = onBack)
         })
     }) { padding ->

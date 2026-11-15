@@ -78,6 +78,10 @@ import org.example.memosm.ui.component.item.DraftsCard
 import org.example.memosm.ui.component.rememberScrollContext
 import org.example.memosm.viewmodel.MemosViewModel
 import org.example.memosm.viewmodel.RefreshSource
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.PaperToneComposeBar
+import org.example.memosm.ui.theme.mainBottomBarHeight
+import org.example.memosm.ui.theme.paperToneControlShape
 
 @Composable
 fun MemosScreen(
@@ -88,6 +92,8 @@ fun MemosScreen(
     openComposer: Boolean = false,
     onComposerOpened: () -> Unit = {}
 ) {
+    val paperTone = LocalPaperTone.current
+    val navigationHeight = mainBottomBarHeight()
     val uiState by viewModel.uiState.collectAsState()
     val memosListState = rememberLazyListState()
     val exploreListState = rememberLazyListState()
@@ -125,7 +131,8 @@ fun MemosScreen(
     }
 
     val bottomPadding by animateDpAsState(
-        targetValue = if (isNavBarVisible) 80.dp else 16.dp, label = "BottomPadding"
+        targetValue = (if (isNavBarVisible) navigationHeight else 16.dp) + (if (paperTone) 68.dp else 0.dp),
+        label = "BottomPadding"
     )
 
     // Handle external composer open request (e.g. from widget)
@@ -163,7 +170,7 @@ fun MemosScreen(
         isNavBarVisible = isNavBarVisible,
         navigationKey = activeFeed,
         listHeader = { showSearchBar, searchExpanded ->
-            AnimatedVisibility(
+            if (!paperTone) AnimatedVisibility(
                 visible = showSearchBar && !searchExpanded,
                 enter = slideInVertically { -it } + expandVertically() + fadeIn(),
                 exit = slideOutVertically { -it } + shrinkVertically() + fadeOut()
@@ -188,7 +195,9 @@ fun MemosScreen(
             ) { page ->
                 val feed = MemoFeed.entries[page]
                 val contentPadding = PaddingValues(
-                    start = 16.dp, top = 88.dp + feedHeaderHeight, end = 16.dp, bottom = bottomPadding
+                    start = if (paperTone) 4.dp else 16.dp,
+                    top = if (paperTone) feedHeaderHeight + 12.dp else 88.dp + feedHeaderHeight,
+                    end = if (paperTone) 4.dp else 16.dp, bottom = bottomPadding
                 )
                 when (feed) {
                     MemoFeed.MEMOS -> MemosListPane(
@@ -226,19 +235,28 @@ fun MemosScreen(
                 exit = slideOutVertically { -it } + fadeOut(),
                 modifier = Modifier.align(Alignment.TopCenter)) {
                 key(activeFeed) {
-                    MemoSearchBar(
-                        viewModel = viewModel,
-                        isExplore = activeFeed == MemoFeed.EXPLORE,
-                        placeholder = stringResource(
-                            if (activeFeed == MemoFeed.EXPLORE) R.string.memo_search_explore_placeholder
-                            else R.string.memo_search_placeholder
-                        ),
-                        onMemoClick = onMemoClick,
-                        onExpandedChange = {
-                            isSearchExpanded = it
-                            onSearchExpandedChange(it)
+                    Column(
+                        if (paperTone && !searchExpanded) Modifier.onSizeChanged {
+                            feedHeaderHeight = with(density) { it.height.toDp() }
+                        } else Modifier
+                    ) {
+                        MemoSearchBar(
+                            viewModel = viewModel,
+                            isExplore = activeFeed == MemoFeed.EXPLORE,
+                            placeholder = stringResource(
+                                if (activeFeed == MemoFeed.EXPLORE) R.string.memo_search_explore_placeholder
+                                else R.string.memo_search_placeholder
+                            ),
+                            onMemoClick = onMemoClick,
+                            onExpandedChange = {
+                                isSearchExpanded = it
+                                onSearchExpandedChange(it)
+                            }
+                        )
+                        if (paperTone && !searchExpanded) {
+                            MemoFeedTabs(pagerState, Modifier.testTag("memo_feed_tabs"))
                         }
-                    )
+                    }
                 }
             }
 
@@ -246,20 +264,25 @@ fun MemosScreen(
             if (uiState.session.currUser != null && !searchExpanded) {
                 // Animate FAB position only if nav bar can be toggled (onToggleNavBar provided)
                 val fabBottomPadding by animateDpAsState(
-                    targetValue = if (onToggleNavBar != null && isNavBarVisible) 96.dp else 16.dp,
+                    targetValue = if (onToggleNavBar != null && isNavBarVisible) navigationHeight + 16.dp else 16.dp,
                     label = "fabBottomPadding"
                 )
 
-                ExtendedFloatingActionButton(
-                    onClick = {
-                        // If drafts exist, show prompt; otherwise show composer directly
-                        if (uiState.draft.drafts.isNotEmpty()) {
-                            showDraftPrompt = true
-                        } else {
-                            // Start fresh with a new draft session ID
-                            composeNew()
-                        }
-                    },
+                val onCompose: () -> Unit = {
+                    if (uiState.draft.drafts.isNotEmpty()) {
+                        showDraftPrompt = true
+                    } else {
+                        composeNew()
+                    }
+                }
+                if (paperTone) {
+                    PaperToneComposeBar(
+                        onClick = onCompose,
+                        modifier = Modifier.testTag("memo_feed_compose").align(Alignment.BottomCenter)
+                            .padding(bottom = fabBottomPadding - 16.dp)
+                    )
+                } else ExtendedFloatingActionButton(
+                    onClick = onCompose,
                     expanded = isFabExpanded,
                     icon = {
                         Icon(
@@ -453,7 +476,7 @@ private fun MemosListPane(
                                                     Text(selectedHashtag.removePrefix("#"))
                                                 }
                                             },
-                                            shape = RoundedCornerShape(16.dp),
+                                            shape = paperToneControlShape(RoundedCornerShape(16.dp)),
                                             trailingIcon = {
                                                 Icon(
                                                     imageVector = Icons.Outlined.Close,
@@ -490,7 +513,7 @@ private fun MemosListPane(
                                                 Text(shortcut.title ?: "")
                                             }
                                         },
-                                        shape = RoundedCornerShape(16.dp),
+                                        shape = paperToneControlShape(RoundedCornerShape(16.dp)),
                                         trailingIcon = if (isSelected) {
                                             {
                                                 Icon(

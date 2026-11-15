@@ -108,6 +108,16 @@ internal fun AppearanceSettingsContent(
         Column(Modifier.widthIn(max = 600.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             MemoAppearancePreview(headerScale = headerScale)
             SettingsGroup {
+                SettingToggleRow(
+                    label = stringResource(R.string.appearance_papertone),
+                    description = stringResource(R.string.appearance_papertone_description),
+                    checked = appearance.colorTheme == ColorTheme.PAPERTONE,
+                    onCheckedChange = { enabled ->
+                        save { dataStore.saveColorTheme(if (enabled) ColorTheme.PAPERTONE else ColorTheme.SYSTEM) }
+                    }
+                )
+            }
+            SettingsGroup {
                 Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
                     Row(
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
@@ -150,6 +160,15 @@ internal fun AppearanceSettingsContent(
                             label = stringResource(R.string.appearance_memos),
                             selected = appearance.colorTheme == ColorTheme.MEMOS,
                             onClick = { save { dataStore.saveColorTheme(ColorTheme.MEMOS) } }
+                        )
+                        val paperToneColors = remember(isDark) {
+                            appearanceColorScheme(appearance.copy(colorTheme = ColorTheme.PAPERTONE), wallpaperColors, isDark)
+                        }
+                        PaletteSwatch(
+                            colors = paperToneColors,
+                            label = stringResource(R.string.appearance_papertone),
+                            selected = appearance.colorTheme == ColorTheme.PAPERTONE,
+                            onClick = { save { dataStore.saveColorTheme(ColorTheme.PAPERTONE) } }
                         )
                         repeat(5) { index ->
                             val hue = (wallpaperHue + index * 60f) % 360f
@@ -342,6 +361,7 @@ private val ColorTheme.labelRes: Int
         ColorTheme.SYSTEM -> R.string.appearance_device_colors
         ColorTheme.MONOCHROME -> R.string.appearance_monochrome
         ColorTheme.MEMOS -> R.string.appearance_memos
+        ColorTheme.PAPERTONE -> R.string.appearance_papertone
         ColorTheme.CUSTOM -> R.string.appearance_custom
     }
 

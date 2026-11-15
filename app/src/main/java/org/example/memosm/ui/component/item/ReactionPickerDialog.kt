@@ -23,6 +23,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.unit.dp
 import org.example.memosm.R
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.PaperToneSheetHandle
+import org.example.memosm.ui.theme.paperToneControlShape
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -37,7 +40,10 @@ fun ReactionPickerDialog(
     }
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss, dragHandle = { BottomSheetDefaults.DragHandle() }) {
+        onDismissRequest = onDismiss,
+        shape = if (LocalPaperTone.current) MaterialTheme.shapes.large else BottomSheetDefaults.ExpandedShape,
+        containerColor = if (LocalPaperTone.current) MaterialTheme.colorScheme.surfaceContainerHigh else BottomSheetDefaults.ContainerColor,
+        dragHandle = { if (LocalPaperTone.current) PaperToneSheetHandle() else BottomSheetDefaults.DragHandle() }) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -58,7 +64,7 @@ fun ReactionPickerDialog(
                 commonEmojis.forEach { emoji ->
                     Surface(
                         onClick = { onReactionSelected(emoji) },
-                        shape = CircleShape,
+                        shape = paperToneControlShape(CircleShape),
                         color = if (emoji in selectedReactions) MaterialTheme.colorScheme.primaryContainer
                             else MaterialTheme.colorScheme.surfaceVariant,
                         modifier = Modifier.size(56.dp).semantics { selected = emoji in selectedReactions }

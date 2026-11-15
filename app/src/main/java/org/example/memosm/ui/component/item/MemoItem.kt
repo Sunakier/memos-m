@@ -1,6 +1,9 @@
 package org.example.memosm.ui.component.item
 
 import org.example.memosm.ui.theme.flatCardElevation
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.paperToneCardBorder
+import org.example.memosm.ui.theme.paperToneControlShape
 import android.content.Intent
 import android.net.Uri
 import android.text.format.DateUtils
@@ -122,6 +125,7 @@ fun MemoItem(
     headerScale: Float,
     onHashtagClick: ((String) -> Unit)? = null
 ) {
+    val paperTone = LocalPaperTone.current
     var showMenu by remember { mutableStateOf(false) }
     var showReactionPicker by remember { mutableStateOf(false) }
     var showRawTextDialog by remember { mutableStateOf(false) }
@@ -159,6 +163,7 @@ fun MemoItem(
 
     Card(
         elevation = flatCardElevation(),
+        border = paperToneCardBorder(),
         modifier = modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, colors = colors
     ) {
         Column(
@@ -166,14 +171,15 @@ fun MemoItem(
                 .fillMaxWidth()
                 .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
                 .padding(
-                    start = 12.dp,
-                    top = if (user != null) 12.dp else 4.dp,
+                    start = if (paperTone) 4.dp else 12.dp,
+                    top = if (paperTone || user != null) 12.dp else 4.dp,
                     end = 4.dp,
-                    bottom = 12.dp
+                    bottom = if (paperTone) 4.dp else 12.dp
                 )
         ) {
+            val metadata: @Composable () -> Unit = {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(start = if (paperTone) 12.dp else 0.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -327,7 +333,11 @@ fun MemoItem(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(if (user != null) 10.dp else 2.dp))
+            }
+            if (!paperTone) {
+                metadata()
+                Spacer(modifier = Modifier.height(if (user != null) 10.dp else 2.dp))
+            }
 
             Column(modifier = Modifier.padding(start = 0.dp, end = 0.dp)) {
                 Box(
@@ -385,7 +395,7 @@ fun MemoItem(
                             }
                         },
                         enabled = isClickable,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = paperToneControlShape(RoundedCornerShape(16.dp)),
                         color = MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                     ) {
@@ -507,6 +517,7 @@ fun MemoItem(
                     )
                 }
             }
+            if (paperTone) metadata()
         }
     }
 

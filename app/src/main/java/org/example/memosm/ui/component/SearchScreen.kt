@@ -1,6 +1,9 @@
 package org.example.memosm.ui.component
 
 import org.example.memosm.ui.theme.flatCardElevation
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.paperToneCardBorder
+import org.example.memosm.ui.theme.paperToneControlShape
 import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -297,7 +300,24 @@ fun MemoSearchBar(
         // The inline overload respects the list pane's bounds and scaffold insets.
         // The newer expanded variants use separate dialog/popup windows.
         @Suppress("DEPRECATION")
-        SearchBar(
+        if (LocalPaperTone.current && !expanded) {
+            Row(
+                Modifier.fillMaxWidth().height(56.dp).testTag("memo_search_bar"),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { searchScope.launch { searchBarState.animateToExpanded() } }) {
+                    Icon(Icons.Outlined.Search, contentDescription = placeholder)
+                }
+                if (localMemos == null) {
+                    SyncStatusIconButton(uiState = uiState, onClick = { showSyncPanel = true })
+                }
+            }
+        } else SearchBar(
             inputField = inputField,
             expanded = expanded,
             onExpandedChange = { expand ->
@@ -462,6 +482,7 @@ private fun SearchResultContent(
         if (availableTags.isNotEmpty()) {
             item {
                 Card(
+                    border = paperToneCardBorder(),
                     elevation = flatCardElevation(),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -581,7 +602,7 @@ private fun SearchResultContent(
                     Surface(
                         onClick = { showSortMenu = true }, modifier = Modifier.menuAnchor(
                             ExposedDropdownMenuAnchorType.PrimaryNotEditable, true
-                        ), shape = RoundedCornerShape(32.dp), color = Color.Transparent
+                        ), shape = paperToneControlShape(RoundedCornerShape(32.dp)), color = Color.Transparent
                     ) {
                         Row(
                             modifier = Modifier
@@ -744,6 +765,7 @@ private fun DateSelectorCard(
 ) {
     val context = LocalContext.current
     Card(
+        border = paperToneCardBorder(),
         elevation = flatCardElevation(),
         modifier = modifier, colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)

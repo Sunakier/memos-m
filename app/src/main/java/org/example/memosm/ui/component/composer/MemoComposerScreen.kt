@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import org.example.memosm.R
 import org.example.memosm.model.Memo
 import org.example.memosm.viewmodel.MemosViewModel
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.PaperToneEditorHeader
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,13 +47,16 @@ fun MemoComposerScreen(
     }
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val paperTone = LocalPaperTone.current
 
     val scope = rememberCoroutineScope()
     var exitRequested by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
 
     Scaffold(
         topBar = {
-            if (!uiState.appSettings.immersiveEditing) TopAppBar(
+            if (!uiState.appSettings.immersiveEditing && paperTone) {
+                PaperToneEditorHeader(title, editorSession.state.content.value.text) { exitRequested++ }
+            } else if (!uiState.appSettings.immersiveEditing) TopAppBar(
                 title = { Text(title) },
                 navigationIcon = {
                     ProfileBackButton(onClick = { exitRequested++ })
@@ -114,7 +119,7 @@ fun MemoComposerScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
-                        .padding(horizontal = 8.dp),
+                        .padding(horizontal = if (paperTone) 0.dp else 8.dp),
                     onDiscardQueuedUpload = { clientId ->
                         viewModel.memoActionDelegate.discardQueuedUploadIfOrphaned(clientId)
                     }

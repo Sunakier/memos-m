@@ -66,6 +66,10 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.testTag
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.paperToneCardBorder
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import kotlin.math.max
@@ -94,6 +98,7 @@ fun MemoInput(
     enabled: Boolean = true,
     autoFocus: Boolean = false,
 ) {
+    val paperTone = LocalPaperTone.current
     val focusRequester = remember { FocusRequester() }
     val scrollState = rememberScrollState()
 
@@ -154,8 +159,8 @@ fun MemoInput(
 
     Column(modifier = modifier) {
         val interactionSource = remember { MutableInteractionSource() }
-        val paddingValues = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
-        val textStyle = LocalTextStyle.current
+        val paddingValues = PaddingValues(horizontal = if (paperTone) 24.dp else 16.dp, vertical = if (paperTone) 20.dp else 12.dp)
+        val textStyle = if (paperTone) MaterialTheme.typography.bodyLarge.copy(lineHeight = 26.sp) else LocalTextStyle.current
 
         var boxPositionInWindow by remember { mutableStateOf(IntOffset.Zero) }
         var boxHeightPx by remember { mutableIntStateOf(0) }
@@ -181,6 +186,7 @@ fun MemoInput(
                 inputTransformation = inputTransformation,
                 modifier = Modifier
                     .fillMaxSize()
+                    .testTag("memo_editor_input")
                     .focusRequester(focusRequester),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 textStyle = textStyle.copy(color = MaterialTheme.colorScheme.onSurface),
@@ -333,14 +339,15 @@ fun MemoInput(
                         when (state) {
                             SuggestionUIState.Icon -> {
                                 Surface(
-                                    shape = androidx.compose.foundation.shape.CircleShape,
-                                    tonalElevation = 6.dp,
-                                    shadowElevation = 6.dp,
+                                    shape = if (paperTone) MaterialTheme.shapes.small else androidx.compose.foundation.shape.CircleShape,
+                                    border = paperToneCardBorder(),
+                                    tonalElevation = if (paperTone) 0.dp else 6.dp,
+                                    shadowElevation = if (paperTone) 0.dp else 6.dp,
                                     color = MaterialTheme.colorScheme.surfaceContainer,
                                     modifier = Modifier
                                         .padding(4.dp)
                                         .clickable { showSuggestionPopup = true }) {
-                                    Box(modifier = Modifier.padding(8.dp)) {
+                                    Box(modifier = Modifier.padding(if (paperTone) 14.dp else 8.dp)) {
                                         Icon(
                                             imageVector = Icons.Outlined.Add,
                                             contentDescription = stringResource(R.string.memo_input_show_suggestions),
@@ -356,9 +363,10 @@ fun MemoInput(
                                     modifier = Modifier
                                         .widthIn(min = 140.dp, max = 240.dp)
                                         .heightIn(max = constrainedMaxHeight),
-                                    shape = RoundedCornerShape(8.dp),
-                                    tonalElevation = 3.dp,
-                                    shadowElevation = 3.dp,
+                                    shape = if (paperTone) MaterialTheme.shapes.small else RoundedCornerShape(8.dp),
+                                    border = paperToneCardBorder(),
+                                    tonalElevation = if (paperTone) 0.dp else 3.dp,
+                                    shadowElevation = if (paperTone) 0.dp else 3.dp,
                                     color = MaterialTheme.colorScheme.surfaceContainer
                                 ) {
                                     LazyColumn(modifier = Modifier.fillMaxWidth()) {

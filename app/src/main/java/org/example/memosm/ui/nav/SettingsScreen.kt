@@ -1,5 +1,7 @@
 package org.example.memosm.ui.nav
 
+import org.example.memosm.ui.theme.paperToneDivider
+
 import android.os.Build
 
 import androidx.compose.foundation.layout.Arrangement
@@ -210,12 +212,14 @@ internal fun SettingsPageScaffold(
         topBar = {
             if (scrollBehavior != null) {
                 LargeTopAppBar(
+                    modifier = Modifier.paperToneDivider(),
                     title = { Text(title) },
                     navigationIcon = { ProfileBackButton(onClick = onBack) },
                     scrollBehavior = scrollBehavior
                 )
             } else {
                 TopAppBar(
+                    modifier = Modifier.paperToneDivider(),
                     title = { Text(title) },
                     navigationIcon = { ProfileBackButton(onClick = onBack) }
                 )

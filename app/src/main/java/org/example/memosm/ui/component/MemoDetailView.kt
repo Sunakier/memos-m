@@ -1,5 +1,10 @@
 package org.example.memosm.ui.component
 
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.PaperToneComposeBar
+import org.example.memosm.ui.theme.paperToneCardBorder
+import org.example.memosm.ui.theme.paperToneDivider
+
 import DeleteConfirmationDialog
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.AnimatedVisibility
@@ -90,6 +95,7 @@ fun MemoDetailView(
     reactionOptions: List<String> = emptyList(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val paperTone = LocalPaperTone.current
     val onCommentMemo = LocalMemoCommenter.current
     val onEditMemo = LocalMemoEditor.current
     var memoToDelete by remember { mutableStateOf<Memo?>(null) }
@@ -127,11 +133,12 @@ fun MemoDetailView(
             bottomStart = CornerSize(0.dp), bottomEnd = CornerSize(0.dp)
         ),
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp
+        tonalElevation = if (paperTone) 0.dp else 1.dp
     ) {
         Scaffold(
             contentWindowInsets = WindowInsets(0, 0, 0, 0), topBar = {
                 TopAppBar(
+                    modifier = Modifier.paperToneDivider(),
                     title = {
                         Box(
                             modifier = Modifier.fillMaxWidth(),
@@ -158,7 +165,7 @@ fun MemoDetailView(
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             }, floatingActionButton = {
-                if (uiState.session.currUser != null) {
+                if (uiState.session.currUser != null && !paperTone) {
                     ExtendedFloatingActionButton(
                         onClick = { commentsOverride = true; onCommentMemo(memo) },
                         expanded = isFabExpanded,
@@ -174,6 +181,14 @@ fun MemoDetailView(
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
+            }, bottomBar = {
+                if (paperTone && uiState.session.currUser != null) {
+                    PaperToneComposeBar(
+                        onClick = { commentsOverride = true; onCommentMemo(memo) },
+                        label = stringResource(R.string.memo_detail_add_comment),
+                        icon = Icons.Default.Add
+                    )
+                }
             }, containerColor = Color.Transparent, modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
             Box(
@@ -187,8 +202,8 @@ fun MemoDetailView(
                     modifier = Modifier
                         .fillMaxSize() // Use fillMaxSize instead of fillMaxHeight
                         .widthIn(max = 800.dp)
-                        .padding(horizontal = 16.dp),
-                    contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp),
+                        .padding(horizontal = if (paperTone) 4.dp else 16.dp),
+                    contentPadding = PaddingValues(top = 16.dp, bottom = if (paperTone) 16.dp else 80.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -264,6 +279,7 @@ fun MemoDetailView(
                             label = "commentsToggleRotation"
                         )
                         FilledTonalButton(
+                            border = paperToneCardBorder(),
                             onClick = { commentsOverride = !showComments },
                             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                             shape = MaterialTheme.shapes.medium,

@@ -1,6 +1,8 @@
 package org.example.memosm.ui.component
 
 import org.example.memosm.ui.theme.flatCardElevation
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.paperToneCardBorder
 import android.text.format.DateFormat
 import android.util.Log
 import androidx.compose.foundation.background
@@ -63,6 +65,7 @@ fun StatsActivityCard(
     }
 
     Card(
+        border = paperToneCardBorder(),
         elevation = flatCardElevation(),
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -91,10 +94,11 @@ private fun CalendarMonthView(
     val maxCount = activityData.values.maxOrNull()?.coerceAtLeast(1) ?: 1
 
     val primaryColor = MaterialTheme.colorScheme.primary
-    val emptyDayColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f)
-    val activeDayColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val paperTone = LocalPaperTone.current
+    val emptyDayColor = if (paperTone) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.45f)
+    val activeDayColor = if (paperTone) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest
     val onSurface = MaterialTheme.colorScheme.onSurface
-    val cellShape = CircleShape
+    val cellShape = if (paperTone) MaterialTheme.shapes.extraSmall else CircleShape
     val cellHeight = with(LocalDensity.current) {
         MaterialTheme.typography.labelSmall.lineHeight.toDp() + 12.dp
     }.coerceAtLeast(28.dp)
@@ -136,7 +140,7 @@ private fun CalendarMonthView(
         ) {
             for (day in daysOfWeek) {
                 Text(
-                    text = day.getDisplayName(TextStyle.NARROW, locale),
+                    text = day.getDisplayName(if (paperTone) TextStyle.SHORT else TextStyle.NARROW, locale),
                     style = MaterialTheme.typography.labelSmall,
                     color = onSurfaceVariant,
                     textAlign = TextAlign.Center,

@@ -46,6 +46,7 @@ import org.example.memosm.model.Location
 import org.example.memosm.model.Visibility
 import org.example.memosm.ui.findActivity
 import org.example.memosm.ui.getFileSize
+import org.example.memosm.ui.theme.LocalPaperTone
 
 
 /**
@@ -81,9 +82,10 @@ fun MemoComposer(
     exitRequested: Int = 0
 
 ) {
+    val paperTone = LocalPaperTone.current
     // Depending on the Composer Mode there will be different placeholder
     val placeholder = when (mode) {
-        ComposerMode.PUBLISH -> stringResource(R.string.memo_composer_placeholder)
+        ComposerMode.PUBLISH -> stringResource(if (paperTone) R.string.appearance_papertone_write else R.string.memo_composer_placeholder)
         ComposerMode.UPDATE -> stringResource(R.string.memo_composer_placeholder)
         ComposerMode.COMMENT -> stringResource(R.string.memo_detail_comment_placeholder)
     }
@@ -309,7 +311,7 @@ fun MemoComposer(
             draftAttachments = draftAttachments,
             uploadingUris = uploadingUris,
             location = location,
-            isPosting = isPosting,
+            isPosting = isPosting || (paperTone && (preparing || isUploadingCount > 0)),
             visibility = visibility,
             mode = mode,
             componentWidth = componentWidth,

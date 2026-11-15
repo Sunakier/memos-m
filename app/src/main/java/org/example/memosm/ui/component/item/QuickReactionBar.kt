@@ -1,5 +1,7 @@
 package org.example.memosm.ui.component.item
 
+import org.example.memosm.ui.theme.paperToneElevation
+
 import android.os.SystemClock
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -205,7 +207,7 @@ fun QuickReactionBar(
                             .size(width = gutterDp + outerDp, height = outerDp * 2),
                         shape = panelShape, color = panelColor,
                         border = BorderStroke(.5.dp, outline.copy(alpha = .25f)),
-                        shadowElevation = 8.dp, tonalElevation = 3.dp
+                        shadowElevation = paperToneElevation(8.dp), tonalElevation = paperToneElevation(3.dp)
                     ) {}
                     choices.forEachIndexed { index, emoji ->
                         val angle = if (choices.size == 1) 0.0 else -choiceHalfAngle + index * 2 * choiceHalfAngle / (choices.size - 1)

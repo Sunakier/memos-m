@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_papertone">PaperTone</string>
+    <string name="appearance_papertone_description">Paper cards, ink-colored controls and a quick writing bar. Takes priority over other styles. Turning it off restores system colors.</string>
+    <string name="appearance_papertone_write">Write something…</string>
+    <plurals name="appearance_papertone_characters">
+        <item quantity="one">%1$d character</item>
+        <item quantity="other">%1$d characters</item>
+    </plurals>
+</resources>

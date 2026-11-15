@@ -14,6 +14,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.launch
 import org.example.memosm.R
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.PaperToneTabs
 
 enum class MemoFeed(val labelRes: Int) {
     MEMOS(R.string.nav_memos),
@@ -24,6 +26,18 @@ enum class MemoFeed(val labelRes: Int) {
 internal fun MemoFeedTabs(pagerState: PagerState, modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
+    if (LocalPaperTone.current) {
+        PaperToneTabs(
+            labels = MemoFeed.entries.map { stringResource(it.labelRes) },
+            selectedIndex = pagerState.currentPage,
+            onSelect = { index ->
+                focusManager.clearFocus()
+                scope.launch { pagerState.animateScrollToPage(index) }
+            },
+            modifier = modifier
+        )
+        return
+    }
     PrimaryTabRow(
         selectedTabIndex = pagerState.currentPage,
         modifier = modifier,

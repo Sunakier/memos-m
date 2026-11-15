@@ -1,5 +1,7 @@
 package org.example.memosm.ui.component
 
+import org.example.memosm.ui.theme.paperToneDivider
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,6 +43,7 @@ fun ArchivedMemosScreen(
             topBar = { isDetailVisible, isDualPane ->
                 if (!isDetailVisible || isDualPane) {
                     TopAppBar(
+                        modifier = Modifier.paperToneDivider(),
                         title = {
                             Text(stringResource(R.string.profile_archived))
                         },

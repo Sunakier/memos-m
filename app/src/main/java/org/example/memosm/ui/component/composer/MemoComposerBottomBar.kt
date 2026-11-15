@@ -1,6 +1,8 @@
 package org.example.memosm.ui.component.composer
 
 import org.example.memosm.ui.theme.flatCardElevation
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.PaperToneEditorSubmit
 import android.net.Uri
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.compose.foundation.background
@@ -55,9 +57,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
@@ -97,6 +105,7 @@ fun MemoComposerBottomBar(
     onRecordingFinished: (Uri, Attachment?) -> Unit,
     onLocationFounded: (Location) -> Unit,
 ) {
+    val paperTone = LocalPaperTone.current
     LocalContext.current
     var showActionOverflowMenu by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
@@ -105,8 +114,10 @@ fun MemoComposerBottomBar(
     val showPublishLabel = componentWidth > 410.dp || componentWidth == 0.dp
     val isCompact = componentWidth < 380.dp && componentWidth != 0.dp
 
-    val actionIconSize = if (isCompact) 20.dp else 24.dp
-    val actionButtonSize = if (isCompact) 36.dp else 48.dp
+    val actionIconSize = if (paperTone || isCompact) 20.dp else 24.dp
+    val actionButtonSize = if (isCompact && !paperTone) 36.dp else 48.dp
+    val rule = MaterialTheme.colorScheme.outlineVariant
+    val visibilityLabel = getVisibilityLabel(visibility)
 
 
     val defaultElevation = 4.dp
@@ -117,18 +128,22 @@ fun MemoComposerBottomBar(
         modifier = modifier
             .fillMaxWidth()
             .focusProperties { canFocus = false }
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically) {
+            .then(if (paperTone) Modifier.background(MaterialTheme.colorScheme.surface).drawWithContent {
+                drawContent()
+                drawLine(rule, Offset.Zero, Offset(size.width, 0f), 0.5.dp.toPx())
+            } else Modifier)
+            .padding(horizontal = if (paperTone) 4.dp else 8.dp, vertical = if (paperTone) 4.dp else 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (paperTone) 0.dp else 8.dp),
+        verticalAlignment = if (paperTone) Alignment.Bottom else Alignment.CenterVertically) {
         // "Everything else" Card — pill when empty, rounded card when content is present
         val hasContent = draftAttachments.isNotEmpty() || location != null
-        val cardShape = if (hasContent) MaterialTheme.shapes.large else CircleShape
+        val cardShape = if (paperTone) RectangleShape else if (hasContent) MaterialTheme.shapes.large else CircleShape
         Card(
             modifier = Modifier.weight(1f), shape = cardShape, colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                containerColor = if (paperTone) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceContainerHigh
             ), elevation = flatCardElevation()
         ) {
-            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+            Column(modifier = Modifier.padding(horizontal = if (paperTone) 0.dp else 12.dp, vertical = 4.dp)) {
                 // Attachments List
                 if (draftAttachments.isNotEmpty()) {
                     LazyRow(
@@ -149,7 +164,8 @@ fun MemoComposerBottomBar(
                                     token = token,
                                     hostUrl = hostUrl,
                                     uri = uri,
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.fillMaxSize()
+                                        .then(if (paperTone) Modifier.clip(MaterialTheme.shapes.small) else Modifier),
                                     showInfo = false,
                                     compactMode = AttachmentCompactMode.Always
                                 )
@@ -218,7 +234,7 @@ fun MemoComposerBottomBar(
                     InputChip(
                         selected = true,
                         onClick = onLocationClick,
-                        shape = CircleShape,
+                        shape = if (paperTone) MaterialTheme.shapes.small else CircleShape,
                         label = {
                             Text(
                                 text = loc.placeholder ?: "${loc.latitude}, ${loc.longitude}",
@@ -249,7 +265,7 @@ fun MemoComposerBottomBar(
 
                 // Actions Row
                 // Determine if we should use overflow menu based on width
-                val useOverflowMenu = componentWidth < 320.dp && componentWidth != 0.dp
+                val useOverflowMenu = componentWidth < (if (paperTone) 360.dp else 320.dp) && componentWidth != 0.dp
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -402,7 +418,8 @@ fun MemoComposerBottomBar(
                                 onClick = { expanded = true },
                                 enabled = !isPosting,
                                 contentPadding = if (isCompact) PaddingValues(horizontal = 8.dp) else ButtonDefaults.TextButtonContentPadding,
-                                modifier = if (isCompact) Modifier.height(actionButtonSize) else Modifier
+                                modifier = (if (isCompact) Modifier.height(actionButtonSize) else Modifier)
+                                    .then(if (paperTone) Modifier.semantics { contentDescription = visibilityLabel } else Modifier)
                             ) {
                                 VisibilityIcon(
                                     visibility = visibility, modifier = Modifier.size(18.dp)
@@ -454,7 +471,9 @@ fun MemoComposerBottomBar(
         }
 
 
-        if (showPublishLabel) {
+        if (paperTone) {
+            PaperToneEditorSubmit(label = label, busy = isPosting, onClick = onPublishClick)
+        } else if (showPublishLabel) {
             ExtendedFloatingActionButton(
                 onClick = onPublishClick,
                 icon = {

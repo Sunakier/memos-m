@@ -1,5 +1,9 @@
 package org.example.memosm.ui.nav
 
+import org.example.memosm.ui.theme.mainBottomBarHeight
+import org.example.memosm.ui.theme.paperToneControlShape
+import org.example.memosm.ui.theme.paperToneElevation
+
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.activity.compose.BackHandler
@@ -85,7 +89,7 @@ fun MapScreen(
     var controlsHeight by remember { mutableIntStateOf(0) }
     val controlsBottom = with(LocalDensity.current) { controlsHeight.toDp() } + 12.dp
     val configuration = LocalConfiguration.current
-    val bottom = if (configuration.screenWidthDp < 600 && isNavBarVisible && !searchExpanded) 80.dp else 0.dp
+    val bottom = if (configuration.screenWidthDp < 600 && isNavBarVisible && !searchExpanded) mainBottomBarHeight() else 0.dp
     val dark = MaterialTheme.colorScheme.background.let { it.red + it.green + it.blue < 1.5f }
     val visible = remember(map.memos, searchResults) {
         val current = map.memos.associateBy { it.name }
@@ -136,7 +140,7 @@ fun MapScreen(
                         }
                         if (desktop || place == null) {
                             Surface(modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-                                shape = RoundedCornerShape(50), shadowElevation = 3.dp) {
+                                shape = paperToneControlShape(RoundedCornerShape(50)), shadowElevation = paperToneElevation(3.dp)) {
                                 IconButton(onClick = controller::fitAll, enabled = visible.isNotEmpty(),
                                     modifier = Modifier.testTag("map_fit_all")) {
                                     Icon(Icons.Outlined.MyLocation, stringResource(R.string.map_fit_all))
@@ -188,7 +192,7 @@ fun MapScreen(
                                                     }
                                                 }
                                             }
-                                        }, enabled = !isDrafting, shape = RoundedCornerShape(50), modifier = Modifier.testTag("map_new_here")) {
+                                        }, enabled = !isDrafting, shape = paperToneControlShape(RoundedCornerShape(50)), modifier = Modifier.testTag("map_new_here")) {
                                             if (isDrafting) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                                             else Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                                             Spacer(Modifier.width(8.dp))
@@ -242,7 +246,7 @@ fun MapScreen(
                             .padding(horizontal = 16.dp).testTag("map_scopes"),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             MapScope.entries.forEach { scope ->
-                                val shape = RoundedCornerShape(50)
+                                val shape = paperToneControlShape(RoundedCornerShape(50))
                                 FilterChip(selected = map.scope == scope,
                                     onClick = { if (map.scope != scope) viewModel.memoMapManager.selectScope(scope) },
                                     shape = shape, border = null,
@@ -270,7 +274,7 @@ fun MapScreen(
 
 @Composable
 private fun MapNotice(text: String, action: String? = null, modifier: Modifier = Modifier, onAction: () -> Unit = {}) {
-    Surface(modifier = modifier, shape = MaterialTheme.shapes.medium, tonalElevation = 4.dp) {
+    Surface(modifier = modifier, shape = MaterialTheme.shapes.medium, tonalElevation = paperToneElevation(4.dp)) {
         Column(Modifier.padding(12.dp)) {
             Text(text, style = MaterialTheme.typography.bodySmall)
             if (action != null) TextButton(onClick = onAction) { Text(action) }

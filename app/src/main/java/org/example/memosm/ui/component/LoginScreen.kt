@@ -1,5 +1,7 @@
 package org.example.memosm.ui.component
 
+import org.example.memosm.ui.theme.paperToneElevation
+
 import android.os.Build
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -137,7 +139,7 @@ fun LoginDialog(
                     .wrapContentHeight(),
                 shape = MaterialTheme.shapes.extraLarge,
                 color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp
+                tonalElevation = paperToneElevation(6.dp)
             ) {
                 Box {
                     IconButton(
