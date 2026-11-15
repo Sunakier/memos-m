@@ -31,12 +31,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.clip
 import org.example.memosm.R
 import org.example.memosm.ui.component.setting.SettingsGroup
+import org.example.memosm.ui.theme.LocalPaperTone
 
 enum class SettingsSection(
     @StringRes val titleRes: Int,
@@ -79,7 +81,7 @@ internal fun SettingsOverview(onOpenSection: (SettingsSection) -> Unit, modifier
                                     Surface(
                                         modifier = Modifier.size(40.dp),
                                         shape = CircleShape,
-                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        color = if (LocalPaperTone.current) Color.Transparent else MaterialTheme.colorScheme.primaryContainer,
                                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {

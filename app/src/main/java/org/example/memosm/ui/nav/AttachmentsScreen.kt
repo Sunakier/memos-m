@@ -1,10 +1,15 @@
 package org.example.memosm.ui.nav
 
+import org.example.memosm.ui.theme.mainBottomBarHeight
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.PaperTonePageHeader
+
 import android.text.format.DateFormat
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -165,8 +170,9 @@ fun AttachmentsScreen(
         onScrollUp = { onToggleNavBar?.invoke(true) },
     )
 
+    val navigationHeight = mainBottomBarHeight()
     val bottomPadding by animateDpAsState(
-        targetValue = if (isNavBarVisible) 80.dp else 16.dp,
+        targetValue = if (isNavBarVisible) navigationHeight else 16.dp,
         label = "BottomPadding",
     )
 
@@ -181,210 +187,215 @@ fun AttachmentsScreen(
         lastProcessedTrigger = uiState.refreshTrigger
     }
 
-    PullToRefreshBox(
-        isRefreshing = attachmentPages.loadState.refresh is LoadState.Loading && attachmentPages.itemCount > 0,
-        onRefresh = {
-            attachmentPages.refresh()
-            viewModel.checkConnection()
-        },
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .statusBarsPadding(),
-    ) {
-        BoxWithConstraints(
+    val paperTone = LocalPaperTone.current
+    Column(Modifier.fillMaxSize()) {
+        if (paperTone) PaperTonePageHeader(stringResource(R.string.nav_attachments), Modifier.statusBarsPadding())
+        PullToRefreshBox(
+            isRefreshing = attachmentPages.loadState.refresh is LoadState.Loading && attachmentPages.itemCount > 0,
+            onRefresh = {
+                attachmentPages.refresh()
+                viewModel.checkConnection()
+            },
             modifier =
                 Modifier
-                    .fillMaxSize()
-                    // Detect pinch-to-zoom gestures globally using the Initial pass
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                val pressedChanges = event.changes.filter { it.pressed }
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .then(if (paperTone) Modifier else Modifier.statusBarsPadding()),
+        ) {
+            BoxWithConstraints(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        // Detect pinch-to-zoom gestures globally using the Initial pass
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                    val pressedChanges = event.changes.filter { it.pressed }
 
-                                if (pressedChanges.size >= 2) {
-                                    val p1 = pressedChanges[0].position
-                                    val p2 = pressedChanges[1].position
-                                    val p1Prev = pressedChanges[0].previousPosition
-                                    val p2Prev = pressedChanges[1].previousPosition
+                                    if (pressedChanges.size >= 2) {
+                                        val p1 = pressedChanges[0].position
+                                        val p2 = pressedChanges[1].position
+                                        val p1Prev = pressedChanges[0].previousPosition
+                                        val p2Prev = pressedChanges[1].previousPosition
 
-                                    val currentDistance = (p1 - p2).getDistance()
-                                    val previousDistance = (p1Prev - p2Prev).getDistance()
+                                        val currentDistance = (p1 - p2).getDistance()
+                                        val previousDistance = (p1Prev - p2Prev).getDistance()
 
-                                    if (previousDistance > 0f && currentDistance > 0f) {
-                                        val zoomFactor = currentDistance / previousDistance
-                                        if (zoomFactor != 1f) {
-                                            val newWidth =
-                                                (latestCellWidth * zoomFactor).coerceIn(
-                                                    100f,
-                                                    600f,
-                                                )
-                                            viewModel.updateAttachmentCellWidth(newWidth)
-                                            // Consume the event to prevent the list from scrolling while zooming
-                                            event.changes.forEach { it.consume() }
+                                        if (previousDistance > 0f && currentDistance > 0f) {
+                                            val zoomFactor = currentDistance / previousDistance
+                                            if (zoomFactor != 1f) {
+                                                val newWidth =
+                                                    (latestCellWidth * zoomFactor).coerceIn(
+                                                        100f,
+                                                        600f,
+                                                    )
+                                                viewModel.updateAttachmentCellWidth(newWidth)
+                                                // Consume the event to prevent the list from scrolling while zooming
+                                                event.changes.forEach { it.consume() }
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                    },
-        ) {
-            val viewportWidth = maxWidth.value
-            val entries =
-                rememberTimelineEntries(
-                    listState,
-                    days,
-                    uiState.attachmentList.aspectRatios,
-                    viewportWidth,
-                    uiState.attachmentList.cellWidth,
-                )
-            if (attachmentItems.isEmpty() && loading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else if (attachmentItems.isEmpty() && !loading) {
-                if (loadError != null || uiState.error != null) {
-                    ErrorView(
-                        title = stringResource(R.string.common_error_failed_to_load_attachments),
-                        message =
-                            loadError?.message ?: uiState.error
-                                ?.let {
-                                    stringResource(it.resourceId, *it.formatArgs.toTypedArray())
-                                }.orEmpty(),
-                        onRetry = attachmentPages::retry,
-                        modifier = Modifier.align(Alignment.Center),
+                        },
+            ) {
+                val viewportWidth = maxWidth.value
+                val entries =
+                    rememberTimelineEntries(
+                        listState,
+                        days,
+                        uiState.attachmentList.aspectRatios,
+                        viewportWidth,
+                        uiState.attachmentList.cellWidth,
                     )
+                if (attachmentItems.isEmpty() && loading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                } else if (attachmentItems.isEmpty() && !loading) {
+                    if (loadError != null || uiState.error != null) {
+                        ErrorView(
+                            title = stringResource(R.string.common_error_failed_to_load_attachments),
+                            message =
+                                loadError?.message ?: uiState.error
+                                    ?.let {
+                                        stringResource(it.resourceId, *it.formatArgs.toTypedArray())
+                                    }.orEmpty(),
+                            onRetry = attachmentPages::retry,
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(
+                                stringResource(
+                                    if (uiState.connectionState.isOffline) {
+                                        R.string.attachments_offline_empty
+                                    } else {
+                                        R.string.attachments_none_found
+                                    },
+                                ),
+                            )
+                        }
+                    }
                 } else {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            stringResource(
-                                if (uiState.connectionState.isOffline) {
-                                    R.string.attachments_offline_empty
-                                } else {
-                                    R.string.attachments_none_found
-                                },
-                            ),
+                    val attachmentCard: @Composable (TimelineAttachment, Modifier) -> Unit = { item, modifier ->
+                        attachmentPages[item.index]
+                        val attachment = item.attachment
+                        AttachmentCard(
+                            attachment = attachment,
+                            mediaModifier = Modifier.attachmentOrigin(attachmentOrigins, attachment),
+                            token = uiState.session.token,
+                            hostUrl = uiState.session.hostUrl,
+                            compactMode = AttachmentCompactMode.Width,
+                            gallery = true,
+                            modifier = modifier,
+                            onClick = {
+                                fullScreenInitialIndex = item.index
+                                showFullScreenViewer = true
+                            },
+                            onMediaRatioAvailable = { ratio, exact ->
+                                if (exact) {
+                                    viewModel.updateAttachmentAspectRatio(
+                                        accountIdentity?.id,
+                                        accountIdentity?.generation ?: 0,
+                                        attachment.identityKey,
+                                        ratio,
+                                    )
+                                }
+                            },
                         )
                     }
-                }
-            } else {
-                val attachmentCard: @Composable (TimelineAttachment, Modifier) -> Unit = { item, modifier ->
-                    attachmentPages[item.index]
-                    val attachment = item.attachment
-                    AttachmentCard(
-                        attachment = attachment,
-                        mediaModifier = Modifier.attachmentOrigin(attachmentOrigins, attachment),
-                        token = uiState.session.token,
-                        hostUrl = uiState.session.hostUrl,
-                        compactMode = AttachmentCompactMode.Width,
-                        gallery = true,
-                        modifier = modifier,
-                        onClick = {
-                            fullScreenInitialIndex = item.index
-                            showFullScreenViewer = true
-                        },
-                        onMediaRatioAvailable = { ratio, exact ->
-                            if (exact) {
-                                viewModel.updateAttachmentAspectRatio(
-                                    accountIdentity?.id,
-                                    accountIdentity?.generation ?: 0,
-                                    attachment.identityKey,
-                                    ratio,
-                                )
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(top = 12.dp, bottom = bottomPadding),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        items(entries, key = { it.key }, contentType = {
+                            when (it) {
+                                is AttachmentTimelineEntry.Month -> "month"
+                                is AttachmentTimelineEntry.Day -> "day"
+                                is AttachmentTimelineEntry.Row -> "row"
                             }
-                        },
-                    )
-                }
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 12.dp, bottom = bottomPadding),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    items(entries, key = { it.key }, contentType = {
-                        when (it) {
-                            is AttachmentTimelineEntry.Month -> "month"
-                            is AttachmentTimelineEntry.Day -> "day"
-                            is AttachmentTimelineEntry.Row -> "row"
-                        }
-                    }) { entry ->
-                        when (entry) {
-                            is AttachmentTimelineEntry.Month -> {
-                                Text(
-                                    text =
-                                        entry.month.atDay(1).format(
-                                            if (entry.month.year == currentYear) monthFormatter else yearMonthFormatter,
-                                        ),
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    modifier =
-                                        Modifier
-                                            .padding(start = 12.dp, end = 12.dp, top = 24.dp, bottom = 8.dp)
-                                            .semantics { heading() },
-                                )
-                            }
+                        }) { entry ->
+                            when (entry) {
+                                is AttachmentTimelineEntry.Month -> {
+                                    Text(
+                                        text =
+                                            entry.month.atDay(1).format(
+                                                if (entry.month.year == currentYear) monthFormatter else yearMonthFormatter,
+                                            ),
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        modifier =
+                                            Modifier
+                                                .padding(start = 12.dp, end = 12.dp, top = 24.dp, bottom = 8.dp)
+                                                .semantics { heading() },
+                                    )
+                                }
 
-                            is AttachmentTimelineEntry.Day -> {
-                                Text(
-                                    text = entry.date?.format(dayFormatter) ?: stringResource(R.string.attachments_unknown_date),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp).semantics { heading() },
-                                )
-                            }
+                                is AttachmentTimelineEntry.Day -> {
+                                    Text(
+                                        text = entry.date?.format(dayFormatter) ?: stringResource(R.string.attachments_unknown_date),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp).semantics { heading() },
+                                    )
+                                }
 
-                            is AttachmentTimelineEntry.Row -> {
-                                Row(
-                                    modifier =
-                                        Modifier
-                                            .width(
-                                                (entry.geometry.widths.sum() + 2f * (entry.attachments.size - 1))
-                                                    .coerceAtMost(viewportWidth)
-                                                    .dp,
-                                            ).height(entry.geometry.height.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                ) {
-                                    entry.attachments.forEachIndexed { column, item ->
-                                        key(item.key) {
-                                            attachmentCard(item, Modifier.weight(entry.geometry.widths[column]).fillMaxSize())
+                                is AttachmentTimelineEntry.Row -> {
+                                    Row(
+                                        modifier =
+                                            Modifier
+                                                .width(
+                                                    (entry.geometry.widths.sum() + 2f * (entry.attachments.size - 1))
+                                                        .coerceAtMost(viewportWidth)
+                                                        .dp,
+                                                ).height(entry.geometry.height.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                    ) {
+                                        entry.attachments.forEachIndexed { column, item ->
+                                            key(item.key) {
+                                                attachmentCard(item, Modifier.weight(entry.geometry.widths[column]).fillMaxSize())
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    if (loading && attachmentItems.isNotEmpty()) {
-                        item(key = "loading", contentType = "footer") {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator()
+                        if (loading && attachmentItems.isNotEmpty()) {
+                            item(key = "loading", contentType = "footer") {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    CircularProgressIndicator()
+                                }
                             }
-                        }
-                    } else if (!loading && attachmentPages.loadState.append.endOfPaginationReached && attachmentItems.isNotEmpty()) {
-                        item(key = "end", contentType = "footer") {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 32.dp, horizontal = 16.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.memo_list_end),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.outline,
-                                )
+                        } else if (!loading && attachmentPages.loadState.append.endOfPaginationReached && attachmentItems.isNotEmpty()) {
+                            item(key = "end", contentType = "footer") {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 32.dp, horizontal = 16.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.memo_list_end),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline,
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
-    }
 
+    }
     if (showFullScreenViewer) {
         FullScreenAttachmentViewer(
             attachments = orderedAttachments,

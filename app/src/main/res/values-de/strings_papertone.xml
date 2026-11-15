@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_papertone">PaperTone</string>
+    <string name="appearance_papertone_description">Papierkarten, tintenfarbene Bedienelemente und eine Leiste für schnelle Notizen. Hat Vorrang vor anderen Stilen. Beim Ausschalten werden die Systemfarben wiederhergestellt.</string>
+    <string name="appearance_papertone_write">Etwas schreiben…</string>
+    <plurals name="appearance_papertone_characters">
+        <item quantity="one">%1$d Zeichen</item>
+        <item quantity="other">%1$d Zeichen</item>
+    </plurals>
+</resources>

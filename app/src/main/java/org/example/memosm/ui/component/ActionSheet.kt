@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.PaperToneSheetHandle
+import org.example.memosm.ui.theme.paperToneDivider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,7 +36,9 @@ internal fun ActionSheet(
             initialValue = SheetValue.Hidden,
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
         ),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        shape = if (LocalPaperTone.current) MaterialTheme.shapes.large else BottomSheetDefaults.ExpandedShape,
+        dragHandle = { if (LocalPaperTone.current) PaperToneSheetHandle() else BottomSheetDefaults.DragHandle() },
+        containerColor = if (LocalPaperTone.current) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
             modifier = Modifier
@@ -56,7 +62,7 @@ internal fun ActionSheetItem(
     ListItem(
         content = text,
         leadingContent = leadingIcon,
-        modifier = Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick),
+        modifier = Modifier.fillMaxWidth().paperToneDivider().clickable(role = Role.Button, onClick = onClick),
         colors = ListItemDefaults.colors(
             containerColor = Color.Transparent,
             headlineColor = contentColor,

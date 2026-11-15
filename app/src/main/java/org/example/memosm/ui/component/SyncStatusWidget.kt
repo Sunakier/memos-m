@@ -1,5 +1,10 @@
 package org.example.memosm.ui.component
 
+import org.example.memosm.ui.theme.paperToneCardBorder
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.PaperToneSheetHandle
+import androidx.compose.material3.BottomSheetDefaults
+
 import android.text.format.DateUtils
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -134,7 +139,11 @@ fun SyncStatusPanel(
     onReviewConflict: (String) -> Unit,
     onManageCache: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss,
+        shape = if (LocalPaperTone.current) MaterialTheme.shapes.large else BottomSheetDefaults.ExpandedShape,
+        dragHandle = { if (LocalPaperTone.current) PaperToneSheetHandle() else BottomSheetDefaults.DragHandle() },
+        containerColor = if (LocalPaperTone.current) MaterialTheme.colorScheme.surfaceContainerHigh else BottomSheetDefaults.ContainerColor
+    ) {
         Column(
             modifier =
                 Modifier
@@ -293,6 +302,7 @@ private fun PendingOperationItem(
     val payloadSummary = remember(op.payloadJson) { pendingPayloadSummary(op.payloadJson) }
 
     Surface(
+        border = paperToneCardBorder(),
         modifier =
             Modifier
                 .fillMaxWidth()

@@ -1,5 +1,8 @@
 import androidx.compose.animation.animateColorAsState
 import org.example.memosm.ui.theme.flatCardElevation
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.paperToneCardBorder
+import org.example.memosm.ui.theme.paperToneControlShape
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -135,7 +138,7 @@ fun AccountsList(
         Column {
             accounts.forEachIndexed { index, account ->
                 // Pill shape for when swiping
-                val pillShape = RoundedCornerShape(28.dp)
+                val pillShape = paperToneControlShape(RoundedCornerShape(28.dp))
 
                 // Track component width for calculating swipe progress
                 var componentWidth by remember { mutableFloatStateOf(1f) }
@@ -251,6 +254,7 @@ fun AccountsList(
 
                 // Current animated shape for the card
                 val currentShape = when {
+                    LocalPaperTone.current -> MaterialTheme.shapes.small
                     accounts.size == 1 -> pillShape
                     index == 0 -> RoundedCornerShape(
                         topStart = 28.dp,
@@ -334,6 +338,7 @@ fun AccountsList(
 
                     // Foreground card with swipe gesture
                     Card(
+                        border = paperToneCardBorder(),
                         elevation = flatCardElevation(),
                         modifier = Modifier
                             .fillMaxWidth()

@@ -2,7 +2,6 @@ package org.example.memosm.ui.component.item.markdown
 
 import android.content.Context
 import android.view.View.MeasureSpec
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -34,6 +33,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
@@ -463,7 +463,7 @@ fun NativeMarkdownNodeRecursive(node: ASTNode, allowPreview: Boolean = false) {
 
                 // Remove leading/trailing newlines to avoid extra padding, but preserve indentation
                 val code = sb.toString().removePrefix("\n").removeSuffix("\n")
-                val isDarkTheme = isSystemInDarkTheme()
+                val isDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                 val highlightedText = CodeHighlighter.highlightCode(code, lang, isDarkTheme)
 
                 Text(

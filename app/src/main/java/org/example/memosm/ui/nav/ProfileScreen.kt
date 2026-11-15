@@ -33,6 +33,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -72,7 +73,10 @@ import org.example.memosm.ui.profile.EditAccountCredentialsActivity
 import org.example.memosm.ui.profile.EditProfileActivity
 import org.example.memosm.ui.profile.NotificationsActivity
 import org.example.memosm.ui.profile.SettingsActivity
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.PaperToneSheetHandle
 import org.example.memosm.ui.theme.ProfileTheme
+import org.example.memosm.ui.theme.mainBottomBarHeight
 import org.example.memosm.viewmodel.MemosViewModel
 import org.example.memosm.viewmodel.RefreshSource
 import org.koin.compose.koinInject
@@ -151,8 +155,9 @@ private fun ProfileListPane(
         onScrollUp = { onToggleNavBar?.invoke(true) },
     )
 
+    val navigationHeight = mainBottomBarHeight()
     val bottomPadding by animateDpAsState(
-        targetValue = if (isNavBarVisible) 96.dp else 16.dp, // Profile has more bottom internal padding?
+        targetValue = if (isNavBarVisible) navigationHeight + 16.dp else 16.dp,
         label = "BottomPadding",
     )
 
@@ -189,6 +194,9 @@ private fun ProfileListPane(
 
     if (showAccountSwitcher) {
         ModalBottomSheet(
+            shape = if (LocalPaperTone.current) MaterialTheme.shapes.large else BottomSheetDefaults.ExpandedShape,
+            dragHandle = { if (LocalPaperTone.current) PaperToneSheetHandle() else BottomSheetDefaults.DragHandle() },
+            containerColor = if (LocalPaperTone.current) MaterialTheme.colorScheme.surfaceContainerHigh else BottomSheetDefaults.ContainerColor,
             onDismissRequest = { showAccountSwitcher = false },
             sheetState =
                 rememberBottomSheetState(

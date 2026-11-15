@@ -78,6 +78,7 @@ import org.example.memosm.ui.component.composer.ComposerMode
 import org.example.memosm.ui.component.composer.EditorRequest
 import org.example.memosm.ui.component.composer.rememberMemoEditorLauncher
 import org.example.memosm.ui.component.item.MemoItem
+import org.example.memosm.ui.theme.mainBottomBarHeight
 import org.example.memosm.viewmodel.MemosViewModel
 
 val LocalMemoEditor = compositionLocalOf<(Memo) -> Unit> { { } }
@@ -351,7 +352,7 @@ fun GenericMemosListPane(
     listState: LazyListState = rememberLazyListState(),
     userProvider: (Memo) -> User? = { null },
     header: (LazyListScope.() -> Unit)? = null,
-    contentPadding: PaddingValues = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
+    contentPadding: PaddingValues = PaddingValues(start = 16.dp, end = 16.dp, bottom = mainBottomBarHeight()),
     errorTitle: String = stringResource(R.string.common_error_failed_to_load),
     onHashtagClick: ((String) -> Unit)? = null,
     isActive: Boolean = true,

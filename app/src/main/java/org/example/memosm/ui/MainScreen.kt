@@ -82,6 +82,8 @@ import org.example.memosm.ui.nav.MapScreen
 import org.example.memosm.ui.nav.MemoFeed
 import org.example.memosm.ui.nav.MemosScreen
 import org.example.memosm.ui.nav.ProfileScreen
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.PaperToneNavigationBar
 import org.example.memosm.viewmodel.MemosUiState
 import org.example.memosm.viewmodel.MemosViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -155,6 +157,9 @@ private fun MainScreenContent(
     var currentDestination by destination
     val mapSupported = uiState.memoMap.capability == MapCapability.SUPPORTED
     val visibleDestinations = MainDestination.entries.filter { it != MainDestination.MAP || mapSupported }
+    val paperTone = LocalPaperTone.current
+    var navigationPreview by remember(paperTone, visibleDestinations) { mutableStateOf<MainDestination?>(null) }
+    val displayedDestination = navigationPreview ?: currentDestination
     LaunchedEffect(mapSupported, uiState.accountGeneration) {
         if (!mapSupported && currentDestination == MainDestination.MAP) currentDestination = MainDestination.MEMOS
     }
@@ -226,7 +231,7 @@ private fun MainScreenContent(
 
     val toggleNavBar: ((Boolean) -> Unit)? =
         if (isMobile) {
-            { isNavBarVisible = it }
+            { if (navigationPreview == null) isNavBarVisible = it }
         } else {
             null
         }
@@ -379,7 +384,7 @@ private fun MainScreenContent(
                 ) {
                     // Content
                     AnimatedContent(
-                        targetState = currentDestination,
+                        targetState = displayedDestination,
                         transitionSpec = {
                             fadeIn(animationSpec = tween(220)) togetherWith
                                 fadeOut(
@@ -447,7 +452,25 @@ private fun MainScreenContent(
                         enter = slideInVertically(initialOffsetY = { it }),
                         exit = slideOutVertically(targetOffsetY = { it }),
                     ) {
-                        NavigationBar(
+                        if (paperTone) {
+                            PaperToneNavigationBar(
+                                labels = visibleDestinations.map { stringResource(it.labelRes) },
+                                selectedIndex = visibleDestinations.indexOf(currentDestination).coerceAtLeast(0),
+                                onSelect = {
+                                    navigationPreview = null
+                                    handleDestinationClick(visibleDestinations[it])
+                                },
+                                onPreview = { navigationPreview = visibleDestinations[it] },
+                                onCommit = {
+                                    focusManager.clearFocus()
+                                    currentDestination = visibleDestinations[it]
+                                    navigationPreview = null
+                                    lastTapTime = 0L
+                                },
+                                onCancel = { navigationPreview = null },
+                                icon = { index, selected -> NavigationIcon(visibleDestinations[index], selected, Modifier.size(21.dp)) }
+                            )
+                        } else NavigationBar(
                             containerColor = MaterialTheme.colorScheme.surfaceContainer,
                             contentColor = contentColorFor(MaterialTheme.colorScheme.surfaceContainer),
                         ) {

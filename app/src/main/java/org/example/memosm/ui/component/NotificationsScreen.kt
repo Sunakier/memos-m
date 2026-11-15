@@ -1,5 +1,9 @@
 package org.example.memosm.ui.component
 
+import org.example.memosm.ui.theme.paperToneCardBorder
+import org.example.memosm.ui.theme.paperToneDivider
+import org.example.memosm.ui.theme.paperToneControlShape
+
 import org.example.memosm.ui.theme.flatCardElevation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -107,6 +111,7 @@ fun NotificationsScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
+                modifier = Modifier.paperToneDivider(),
                 title = { Text(stringResource(R.string.profile_notifications)) },
                 navigationIcon = {
                     ProfileBackButton(onClick = onBack)
@@ -172,7 +177,7 @@ fun NotificationsScreen(
                         if (showingCached) {
                             item(key = "cached_hint") {
                                 Surface(
-                                    shape = RoundedCornerShape(8.dp),
+                                    shape = paperToneControlShape(RoundedCornerShape(8.dp)),
                                     color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
@@ -213,7 +218,7 @@ fun NotificationsScreen(
 
 @Composable
 private fun NotificationCard(notification: UserNotification) {
-    Card(elevation = flatCardElevation(), modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+    Card(border = paperToneCardBorder(), elevation = flatCardElevation(), modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
         ListItem(
             content = {
                 Text(

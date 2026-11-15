@@ -63,6 +63,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import org.example.memosm.R
+import org.example.memosm.data.paging.isLocalShortcutTagFilter
 import org.example.memosm.data.sync.PreDownloadState
 import org.example.memosm.model.Memo
 import org.example.memosm.ui.component.GenericMemosListPane
@@ -74,6 +75,10 @@ import org.example.memosm.ui.component.composer.rememberMemoEditorLauncher
 import org.example.memosm.ui.component.item.DraftsCard
 import org.example.memosm.ui.component.rememberScrollContext
 import org.example.memosm.ui.profile.DraftsActivity
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.PaperToneComposeBar
+import org.example.memosm.ui.theme.mainBottomBarHeight
+import org.example.memosm.ui.theme.paperToneControlShape
 import org.example.memosm.viewmodel.MemosViewModel
 import org.example.memosm.viewmodel.RefreshSource
 import org.example.memosm.viewmodel.isOffline
@@ -87,6 +92,8 @@ fun MemosScreen(
     openComposer: Boolean = false,
     onComposerOpened: () -> Unit = {},
 ) {
+    val paperTone = LocalPaperTone.current
+    val navigationHeight = mainBottomBarHeight()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val userPages = viewModel.userMemos.collectAsLazyPagingItems()
     val explorePages = viewModel.exploreMemos.collectAsLazyPagingItems()
@@ -130,7 +137,7 @@ fun MemosScreen(
     }
 
     val bottomPadding by animateDpAsState(
-        targetValue = if (isNavBarVisible) 80.dp else 16.dp,
+        targetValue = (if (isNavBarVisible) navigationHeight else 16.dp) + (if (paperTone) 68.dp else 0.dp),
         label = "BottomPadding",
     )
 
@@ -177,10 +184,11 @@ fun MemosScreen(
                 key = { MemoFeed.entries[it] },
             ) { page ->
                 val feed = MemoFeed.entries[page]
+                val sidePadding = if (paperTone) 4.dp else 16.dp
                 val contentPadding =
                     PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
+                        start = sidePadding,
+                        end = sidePadding,
                         bottom = bottomPadding,
                     )
                 when (feed) {
@@ -217,43 +225,52 @@ fun MemosScreen(
             if (uiState.session.currUser != null && !isSearchExpanded) {
                 // Animate FAB position only if nav bar can be toggled (onToggleNavBar provided)
                 val fabBottomPadding by animateDpAsState(
-                    targetValue = if (onToggleNavBar != null && isNavBarVisible) 96.dp else 16.dp,
+                    targetValue = if (onToggleNavBar != null && isNavBarVisible) navigationHeight + 16.dp else 16.dp,
                     label = "fabBottomPadding",
                 )
 
-                ExtendedFloatingActionButton(
-                    onClick = {
-                        // If drafts exist, show prompt; otherwise show composer directly
-                        if (uiState.draft.drafts.isNotEmpty()) {
-                            showDraftPrompt = true
-                        } else {
-                            // Start fresh with a new draft session ID
-                            composeNew()
-                        }
-                    },
-                    expanded = isFabExpanded,
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Add,
-                            contentDescription =
-                                if (isFabExpanded) {
-                                    null
-                                } else {
-                                    stringResource(R.string.memo_composer_fab_new_memo)
-                                },
-                        )
-                    },
-                    text = {
-                        Text(text = stringResource(R.string.memo_composer_fab_new_memo))
-                    },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier =
-                        Modifier
+                val onCompose: () -> Unit = {
+                    if (uiState.draft.drafts.isNotEmpty()) {
+                        showDraftPrompt = true
+                    } else {
+                        composeNew()
+                    }
+                }
+                if (paperTone) {
+                    PaperToneComposeBar(
+                        onClick = onCompose,
+                        modifier = Modifier
                             .testTag("memo_feed_compose")
-                            .align(Alignment.BottomEnd)
-                            .padding(end = 16.dp, bottom = fabBottomPadding),
-                )
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = fabBottomPadding - 16.dp),
+                    )
+                } else {
+                    ExtendedFloatingActionButton(
+                        onClick = onCompose,
+                        expanded = isFabExpanded,
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Add,
+                                contentDescription =
+                                    if (isFabExpanded) {
+                                        null
+                                    } else {
+                                        stringResource(R.string.memo_composer_fab_new_memo)
+                                    },
+                            )
+                        },
+                        text = {
+                            Text(text = stringResource(R.string.memo_composer_fab_new_memo))
+                        },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier =
+                            Modifier
+                                .testTag("memo_feed_compose")
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 16.dp, bottom = fabBottomPadding),
+                    )
+                }
             }
         },
         header = { onMemoClick, showSearchBar, searchExpanded, onSearchExpandedChange, isDualPane, isDetailVisible ->
@@ -348,6 +365,7 @@ private fun MemosListPane(
     val hasDrafts = uiState.draft.drafts.isNotEmpty()
     val shortcutListState = rememberLazyListState()
     val draftCount = uiState.draft.drafts.size
+    val shortcutFilter = uiState.userMemoList.selectedShortcut?.filter.orEmpty()
 
     GenericMemosListPane(
         viewModel = viewModel,
@@ -360,11 +378,7 @@ private fun MemosListPane(
         onHashtagClick = onHashtagClick,
         isActive = isActive,
         emptyMessage =
-            if (!uiState.isOnline &&
-                !uiState.userMemoList.selectedShortcut
-                    ?.filter
-                    .isNullOrBlank()
-            ) {
+            if (!uiState.isOnline && shortcutFilter.isNotBlank() && !isLocalShortcutTagFilter(shortcutFilter)) {
                 stringResource(R.string.offline_filter_unavailable)
             } else {
                 null
@@ -485,7 +499,7 @@ private fun MemosListPane(
                                                     Text(selectedHashtag.removePrefix("#"))
                                                 }
                                             },
-                                            shape = RoundedCornerShape(16.dp),
+                                            shape = paperToneControlShape(RoundedCornerShape(16.dp)),
                                             trailingIcon = {
                                                 Icon(
                                                     imageVector = Icons.Outlined.Close,
@@ -523,7 +537,7 @@ private fun MemosListPane(
                                                 Text(shortcut.title ?: "")
                                             }
                                         },
-                                        shape = RoundedCornerShape(16.dp),
+                                        shape = paperToneControlShape(RoundedCornerShape(16.dp)),
                                         trailingIcon =
                                             if (isSelected) {
                                                 {

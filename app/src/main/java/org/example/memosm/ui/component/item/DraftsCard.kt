@@ -1,6 +1,8 @@
 package org.example.memosm.ui.component.item
 
 import org.example.memosm.ui.theme.flatCardElevation
+import org.example.memosm.ui.theme.LocalPaperTone
+import org.example.memosm.ui.theme.paperToneCardBorder
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -54,13 +56,14 @@ fun DraftsCard(
     val context = LocalContext.current
 
     Card(
+        border = paperToneCardBorder(),
         elevation = flatCardElevation(),
         modifier = modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
+            containerColor = if (LocalPaperTone.current) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.secondaryContainer
         )
     ) {
         // Top: Draft info (clickable to open drafts screen)

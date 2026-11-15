@@ -102,7 +102,10 @@ import org.example.memosm.model.Visibility
 import org.example.memosm.ui.component.item.MemoItem
 import org.example.memosm.ui.nav.SettingsSection
 import org.example.memosm.ui.profile.SettingsActivity
+import org.example.memosm.ui.theme.LocalPaperTone
 import org.example.memosm.ui.theme.flatCardElevation
+import org.example.memosm.ui.theme.paperToneCardBorder
+import org.example.memosm.ui.theme.paperToneControlShape
 import org.example.memosm.viewmodel.MemosUiState
 import org.example.memosm.viewmodel.MemosViewModel
 import org.example.memosm.viewmodel.isOffline
@@ -344,7 +347,24 @@ fun MemoSearchBar(
         // The inline overload respects the list pane's bounds and scaffold insets.
         // The newer expanded variants use separate dialog/popup windows.
         @Suppress("DEPRECATION")
-        SearchBar(
+        if (LocalPaperTone.current && !expanded) {
+            Row(
+                Modifier.fillMaxWidth().height(56.dp).testTag("memo_search_bar"),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { searchScope.launch { searchBarState.animateToExpanded() } }) {
+                    Icon(Icons.Outlined.Search, contentDescription = placeholder)
+                }
+                if (localMemos == null) {
+                    SyncStatusIconButton(uiState = uiState, onClick = { showSyncPanel = true })
+                }
+            }
+        } else SearchBar(
             inputField = inputField,
             expanded = expanded,
             onExpandedChange = { expand ->
@@ -525,6 +545,7 @@ private fun SearchResultContent(
         if (availableTags.isNotEmpty()) {
             item {
                 Card(
+                    border = paperToneCardBorder(),
                     elevation = flatCardElevation(),
                     modifier =
                         Modifier
@@ -661,7 +682,7 @@ private fun SearchResultContent(
                                 ExposedDropdownMenuAnchorType.PrimaryNotEditable,
                                 true,
                             ),
-                        shape = RoundedCornerShape(32.dp),
+                        shape = paperToneControlShape(RoundedCornerShape(32.dp)),
                         color = Color.Transparent,
                     ) {
                         Row(
@@ -866,6 +887,7 @@ private fun DateSelectorCard(
 ) {
     val context = LocalContext.current
     Card(
+        border = paperToneCardBorder(),
         elevation = flatCardElevation(),
         modifier = modifier,
         colors =

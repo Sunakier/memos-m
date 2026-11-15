@@ -9,6 +9,7 @@ import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import androidx.paging.filter
 import androidx.paging.map
+import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -35,20 +36,22 @@ private val shortcutTagGroup = Regex(SHORTCUT_TAG_GROUP)
 private val shortcutTagLiteral = Regex(SHORTCUT_TAG_LITERAL)
 private val markdownHashtag = Regex("""#[^\s#]+""")
 
+internal fun isLocalShortcutTagFilter(filter: String): Boolean = shortcutTagFilter.matches(filter)
+
 /** A request captures its account, parent, filter and ordering for its entire lifetime. */
 data class MemoQuery(
-    val listType: CacheListType,
-    val parentName: String? = null,
-    val search: MemoSearchFilter? = null,
-    val explore: Boolean = false,
-    val hashtag: String? = null,
-    val serverFilter: String? = null,
-    val order: MemoOrderBy = MemoOrderBy.NEWEST,
+    @SerializedName("listType") val listType: CacheListType,
+    @SerializedName("parentName") val parentName: String? = null,
+    @SerializedName("search") val search: MemoSearchFilter? = null,
+    @SerializedName("explore") val explore: Boolean = false,
+    @SerializedName("hashtag") val hashtag: String? = null,
+    @SerializedName("serverFilter") val serverFilter: String? = null,
+    @SerializedName("order") val order: MemoOrderBy = MemoOrderBy.NEWEST,
 ) {
     // A shortcut can reuse the personal cache only if its entire CEL filter is understood.
     @Transient
     internal val shortcutTagGroups =
-        serverFilter?.takeIf(shortcutTagFilter::matches)?.let { filter ->
+        serverFilter?.takeIf(::isLocalShortcutTagFilter)?.let { filter ->
             shortcutTagGroup.findAll(filter).map { group ->
                 shortcutTagLiteral.findAll(group.value).map { it.value.substring(1, it.value.lastIndex) }.toSet()
             }.toList()

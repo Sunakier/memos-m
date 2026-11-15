@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_papertone">PaperTone · 纸风</string>
+    <string name="appearance_papertone_description">纸面卡片、墨色控件与底部速记栏。优先使用纸风样式，关闭后恢复系统配色。</string>
+    <string name="appearance_papertone_write">写点什么…</string>
+    <plurals name="appearance_papertone_characters">
+        <item quantity="other">%1$d 字</item>
+    </plurals>
+</resources>

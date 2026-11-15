@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_papertone">PaperTone</string>
+    <string name="appearance_papertone_description">紙のカード、墨色のボタン、すぐに書ける入力バー。他のスタイルより優先されます。オフにするとシステムの配色に戻ります。</string>
+    <string name="appearance_papertone_write">何か書いてみよう…</string>
+    <plurals name="appearance_papertone_characters">
+        <item quantity="other">%1$d 文字</item>
+    </plurals>
+</resources>

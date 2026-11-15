@@ -1,7 +1,6 @@
 package org.example.memosm.ui.component.item
 
 import org.example.memosm.api.resourceAuthorization
-
 import android.content.Intent
 import android.net.Uri
 import android.text.format.DateUtils
@@ -94,7 +93,10 @@ import org.example.memosm.ui.component.item.markdown.NativeComposeMarkdown
 import org.example.memosm.ui.component.item.media.AttachmentOrigins
 import org.example.memosm.ui.component.item.media.FullScreenAttachmentViewer
 import org.example.memosm.ui.component.item.media.attachmentOrigin
+import org.example.memosm.ui.theme.LocalPaperTone
 import org.example.memosm.ui.theme.flatCardElevation
+import org.example.memosm.ui.theme.paperToneCardBorder
+import org.example.memosm.ui.theme.paperToneControlShape
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -122,6 +124,7 @@ fun MemoItem(
     headerScale: Float,
     onHashtagClick: ((String) -> Unit)? = null,
 ) {
+    val paperTone = LocalPaperTone.current
     var showMenu by remember { mutableStateOf(false) }
     var showReactionPicker by remember { mutableStateOf(false) }
     var showRawTextDialog by remember { mutableStateOf(false) }
@@ -159,6 +162,7 @@ fun MemoItem(
 
     Card(
         elevation = flatCardElevation(),
+        border = paperToneCardBorder(),
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         colors = colors,
@@ -169,74 +173,129 @@ fun MemoItem(
                     .fillMaxWidth()
                     .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
                     .padding(
-                        start = 12.dp,
-                        top = if (user != null) 12.dp else 4.dp,
+                        start = if (paperTone) 4.dp else 12.dp,
+                        top = if (paperTone || user != null) 12.dp else 4.dp,
                         end = 4.dp,
-                        bottom = 12.dp,
+                        bottom = if (paperTone) 4.dp else 12.dp,
                     ),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
+            val metadata: @Composable () -> Unit = {
                 Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = if (paperTone) 12.dp else 0.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    if (user != null) {
-                        val avatarUrl =
-                            remember(user.avatarUrl, hostUrl) {
-                                resolveResourceUrl(hostUrl, user.avatarUrl)
-                            }
-                        if (avatarUrl != null) {
-                            val imageRequest =
-                                remember(avatarUrl, token) {
-                                    val headers =
-                                        coil3.network.NetworkHeaders
-                                            .Builder()
-                                            .apply {
-                                                resourceAuthorization(
-                                                        hostUrl,
-                                                        avatarUrl,
-                                                        token,
-                                                    )?.let { set("Authorization", it) }
-                                            }.build()
-
-                                    coil3.request.ImageRequest
-                                        .Builder(context)
-                                        .data(avatarUrl)
-                                        .httpHeaders(headers)
-                                        .build()
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        if (user != null) {
+                            val avatarUrl =
+                                remember(user.avatarUrl, hostUrl) {
+                                    resolveResourceUrl(hostUrl, user.avatarUrl)
                                 }
-                            AsyncImage(
-                                model = imageRequest,
-                                contentDescription = stringResource(R.string.profile_avatar_description),
-                                modifier =
-                                    Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape),
-                                contentScale = ContentScale.Crop,
-                            )
+                            if (avatarUrl != null) {
+                                val imageRequest =
+                                    remember(avatarUrl, token) {
+                                        val headers =
+                                            coil3.network.NetworkHeaders
+                                                .Builder()
+                                                .apply {
+                                                    resourceAuthorization(
+                                                            hostUrl,
+                                                            avatarUrl,
+                                                            token,
+                                                        )?.let { set("Authorization", it) }
+                                                }.build()
+
+                                        coil3.request.ImageRequest
+                                            .Builder(context)
+                                            .data(avatarUrl)
+                                            .httpHeaders(headers)
+                                            .build()
+                                    }
+                                AsyncImage(
+                                    model = imageRequest,
+                                    contentDescription = stringResource(R.string.profile_avatar_description),
+                                    modifier =
+                                        Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape),
+                                    contentScale = ContentScale.Crop,
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Outlined.AccountCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(28.dp),
+                                    tint = MaterialTheme.colorScheme.outline,
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(verticalArrangement = Arrangement.Center) {
+                                Text(
+                                    text =
+                                        user.displayName ?: user.username
+                                            ?: stringResource(R.string.memo_unknown_user),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    lineHeight = MaterialTheme.typography.labelSmall.lineHeight,
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = formattedTime,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    if (memo.pinned == true) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.PushPin,
+                                            contentDescription = stringResource(R.string.profile_stats_pinned),
+                                            modifier = Modifier.size(12.dp),
+                                            tint = MaterialTheme.colorScheme.secondary,
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                    }
+                                    VisibilityIcon(
+                                        visibility = memo.visibility,
+                                        modifier = Modifier.size(10.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    )
+                                    val commentCount =
+                                        remember(memo.relations) {
+                                            memo.relations?.count { it.type == MemoRelationType.COMMENT }
+                                                ?: 0
+                                        }
+                                    if (commentCount > 0 && !isDetailView) {
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Outlined.Comment,
+                                            contentDescription =
+                                                stringResource(
+                                                    R.string.memo_detail_comments,
+                                                    commentCount,
+                                                ),
+                                            modifier = Modifier.size(10.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        )
+                                        Spacer(modifier = Modifier.width(2.dp))
+                                        Text(
+                                            text = commentCount.toString(),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color =
+                                                MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                    alpha = 0.7f,
+                                                ),
+                                        )
+                                    }
+                                }
+                            }
                         } else {
-                            Icon(
-                                imageVector = Icons.Outlined.AccountCircle,
-                                contentDescription = null,
-                                modifier = Modifier.size(28.dp),
-                                tint = MaterialTheme.colorScheme.outline,
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column(verticalArrangement = Arrangement.Center) {
-                            Text(
-                                text =
-                                    user.displayName ?: user.username
-                                        ?: stringResource(R.string.memo_unknown_user),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = MaterialTheme.typography.labelSmall.lineHeight,
-                            )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 4.dp),
+                            ) {
                                 Text(
                                     text = formattedTime,
                                     style = MaterialTheme.typography.labelSmall,
@@ -254,13 +313,12 @@ fun MemoItem(
                                 }
                                 VisibilityIcon(
                                     visibility = memo.visibility,
-                                    modifier = Modifier.size(10.dp),
+                                    modifier = Modifier.size(12.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 )
                                 val commentCount =
                                     remember(memo.relations) {
-                                        memo.relations?.count { it.type == MemoRelationType.COMMENT }
-                                            ?: 0
+                                        memo.relations?.count { it.type == MemoRelationType.COMMENT } ?: 0
                                     }
                                 if (commentCount > 0 && !isDetailView) {
                                     Spacer(modifier = Modifier.width(4.dp))
@@ -271,87 +329,38 @@ fun MemoItem(
                                                 R.string.memo_detail_comments,
                                                 commentCount,
                                             ),
-                                        modifier = Modifier.size(10.dp),
+                                        modifier = Modifier.size(12.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     )
                                     Spacer(modifier = Modifier.width(2.dp))
                                     Text(
                                         text = commentCount.toString(),
                                         style = MaterialTheme.typography.labelSmall,
-                                        color =
-                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                                alpha = 0.7f,
-                                            ),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     )
                                 }
                             }
                         }
-                    } else {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(vertical = 4.dp),
+                    }
+
+                    if (onEdit != null || onDelete != null || onUpsertReaction != null || memo.name != null) {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.size(32.dp),
                         ) {
-                            Text(
-                                text = formattedTime,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            Icon(
+                                imageVector = Icons.Outlined.MoreVert,
+                                contentDescription = stringResource(R.string.memo_action_more),
+                                modifier = Modifier.size(20.dp),
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            if (memo.pinned == true) {
-                                Icon(
-                                    imageVector = Icons.Outlined.PushPin,
-                                    contentDescription = stringResource(R.string.profile_stats_pinned),
-                                    modifier = Modifier.size(12.dp),
-                                    tint = MaterialTheme.colorScheme.secondary,
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                            }
-                            VisibilityIcon(
-                                visibility = memo.visibility,
-                                modifier = Modifier.size(12.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            )
-                            val commentCount =
-                                remember(memo.relations) {
-                                    memo.relations?.count { it.type == MemoRelationType.COMMENT } ?: 0
-                                }
-                            if (commentCount > 0 && !isDetailView) {
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.Comment,
-                                    contentDescription =
-                                        stringResource(
-                                            R.string.memo_detail_comments,
-                                            commentCount,
-                                        ),
-                                    modifier = Modifier.size(12.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                )
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Text(
-                                    text = commentCount.toString(),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                )
-                            }
                         }
                     }
                 }
-
-                if (onEdit != null || onDelete != null || onUpsertReaction != null || memo.name != null) {
-                    IconButton(
-                        onClick = { showMenu = true },
-                        modifier = Modifier.size(32.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.MoreVert,
-                            contentDescription = stringResource(R.string.memo_action_more),
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-                }
             }
-            Spacer(modifier = Modifier.height(if (user != null) 10.dp else 2.dp))
+            if (!paperTone) {
+                metadata()
+                Spacer(modifier = Modifier.height(if (user != null) 10.dp else 2.dp))
+            }
 
             Column(modifier = Modifier.padding(start = 0.dp, end = 0.dp)) {
                 Box(
@@ -419,7 +428,7 @@ fun MemoItem(
                             }
                         },
                         enabled = isClickable,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = paperToneControlShape(RoundedCornerShape(16.dp)),
                         color = MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     ) {
@@ -553,6 +562,7 @@ fun MemoItem(
                     )
                 }
             }
+            if (paperTone) metadata()
         }
     }
 

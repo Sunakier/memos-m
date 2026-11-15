@@ -12,6 +12,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -59,6 +60,7 @@ fun appearanceColorScheme(
         )
     }
     ColorTheme.MEMOS -> memosColorScheme(isDark)
+    ColorTheme.PAPERTONE -> paperToneColorScheme(isDark)
     ColorTheme.CUSTOM -> appearance.customHue?.let { hue ->
         dynamicColorScheme(
             seedColor = Color.hsv(hue % 360f, saturation = 0.65f, value = 0.75f),
@@ -81,13 +83,18 @@ fun MemosMTheme(
     val colors = remember(appearance.colorTheme, appearance.customHue, systemColors, isDark) {
         appearanceColorScheme(appearance, systemColors, isDark)
     }
-    val typography = remember(appearance.font) { typographyFor(appearance.font) }
-    MaterialTheme(
-        colorScheme = colors,
-        typography = typography,
-        shapes = MemosShapes,
-        content = content
-    )
+    val paperTone = appearance.colorTheme == ColorTheme.PAPERTONE
+    val typography = remember(appearance.font, paperTone) {
+        typographyFor(appearance.font).let { if (paperTone) paperToneTypography(it) else it }
+    }
+    CompositionLocalProvider(LocalPaperTone provides paperTone) {
+        MaterialTheme(
+            colorScheme = colors,
+            typography = typography,
+            shapes = if (paperTone) PaperToneShapes else MemosShapes,
+            content = content
+        )
+    }
 }
 
 /** Each activity observes the same saved preferences, including changes made in another activity. */
@@ -113,6 +120,11 @@ fun SavedMemosMTheme(dataStoreManager: DataStoreManager, content: @Composable ()
 /** Expressive styling is local to Profile and its activities. */
 @Composable
 fun ProfileTheme(content: @Composable () -> Unit) {
+    // PaperTone owns the whole presentation, including the normally expressive profile/settings.
+    if (LocalPaperTone.current) {
+        content()
+        return
+    }
     val base = MaterialTheme.colorScheme
     val colors = base.copy(surface = base.surfaceContainerLow, background = base.surfaceContainerLow)
     MaterialExpressiveTheme(
