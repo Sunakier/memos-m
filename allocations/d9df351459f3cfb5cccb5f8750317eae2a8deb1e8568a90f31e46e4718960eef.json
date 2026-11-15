@@ -7,5 +7,37 @@
   "name": "1.0.3-papertone-106",
   "tag": "papertone-106",
   "runId": "manual-papertone-3d5dda161fa5",
-  "complete": false
+  "complete": false,
+  "manifest": {
+    "schema": 1,
+    "source": "3d5dda161fa5d526a1076124df104bf53b2a1c44",
+    "channel": "preview",
+    "versionName": "1.0.3-papertone-106",
+    "versionCode": 106,
+    "tag": "papertone-106",
+    "applicationId": "top.lazyerpaper.memosm",
+    "signerSha256": "17a7f4feee874fd644d60616d1938365467f07023acd30c9f71b8a8be49b7022",
+    "assets": [
+      {
+        "name": "MemosM-1.0.3-papertone-106-arm64-v8a.apk",
+        "size": 11891578,
+        "digest": "sha256:68993048936320f05be62ee5b1953db81a335eff583ce0a33d2936c022c91b4d"
+      },
+      {
+        "name": "MemosM-1.0.3-papertone-106-armeabi-v7a.apk",
+        "size": 11287932,
+        "digest": "sha256:28bb8139f15e4f18f7492fb7b851d9d8a2b57fad476c5cd99499737c6b44c9d3"
+      },
+      {
+        "name": "MemosM-1.0.3-papertone-106-mapping.txt.gz",
+        "size": 7638838,
+        "digest": "sha256:cf88bcad28f35c9543d876e7cb5f263e17458738ae49131ce6610db7533eb532"
+      },
+      {
+        "name": "SHA256SUMS-1.0.3-papertone-106.txt",
+        "size": 327,
+        "digest": "sha256:96bdd19ad286d477af90f87193cfc07aafcb572440c023c437def24f70f6b92c"
+      }
+    ]
+  }
 }
