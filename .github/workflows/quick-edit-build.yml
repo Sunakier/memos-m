@@ -30,25 +30,74 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: platform-tools platforms;android-37.1
+          packages: platform-tools platforms;android-37.1 build-tools;36.0.0
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: wrapper
+          cache-encryption-key: ${{ secrets.GRADLE_CACHE_KEY }}
 
-      - name: Build APK and test editor writes
+      - name: Build Debug APK and test editor writes
         run: >-
           ./gradlew :app:assembleDebug :app:testDebugUnitTest
           --tests org.example.memosm.account.MemoEditorSubmissionTest
           --tests org.example.memosm.account.MemoWriteAccountIsolationTest
           --console=plain
 
-      - name: Upload QuickEdit APK
+      - name: Upload QuickEdit Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: MemosM-QuickEdit-debug-${{ github.sha }}
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Resolve QuickEdit release version
+        if: github.repository == 'Sunakier/memos-m'
+        id: version
+        uses: actions/github-script@v9
+        env:
+          RELEASE_CHANNEL: quickedit
+        with:
+          script: |
+            const allocate = require('./.github/scripts/allocate-version.cjs');
+            await allocate({ github, context, core });
+
+      - name: Build signed QuickEdit Release APKs
+        if: github.repository == 'Sunakier/memos-m'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE }}
+          KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+        run: |
+          set -euo pipefail
+          : "${KEYSTORE_BASE64:?Missing KEYSTORE}"
+          KEYSTORE_PATH="$(mktemp "$RUNNER_TEMP/quickedit-keystore.XXXXXX")"
+          export KEYSTORE_PATH
+          trap 'rm -f "$KEYSTORE_PATH"' EXIT
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          unset KEYSTORE_BASE64
+          ./gradlew :app:assembleRelease -PabiSplits=true \
+            -PversionNameOverride="$VERSION_NAME" -PversionCodeOverride="$VERSION_CODE" --console=plain
+
+      - name: Verify QuickEdit Release APKs
+        if: github.repository == 'Sunakier/memos-m'
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+          EXPECTED_APP_ID: top.lazyerpaper.memosm
+          EXPECTED_SIGNER_SHA256: 17a7f4feee874fd644d60616d1938365467f07023acd30c9f71b8a8be49b7022
+        run: bash .github/scripts/verify-release.sh
+
+      - name: Upload QuickEdit Release APKs
+        if: github.repository == 'Sunakier/memos-m'
+        uses: actions/upload-artifact@v4
+        with:
+          name: MemosM-QuickEdit-release-${{ github.sha }}
+          path: tmp/distribution/
           if-no-files-found: error
 
       - name: Upload test results

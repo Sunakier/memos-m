@@ -21,8 +21,21 @@ module.exports = async ({ github, context, core }) => {
     core.info(`Version ${data.name} (${data.code}), source ${sha}; distribute=${data.publish}, build=${data.build}`);
   };
   if (!distributable) {
-    const suffix = pr ? `pr.${context.payload.pull_request.number}` : 'check';
-    output({ base, name: `${base}-${suffix}.${sha.slice(0, 12)}`, code: localCode, sha, publish: false, build: true, record: '', tag: '' });
+    const quickEdit = process.env.RELEASE_CHANNEL === 'quickedit';
+    const suffix = pr ? `pr.${context.payload.pull_request.number}` : quickEdit ? 'quickedit' : 'check';
+    let code = localCode;
+    if (quickEdit) {
+      // Match the installed distribution's versionCode without allocating a release number.
+      const store = createStore(github, context.repo);
+      const state = await store.read('state.json', await store.head());
+      if (state) {
+        if (!Number.isSafeInteger(state.publishedCode) || state.publishedCode < 1 || state.publishedCode > MAX_CODE) {
+          throw new Error('Invalid published versionCode in the release ledger');
+        }
+        code = Math.max(code, state.publishedCode);
+      }
+    }
+    output({ base, name: `${base}-${suffix}.${sha.slice(0, 12)}`, code, sha, publish: false, build: true, record: '', tag: '' });
     return;
   }
   // Resolve source once, and use this exact commit in every dependent job.

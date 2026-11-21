@@ -9,10 +9,16 @@
 - 成功后以正式签名和 R8 构建 `arm64-v8a`、`armeabi-v7a`，自动发布 `ci-<编号>` 预览 Release。
 - 预览版名为 `<versionName>-ci-<编号>`，包名仍为 `top.lazyerpaper.memosm`，可以覆盖同包名的较低编号安装包。
 - Release 附件包含两个 APK、R8 mapping、SHA-256 校验和、`release-manifest.json`。发布前核对签名、包名、版本、ABI、许可资源及远端附件大小/哈希。
-- PR 和非 main 的手动 CI 仅检查、生成 Debug Artifact，不领取分发编号，也不使用签名 Secrets。Artifact 保留 1 天；发布包直接放 Release，避免重复保存 APK。
+- 常规 `CI` 的 PR 和非 main 手动运行使用本地回退版本编号，生成保留 1 天的 Debug Artifact。
 - CI 的 JVM、构建及静态校验不代表设备交互验收。
 
 `dev` 继续保持上游镜像。`feature/*` 继续用于上游贡献；这里的分发工作流与个人包名配置只放在 main。
+
+## QuickEdit 分支构建
+
+`QuickEdit Build CI` 手动运行时可以选择分支。Fork 的 Actions Artifacts 分别提供 Debug APK 和签名的 Release APK，Release 产物包含 ARM64、ARMv7、R8 mapping 与 SHA-256 校验和。
+
+Release 包名为 `top.lazyerpaper.memosm`，版本名带有 `quickedit` 和提交短哈希。版本编号读取当前已发布的编号，分支构建只上传到 Actions Artifacts。
 
 ## 正式发布
 

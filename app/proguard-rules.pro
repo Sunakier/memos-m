@@ -47,6 +47,7 @@
 -keep class org.example.memosm.ui.component.composer.EditorSnapshot { *; }
 -keep class org.example.memosm.ui.component.composer.EditorAttachment { *; }
 -keep class org.example.memosm.ui.component.composer.StoredEditorSession { *; }
+-keep class org.example.memosm.viewmodel.delegates.EditorMemoCommit { *; }
 
 # Enum constant names are persisted by Gson and in DataStore/backup payloads.
 # Do not rely on a third-party consumer rule (MapLibre currently keeps them).

@@ -56,7 +56,8 @@ if [ "${RESTORED:-false}" != true ]; then
     org.example.memosm.ui.component.composer.EditorRequest \
     org.example.memosm.ui.component.composer.EditorSnapshot \
     org.example.memosm.ui.component.composer.EditorAttachment \
-    org.example.memosm.ui.component.composer.StoredEditorSession; do
+    org.example.memosm.ui.component.composer.StoredEditorSession \
+    org.example.memosm.viewmodel.delegates.EditorMemoCommit; do
     grep -F "$type -> $type:" "$source/mapping.txt" > /dev/null
     grep -F "$type" "$source/configuration.txt" > /dev/null
   done
