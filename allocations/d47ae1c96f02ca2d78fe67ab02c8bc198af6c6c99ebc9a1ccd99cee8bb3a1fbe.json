@@ -6,7 +6,7 @@
   "name": "1.0.3-ci-108",
   "tag": "ci-108",
   "runId": 44922448209,
-  "complete": false,
+  "complete": true,
   "manifest": {
     "schema": 1,
     "source": "bd965ef97e0139cf4fb8bc91b784996a05dc3694",
@@ -38,5 +38,6 @@
         "digest": "sha256:1ef709cd03feec660ddafd3062a802c2d0afa57ad3abea5fb2bc8f7c8c820f4d"
       }
     ]
-  }
+  },
+  "publishedRunId": 44922448209
 }
