@@ -27,6 +27,7 @@ import org.example.memosm.model.Draft
 import org.example.memosm.model.Location
 import org.example.memosm.model.Memo
 import org.example.memosm.model.Visibility
+import org.example.memosm.viewmodel.delegates.EditorMemoCommit
 import org.koin.core.context.GlobalContext
 import java.io.File
 import java.util.UUID
@@ -55,9 +56,24 @@ data class EditorSnapshot(
     val selectionEnd: Int,
     val visibility: Visibility,
     val location: Location?,
-    val attachments: List<EditorAttachment>
+    val attachments: List<EditorAttachment>,
+) {
+    fun sameContentAs(other: EditorSnapshot): Boolean = text == other.text && visibility == other.visibility &&
+        location == other.location && attachments == other.attachments
+
+    fun hasContent(): Boolean = text.isNotBlank() || attachments.isNotEmpty() || location != null
+
+    fun matches(memo: Memo): Boolean = text == memo.content && visibility == memo.visibility &&
+        location == memo.location && attachments.none { it.attachment == null } &&
+        attachments.mapNotNull { it.attachment } == memo.attachments.orEmpty()
+}
+
+data class StoredEditorSession(
+    val request: EditorRequest,
+    val snapshot: EditorSnapshot,
+    val savedAt: Long? = null,
+    val lastCommit: EditorMemoCommit? = null,
 )
-data class StoredEditorSession(val request: EditorRequest, val snapshot: EditorSnapshot)
 
 /** The IME's full value is retained, including selection and composing range. */
 class ComposerState(snapshot: EditorSnapshot) {
@@ -79,11 +95,13 @@ object EditorSessionStore {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val writes = ConcurrentHashMap<String, Job>()
     private val mutex = Mutex()
+    private val directory get() = File(MemosApplication.instance.filesDir, "editor_sessions")
+
     private fun file(id: String): AtomicFile {
         require(UUID.fromString(id).toString() == id)
-        val directory = File(MemosApplication.instance.filesDir, "editor_sessions")
-        check(directory.isDirectory || directory.mkdirs() || directory.isDirectory)
-        return AtomicFile(File(directory, "$id.json"))
+        val target = directory
+        check(target.isDirectory || target.mkdirs() || target.isDirectory)
+        return AtomicFile(File(target, "$id.json"))
     }
 
     suspend fun create(request: EditorRequest): String = withContext(Dispatchers.IO) {
@@ -98,9 +116,21 @@ object EditorSessionStore {
     }
 
     suspend fun read(id: String): StoredEditorSession = withContext(Dispatchers.IO) {
+        mutex.withLock { read(file(id)) }
+    }
+
+    private fun read(file: AtomicFile): StoredEditorSession =
+        file.openRead().bufferedReader().use { GsonProvider.gson.fromJson(it, StoredEditorSession::class.java) }
+
+    suspend fun referencedUploadIds(): Set<String> = withContext(Dispatchers.IO) {
         mutex.withLock {
-            file(id).openRead().bufferedReader().use {
-                GsonProvider.gson.fromJson(it, StoredEditorSession::class.java)
+            buildSet {
+                for (file in directory.listFiles().orEmpty()) {
+                    if (file.extension != "json") continue
+                    val stored = read(AtomicFile(file))
+                    stored.snapshot.attachments.mapNotNullTo(this) { it.attachment?.clientId }
+                    stored.lastCommit?.memo?.attachments.orEmpty().mapNotNullTo(this) { it.clientId }
+                }
             }
         }
     }
@@ -127,15 +157,28 @@ object EditorSessionStore {
                     // Once a write starts, finish it before a newer snapshot or submission.
                     withContext(NonCancellable) {
                         if (!session.completed) {
-                            write(session.id, StoredEditorSession(session.request, snapshot))
-                            if (session.request.mode == ComposerMode.PUBLISH && !session.submitting) {
+                            val commit = session.lastCommit
+                            val contentChanged = !snapshot.sameContentAs(session.savedSnapshot)
+                            val savedAt = when {
+                                commit != null && snapshot.matches(commit.memo) -> commit.savedAt
+                                contentChanged -> System.currentTimeMillis()
+                                else -> session.savedAt
+                            }
+                            write(session.id, StoredEditorSession(session.request, snapshot, savedAt, commit))
+                            if (session.request.mode == ComposerMode.PUBLISH && commit == null && !session.submitting) {
                                 val draft = Draft(id = session.request.draftId, content = snapshot.text,
                                     visibility = snapshot.visibility, location = snapshot.location,
                                     attachments = snapshot.attachments.mapNotNull { it.attachment },
                                     createdAt = session.createdAt)
-                                if (draft.hasContent()) GlobalContext.get().get<DraftManager>()
-                                    .saveDraft(session.request.accountId, draft, strict = true)
+                                val drafts = GlobalContext.get().get<DraftManager>()
+                                if (draft.hasContent()) {
+                                    drafts.saveDraft(session.request.accountId, draft, strict = true)
+                                } else if (!snapshot.hasContent() && contentChanged) {
+                                    drafts.deleteDraft(session.request.accountId, draft.id)
+                                }
                             }
+                            session.savedSnapshot = snapshot
+                            session.savedAt = savedAt
                         }
                         if (remove || session.completed) file(session.id).delete()
                         session.saveFailed = false
@@ -166,13 +209,24 @@ object EditorSessionStore {
 class EditorSession(val id: String, stored: StoredEditorSession) {
     val request = stored.request
     val state = ComposerState(stored.snapshot)
-    val hasChanges: Boolean get() {
-        val original = request.memo ?: return true
-        val current = state.snapshot()
-        return current.text != original.content || current.visibility != original.visibility ||
-            current.location != original.location || current.attachments.any { it.attachment == null } ||
-            current.attachments.mapNotNull { it.attachment } != original.attachments.orEmpty()
+    private val openingDraft = request.draft?.toMemo()
+    var lastCommit by mutableStateOf(stored.lastCommit)
+        private set
+    var savedSnapshot by mutableStateOf(stored.snapshot)
+        internal set
+    var savedAt by mutableStateOf(stored.savedAt ?: stored.lastCommit?.savedAt ?: request.draft?.updatedAt
+        ?: request.memo?.updateTime?.toEpochMilliseconds())
+        internal set
+
+    fun needsPublication(snapshot: EditorSnapshot): Boolean {
+        if (request.mode == ComposerMode.COMMENT) return lastCommit == null && snapshot.text.isNotBlank()
+        val base = lastCommit?.memo ?: request.memo
+        return if (base == null) snapshot.hasContent() else !snapshot.matches(base)
     }
+
+    fun canAutoPublish(snapshot: EditorSnapshot): Boolean = needsPublication(snapshot) &&
+        (lastCommit != null || openingDraft == null || !snapshot.matches(openingDraft))
+
     val createdAt = request.createdAt
     @Volatile var completed = false
         private set
@@ -184,13 +238,26 @@ class EditorSession(val id: String, stored: StoredEditorSession) {
         private set
     var busy by mutableStateOf(false)
         private set
+    var finishAfterSave by mutableStateOf(false)
+        private set
     private var closing = false
     private var pendingSave: Job? = null
+    private var failedSnapshot: EditorSnapshot? = null
 
     fun changed() {
         if (completed || busy || closing) return
+        val snapshot = state.snapshot()
+        if (failedSnapshot?.sameContentAs(snapshot) == false) {
+            failedSnapshot = null
+            submitFailed = false
+        }
         pendingSave?.cancel()
-        pendingSave = EditorSessionStore.save(this, state.snapshot(), debounce = true)
+        pendingSave = EditorSessionStore.save(this, snapshot, debounce = true)
+    }
+
+    fun requestFinishAfterSave() {
+        submitFailed = false
+        finishAfterSave = true
     }
 
     fun flush(remove: Boolean = false): Job {
@@ -204,21 +271,49 @@ class EditorSession(val id: String, stored: StoredEditorSession) {
         if (busy || completed || closing) return false
         busy = true
         submitFailed = false
+        failedSnapshot = null
         return true
     }
 
     suspend fun prepareSubmission(): Boolean {
-        flush().join()
+        flush()
+        EditorSessionStore.awaitWrites(id)
         if (saveFailed) return false
         submitting = true
         return true
     }
 
-    fun submissionFailed() {
-        submitFailed = true
+    fun stageAttachmentInEditor(index: Int, sourceUri: String, attachment: Attachment) {
+        val current = state.attachments.value
+        val item = current.getOrNull(index) ?: return
+        if (item.first.toString() != sourceUri || item.second != null) return
+        state.attachments.value = current.toMutableList().apply { set(index, item.first to attachment) }
+    }
+
+    fun recordCommit(snapshot: EditorSnapshot, commit: EditorMemoCommit) {
+        lastCommit = commit
+        if (request.mode == ComposerMode.COMMENT) return
+
+        // Only replace sources still in the editor. A newer selection or edit can arrive during staging.
+        val prepared = snapshot.attachments.zip(commit.memo.attachments.orEmpty()).toMutableList()
+        state.attachments.value = state.attachments.value.map { (uri, attachment) ->
+            val index = prepared.indexOfFirst { (source, _) ->
+                source.uri == uri.toString() && (source.attachment == attachment ||
+                    source.attachment == null && attachment?.name == null && attachment?.clientId == null)
+            }
+            if (index == -1) uri to attachment else uri to prepared.removeAt(index).second
+        }
+    }
+
+    fun endSubmission(failed: Boolean) {
+        submitFailed = failed
+        if (failed) {
+            failedSnapshot = state.snapshot()
+            finishAfterSave = false
+        }
         busy = false
         submitting = false
-        changed()
+        if (!closing && !completed) flush()
     }
 
     fun close() {

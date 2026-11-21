@@ -44,6 +44,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.koin.core.context.GlobalContext
+import java.util.UUID
 
 class MemoEditorActivityTest {
     @get:Rule val compose = createEmptyComposeRule()
@@ -103,6 +104,7 @@ class MemoEditorActivityTest {
                 ),
             )
             koin.get<DataStoreManager>().apply {
+                saveQuickEditAutoPublish(false)
                 completeSetup()
                 saveAccounts(
                     listOf(
@@ -219,23 +221,25 @@ class MemoEditorActivityTest {
     }
 
     @Test
-    fun offlinePublishClosesEditorAndDoesNotResurrectDraft() {
-        val launch = intent(request(Draft(id = draftId, content = "Publish offline")))
+    fun offlineAutoPublishKeepsEditorOpenAndBackSavesLatest() {
+        val draft = Draft(id = UUID.randomUUID().toString(), content = "Draft before auto-publish")
+        val memoName = "offline-${UUID.nameUUIDFromBytes(draft.id.toByteArray(Charsets.UTF_8))}"
+        val koin = GlobalContext.get()
+        runBlocking { koin.get<DataStoreManager>().saveQuickEditAutoPublish(true) }
+        val launch = intent(request(draft))
+        fun cachedMemo() = runBlocking { koin.get<MemoCacheRepository>().getCachedMemo(accountId, memoName) }
+
         ActivityScenario.launch<MemoEditorActivity>(launch).use { scenario ->
             awaitInput()
-            submit(R.string.memo_publish)
+            input().performTextReplacement("Publish offline")
+            compose.waitUntil(10_000) { cachedMemo()?.content == "Publish offline" }
+            input().assertTextEquals("Publish offline")
+            input().performTextReplacement("Latest offline revision")
+            compose.onNodeWithContentDescription(label(R.string.memo_detail_back)).performClick()
             compose.waitUntil(30_000) { scenario.state == Lifecycle.State.DESTROYED }
             runBlocking { EditorSessionStore.awaitWrites(launch.getStringExtra("editor_session")) }
-            SystemClock.sleep(700)
-            assertTrue(drafts().none { it.id == draftId })
-            val cached =
-                runBlocking {
-                    GlobalContext
-                        .get()
-                        .get<MemoCacheRepository>()
-                        .cachedMemos(accountId, CacheListType.USER)
-                }
-            assertTrue(cached.any { it.content == "Publish offline" })
+            assertTrue(drafts().none { it.id == draft.id })
+            assertEquals("Latest offline revision", cachedMemo()?.content)
         }
     }
 

@@ -2,6 +2,7 @@ package org.example.memosm.ui.component.composer
 
 import android.content.Intent
 import android.content.Context
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -23,16 +24,23 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.example.memosm.R
+import org.example.memosm.data.DataStoreManager
+import org.example.memosm.model.Memo
 import org.example.memosm.ui.profile.ProfileActivity
 import org.example.memosm.viewmodel.MemosViewModel
+import org.example.memosm.viewmodel.delegates.MemoActionDelegate
+import org.koin.android.ext.android.inject
 
 private const val EXTRA_SESSION = "editor_session"
 private const val EXTRA_ACCOUNT = "editor_account"
 
 class MemoEditorActivity : ProfileActivity() {
     private val editor: MemoEditorViewModel by viewModels()
+    private val settings: DataStoreManager by inject()
     override val requiredAccountId: String? get() = intent.getStringExtra(EXTRA_ACCOUNT)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,15 +75,14 @@ class MemoEditorActivity : ProfileActivity() {
             return
         }
         LaunchedEffect(session) {
-            if (session.request.mode == ComposerMode.PUBLISH) {
-                viewModel.draftDelegate.setCurrentEditingDraft(session.request.draftId)
-            }
             snapshotFlow { session.state.snapshot() }.collect { session.changed() }
         }
+        val autoPublish by settings.quickEditAutoPublish.collectAsState(initial = null)
         MemoComposerScreen(viewModel = viewModel, hostUrl = uiState.session.hostUrl,
             title = stringResource(session.request.titleRes),
-            initialMemo = session.request.memo, parentMemo = session.request.parentMemo,
-            mode = session.request.mode, editorSession = session,
+            editorSession = session,
+            autoPublish = autoPublish == true && session.request.mode != ComposerMode.COMMENT,
+            onPublish = { editor.publish(viewModel.memoActionDelegate, applicationContext) },
             onDismiss = { finish() },
             onSubmitted = {
                 session.submitted()
@@ -114,6 +121,47 @@ class MemoEditorViewModel : ViewModel() {
     var failed by mutableStateOf(false)
         private set
     private var loading = false
+
+    fun publish(actions: MemoActionDelegate, context: Context) {
+        val session = session ?: return
+        val snapshot = session.state.snapshot()
+        if (!session.needsPublication(snapshot) || !session.beginSubmission()) return
+        viewModelScope.launch {
+            var failed = true
+            try {
+                check(session.prepareSubmission()) { "Could not save editor recovery snapshot" }
+                val request = session.request
+                val attachments = if (request.mode == ComposerMode.COMMENT) emptyList() else collectComposerAttachments(
+                    snapshot.attachments.map { Uri.parse(it.uri) to it.attachment },
+                    stage = { uri ->
+                        requireNotNull(actions.uploadAttachment(uri, context, request.accountId)) { "Could not save attachment" }
+                    },
+                    onPrepared = { index, attachment ->
+                        session.stageAttachmentInEditor(index, snapshot.attachments[index].uri, attachment)
+                    },
+                )
+                withContext(NonCancellable) {
+                    val commit = actions.saveEditorMemo(
+                        accountId = request.accountId,
+                        draftId = request.draftId,
+                        edited = Memo(content = snapshot.text, visibility = snapshot.visibility, attachments = attachments, location = snapshot.location),
+                        original = request.memo,
+                        parent = request.parentMemo,
+                        previous = session.lastCommit,
+                    )
+                    session.recordCommit(snapshot, commit)
+                    failed = false
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Log.e("MemoEditor", "Could not publish editor snapshot", error)
+            } finally {
+                session.endSubmission(failed)
+            }
+        }
+    }
+
     fun load(id: String?) {
         if (session != null || loading) return
         loading = true

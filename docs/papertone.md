@@ -33,18 +33,19 @@ retain Material navigation and its existing dimensions/interactions.
 
 ## Editor presentation
 
-PaperTone also adapts the existing editor: a compact header with a Unicode
-character count, a continuous paper-colored writing area with 24dp margins and
-26sp line spacing, a flat divider above the attachment/recording/location and
-visibility controls, and a flat send/update/comment action. Suggestion popovers
-use small corners and fine borders. Attachment previews and location chips share
-the same paper geometry. Busy upload/submission states disable the toolbar and
-show progress in the send control. The keyboard remains managed by Android;
-existing IME insets and immersive-editing behavior are retained.
+PaperTone uses a compact editor header above a continuous paper-colored writing
+area with 24dp margins and 26sp line spacing. A flat divider separates the writing
+area from the three-dot tools menu, visibility control, and send action. Manual
+Markdown suggestions are available through the tools menu when the cursor has
+suggestions. Attachment previews, location chips, and suggestion popovers use
+PaperTone shapes and borders.
 
-`PaperToneEditor.kt` owns the header and submit presentation. The existing
-composer, input, picker, draft session and outbox remain the owners of content
-and writes. Normal themes keep their original header, tools card and publish FAB.
+The editor shows a character count excluding whitespace, the local save time,
+and this memo's sync status in the header across themes and in immersive mode.
+QuickEdit publishes new or changed memo content after a 1.5-second editing
+pause and saves the latest revision when leaving the editor. The first publish
+creates the memo locally. Later saves update that memo, and WorkManager syncs
+the queued changes. Comments use the explicit send action.
 
 ## Other surfaces and interactions
 

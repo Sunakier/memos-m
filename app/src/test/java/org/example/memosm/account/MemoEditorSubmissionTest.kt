@@ -4,6 +4,7 @@ import android.content.ContextWrapper
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -70,16 +71,20 @@ class MemoEditorSubmissionTest {
     @Test fun `editor success and scheduling wait for local transaction`() =
         runTest {
             val fixture = Fixture(backgroundScope)
-            var success = false
-            fixture.actions.createMemo("Saved", Visibility.PRIVATE, onSuccess = { success = true })
+            val original = Memo(name = "memos/1", content = "Original")
+            val save = backgroundScope.async {
+                fixture.actions.saveEditorMemo(
+                    "A", "draft", original.copy(content = "Saved"), original = original, parent = null, previous = null,
+                )
+            }
             runCurrent()
-            assertFalse(success)
+            assertFalse(save.isCompleted)
             assertTrue(fixture.scheduled.isEmpty())
             fixture.commit.complete(Unit)
-            runCurrent()
-            assertTrue(success)
+            val saved = save.await()
+            assertEquals("Saved", saved.memo.content)
             assertEquals(listOf("A"), fixture.scheduled)
-            assertEquals("CREATE", fixture.ops.single().type)
+            assertEquals(saved.operationId, fixture.ops.single().id)
         }
 
     @Test fun `failed local transaction keeps editor open and does not schedule`() =
@@ -116,10 +121,9 @@ class MemoEditorSubmissionTest {
                         org.example.memosm.model
                             .Location(placeholder = "keep this location"),
                 )
-            var success = false
-            fixture.actions.updateMemo(memo, memo.content, memo.visibility, emptyList(), onSuccess = { success = true })
-            runCurrent()
-            assertTrue(success)
+            val saved = fixture.actions.saveEditorMemo("A", "draft", memo, original = memo, parent = null, previous = null)
+            assertEquals(memo, saved.memo)
+            assertNull(saved.operationId)
             assertTrue(fixture.ops.isEmpty())
             assertTrue(fixture.scheduled.isEmpty())
             assertNull(fixture.state.value.error)

@@ -17,8 +17,17 @@
     <string name="map_place_count">Memos here: %1$d</string>
     <string name="map_place_empty">No memos at this location yet.</string>
     <string name="quick_edit_title">QuickEdit</string>
-    <string name="quick_edit_auto_publish">Publish on exit</string>
-    <string name="quick_edit_auto_publish_description">Pause typing to save locally; leave the editor to publish.</string>
+    <string name="quick_edit_auto_publish">Auto-publish and sync</string>
+    <string name="quick_edit_auto_publish_description">Publish when you pause typing or leave the editor, then sync in the background.</string>
+    <string name="memo_editor_saving">Saving…</string>
+    <string name="memo_editor_saved_locally">Saved locally</string>
+    <string name="memo_editor_pending">Pending sync</string>
+    <string name="memo_editor_offline_pending">Offline · pending sync</string>
+    <string name="memo_editor_synced">Synced</string>
+    <string name="memo_editor_save_failed">Couldn’t save</string>
+    <string name="memo_editor_publish_failed">Couldn’t publish</string>
+    <string name="memo_editor_sync_failed">Sync failed</string>
+    <string name="memo_editor_status_with_time" translatable="false">%1$s · %2$s</string>
     <string name="quick_edit_immersive">Immersive editing</string>
     <string name="quick_edit_hide_comments">Collapse comments by default</string>
     <string name="quick_edit_hide_empty_comments">Collapse empty comments</string>

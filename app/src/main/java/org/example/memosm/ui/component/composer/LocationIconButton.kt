@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -46,61 +47,55 @@ import org.example.memosm.model.Location
 import kotlin.coroutines.resume
 
 @Composable
-fun LocationIconButton(
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    iconSize: Dp = 24.dp,
-    location: Location? = null,
-    onLocationFounded: (Location) -> Unit
-) {
+internal fun rememberLocationAction(onLocationFound: (Location) -> Unit): Pair<Boolean, () -> Unit> {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val onFound by rememberUpdatedState(onLocationFound)
     var isFetching by remember { mutableStateOf(false) }
 
+    val fetch: () -> Unit = {
+        if (!isFetching) {
+            isFetching = true
+            scope.launch {
+                try {
+                    fetchCurrentLocation(context)?.let(onFound)
+                } finally {
+                    isFetching = false
+                }
+            }
+        }
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
             permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         ) {
-            isFetching = true
-            scope.launch {
-                val loc = fetchCurrentLocation(context)
-                if (loc != null) {
-                    onLocationFounded(loc)
-                }
-                isFetching = false
-            }
+            fetch()
         }
     }
 
-    IconButton(
-        onClick = {
-            val hasCoarse = ContextCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_COARSE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-            val hasFine = ContextCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
+    return isFetching to {
+        val permissions = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+        if (permissions.any { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }) {
+            fetch()
+        } else {
+            permissionLauncher.launch(permissions)
+        }
+    }
+}
 
-            if (hasCoarse || hasFine) {
-                isFetching = true
-                scope.launch {
-                    val loc = fetchCurrentLocation(context)
-                    if (loc != null) {
-                        onLocationFounded(loc)
-                    }
-                    isFetching = false
-                }
-            } else {
-                permissionLauncher.launch(
-                    arrayOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    )
-                )
-            }
-        },
+@Composable
+fun LocationIconButton(
+    modifier: Modifier,
+    enabled: Boolean,
+    iconSize: Dp,
+    location: Location?,
+    isFetching: Boolean,
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = onClick,
         enabled = enabled && !isFetching,
         modifier = modifier
     ) {

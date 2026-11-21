@@ -3,8 +3,10 @@ package org.example.memosm.ui.component.composer
 import org.example.memosm.ui.theme.flatCardElevation
 import org.example.memosm.ui.theme.LocalPaperTone
 import org.example.memosm.ui.theme.PaperToneEditorSubmit
+import android.Manifest
 import android.net.Uri
 import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,19 +22,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.ArrowDropUp
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.MicNone
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Place
+import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -62,7 +66,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -94,8 +98,7 @@ fun MemoComposerBottomBar(
     pickerLauncher: ManagedActivityResultLauncher<String, List<Uri>>,
     token: String,
     hostUrl: String,
-    contentStateText: String,
-    isUploadingCount: Int,
+    onShowSuggestions: (() -> Unit)?,
 
     onRemoveLocation: () -> Unit,
     onLocationClick: () -> Unit,
@@ -106,9 +109,15 @@ fun MemoComposerBottomBar(
     onLocationFounded: (Location) -> Unit,
 ) {
     val paperTone = LocalPaperTone.current
-    LocalContext.current
     var showActionOverflowMenu by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
+    val (recorder, microphonePermission) = rememberAudioRecorder(onRecordingFinished)
+    val isRecording = recorder.isRecording
+    val recordAudio: () -> Unit = {
+        if (recorder.isRecording) recorder.stopRecording() else microphonePermission.launch(Manifest.permission.RECORD_AUDIO)
+    }
+    val (isFetchingLocation, addLocation) = rememberLocationAction(onLocationFounded)
+    val locationEnabled = !isPosting && location == null
 
     val showVisibilityLabel = componentWidth > 480.dp || componentWidth == 0.dp
     val showPublishLabel = componentWidth > 410.dp || componentWidth == 0.dp
@@ -263,9 +272,7 @@ fun MemoComposerBottomBar(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                // Actions Row
-                // Determine if we should use overflow menu based on width
-                val useOverflowMenu = componentWidth < (if (paperTone) 360.dp else 320.dp) && componentWidth != 0.dp
+                val useOverflowMenu = paperTone || onShowSuggestions != null || (componentWidth > 0.dp && componentWidth < 320.dp)
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -274,7 +281,6 @@ fun MemoComposerBottomBar(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (useOverflowMenu) {
-                            // Show overflow menu button
                             Box {
                                 IconButton(
                                     onClick = { showActionOverflowMenu = true },
@@ -293,83 +299,61 @@ fun MemoComposerBottomBar(
                                     onDismissRequest = { showActionOverflowMenu = false },
                                     properties = PopupProperties(focusable = false)
                                 ) {
-                                    DropdownMenuItem(
-                                        text = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.AttachFile,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Text(stringResource(R.string.memo_composer_attach_file))
-                                            }
-                                        }, onClick = {
+                                    ComposerMenuItem(
+                                        R.string.memo_composer_attach_file, Icons.Outlined.AttachFile, enabled = !isPosting,
+                                    ) {
+                                        showActionOverflowMenu = false
+                                        pickerLauncher.launch("*/*")
+                                    }
+                                    ComposerMenuItem(
+                                        R.string.memo_composer_add_image, Icons.Outlined.Image, enabled = !isPosting,
+                                    ) {
+                                        showActionOverflowMenu = false
+                                        pickerLauncher.launch("image/*")
+                                    }
+                                    ComposerMenuItem(
+                                        label = if (isRecording) R.string.memo_composer_stop_recording else R.string.memo_composer_record_audio,
+                                        icon = if (isRecording) Icons.Filled.Mic else Icons.Outlined.MicNone,
+                                        enabled = isRecording || !isPosting,
+                                    ) {
+                                        showActionOverflowMenu = false
+                                        recordAudio()
+                                    }
+                                    ComposerMenuItem(
+                                        R.string.memo_composer_add_location, Icons.Outlined.Place,
+                                        enabled = locationEnabled && !isFetchingLocation,
+                                    ) {
+                                        showActionOverflowMenu = false
+                                        addLocation()
+                                    }
+                                    if (onShowSuggestions != null) {
+                                        ComposerMenuItem(
+                                            R.string.memo_input_show_suggestions, Icons.Outlined.TextFields, enabled = !isPosting,
+                                        ) {
                                             showActionOverflowMenu = false
-                                            pickerLauncher.launch("*/*")
-                                        }, enabled = !isPosting
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.Image,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Text(stringResource(R.string.memo_composer_add_image))
-                                            }
-                                        }, onClick = {
-                                            showActionOverflowMenu = false
-                                            pickerLauncher.launch("image/*")
-                                        }, enabled = !isPosting
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                AudioRecorderIconButton(
-                                                    onRecordingFinished = onRecordingFinished,
-                                                    enabled = !isPosting,
-                                                    iconSize = 20.dp
-                                                )
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Text(stringResource(R.string.memo_composer_record_audio))
-                                            }
-                                        }, onClick = {
-                                            // Click handled by AudioRecorderIconButton, or we can close menu here
-                                            // But since AudioRecorderIconButton intercepts click, this might not trigger if clicking the button.
-                                            // Clicking the audio label will trigger this.
-                                            // Ideally we want the whole row to toggle recording.
-                                            // But AudioRecorderIconButton is self-contained.
-                                            // If we want the menu item to act as the recorder, we need to access recorder state... which we moved out.
-                                            // So for now, let's keep it simple. Clicking the text does nothing useful except maybe show a toast or we can omit separate onClick logic if the button is there.
-                                            // Actually, the button inside needs to be clickable.
-                                            // If we set enabled=false on the DropdownMenuItem it might disable the button too?
-                                            // Let's just close the menu on click, but the user has to click the button to record.
-                                            // This UX is slightly broken for overflow menu, but complies with "self-contained button".
-                                            showActionOverflowMenu = false
-                                        }, enabled = !isPosting
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                LocationIconButton(
-                                                    onLocationFounded = onLocationFounded,
-                                                    enabled = !isPosting && location == null,
-                                                    iconSize = 20.dp,
-                                                    location = location
-                                                )
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Text(stringResource(R.string.memo_composer_add_location))
-                                            }
-                                        }, onClick = {
-                                            showActionOverflowMenu = false
-                                            // Same interaction issue as AudioRecorderIconButton.
-                                            // The button handles the click.
-                                        }, enabled = !isPosting && location == null
-                                    )
+                                            onShowSuggestions()
+                                        }
+                                    }
                                 }
+                            }
+                            if (isRecording) {
+                                AudioRecorderIconButton(
+                                    modifier = Modifier.size(actionButtonSize),
+                                    enabled = true,
+                                    iconSize = actionIconSize,
+                                    isRecording = true,
+                                    onClick = recordAudio,
+                                )
+                            }
+                            if (isFetchingLocation) {
+                                LocationIconButton(
+                                    modifier = Modifier.size(actionButtonSize),
+                                    enabled = false,
+                                    iconSize = actionIconSize,
+                                    location = location,
+                                    isFetching = true,
+                                    onClick = addLocation,
+                                )
                             }
                         } else {
                             // Show individual icon buttons
@@ -396,17 +380,19 @@ fun MemoComposerBottomBar(
                                 )
                             }
                             AudioRecorderIconButton(
-                                enabled = !isPosting,
+                                enabled = isRecording || !isPosting,
                                 modifier = Modifier.size(actionButtonSize),
                                 iconSize = actionIconSize,
-                                onRecordingFinished = onRecordingFinished
+                                isRecording = isRecording,
+                                onClick = recordAudio,
                             )
                             LocationIconButton(
-                                enabled = !isPosting && location == null,
+                                enabled = locationEnabled,
                                 modifier = Modifier.size(actionButtonSize),
                                 iconSize = actionIconSize,
                                 location = location,
-                                onLocationFounded = onLocationFounded
+                                isFetching = isFetchingLocation,
+                                onClick = addLocation,
                             )
                         }
                     } // End Left Actions Row
@@ -525,4 +511,14 @@ fun MemoComposerBottomBar(
             }
         }
     }
+}
+
+@Composable
+private fun ComposerMenuItem(@StringRes label: Int, icon: ImageVector, enabled: Boolean, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(stringResource(label)) },
+        leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp)) },
+        enabled = enabled,
+        onClick = onClick,
+    )
 }

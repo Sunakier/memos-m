@@ -1,6 +1,5 @@
 package org.example.memosm.ui.component.composer
 
-import android.Manifest
 import android.content.Context
 import android.media.MediaRecorder
 import android.net.Uri
@@ -19,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -120,9 +120,10 @@ fun rememberAudioRecorder(
 ): Pair<AudioRecorder, ManagedActivityResultLauncher<String, Boolean>> {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val onFinished by rememberUpdatedState(onRecordingFinished)
 
     val recorder = remember {
-        AudioRecorder(context, scope, onRecordingFinished)
+        AudioRecorder(context, scope) { uri, attachment -> onFinished(uri, attachment) }
     }
 
     val toastText = stringResource(R.string.memo_composer_error_microphone_permission)
@@ -152,22 +153,14 @@ fun rememberAudioRecorder(
 
 @Composable
 fun AudioRecorderIconButton(
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    iconSize: androidx.compose.ui.unit.Dp = 24.dp,
-    onRecordingFinished: (Uri, Attachment?) -> Unit
+    modifier: Modifier,
+    enabled: Boolean,
+    iconSize: androidx.compose.ui.unit.Dp,
+    isRecording: Boolean,
+    onClick: () -> Unit,
 ) {
-    val (recorder, permissionLauncher) = rememberAudioRecorder(onRecordingFinished)
-    val isRecording = recorder.isRecording
-
     androidx.compose.material3.IconButton(
-        onClick = {
-            if (isRecording) {
-                recorder.stopRecording()
-            } else {
-                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-            }
-        },
+        onClick = onClick,
         enabled = enabled,
         modifier = modifier
     ) {

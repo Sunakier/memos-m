@@ -88,6 +88,7 @@ class MemosApplication :
             } catch (error: Exception) {
                 android.util.Log.w("MemosApplication", "Could not clean orphaned staging files", error)
             }
+            val editorUploadIds = runCatching { org.example.memosm.ui.component.composer.EditorSessionStore.referencedUploadIds() }
             koin.get<DataStoreManager>().getAccounts().forEach {
                 try {
                     koin.get<org.example.memosm.data.media.AttachmentUploadQueue>().cleanupCompletedUploads(
@@ -97,6 +98,7 @@ class MemosApplication :
                         koin.get(),
                         koin.get(),
                         createdBefore = startupAt,
+                        editorUploadIds = editorUploadIds.getOrThrow(),
                     )
                 } catch (error: Exception) {
                     android.util.Log.w("MemosApplication", "Could not clean completed uploads", error)

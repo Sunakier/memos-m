@@ -29,16 +29,15 @@ class AttachmentManager(
     suspend fun uploadAttachment(
         uri: Uri,
         context: Context,
-    ): Attachment? {
-        val account = accountSession.current ?: return null
-        return enqueueForLater(
+        account: AccountContext,
+    ): Attachment? =
+        enqueueForLater(
             account,
             uri,
             getFileName(uri, context) ?: "unknown_file",
             resolveMimeType(uri, context),
             getFileSize(uri, context),
         )
-    }
 
     suspend fun <T> withPreparedAttachments(
         account: AccountContext,
@@ -47,6 +46,9 @@ class AttachmentManager(
     ): T =
         requireNotNull(uploadQueueProvider()) { "Uploads are unavailable" }
             .withPreparedAttachments(account.account.id, attachments, commit)
+
+    suspend fun resolvedAttachmentName(attachment: Attachment): String? =
+        attachment.clientId?.let { uploadQueueProvider()?.resolved(it)?.name }
 
     /**
      * Stage the bytes and persist a durable upload row so the attachment is

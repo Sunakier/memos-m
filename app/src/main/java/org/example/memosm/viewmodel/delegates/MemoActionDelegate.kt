@@ -19,6 +19,7 @@ import org.example.memosm.data.sync.PendingOp
 import org.example.memosm.data.sync.PendingOpType
 import org.example.memosm.data.sync.ReactionOpPayload
 import org.example.memosm.data.sync.SyncWorkScheduler
+import org.example.memosm.data.sync.applyMemoPatch
 import org.example.memosm.model.Attachment
 import org.example.memosm.model.Location
 import org.example.memosm.model.Memo
@@ -32,6 +33,9 @@ import org.example.memosm.viewmodel.UiMessage
 import org.example.memosm.viewmodel.manager.AttachmentManager
 import java.util.UUID
 import kotlin.time.Clock
+import kotlin.time.Instant
+
+data class EditorMemoCommit(val memo: Memo, val operationId: String?, val savedAt: Long)
 
 interface MemoActionDelegate {
     fun selectMemo(memo: Memo?)
@@ -78,9 +82,19 @@ interface MemoActionDelegate {
         onSuccess: () -> Unit = {},
     )
 
+    suspend fun saveEditorMemo(
+        accountId: String,
+        draftId: String,
+        edited: Memo,
+        original: Memo?,
+        parent: Memo?,
+        previous: EditorMemoCommit?,
+    ): EditorMemoCommit
+
     suspend fun uploadAttachment(
         uri: Uri,
         context: Context,
+        accountId: String,
     ): Attachment?
 
     /** Discard a queued offline upload once nothing references its placeholder anymore. */
@@ -132,46 +146,7 @@ class MemoActionDelegateImpl(
         scope.launch {
             accountSession.update(uiState, context) { it.copy(isPosting = true) }
             try {
-                val commit: suspend (
-                    List<Attachment>?,
-                    List<AttachmentUpload>,
-                ) -> Unit = { prepared, uploads ->
-                    val mutation = prepare(prepared)
-                    BackupCoordinator.withStorageLock {
-                        check(BackupCoordinator.generation == generation && !BackupCoordinator.restoring.value) { "Storage was restored" }
-                        check(accountExists(context.account.id)) { "Account was removed" }
-                        if (mutation != null) {
-                            val (op, memo) = mutation
-                            memoCacheRepository.commitMutation(
-                                op,
-                                memo,
-                                when {
-                                    op.parentName != null || memo?.parent != null -> CacheListType.COMMENT
-                                    memo?.state == MemoState.ARCHIVED -> CacheListType.ARCHIVED
-                                    else -> CacheListType.USER
-                                },
-                                op.parentName ?: memo?.parent,
-                                uploads,
-                            )
-                        }
-                    }
-                    if (mutation != null) {
-                        try {
-                            workScheduler.schedule(context.account.id)
-                        } catch (
-                            error: Exception,
-                        ) {
-                            Log.e("MemoActions", "Could not schedule committed mutation", error)
-                        }
-                    }
-                }
-                val manager = attachmentManagerProvider()
-                if (attachments != null && manager != null) {
-                    manager.withPreparedAttachments(context, attachments, commit)
-                } else {
-                    require(attachments.orEmpty().all { !it.name.isNullOrBlank() || it.clientId != null }) { "Uploads are unavailable" }
-                    commit(attachments, emptyList())
-                }
+                commitMutation(context, attachments, generation, prepare)
                 afterCommit()
                 if (accountSession.isCurrent(context)) onSuccess()
             } catch (cancelled: CancellationException) {
@@ -184,6 +159,49 @@ class MemoActionDelegateImpl(
                 accountSession.update(uiState, context) { it.copy(isPosting = false) }
             }
         }
+    }
+
+    private suspend fun commitMutation(
+        context: AccountContext,
+        attachments: List<Attachment>?,
+        generation: Long = BackupCoordinator.generation,
+        prepare: suspend (List<Attachment>?) -> Pair<PendingOp, Memo?>?,
+    ): Pair<PendingOp, Memo?>? {
+        val accountId = context.account.id
+        val commit: suspend (List<Attachment>?, List<AttachmentUpload>) -> Pair<PendingOp, Memo?>? = { prepared, uploads ->
+            BackupCoordinator.withStorageLock {
+                check(BackupCoordinator.generation == generation && !BackupCoordinator.restoring.value) { "Storage was restored" }
+                check(accountExists(accountId)) { "Account was removed" }
+                prepare(prepared)?.also { (op, memo) ->
+                    memoCacheRepository.commitMutation(
+                        op,
+                        memo,
+                        when {
+                            op.parentName != null || memo?.parent != null -> CacheListType.COMMENT
+                            memo?.state == MemoState.ARCHIVED -> CacheListType.ARCHIVED
+                            else -> CacheListType.USER
+                        },
+                        op.parentName ?: memo?.parent,
+                        uploads,
+                    )
+                }
+            }
+        }
+        val manager = attachmentManagerProvider()
+        val mutation = if (attachments != null && manager != null) {
+            manager.withPreparedAttachments(context, attachments, commit)
+        } else {
+            require(attachments.orEmpty().all { !it.name.isNullOrBlank() || it.clientId != null }) { "Uploads are unavailable" }
+            commit(attachments, emptyList())
+        }
+        if (mutation != null) {
+            try {
+                workScheduler.schedule(accountId)
+            } catch (error: Exception) {
+                Log.e("MemoActions", "Could not schedule committed mutation", error)
+            }
+        }
+        return mutation
     }
 
     override fun createMemo(
@@ -200,9 +218,7 @@ class MemoActionDelegateImpl(
         val id =
             memoId ?: draftId?.let { UUID.nameUUIDFromBytes(it.toByteArray(Charsets.UTF_8)).toString() }
                 ?: UUID.randomUUID().toString()
-        val creator =
-            context.account.user?.name ?: uiState.value.session.currUser
-                ?.name
+        val creator = context.account.user?.name ?: uiState.value.session.currUser?.name
         mutate(context, onError, onSuccess, attachments = attachments.orEmpty(), afterCommit = {
             // Await originating-account draft cleanup before the editor can finish.
             draftId?.let { draftManager.deleteDraft(context.account.id, it) }
@@ -210,21 +226,10 @@ class MemoActionDelegateImpl(
                 draftDelegate.setCurrentEditingDraft(null)
             }
         }) { prepared ->
-            val now = Clock.System.now()
-            val memo =
-                Memo(
-                    name = "offline-$id",
-                    content = content,
-                    visibility = visibility,
-                    attachments = prepared,
-                    location = location,
-                    state = MemoState.NORMAL,
-                    creator = creator,
-                    createTime = now,
-                    updateTime = now,
-                    displayTime = now,
-                )
-            PendingOp.new(context.account.id, PendingOpType.CREATE, memo.name, payloadJson = gson.toJson(memo), id = id) to memo
+            createMutation(
+                context, id,
+                Memo(content = content, visibility = visibility, attachments = prepared, location = location, creator = creator),
+            )
         }
     }
 
@@ -239,35 +244,119 @@ class MemoActionDelegateImpl(
         onSuccess: () -> Unit,
     ) {
         val context = accountSession.current ?: return
-        val name = memo.name ?: return
+        if (memo.name == null) return
         mutate(context, onError, onSuccess, attachments = attachments) { prepared ->
-            val update =
+            updateMutation(
+                context,
+                memo,
                 memo.copy(
                     content = content,
                     visibility = visibility,
                     attachments = prepared,
                     location = location,
                     state = state ?: memo.state,
-                )
-            val mask =
-                buildList {
-                    if (update.content != memo.content) add("content")
-                    if (update.visibility != memo.visibility) add("visibility")
-                    if (prepared != memo.attachments.orEmpty()) add("attachments")
-                    if (update.location != memo.location) add("location")
-                    if (update.state != memo.state) add("state")
-                }.joinToString(",")
-            if (mask.isEmpty()) return@mutate null
-            PendingOp.new(
-                context.account.id,
-                PendingOpType.UPDATE,
-                name,
-                parentName = memo.parent,
-                payloadJson = gson.toJson(update),
-                updateMask = mask,
-                baseUpdateTime = memo.updateTime?.toString(),
-            ) to update
+                ),
+            )
         }
+    }
+
+    private fun createMutation(context: AccountContext, id: String, edited: Memo, parent: String? = null): Pair<PendingOp, Memo> {
+        val now = Clock.System.now()
+        val type = if (parent == null) PendingOpType.CREATE else PendingOpType.COMMENT_CREATE
+        val memo = edited.copy(
+            name = if (parent == null) "offline-$id" else "offline-comment-$id",
+            parent = parent,
+            state = MemoState.NORMAL,
+            createTime = now,
+            updateTime = now,
+            displayTime = now,
+        )
+        return PendingOp.new(context.account.id, type, memo.name, parent, gson.toJson(memo), id = id) to memo
+    }
+
+    private fun updateMutation(context: AccountContext, memo: Memo, update: Memo): Pair<PendingOp, Memo>? {
+        val mask = buildList {
+            if (update.content != memo.content) add("content")
+            if (update.visibility != memo.visibility) add("visibility")
+            if (update.attachments.orEmpty() != memo.attachments.orEmpty()) add("attachments")
+            if (update.location != memo.location) add("location")
+            if (update.state != memo.state) add("state")
+        }.joinToString(",")
+        if (mask.isEmpty()) return null
+        return PendingOp.new(
+            context.account.id,
+            PendingOpType.UPDATE,
+            requireNotNull(memo.name),
+            parentName = memo.parent,
+            payloadJson = gson.toJson(update),
+            updateMask = mask,
+            baseUpdateTime = memo.updateTime?.toString(),
+        ) to update
+    }
+
+    override suspend fun saveEditorMemo(
+        accountId: String,
+        draftId: String,
+        edited: Memo,
+        original: Memo?,
+        parent: Memo?,
+        previous: EditorMemoCommit?,
+    ): EditorMemoCommit {
+        val context = checkNotNull(accountSession.current?.takeIf { it.account.id == accountId }) { "Editor account is unavailable" }
+        val creator = context.account.user?.name ?: uiState.value.session.currUser?.name
+        val id = UUID.nameUUIDFromBytes(draftId.toByteArray(Charsets.UTF_8)).toString()
+        var base = previous?.memo ?: original
+        val previousAttachments = base?.attachments.orEmpty()
+        val attachments = edited.attachments.orEmpty().takeIf { parent == null && (base == null || it != previousAttachments) }
+        val mutation = commitMutation(context, attachments) { prepared ->
+            if (parent != null) {
+                val name = requireNotNull(parent.name)
+                val comment = memoCacheRepository.getCachedMemo(accountId, "offline-comment-$id").also { base = it }
+                return@commitMutation if (comment == null) {
+                    createMutation(context, id, Memo(content = edited.content, visibility = parent.visibility, creator = creator), name)
+                } else updateMutation(context, comment, comment.copy(content = edited.content))
+            }
+            // The create may already be durable if the process died before saving the editor checkpoint.
+            val memo = base ?: memoCacheRepository.getCachedMemo(accountId, "offline-$id").also { base = it }
+                ?: return@commitMutation createMutation(context, id, edited.copy(attachments = prepared, creator = creator))
+            val mutation = updateMutation(
+                context,
+                memo,
+                memo.copy(
+                    content = edited.content,
+                    visibility = edited.visibility,
+                    attachments = prepared ?: memo.attachments,
+                    location = edited.location,
+                ),
+            ) ?: return@commitMutation null
+            val (op, update) = mutation
+            // A note opened from its optimistic local identity can be acknowledged before the first edit.
+            if (previous == null && !op.memoName.orEmpty().startsWith("offline-")) return@commitMutation mutation
+            val guard = editorUpdateBase(accountId, memo, previous?.operationId, requireNotNull(op.updateMask))
+            op.copy(baseUpdateTime = guard?.toString()) to update.copy(updateTime = guard ?: memo.updateTime)
+        }
+        if (original == null && parent == null && previous == null) draftManager.deleteDraft(accountId, draftId)
+        val memo = requireNotNull(mutation?.second ?: base)
+        return EditorMemoCommit(memo, mutation?.first?.id ?: previous?.operationId, System.currentTimeMillis())
+    }
+
+    private suspend fun editorUpdateBase(accountId: String, memo: Memo, predecessorId: String?, mask: String): Instant? {
+        // Acknowledgements can advance the predecessor's guard while it is still queued.
+        predecessorId?.let { id ->
+            memoCacheRepository.getMutation(id)?.takeIf { it.accountId == accountId }?.let { op ->
+                return op.baseUpdateTime?.let(Instant::parse)
+            }
+        }
+        val server = memoCacheRepository.getServerMemo(accountId, requireNotNull(memo.name)) ?: return memo.updateTime
+        val fields = mask.split(',')
+        val sameOtherFields = applyMemoPatch(server, memo, fields.filterNot { it == "attachments" }.joinToString(",")) == server
+        if (!sameOtherFields) return memo.updateTime
+        if ("attachments" in fields) {
+            val manager = attachmentManagerProvider()
+            val savedNames = memo.attachments.orEmpty().map { it.name ?: manager?.resolvedAttachmentName(it) }
+            if (savedNames != server.attachments.orEmpty().map { it.name }) return memo.updateTime
+        }
+        return server.updateTime
     }
 
     override fun deleteMemo(
@@ -312,31 +401,9 @@ class MemoActionDelegateImpl(
         val context = accountSession.current ?: return
         val parent = parentMemo.name ?: return
         val id = commentId ?: UUID.randomUUID().toString()
-        val creator =
-            context.account.user?.name ?: uiState.value.session.currUser
-                ?.name
+        val creator = context.account.user?.name ?: uiState.value.session.currUser?.name
         mutate(context, onError, onSuccess) {
-            val now = Clock.System.now()
-            val comment =
-                Memo(
-                    name = "offline-comment-$id",
-                    parent = parent,
-                    content = content,
-                    visibility = parentMemo.visibility,
-                    creator = creator,
-                    createTime = now,
-                    updateTime = now,
-                    displayTime = now,
-                    state = MemoState.NORMAL,
-                )
-            PendingOp.new(
-                context.account.id,
-                PendingOpType.COMMENT_CREATE,
-                comment.name,
-                parent,
-                gson.toJson(comment),
-                id = id,
-            ) to comment
+            createMutation(context, id, Memo(content = content, visibility = parentMemo.visibility, creator = creator), parent)
         }
     }
 
@@ -374,9 +441,10 @@ class MemoActionDelegateImpl(
     override suspend fun uploadAttachment(
         uri: Uri,
         context: Context,
+        accountId: String,
     ): Attachment? {
-        val account = accountSession.current ?: return null
-        return attachmentManagerProvider()?.uploadAttachment(uri, context).takeIf { accountSession.isCurrent(account) }
+        val account = accountSession.current?.takeIf { it.account.id == accountId } ?: return null
+        return attachmentManagerProvider()?.uploadAttachment(uri, context, account).takeIf { accountSession.isCurrent(account) }
     }
 
     override fun discardQueuedUploadIfOrphaned(clientId: String) {

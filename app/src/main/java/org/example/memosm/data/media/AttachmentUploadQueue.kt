@@ -215,6 +215,7 @@ class AttachmentUploadQueue(
         cache: MemoCacheRepository,
         outbox: org.example.memosm.data.sync.SyncRepository,
         createdBefore: Long,
+        editorUploadIds: Set<String> = emptySet(),
     ) = withContext(Dispatchers.IO) {
         BackupCoordinator.withStorageLock {
             // Strict reads fail closed: uncertain ownership must preserve the bytes and mapping.
@@ -223,7 +224,8 @@ class AttachmentUploadQueue(
             val restored = settings.restoredEdits(accountId).first().toString()
             for (row in dao.getForAccount(accountId)) {
                 if (row.serverJson == null || row.createdAt >= createdBefore) continue
-                if (draftAttachments.any { it.clientId == row.clientId || it.localPath == row.localPath } ||
+                if (row.clientId in editorUploadIds ||
+                    draftAttachments.any { it.clientId == row.clientId || it.localPath == row.localPath } ||
                     pending.any { it.payloadJson?.contains(row.clientId) == true || it.payloadJson?.contains(row.localPath) == true } ||
                     restored.contains(row.clientId) || restored.contains(row.localPath) ||
                     cache.referencesAttachment(accountId, row.clientId, row.localPath)

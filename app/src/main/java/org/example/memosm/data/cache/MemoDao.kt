@@ -65,6 +65,19 @@ interface MemoDao {
         name: String,
     ): Flow<MemoEntity?>
 
+    @Query(
+        """
+        SELECT e.serverVerified, e.content, e.visibility, COUNT(p.id) AS pendingCount,
+               COALESCE(MAX(p.status != 'PENDING' OR p.permanentlyFailed), 0) AS blocked
+        FROM memo_entities e LEFT JOIN pending_ops p
+          ON p.accountId = e.accountId AND p.memoName = e.localId
+          AND p.type IN ('CREATE', 'UPDATE', 'COMMENT_CREATE')
+        WHERE e.accountId = :accountId AND (e.localId = :name OR e.remoteName = :name) AND e.deleted = 0
+        GROUP BY e.localId LIMIT 1
+        """,
+    )
+    fun observeWriteStatus(accountId: String, name: String): Flow<MemoWriteStatus?>
+
     @Query("SELECT * FROM memo_queries WHERE accountId=:accountId AND `key`=:queryKey")
     suspend fun getQuery(
         accountId: String,

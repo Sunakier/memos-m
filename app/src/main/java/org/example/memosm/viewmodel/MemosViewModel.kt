@@ -555,6 +555,8 @@ class MemosViewModel(
         memoMapManager.refreshIfOpen()
     }
 
+    fun observeMemoWriteStatus(accountId: String, name: String) = memoCacheRepository.observeWriteStatus(accountId, name)
+
     fun deletePendingOp(opId: String) {
         viewModelScope.launch {
             val account = accountSession.current ?: return@launch

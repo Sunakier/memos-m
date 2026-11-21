@@ -9,6 +9,14 @@ import org.example.memosm.data.media.AttachmentUpload
 import org.example.memosm.data.sync.PendingOp
 import org.example.memosm.model.Memo
 
+data class MemoWriteStatus(
+    val serverVerified: Boolean,
+    val content: String,
+    val visibility: String,
+    val pendingCount: Int,
+    val blocked: Boolean,
+)
+
 /** All rendered memo values originate in Room; failures are never converted to empty data. */
 class MemoCacheRepository(
     private val memoDao: MemoDao,
@@ -37,6 +45,12 @@ class MemoCacheRepository(
         memoDao.observeEntity(accountId, name).map {
             it?.takeUnless { entity -> entity.deleted }?.visibleMemo()
         }
+
+    fun observeWriteStatus(accountId: String, name: String): Flow<MemoWriteStatus?> = memoDao.observeWriteStatus(accountId, name)
+
+    suspend fun getServerMemo(accountId: String, name: String): Memo? = memoDao.getEntity(accountId, name)?.serverMemo()
+
+    suspend fun getMutation(id: String): PendingOp? = memoDao.mutation(id)
 
     fun observeCachedMemos(
         accountId: String,

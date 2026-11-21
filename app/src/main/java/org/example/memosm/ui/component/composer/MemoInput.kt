@@ -97,6 +97,9 @@ fun MemoInput(
     availableTags: Map<String, Int>,
     enabled: Boolean = true,
     autoFocus: Boolean = false,
+    showInlineSuggestionButton: Boolean = true,
+    suggestionsRequested: Int = 0,
+    onManualSuggestionsAvailable: (Boolean) -> Unit = {},
 ) {
     val paperTone = LocalPaperTone.current
     val focusRequester = remember { FocusRequester() }
@@ -112,7 +115,8 @@ fun MemoInput(
     val markdownHandler = rememberMarkdownLanguageHandler()
     val fieldState = rememberTextFieldState(contentState.text, contentState.selection)
     val contentChange by rememberUpdatedState(onContentChange)
-    LaunchedEffect(contentState.text, contentState.selection) {
+    val updateSuggestionAvailability by rememberUpdatedState(onManualSuggestionsAvailable)
+    LaunchedEffect(contentState.text, contentState.selection, availableTags, resources) {
         if (fieldState.text.toString() != contentState.text || fieldState.selection != contentState.selection) {
             fieldState.edit {
                 if (toString() != contentState.text) replace(0, length, contentState.text)
@@ -142,12 +146,15 @@ fun MemoInput(
             contentState.text, contentState.selection, availableTags, resources
         )
         currentSuggestionResult = result
+        updateSuggestionAvailability(result?.type?.isAutoShown == false)
         if (result != null && result.type.isAutoShown) {
             showSuggestionPopup = true
         } else if (result == null) {
             showSuggestionPopup = false
         }
-        // For non-auto types (Markdown, Code), showSuggestionPopup remains false (showing icon)
+    }
+    LaunchedEffect(suggestionsRequested) {
+        if (suggestionsRequested > 0 && currentSuggestionResult != null) showSuggestionPopup = true
     }
 
     if (autoFocus) {
@@ -200,13 +207,14 @@ fun MemoInput(
             // Suggestion UI (Popup OR Hint Icon)
             // Suggestion UI Logic
             // 1. Define states
-            val suggestionUIState = remember(currentSuggestionResult, showSuggestionPopup) {
+            val suggestionUIState = remember(currentSuggestionResult, showSuggestionPopup, showInlineSuggestionButton, enabled) {
                 val result = currentSuggestionResult
                 when {
-                    result == null -> SuggestionUIState.Hidden
+                    result == null || !enabled -> SuggestionUIState.Hidden
                     result.type.isAutoShown -> SuggestionUIState.List
                     showSuggestionPopup -> SuggestionUIState.List
-                    else -> SuggestionUIState.Icon
+                    showInlineSuggestionButton -> SuggestionUIState.Icon
+                    else -> SuggestionUIState.Hidden
                 }
             }
 
