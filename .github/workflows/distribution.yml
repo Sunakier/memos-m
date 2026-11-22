@@ -88,13 +88,13 @@ jobs:
           VERSION_NAME: ${{ steps.version.outputs.name }}
           VERSION_CODE: ${{ steps.version.outputs.code }}
         run: |
-          tasks=(:app:testDebugUnitTest)
+          tasks=()
           version=()
           if [[ "$BUILD_DEBUG" == true ]]; then
             tasks+=(:app:assembleDebug)
             version=(-PversionNameOverride="$VERSION_NAME" -PversionCodeOverride="$VERSION_CODE")
           fi
-          ./gradlew "${tasks[@]}" "${version[@]}" \
+          ./gradlew "${tasks[@]}" "${version[@]}" :app:testDebugUnitTest \
             --tests org.example.memosm.account.MemoEditorSubmissionTest \
             --tests org.example.memosm.account.MemoWriteAccountIsolationTest \
             --tests org.example.memosm.api.UnversionedApiTest \
