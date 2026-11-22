@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "channel": "preview",
+  "sha": "08a126bac445aa14edaaf6432895ec1c7297d2fc",
+  "code": 110,
+  "name": "1.0.3-ci-110",
+  "tag": "ci-110",
+  "runId": 44993128008,
+  "complete": false,
+  "branch": "codex/quickedit-auto-sync"
+}
