@@ -31,6 +31,7 @@ module.exports = async ({ github, context, core }) => {
     `MemosM-${record.name}-mapping.txt.gz`,
     `SHA256SUMS-${record.name}.txt`,
   ];
+  if (record.branch) names.push(`MemosM-${record.name}-debug.zip`);
   const directory = 'tmp/distribution';
   const files = names.map(name => path.join(directory, name));
   const assets = files.map(file => {
@@ -41,7 +42,8 @@ module.exports = async ({ github, context, core }) => {
   }).sort((a, b) => a.name.localeCompare(b.name));
   const manifest = { schema: 1, source: record.sha, channel: record.channel,
     versionName: record.name, versionCode: record.code, tag: record.tag,
-    applicationId: process.env.EXPECTED_APP_ID, signerSha256: process.env.EXPECTED_SIGNER_SHA256, assets };
+    applicationId: process.env.EXPECTED_APP_ID, signerSha256: process.env.EXPECTED_SIGNER_SHA256, assets,
+    ...(record.branch ? { branch: record.branch } : {}) };
   // CI and tagged releases hold the same concurrency group through completion.
   await store.transact(async (state, read) => {
     const current = await read(recordFile);
@@ -76,6 +78,7 @@ module.exports = async ({ github, context, core }) => {
   const marker = `<!-- memosm-source:${record.sha};code:${record.code} -->`;
   const body = `${record.channel === 'stable' ? '正式版' : '自动 CI 预览版'} **MemosM ${record.name}**\n\n` +
     `- versionCode: ${record.code}\n- 源码：${record.sha}\n- 包名：top.lazyerpaper.memosm\n` +
+    (record.branch ? `- 分支：${record.branch}\n- Debug ZIP 包含单独安装的 \`top.lazyerpaper.memosm.debug\` APK。\n` : '') +
     '- ARM64 推荐；armeabi-v7a 适用于较老的 32 位 ARM 设备。\n' +
     '- 沿用正式签名；同包名预览版与正式版共用递增编号，可安装编号更高的后续版本。\n' +
     '- 附带 R8 mapping、SHA-256 校验和及 release-manifest.json。\n' +
@@ -97,8 +100,13 @@ module.exports = async ({ github, context, core }) => {
     let asset = remote.find(item => item.name === name);
     if (!asset) {
       if (!release.draft) throw new Error('Published release is missing an immutable asset');
-      const contentType = name.endsWith('.json') ? 'application/json' : name.endsWith('.gz') ? 'application/gzip' :
-        name.endsWith('.txt') ? 'text/plain' : 'application/vnd.android.package-archive';
+      const contentType = {
+        '.json': 'application/json',
+        '.gz': 'application/gzip',
+        '.txt': 'text/plain',
+        '.zip': 'application/zip',
+        '.apk': 'application/vnd.android.package-archive',
+      }[path.extname(name)];
       asset = (await github.rest.repos.uploadReleaseAsset({
         ...repo, release_id: release.id, name, data: bytes,
         headers: { 'content-type': contentType, 'content-length': bytes.length },
@@ -122,5 +130,5 @@ module.exports = async ({ github, context, core }) => {
   core.setOutput('published', true);
   await core.summary.addHeading('Published MemosM').addRaw(
     `[${record.name}](${release.html_url}) — versionCode ${record.code}, source \`${record.sha}\`.\n\n` +
-    'Both APKs, R8 mapping and checksums were verified before publication.\n').write();
+    'Signed APKs, R8 mapping and checksums were verified before publication.\n').write();
 };

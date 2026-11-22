@@ -24,6 +24,10 @@ env:
 
 jobs:
   build:
+    # Preview branches and stable tags share one version ledger.
+    concurrency:
+      group: ${{ inputs.channel == 'check' && format('memosm-check-{0}', github.ref) || 'memosm-distribution' }}
+      queue: max
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -37,7 +41,6 @@ jobs:
         uses: actions/github-script@v9
         env:
           RELEASE_CHANNEL: ${{ inputs.channel }}
-          DISTRIBUTE: ${{ inputs.channel == 'preview' }}
         with:
           script: |
             if (!['check', 'preview', 'stable'].includes(process.env.RELEASE_CHANNEL)) {
@@ -66,26 +69,6 @@ jobs:
           cache-read-only: ${{ github.event_name == 'pull_request' }}
           cache-encryption-key: ${{ secrets.GRADLE_CACHE_KEY }}
 
-      - name: Run focused regression checks
-        if: steps.version.outputs.build == 'true'
-        run: >-
-          ./gradlew :app:testDebugUnitTest
-          --tests org.example.memosm.account.MemoEditorSubmissionTest
-          --tests org.example.memosm.account.MemoWriteAccountIsolationTest
-          --tests org.example.memosm.api.UnversionedApiTest
-          --console=plain
-
-      - name: Build validation APK
-        if: steps.version.outputs.build == 'true' && steps.version.outputs.publish != 'true'
-        env:
-          VERSION_NAME: ${{ steps.version.outputs.name }}
-          VERSION_CODE: ${{ steps.version.outputs.code }}
-        run: >-
-          ./gradlew :app:assembleDebug
-          -PversionNameOverride="$VERSION_NAME"
-          -PversionCodeOverride="$VERSION_CODE"
-          --console=plain
-
       - name: Restore sealed assets for retry
         id: restore
         if: steps.version.outputs.build == 'true' && steps.version.outputs.publish == 'true'
@@ -98,8 +81,27 @@ jobs:
             const restore = require('./.github/scripts/restore-release-assets.cjs');
             await restore({ github, context, core });
 
+      - name: Run focused regression checks and build Debug APK
+        if: steps.version.outputs.build == 'true'
+        env:
+          BUILD_DEBUG: ${{ inputs.channel == 'check' || (steps.version.outputs.branch != '' && steps.restore.outputs.restored != 'true') }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+        run: |
+          tasks=(:app:testDebugUnitTest)
+          version=()
+          if [[ "$BUILD_DEBUG" == true ]]; then
+            tasks+=(:app:assembleDebug)
+            version=(-PversionNameOverride="$VERSION_NAME" -PversionCodeOverride="$VERSION_CODE")
+          fi
+          ./gradlew "${tasks[@]}" "${version[@]}" \
+            --tests org.example.memosm.account.MemoEditorSubmissionTest \
+            --tests org.example.memosm.account.MemoWriteAccountIsolationTest \
+            --tests org.example.memosm.api.UnversionedApiTest \
+            --console=plain
+
       - name: Decode release keystore
-        if: steps.version.outputs.build == 'true' && steps.version.outputs.publish == 'true'
+        if: steps.version.outputs.build == 'true' && steps.version.outputs.publish == 'true' && steps.restore.outputs.restored != 'true'
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE }}
         run: |
@@ -131,6 +133,7 @@ jobs:
           VERSION_NAME: ${{ steps.version.outputs.name }}
           VERSION_CODE: ${{ steps.version.outputs.code }}
           RESTORED: ${{ steps.restore.outputs.restored }}
+          INCLUDE_DEBUG: ${{ steps.version.outputs.branch != '' }}
         run: bash .github/scripts/verify-release.sh
 
       - name: Publish verified Release
@@ -149,7 +152,7 @@ jobs:
             await publish({ github, context, core });
 
       - name: Upload validation APK
-        if: steps.version.outputs.build == 'true' && steps.version.outputs.publish != 'true'
+        if: steps.version.outputs.build == 'true' && inputs.channel == 'check'
         uses: actions/upload-artifact@v4
         with:
           name: MemosM-check-${{ github.run_id }}-${{ github.run_attempt }}
@@ -158,7 +161,7 @@ jobs:
           retention-days: 1
 
       - name: Preserve failed test reports
-        if: failure()
+        if: failure() && inputs.channel == 'check'
         uses: actions/upload-artifact@v4
         with:
           name: MemosM-test-reports-${{ github.run_id }}-${{ github.run_attempt }}

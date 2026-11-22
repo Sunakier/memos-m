@@ -62,10 +62,15 @@ if [ "${RESTORED:-false}" != true ]; then
     grep -F "$type" "$source/configuration.txt" > /dev/null
   done
   gzip -n -c "$source/mapping.txt" > "$mapping"
+  files=("MemosM-$VERSION_NAME-arm64-v8a.apk" "MemosM-$VERSION_NAME-armeabi-v7a.apk" "MemosM-$VERSION_NAME-mapping.txt.gz")
+  if [ "${INCLUDE_DEBUG:-false}" = true ]; then
+    debug_zip="MemosM-$VERSION_NAME-debug.zip"
+    zip -q -j -X "$dist/$debug_zip" app/build/outputs/apk/debug/app-debug.apk
+    files+=("$debug_zip")
+  fi
   (
     cd "$dist"
-    sha256sum "MemosM-$VERSION_NAME-arm64-v8a.apk" \
-      "MemosM-$VERSION_NAME-armeabi-v7a.apk" "MemosM-$VERSION_NAME-mapping.txt.gz" > "$checksums"
+    sha256sum "${files[@]}" > "$checksums"
   )
 fi
 test -s "$mapping"

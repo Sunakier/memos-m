@@ -2,21 +2,21 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'feature/**', 'codex/**']
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
-# Both automatic previews and stable releases serialize distribution.
-concurrency:
-  group: ${{ github.event_name == 'pull_request' && format('memosm-pr-{0}', github.event.pull_request.number) || 'memosm-distribution' }}
-  cancel-in-progress: false
-
 jobs:
   check:
-    if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main' || github.repository != 'Sunakier/memos-m'
+    if: >-
+      github.event.deleted != true &&
+      (github.repository != 'Sunakier/memos-m' || github.event_name == 'pull_request' ||
+        !(github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/feature/') ||
+          startsWith(github.ref, 'refs/heads/codex/')))
     permissions:
       contents: read
     uses: ./.github/workflows/distribution.yml
@@ -24,7 +24,10 @@ jobs:
       channel: check
 
   preview:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository == 'Sunakier/memos-m'
+    if: >-
+      github.event.deleted != true && github.repository == 'Sunakier/memos-m' && github.event_name != 'pull_request' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/feature/') ||
+        startsWith(github.ref, 'refs/heads/codex/'))
     permissions:
       contents: write
     uses: ./.github/workflows/distribution.yml

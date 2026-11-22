@@ -12,36 +12,32 @@ module.exports = async ({ github, context, core }) => {
   if (!Number.isSafeInteger(localCode) || localCode < 1 || localCode >= MAX_CODE) throw new Error('Invalid versionCode migration floor');
   const sha = git('rev-parse', 'HEAD');
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error('Invalid source commit');
+  const defaultBranch = context.payload.repository.default_branch;
+  const sourceBranch = /^refs\/heads\/(.+)$/.exec(context.ref)?.[1];
   const stable = process.env.RELEASE_CHANNEL === 'stable';
-  const branch = context.payload.repository.default_branch;
   const pr = context.eventName === 'pull_request';
-  const distributable = stable || (!pr && context.ref === `refs/heads/${branch}` && process.env.DISTRIBUTE === 'true');
+  const preview = process.env.RELEASE_CHANNEL === 'preview' && !pr && !context.payload.deleted && sourceBranch &&
+    (sourceBranch === defaultBranch || sourceBranch.startsWith('feature/') || sourceBranch.startsWith('codex/'));
+  const featureBranch = preview && sourceBranch !== defaultBranch ? sourceBranch : '';
   const output = data => {
     for (const [key, value] of Object.entries(data)) core.setOutput(key, String(value));
     core.info(`Version ${data.name} (${data.code}), source ${sha}; distribute=${data.publish}, build=${data.build}`);
   };
-  if (!distributable) {
-    const quickEdit = process.env.RELEASE_CHANNEL === 'quickedit';
-    const suffix = pr ? `pr.${context.payload.pull_request.number}` : quickEdit ? 'quickedit' : 'check';
-    let code = localCode;
-    if (quickEdit) {
-      // Match the installed distribution's versionCode without allocating a release number.
-      const store = createStore(github, context.repo);
-      const state = await store.read('state.json', await store.head());
-      if (state) {
-        if (!Number.isSafeInteger(state.publishedCode) || state.publishedCode < 1 || state.publishedCode > MAX_CODE) {
-          throw new Error('Invalid published versionCode in the release ledger');
-        }
-        code = Math.max(code, state.publishedCode);
-      }
-    }
-    output({ base, name: `${base}-${suffix}.${sha.slice(0, 12)}`, code, sha, publish: false, build: true, record: '', tag: '' });
+  if (!stable && !preview) {
+    const suffix = pr ? `pr.${context.payload.pull_request.number}` : 'check';
+    output({ base, name: `${base}-${suffix}.${sha.slice(0, 12)}`, code: localCode, sha, publish: false, build: true, record: '', tag: '' });
     return;
   }
   // Resolve source once, and use this exact commit in every dependent job.
-  const defaultHead = (await github.rest.repos.getBranch({ ...context.repo, branch })).data.commit.sha;
-  if (!stable && sha !== defaultHead) {
-    core.notice('A newer default-branch commit exists; this run validates source but does not distribute an obsolete preview.');
+  const branch = stable ? defaultBranch : sourceBranch;
+  let branchHead;
+  try {
+    branchHead = (await github.rest.repos.getBranch({ ...context.repo, branch })).data.commit.sha;
+  } catch (error) {
+    if (!preview || error.status !== 404) throw error;
+  }
+  if (preview && sha !== branchHead) {
+    core.notice(`Preview source is no longer the head of ${branch}. Running regression checks.`);
     output({ base, name: `${base}-check.${sha.slice(0, 12)}`, code: localCode, sha, publish: false, build: true, record: '', tag: '' });
     return;
   }
@@ -54,7 +50,7 @@ module.exports = async ({ github, context, core }) => {
     const tagSha = git('rev-parse', `${context.ref}^{commit}`);
     if (tagSha !== sha) throw new Error('Tag does not resolve to the checked out source');
     // The publishing policy only accepts reviewed commits already merged to the default branch.
-    const comparison = (await github.rest.repos.compareCommitsWithBasehead({ ...context.repo, basehead: `${sha}...${defaultHead}` })).data;
+    const comparison = (await github.rest.repos.compareCommitsWithBasehead({ ...context.repo, basehead: `${sha}...${branchHead}` })).data;
     if (!['ahead', 'identical'].includes(comparison.status)) throw new Error('Release source must be on the default branch history');
   }
   // A new manual dispatch is a new build request; rerun-attempts retain runId.
@@ -85,6 +81,7 @@ module.exports = async ({ github, context, core }) => {
     const existing = await read(path);
     if (existing) {
       validateRecord(existing, { channel, sha, name: stable ? base : `${base}-ci-${existing.code}`, tag: stable ? tag : `ci-${existing.code}` });
+      if ((existing.branch || '') !== featureBranch) throw new Error('Release allocation belongs to a different branch');
       if (!existing.complete && existing.code < state.publishedCode) {
         throw new Error('A newer build was already distributed. Publish a new commit/version instead of completing this obsolete build.');
       }
@@ -98,10 +95,12 @@ module.exports = async ({ github, context, core }) => {
     state.lastCode = code;
     if (stable) state.stableReserved = base;
     const record = { schema: FORMAT, channel, sha, code, name: stable ? base : `${base}-ci-${code}`,
-      tag: stable ? tag : `ci-${code}`, runId: context.runId, complete: false };
+      tag: stable ? tag : `ci-${code}`, runId: context.runId, complete: false,
+      ...(featureBranch ? { branch: featureBranch } : {}) };
     return { files: { [path]: record }, message: `Allocate ${record.tag} (${code}) for ${sha}`, result: record };
   }, bootstrap);
-  output({ base, name: record.name, code: record.code, tag: record.tag, sha, publish: true, build: !record.complete, record: path });
+  output({ base, name: record.name, code: record.code, tag: record.tag, sha, publish: true, build: !record.complete,
+    record: path, branch: featureBranch });
   await core.summary.addHeading('Version allocation').addTable([
     [{ data: 'Version', header: true }, { data: 'Code', header: true }, { data: 'Commit', header: true }],
     [record.name, String(record.code), sha],

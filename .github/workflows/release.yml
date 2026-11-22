@@ -7,10 +7,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: memosm-distribution
-  cancel-in-progress: false
-
 jobs:
   publish:
     if: github.repository == 'Sunakier/memos-m'
