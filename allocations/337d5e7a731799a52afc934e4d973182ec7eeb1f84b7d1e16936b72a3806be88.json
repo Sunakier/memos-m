@@ -7,5 +7,43 @@
   "tag": "ci-110",
   "runId": 44993128008,
   "complete": false,
-  "branch": "codex/quickedit-auto-sync"
+  "branch": "codex/quickedit-auto-sync",
+  "manifest": {
+    "schema": 1,
+    "source": "08a126bac445aa14edaaf6432895ec1c7297d2fc",
+    "channel": "preview",
+    "versionName": "1.0.3-ci-110",
+    "versionCode": 110,
+    "tag": "ci-110",
+    "applicationId": "top.lazyerpaper.memosm",
+    "signerSha256": "17a7f4feee874fd644d60616d1938365467f07023acd30c9f71b8a8be49b7022",
+    "assets": [
+      {
+        "name": "MemosM-1.0.3-ci-110-arm64-v8a.apk",
+        "size": 12156419,
+        "digest": "sha256:e37ad567a9ee5a04a1b15a1b5c9bebb6830ab5297456da02100f4a550eb6ac95"
+      },
+      {
+        "name": "MemosM-1.0.3-ci-110-armeabi-v7a.apk",
+        "size": 11469145,
+        "digest": "sha256:499633b30f84437cf51bc3e85ab7a60271a12e5b5ea50d27e58ac4c937ce4649"
+      },
+      {
+        "name": "MemosM-1.0.3-ci-110-debug.zip",
+        "size": 57672501,
+        "digest": "sha256:b0edcf947232d6ee72bd706f46aa8e724c8996038dfa11fa68ef2d130031a0d5"
+      },
+      {
+        "name": "MemosM-1.0.3-ci-110-mapping.txt.gz",
+        "size": 8041999,
+        "digest": "sha256:d5ec7f001bbb560f3614518229622e49d07b2222bc6a4f2c62cdf26882410e4a"
+      },
+      {
+        "name": "SHA256SUMS-1.0.3-ci-110.txt",
+        "size": 399,
+        "digest": "sha256:34ad8d0b7b352ceb4d85fe5fe677d9df91cf57291b1ff8160bbce6e5586830c5"
+      }
+    ],
+    "branch": "codex/quickedit-auto-sync"
+  }
 }
