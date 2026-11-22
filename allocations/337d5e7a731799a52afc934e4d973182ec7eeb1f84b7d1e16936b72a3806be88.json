@@ -6,7 +6,7 @@
   "name": "1.0.3-ci-110",
   "tag": "ci-110",
   "runId": 44993128008,
-  "complete": false,
+  "complete": true,
   "branch": "codex/quickedit-auto-sync",
   "manifest": {
     "schema": 1,
@@ -45,5 +45,6 @@
       }
     ],
     "branch": "codex/quickedit-auto-sync"
-  }
+  },
+  "publishedRunId": 44993128008
 }
